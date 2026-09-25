@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router';
 import { Building2, LogOut, User as UserIcon, List, Users, HeartPulse } from 'lucide-react';
 
 export default function SidebarLayout() {

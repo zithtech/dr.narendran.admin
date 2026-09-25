@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { User, Lock, AlertCircle } from 'lucide-react';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
