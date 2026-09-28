@@ -20,6 +20,13 @@ export interface Patient {
   gender: string | null;
   address: string | null;
   status: 'ACTIVE' | 'INACTIVE';
+  height_cm?: number | null;
+  weight_kg?: number | null;
+  blood_group?: string | null;
+  marital_status?: string | null;
+  emergency_contacts?: any | null;
+  profile_image_url?: string | null;
+  is_active?: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -42,6 +49,13 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
   const [gender, setGender] = useState('');
   const [address, setAddress] = useState('');
   const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
+  const [heightCm, setHeightCm] = useState<string>('');
+  const [weightKg, setWeightKg] = useState<string>('');
+  const [bloodGroup, setBloodGroup] = useState('');
+  const [maritalStatus, setMaritalStatus] = useState('');
+  const [emergencyContacts, setEmergencyContacts] = useState('');
+  const [profileImageUrl, setProfileImageUrl] = useState('');
+  const [isActive, setIsActive] = useState<boolean>(true);
 
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -79,10 +93,17 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
       setPhone(patient.phone || '');
       setEmail(patient.email || '');
       // HTML date input expects YYYY-MM-DD
-      setDateOfBirth(patient.date_of_birth ? new Date(patient.date_of_birth).toISOString().split('T')[0] : '');
+      setDateOfBirth(patient.date_of_birth ? (new Date(patient.date_of_birth).toISOString().split('T')[0] || '') : '');
       setGender(patient.gender || '');
       setAddress(patient.address || '');
       setStatus(patient.status);
+      setHeightCm(patient.height_cm ? patient.height_cm.toString() : '');
+      setWeightKg(patient.weight_kg ? patient.weight_kg.toString() : '');
+      setBloodGroup(patient.blood_group || '');
+      setMaritalStatus(patient.marital_status || '');
+      setEmergencyContacts(patient.emergency_contacts ? JSON.stringify(patient.emergency_contacts) : '');
+      setProfileImageUrl(patient.profile_image_url || '');
+      setIsActive(patient.is_active !== undefined && patient.is_active !== null ? patient.is_active : true);
     } else {
       setName('');
       setHospitalId('');
@@ -94,6 +115,13 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
       setGender('');
       setAddress('');
       setStatus('ACTIVE');
+      setHeightCm('');
+      setWeightKg('');
+      setBloodGroup('');
+      setMaritalStatus('');
+      setEmergencyContacts('');
+      setProfileImageUrl('');
+      setIsActive(true);
     }
     setError('');
   }, [patient, isOpen]);
@@ -128,7 +156,14 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
           date_of_birth: dateOfBirth || null,
           gender,
           address,
-          status
+          status,
+          height_cm: heightCm ? parseFloat(heightCm) : null,
+          weight_kg: weightKg ? parseFloat(weightKg) : null,
+          blood_group: bloodGroup || null,
+          marital_status: maritalStatus || null,
+          emergency_contacts: emergencyContacts ? JSON.parse(emergencyContacts) : null,
+          profile_image_url: profileImageUrl || null,
+          is_active: isActive
         } });
 
 
@@ -268,6 +303,87 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div style={inputGroupStyle}>
+              <label style={labelStyle}>Height (cm)</label>
+              <input
+                type="number"
+                value={heightCm}
+                onChange={e => setHeightCm(e.target.value)}
+                placeholder="e.g. 175"
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={inputGroupStyle}>
+              <label style={labelStyle}>Weight (kg)</label>
+              <input
+                type="number"
+                value={weightKg}
+                onChange={e => setWeightKg(e.target.value)}
+                placeholder="e.g. 70"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={inputGroupStyle}>
+              <label style={labelStyle}>Blood Group</label>
+              <select
+                value={bloodGroup}
+                onChange={e => setBloodGroup(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="">Not specified</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+              </select>
+            </div>
+
+            <div style={inputGroupStyle}>
+              <label style={labelStyle}>Marital Status</label>
+              <select
+                value={maritalStatus}
+                onChange={e => setMaritalStatus(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="">Not specified</option>
+                <option value="SINGLE">Single</option>
+                <option value="MARRIED">Married</option>
+                <option value="DIVORCED">Divorced</option>
+                <option value="WIDOWED">Widowed</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={inputGroupStyle}>
+            <label style={labelStyle}>Emergency Contacts (JSON Array)</label>
+            <textarea
+              value={emergencyContacts}
+              onChange={e => setEmergencyContacts(e.target.value)}
+              placeholder='[{"name": "Jane Doe", "phone": "1234567890", "relation": "Spouse"}]'
+              style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }}
+            />
+          </div>
+
+          <div style={inputGroupStyle}>
+            <label style={labelStyle}>Profile Image URL</label>
+            <input
+              type="url"
+              value={profileImageUrl}
+              onChange={e => setProfileImageUrl(e.target.value)}
+              placeholder="https://example.com/image.jpg"
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={inputGroupStyle}>
               <label style={labelStyle}>Linked User Account (App Login)</label>
               <select
                 value={userAccountId}
@@ -292,6 +408,17 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
                 <option value="INACTIVE">Inactive</option>
               </select>
             </div>
+          </div>
+          
+          <div style={inputGroupStyle}>
+            <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input 
+                type="checkbox" 
+                checked={isActive} 
+                onChange={e => setIsActive(e.target.checked)} 
+              />
+              Is Active Patient (System)
+            </label>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
