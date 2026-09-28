@@ -21,6 +21,7 @@ export interface Doctor {
   qualification?: string | null;
   medical_registration_number?: string | null;
   clinic_address?: string | null;
+  years_of_experience?: number | null;
   is_active?: boolean | null;
   created_at: string;
   updated_at: string;
@@ -45,6 +46,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
   const [qualification, setQualification] = useState('');
   const [medicalRegistrationNumber, setMedicalRegistrationNumber] = useState('');
   const [clinicAddress, setClinicAddress] = useState('');
+  const [yearsOfExperience, setYearsOfExperience] = useState<string>('');
   const [isActive, setIsActive] = useState<boolean>(true);
 
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
@@ -87,6 +89,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
       setQualification(doctor.qualification || '');
       setMedicalRegistrationNumber(doctor.medical_registration_number || '');
       setClinicAddress(doctor.clinic_address || '');
+      setYearsOfExperience(doctor.years_of_experience ? doctor.years_of_experience.toString() : '');
       setIsActive(doctor.is_active !== undefined && doctor.is_active !== null ? doctor.is_active : true);
     } else {
       setName('');
@@ -100,6 +103,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
       setQualification('');
       setMedicalRegistrationNumber('');
       setClinicAddress('');
+      setYearsOfExperience('');
       setIsActive(true);
     }
     setError('');
@@ -138,6 +142,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
           qualification,
           medical_registration_number: medicalRegistrationNumber,
           clinic_address: clinicAddress,
+          years_of_experience: yearsOfExperience ? parseInt(yearsOfExperience, 10) : null,
           is_active: isActive
         } });
 
@@ -265,6 +270,32 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
             </div>
           </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={inputGroupStyle}>
+              <label style={labelStyle}>Years of Experience</label>
+              <input
+                type="number"
+                value={yearsOfExperience}
+                onChange={e => setYearsOfExperience(e.target.value)}
+                placeholder="e.g. 10"
+                min="0"
+                max="100"
+                style={inputStyle}
+              />
+            </div>
+            
+            <div style={inputGroupStyle}>
+              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '8px', height: '100%', marginTop: 'auto', paddingBottom: '0.5rem' }}>
+                <input 
+                  type="checkbox" 
+                  checked={isActive} 
+                  onChange={e => setIsActive(e.target.checked)} 
+                />
+                Is Active Doctor (System)
+              </label>
+            </div>
+          </div>
+
           <div style={inputGroupStyle}>
             <label style={labelStyle}>Clinic Address</label>
             <textarea
@@ -273,17 +304,6 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
               placeholder="e.g. 123 Health Ave, Suite 100"
               style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }}
             />
-          </div>
-          
-          <div style={inputGroupStyle}>
-            <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input 
-                type="checkbox" 
-                checked={isActive} 
-                onChange={e => setIsActive(e.target.checked)} 
-              />
-              Is Active Doctor (System)
-            </label>
           </div>
 
           <div style={inputGroupStyle}>

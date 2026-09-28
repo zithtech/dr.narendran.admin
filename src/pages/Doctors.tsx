@@ -104,15 +104,16 @@ export default function Doctors() {
               <th style={thStyle}>DOCTOR</th>
               <th style={thStyle}>HOSPITAL & BRANCH</th>
               <th style={thStyle}>SPECIALIZATION</th>
+              <th style={thStyle}>EXP. (YEARS)</th>
               <th style={thStyle}>STATUS</th>
               <th style={thStyle}>ACTION</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} style={loadingStyle}>Loading...</td></tr>
+              <tr><td colSpan={6} style={loadingStyle}>Loading...</td></tr>
             ) : filteredDoctors.length === 0 ? (
-              <tr><td colSpan={5} style={loadingStyle}>No doctors found.</td></tr>
+              <tr><td colSpan={6} style={loadingStyle}>No doctors found.</td></tr>
             ) : (
               filteredDoctors.map(doctor => (
                 <tr key={doctor.id} style={trStyle}>
@@ -126,6 +127,9 @@ export default function Doctors() {
                   </td>
                   <td style={tdStyle}>
                     <span style={badgeStyle}>{doctor.specialization || 'General'}</span>
+                  </td>
+                  <td style={tdStyle}>
+                    {doctor.years_of_experience !== undefined && doctor.years_of_experience !== null ? `${doctor.years_of_experience} yrs` : '-'}
                   </td>
                   <td style={tdStyle}>{doctor.status === 'ACTIVE' ? 'Active' : 'Inactive'}</td>
                   <td style={tdStyle}>
