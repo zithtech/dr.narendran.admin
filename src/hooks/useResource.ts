@@ -22,8 +22,9 @@ export function useResource<T>(endpoint: string, errorLabel: string): Resource<T
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get<T[]>(endpoint);
-      setItems(Array.isArray(response.data) ? response.data : []);
+      const response = await api.get<any>(endpoint);
+      const data = response.data;
+      setItems(Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []));
       setError('');
       setSyncedAt(Date.now());
     } catch (err: unknown) {
