@@ -1,9 +1,13 @@
+import { CalendarX2, Pencil, Plus, X } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
-import { X, Trash2, Plus, Edit2 } from 'lucide-react';
-import { type Doctor } from './DoctorModal';
-import { type Branch } from './BranchModal';
+
+import { titleCase } from '../lib/format';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
+import { type Branch } from './BranchModal';
+import { type Doctor } from './DoctorModal';
+import { ConfirmDialog, Field, Modal } from './ui/Modal';
+import { Alert, cx } from './ui/primitives';
 
 interface AvailabilitySlot {
   id: string;
@@ -22,11 +26,26 @@ interface DoctorAvailabilityModalProps {
   doctor: Doctor | null;
 }
 
-export default function DoctorAvailabilityModal({ isOpen, onClose, doctor }: DoctorAvailabilityModalProps) {
+const DAYS = [
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+  'SUNDAY',
+] as const;
+
+export default function DoctorAvailabilityModal({
+  isOpen,
+  onClose,
+  doctor,
+}: DoctorAvailabilityModalProps) {
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [pendingDelete, setPendingDelete] = useState<AvailabilitySlot | null>(null);
 
   // Form states for new/edit slot
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
@@ -68,8 +87,8 @@ export default function DoctorAvailabilityModal({ isOpen, onClose, doctor }: Doc
 
   useEffect(() => {
     if (isOpen && doctor) {
-      fetchAvailability();
-      fetchBranches();
+      void fetchAvailability();
+      void fetchBranches();
       resetForm();
     }
   }, [isOpen, doctor, fetchAvailability, fetchBranches, resetForm]);
@@ -77,7 +96,7 @@ export default function DoctorAvailabilityModal({ isOpen, onClose, doctor }: Doc
   if (!isOpen || !doctor) return null;
 
   // Only allow selecting branches in the same hospital as the doctor
-  const availableBranches = branches.filter(b => b.hospital_id === doctor.hospital_id);
+  const availableBranches = branches.filter((b) => b.hospital_id === doctor.hospital_id);
 
   const handleSubmitSlot = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,25 +104,29 @@ export default function DoctorAvailabilityModal({ isOpen, onClose, doctor }: Doc
       setError('Please select a branch for this schedule.');
       return;
     }
+    if (endTime <= startTime) {
+      setError('End time must be after the start time.');
+      return;
+    }
     setLoading(true);
     setError('');
 
     try {
-      const url = editingSlotId
-        ? `doctor-availability/${editingSlotId}`
-        : 'doctor-availability';
+      const url = editingSlotId ? `doctor-availability/${editingSlotId}` : 'doctor-availability';
       const method = editingSlotId ? 'PUT' : 'POST';
 
-      await api({ method, url, data: {
+      await api({
+        method,
+        url,
+        data: {
           doctor_id: doctor.id,
           branch_id: branchId,
           day_of_week: day,
           start_time: startTime,
           end_time: endTime,
-          status: 'ACTIVE'
-        } });
-
-
+          status: 'ACTIVE',
+        },
+      });
 
       await fetchAvailability();
       resetForm();
@@ -124,139 +147,216 @@ export default function DoctorAvailabilityModal({ isOpen, onClose, doctor }: Doc
   };
 
   const handleDeleteSlot = async (id: string) => {
-    if (!confirm('Are you sure you want to remove this time slot?')) return;
     try {
       await api.delete(`doctor-availability/${id}`);
+      if (editingSlotId === id) resetForm();
       await fetchAvailability();
     } catch (err: unknown) {
-      alert(getErrorMessage(err, 'Failed to delete slot.'));
+      setError(getErrorMessage(err, 'Failed to delete slot.'));
+    } finally {
+      setPendingDelete(null);
     }
   };
 
+  const slotsByDay = DAYS.map((d) => ({
+    day: d,
+    slots: slots
+      .filter((s) => s.day_of_week === d)
+      .sort((a, b) => a.start_time.localeCompare(b.start_time)),
+  })).filter((g) => g.slots.length > 0);
+
   return (
-    <div style={overlayStyle}>
-      <div style={modalStyle}>
-        <div style={headerStyle}>
-          <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#111827' }}>
-            Availability: {doctor.name}
-          </h2>
-          <button onClick={onClose} style={closeBtnStyle}><X size={20} /></button>
-        </div>
+    <>
+      <Modal
+        open={isOpen}
+        onClose={onClose}
+        size="xl"
+        title="Weekly schedule"
+        description={`${doctor.name}${doctor.hospital_name ? ` · ${doctor.hospital_name}` : ''}`}
+      >
+        <div className="ui-modal-body">
+          {error && <Alert>{error}</Alert>}
 
-        <div style={{ padding: '0 1.5rem 1.5rem' }}>
-          {error && (
-            <div style={{ marginBottom: '1rem', padding: '0.75rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '4px', fontSize: '0.875rem' }}>
-              {error}
-            </div>
-          )}
-
-          {/* ADD/EDIT SLOT FORM */}
-          <div style={{ backgroundColor: '#f9fafb', padding: '1rem', borderRadius: '6px', border: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: '#374151', textTransform: 'uppercase' }}>
-                {editingSlotId ? 'Edit Time Slot' : 'Add Time Slot'}
-              </h3>
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 8,
+              }}
+            >
+              <span className="ui-section-title">
+                {editingSlotId ? 'Edit time slot' : 'Add time slot'}
+              </span>
               {editingSlotId && (
-                <button type="button" onClick={resetForm} style={cancelEditBtnStyle}>Cancel Edit</button>
+                <button type="button" onClick={resetForm} className="ui-btn ui-btn-sm ui-btn-ghost">
+                  Cancel edit
+                </button>
               )}
             </div>
-
-            <form onSubmit={handleSubmitSlot} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'end' }}>
-
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>Day</label>
-                <select value={day} onChange={e => setDay(e.target.value)} style={inputStyle}>
-                  {['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'].map(d => (
-                    <option key={d} value={d}>{d}</option>
+            <form
+              onSubmit={(e) => {
+                void handleSubmitSlot(e);
+              }}
+              className={cx('ui-slot-form', editingSlotId && 'is-editing')}
+            >
+              <Field label="Day">
+                <select className="ui-select" value={day} onChange={(e) => setDay(e.target.value)}>
+                  {DAYS.map((d) => (
+                    <option key={d} value={d}>
+                      {titleCase(d)}
+                    </option>
                   ))}
                 </select>
-              </div>
-
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>Start</label>
-                <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} required style={inputStyle} />
-              </div>
-
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>End</label>
-                <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} required style={inputStyle} />
-              </div>
-
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>Branch</label>
-                <select value={branchId} onChange={e => setBranchId(e.target.value)} style={inputStyle} required>
-                  <option value="" disabled>Select...</option>
-                  {availableBranches.map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
+              </Field>
+              <Field label="Start">
+                <input
+                  className="ui-input"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  required
+                />
+              </Field>
+              <Field label="End">
+                <input
+                  className="ui-input"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  required
+                />
+              </Field>
+              <Field label="Branch">
+                <select
+                  className="ui-select"
+                  value={branchId}
+                  onChange={(e) => setBranchId(e.target.value)}
+                  required
+                >
+                  <option value="" disabled>
+                    Select…
+                  </option>
+                  {availableBranches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
                   ))}
                 </select>
-              </div>
-
-              <button type="submit" disabled={loading} style={editingSlotId ? updateBtnStyle : addBtnStyle}>
-                {editingSlotId ? 'Update' : <><Plus size={16} /> Add</>}
+              </Field>
+              <button type="submit" disabled={loading} className="ui-btn ui-btn-primary">
+                {editingSlotId ? (
+                  'Update'
+                ) : (
+                  <>
+                    <Plus size={15} /> Add
+                  </>
+                )}
               </button>
             </form>
           </div>
 
-          {/* LIST CURRENT SLOTS */}
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={thStyle}>DAY</th>
-                <th style={thStyle}>TIME</th>
-                <th style={thStyle}>BRANCH</th>
-                <th style={thStyle}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && slots.length === 0 ? (
-                <tr><td colSpan={4} style={{ padding: '1rem', textAlign: 'center', color: '#6b7280' }}>Loading...</td></tr>
-              ) : slots.length === 0 ? (
-                <tr><td colSpan={4} style={{ padding: '1rem', textAlign: 'center', color: '#6b7280' }}>No availability scheduled.</td></tr>
-              ) : (
-                slots.map(slot => (
-                  <tr key={slot.id} style={{ borderBottom: '1px solid #e5e7eb', backgroundColor: editingSlotId === slot.id ? '#eff6ff' : 'transparent' }}>
-                    <td style={tdStyle}>{slot.day_of_week}</td>
-                    <td style={tdStyle}>{slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}</td>
-                    <td style={tdStyle}>{slot.branch_name}</td>
-                    <td style={{ ...tdStyle, textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button onClick={() => handleEditSlot(slot)} style={iconEditBtnStyle} title="Edit slot">
-                          <Edit2 size={16} />
-                        </button>
-                        <button onClick={() => handleDeleteSlot(slot.id)} style={iconDelBtnStyle} title="Remove slot">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-            <button onClick={onClose} style={closeBtnAltStyle}>Close</button>
+          <div>
+            <div className="ui-section-title" style={{ marginBottom: 8 }}>
+              Current availability · {slots.length} slot{slots.length === 1 ? '' : 's'}
+            </div>
+            {loading && slots.length === 0 ? (
+              <div className="ui-week">
+                {[0, 1, 2].map((i) => (
+                  <div className="ui-week-row" key={i}>
+                    <div className="ui-week-day">
+                      <span className="ui-skeleton" style={{ width: 60 }} />
+                    </div>
+                    <div className="ui-week-slots">
+                      <span className="ui-skeleton" style={{ width: 180, height: 20 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : slotsByDay.length === 0 ? (
+              <div
+                className="ui-table-empty"
+                style={{
+                  border: '1px dashed var(--ui-border-strong)',
+                  borderRadius: 10,
+                  padding: '36px 16px',
+                }}
+              >
+                <div className="ui-table-empty-icon">
+                  <CalendarX2 size={20} />
+                </div>
+                <strong>No availability scheduled</strong>
+                <span>Add the first time slot above.</span>
+              </div>
+            ) : (
+              <div className="ui-week">
+                {slotsByDay.map((group) => (
+                  <div className="ui-week-row" key={group.day}>
+                    <div className="ui-week-day">{titleCase(group.day)}</div>
+                    <div className="ui-week-slots">
+                      {group.slots.map((slot) => (
+                        <span
+                          key={slot.id}
+                          className={cx('ui-slot-chip', editingSlotId === slot.id && 'is-editing')}
+                        >
+                          <span className="ui-slot-chip-time">
+                            {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}
+                          </span>
+                          <span className="ui-slot-chip-branch">{slot.branch_name}</span>
+                          <button
+                            type="button"
+                            className="ui-icon-btn"
+                            onClick={() => handleEditSlot(slot)}
+                            aria-label="Edit slot"
+                            title="Edit slot"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            className="ui-icon-btn is-danger"
+                            onClick={() => setPendingDelete(slot)}
+                            aria-label="Remove slot"
+                            title="Remove slot"
+                          >
+                            <X size={14} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      </div>
-    </div>
+
+        <div className="ui-modal-foot">
+          <button type="button" onClick={onClose} className="ui-btn">
+            Done
+          </button>
+        </div>
+      </Modal>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Remove time slot?"
+        confirmLabel="Remove"
+        message={
+          pendingDelete && (
+            <>
+              <strong>
+                {titleCase(pendingDelete.day_of_week)} {pendingDelete.start_time.slice(0, 5)} –{' '}
+                {pendingDelete.end_time.slice(0, 5)}
+              </strong>{' '}
+              at {pendingDelete.branch_name} will be removed from {doctor.name}&apos;s schedule.
+            </>
+          )
+        }
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => (pendingDelete ? handleDeleteSlot(pendingDelete.id) : undefined)}
+      />
+    </>
   );
 }
-
-// Inline styles
-const overlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 50 };
-const modalStyle: React.CSSProperties = { backgroundColor: 'white', borderRadius: '8px', width: '100%', maxWidth: '900px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' };
-const headerStyle: React.CSSProperties = { padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
-const closeBtnStyle: React.CSSProperties = { background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', display: 'flex' };
-const inputGroupStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '0.25rem' };
-const labelStyle: React.CSSProperties = { fontSize: '0.75rem', fontWeight: 600, color: '#374151' };
-const inputStyle: React.CSSProperties = { padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '0.875rem', outline: 'none' };
-const addBtnStyle: React.CSSProperties = { padding: '0.5rem 1rem', border: 'none', backgroundColor: '#10b981', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px', height: '36px' };
-const updateBtnStyle: React.CSSProperties = { padding: '0.5rem 1rem', border: 'none', backgroundColor: '#2563eb', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px', height: '36px' };
-const cancelEditBtnStyle: React.CSSProperties = { padding: '4px 8px', border: 'none', backgroundColor: 'transparent', color: '#6b7280', cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline' };
-const closeBtnAltStyle: React.CSSProperties = { padding: '0.5rem 1.5rem', border: '1px solid #d1d5db', backgroundColor: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500 };
-const thStyle: React.CSSProperties = { textAlign: 'left', padding: '0.75rem 1rem', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' };
-const tdStyle: React.CSSProperties = { padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#374151' };
-const iconEditBtnStyle: React.CSSProperties = { background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', padding: '4px' };
-const iconDelBtnStyle: React.CSSProperties = { background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' };
