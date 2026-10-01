@@ -8,6 +8,7 @@
  * hex codes in components.
  */
 @import 'tailwindcss';
+@import './ui.css';
 
 @theme {
   /* Placeholder brand ramp - replace with the real palette once design
@@ -29,11 +30,7 @@
 
   body {
     margin: 0;
-    font-family:
-      system-ui,
-      -apple-system,
-      'Segoe UI',
-      sans-serif;
+    font-family: var(--ui-font);
   }
 
   /* Respect users who have asked for less motion. Tailwind does not do this

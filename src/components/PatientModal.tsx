@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { X, AlertCircle } from 'lucide-react';
-import { type Hospital } from './HospitalModal';
-import { type Branch } from './BranchModal';
-import { type UserAccount } from './UserModal';
+import React, { useEffect, useState } from 'react';
+
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
+import { type Branch } from './BranchModal';
+import { type Hospital } from './HospitalModal';
+import { Field, Modal, Section, StatusSegment, SwitchRow } from './ui/Modal';
+import { Alert } from './ui/primitives';
+import { type UserAccount } from './UserModal';
 
 export interface Patient {
   id: string;
@@ -70,12 +72,12 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
           const [hRes, bRes, uRes] = await Promise.all([
             api.get('hospitals'),
             api.get('branches'),
-            api.get('user-accounts')
+            api.get('user-accounts'),
           ]);
           setHospitals(hRes.data);
           setBranches(bRes.data);
           const allUsers: UserAccount[] = uRes.data;
-          setUsers(allUsers.filter(u => u.role === 'PATIENT' && u.status === 'ACTIVE'));
+          setUsers(allUsers.filter((u) => u.role === 'PATIENT' && u.status === 'ACTIVE'));
         } catch (err) {
           console.error('Failed to fetch required data for patient modal', err);
         }
@@ -93,7 +95,11 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
       setPhone(patient.phone || '');
       setEmail(patient.email || '');
       // HTML date input expects YYYY-MM-DD
-      setDateOfBirth(patient.date_of_birth ? (new Date(patient.date_of_birth).toISOString().split('T')[0] || '') : '');
+      setDateOfBirth(
+        patient.date_of_birth
+          ? new Date(patient.date_of_birth).toISOString().split('T')[0] || ''
+          : '',
+      );
       setGender(patient.gender || '');
       setAddress(patient.address || '');
       setStatus(patient.status);
@@ -101,9 +107,13 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
       setWeightKg(patient.weight_kg ? patient.weight_kg.toString() : '');
       setBloodGroup(patient.blood_group || '');
       setMaritalStatus(patient.marital_status || '');
-      setEmergencyContacts(patient.emergency_contacts ? JSON.stringify(patient.emergency_contacts) : '');
+      setEmergencyContacts(
+        patient.emergency_contacts ? JSON.stringify(patient.emergency_contacts) : '',
+      );
       setProfileImageUrl(patient.profile_image_url || '');
-      setIsActive(patient.is_active !== undefined && patient.is_active !== null ? patient.is_active : true);
+      setIsActive(
+        patient.is_active !== undefined && patient.is_active !== null ? patient.is_active : true,
+      );
     } else {
       setName('');
       setHospitalId('');
@@ -126,9 +136,7 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
     setError('');
   }, [patient, isOpen]);
 
-  if (!isOpen) return null;
-
-  const availableBranches = branches.filter(b => b.hospital_id === hospitalId);
+  const availableBranches = branches.filter((b) => b.hospital_id === hospitalId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,13 +148,14 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
     setError('');
 
     try {
-      const url = patient
-        ? `patients/${patient.id}`
-        : `patients`;
+      const url = patient ? `patients/${patient.id}` : `patients`;
 
       const method = patient ? 'PUT' : 'POST';
 
-      await api({ method, url, data: {
+      await api({
+        method,
+        url,
+        data: {
           hospital_id: hospitalId,
           branch_id: branchId === '' ? null : branchId,
           user_account_id: userAccountId === '' ? null : userAccountId,
@@ -163,10 +172,9 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
           marital_status: maritalStatus || null,
           emergency_contacts: emergencyContacts ? JSON.parse(emergencyContacts) : null,
           profile_image_url: profileImageUrl || null,
-          is_active: isActive
-        } });
-
-
+          is_active: isActive,
+        },
+      });
 
       onSave();
     } catch (err: unknown) {
@@ -177,269 +185,237 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
   };
 
   return (
-    <div style={overlayStyle}>
-      <div style={modalStyle}>
-        <div style={headerStyle}>
-          <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#111827' }}>
-            {patient ? 'Edit Patient' : 'New Patient'}
-          </h2>
-          <button onClick={onClose} style={closeBtnStyle}><X size={20} /></button>
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      size="lg"
+      title={patient ? 'Edit patient' : 'New patient'}
+      description={patient ? patient.name : 'Register a patient and assign them to a hospital.'}
+    >
+      <form
+        onSubmit={(e) => {
+          void handleSubmit(e);
+        }}
+        className="ui-modal-form"
+      >
+        <div className="ui-modal-body">
+          {error && <Alert>{error}</Alert>}
+
+          <Section title="Basic info">
+            <Field label="Full name" required>
+              <input
+                className="ui-input"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                placeholder="e.g. John Doe"
+              />
+            </Field>
+            <div className="ui-grid-2">
+              <Field label="Date of birth">
+                <input
+                  className="ui-input"
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                />
+              </Field>
+              <Field label="Gender">
+                <select
+                  className="ui-select"
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                >
+                  <option value="">Not specified</option>
+                  <option value="MALE">Male</option>
+                  <option value="FEMALE">Female</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </Field>
+              <Field label="Marital status">
+                <select
+                  className="ui-select"
+                  value={maritalStatus}
+                  onChange={(e) => setMaritalStatus(e.target.value)}
+                >
+                  <option value="">Not specified</option>
+                  <option value="SINGLE">Single</option>
+                  <option value="MARRIED">Married</option>
+                  <option value="DIVORCED">Divorced</option>
+                  <option value="WIDOWED">Widowed</option>
+                </select>
+              </Field>
+              <Field label="Profile image URL">
+                <input
+                  className="ui-input"
+                  type="url"
+                  value={profileImageUrl}
+                  onChange={(e) => setProfileImageUrl(e.target.value)}
+                  placeholder="https://…"
+                />
+              </Field>
+            </div>
+          </Section>
+
+          <Section title="Assignment">
+            <div className="ui-grid-2">
+              <Field label="Hospital" required>
+                <select
+                  className="ui-select"
+                  value={hospitalId}
+                  onChange={(e) => {
+                    setHospitalId(e.target.value);
+                    setBranchId('');
+                  }}
+                  required
+                >
+                  <option value="" disabled>
+                    Select hospital…
+                  </option>
+                  {hospitals.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Branch">
+                <select
+                  className="ui-select"
+                  value={branchId}
+                  onChange={(e) => setBranchId(e.target.value)}
+                  disabled={hospitalId === ''}
+                >
+                  <option value="">No specific branch</option>
+                  {availableBranches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+          </Section>
+
+          <Section title="Contact">
+            <div className="ui-grid-2">
+              <Field label="Email address">
+                <input
+                  className="ui-input"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Optional"
+                />
+              </Field>
+              <Field label="Phone number">
+                <input
+                  className="ui-input"
+                  type="text"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Optional"
+                />
+              </Field>
+            </div>
+            <Field label="Address">
+              <textarea
+                className="ui-textarea"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Full address"
+              />
+            </Field>
+            <Field
+              label="Emergency contacts"
+              hint='JSON array, e.g. [{"name": "Jane Doe", "phone": "1234567890", "relation": "Spouse"}]'
+            >
+              <textarea
+                className="ui-textarea"
+                value={emergencyContacts}
+                onChange={(e) => setEmergencyContacts(e.target.value)}
+                placeholder='[{"name": "Jane Doe", "phone": "1234567890", "relation": "Spouse"}]'
+                style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12 }}
+              />
+            </Field>
+          </Section>
+
+          <Section title="Health">
+            <div className="ui-grid-2">
+              <Field label="Height (cm)">
+                <input
+                  className="ui-input"
+                  type="number"
+                  value={heightCm}
+                  onChange={(e) => setHeightCm(e.target.value)}
+                  placeholder="e.g. 175"
+                />
+              </Field>
+              <Field label="Weight (kg)">
+                <input
+                  className="ui-input"
+                  type="number"
+                  value={weightKg}
+                  onChange={(e) => setWeightKg(e.target.value)}
+                  placeholder="e.g. 70"
+                />
+              </Field>
+              <Field label="Blood group">
+                <select
+                  className="ui-select"
+                  value={bloodGroup}
+                  onChange={(e) => setBloodGroup(e.target.value)}
+                >
+                  <option value="">Not specified</option>
+                  {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+          </Section>
+
+          <Section title="Access">
+            <div className="ui-grid-2">
+              <Field label="Linked user account" hint="Only active patient logins are listed.">
+                <select
+                  className="ui-select"
+                  value={userAccountId}
+                  onChange={(e) => setUserAccountId(e.target.value)}
+                >
+                  <option value="">No account linked</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.username}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Status">
+                <StatusSegment value={status} onChange={setStatus} />
+              </Field>
+            </div>
+            <SwitchRow
+              checked={isActive}
+              onChange={setIsActive}
+              title="Active in system"
+              description="Allow this patient to book appointments and sign in."
+            />
+          </Section>
         </div>
 
-        {error && (
-          <div style={{ margin: '0 1.5rem 1rem', padding: '0.75rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '4px', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <AlertCircle size={16} /> {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ padding: '0 1.5rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-          <div style={inputGroupStyle}>
-            <label style={labelStyle}>Full Name <span style={{ color: 'red' }}>*</span></label>
-            <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              required
-              placeholder="e.g. John Doe"
-              style={inputStyle}
-            />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Hospital <span style={{ color: 'red' }}>*</span></label>
-              <select
-                value={hospitalId}
-                onChange={e => {
-                  setHospitalId(e.target.value);
-                  setBranchId('');
-                }}
-                required
-                style={inputStyle}
-              >
-                <option value="" disabled>Select Hospital...</option>
-                {hospitals.map(h => (
-                  <option key={h.id} value={h.id}>{h.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Branch</label>
-              <select
-                value={branchId}
-                onChange={e => setBranchId(e.target.value)}
-                disabled={hospitalId === ''}
-                style={inputStyle}
-              >
-                <option value="">No specific branch</option>
-                {availableBranches.map(b => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Date of Birth</label>
-              <input
-                type="date"
-                value={dateOfBirth}
-                onChange={e => setDateOfBirth(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Gender</label>
-              <select
-                value={gender}
-                onChange={e => setGender(e.target.value)}
-                style={inputStyle}
-              >
-                <option value="">Not specified</option>
-                <option value="MALE">Male</option>
-                <option value="FEMALE">Female</option>
-                <option value="OTHER">Other</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Email Address</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="Optional"
-                style={inputStyle}
-              />
-            </div>
-
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Phone Number</label>
-              <input
-                type="text"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                placeholder="Optional"
-                style={inputStyle}
-              />
-            </div>
-          </div>
-
-          <div style={inputGroupStyle}>
-            <label style={labelStyle}>Address</label>
-            <textarea
-              value={address}
-              onChange={e => setAddress(e.target.value)}
-              placeholder="Full address"
-              style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }}
-            />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Height (cm)</label>
-              <input
-                type="number"
-                value={heightCm}
-                onChange={e => setHeightCm(e.target.value)}
-                placeholder="e.g. 175"
-                style={inputStyle}
-              />
-            </div>
-
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Weight (kg)</label>
-              <input
-                type="number"
-                value={weightKg}
-                onChange={e => setWeightKg(e.target.value)}
-                placeholder="e.g. 70"
-                style={inputStyle}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Blood Group</label>
-              <select
-                value={bloodGroup}
-                onChange={e => setBloodGroup(e.target.value)}
-                style={inputStyle}
-              >
-                <option value="">Not specified</option>
-                <option value="A+">A+</option>
-                <option value="A-">A-</option>
-                <option value="B+">B+</option>
-                <option value="B-">B-</option>
-                <option value="AB+">AB+</option>
-                <option value="AB-">AB-</option>
-                <option value="O+">O+</option>
-                <option value="O-">O-</option>
-              </select>
-            </div>
-
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Marital Status</label>
-              <select
-                value={maritalStatus}
-                onChange={e => setMaritalStatus(e.target.value)}
-                style={inputStyle}
-              >
-                <option value="">Not specified</option>
-                <option value="SINGLE">Single</option>
-                <option value="MARRIED">Married</option>
-                <option value="DIVORCED">Divorced</option>
-                <option value="WIDOWED">Widowed</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={inputGroupStyle}>
-            <label style={labelStyle}>Emergency Contacts (JSON Array)</label>
-            <textarea
-              value={emergencyContacts}
-              onChange={e => setEmergencyContacts(e.target.value)}
-              placeholder='[{"name": "Jane Doe", "phone": "1234567890", "relation": "Spouse"}]'
-              style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }}
-            />
-          </div>
-
-          <div style={inputGroupStyle}>
-            <label style={labelStyle}>Profile Image URL</label>
-            <input
-              type="url"
-              value={profileImageUrl}
-              onChange={e => setProfileImageUrl(e.target.value)}
-              placeholder="https://example.com/image.jpg"
-              style={inputStyle}
-            />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Linked User Account (App Login)</label>
-              <select
-                value={userAccountId}
-                onChange={e => setUserAccountId(e.target.value)}
-                style={inputStyle}
-              >
-                <option value="">No account linked</option>
-                {users.map(u => (
-                  <option key={u.id} value={u.id}>{u.username} (Patient)</option>
-                ))}
-              </select>
-            </div>
-
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Status</label>
-              <select
-                value={status}
-                onChange={e => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
-                style={inputStyle}
-              >
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
-              </select>
-            </div>
-          </div>
-          
-          <div style={inputGroupStyle}>
-            <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input 
-                type="checkbox" 
-                checked={isActive} 
-                onChange={e => setIsActive(e.target.checked)} 
-              />
-              Is Active Patient (System)
-            </label>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
-            <button type="button" onClick={onClose} style={cancelBtnStyle}>Cancel</button>
-            <button type="submit" disabled={loading} style={saveBtnStyle}>
-              {loading ? 'Saving...' : 'Save Patient'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="ui-modal-foot">
+          <button type="button" onClick={onClose} className="ui-btn">
+            Cancel
+          </button>
+          <button type="submit" disabled={loading} className="ui-btn ui-btn-primary">
+            {loading ? 'Saving…' : patient ? 'Save changes' : 'Create patient'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
-
-// Inline styles
-const overlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 50 };
-const modalStyle: React.CSSProperties = { backgroundColor: 'white', borderRadius: '8px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' };
-const headerStyle: React.CSSProperties = { padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
-const closeBtnStyle: React.CSSProperties = { background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', display: 'flex' };
-const inputGroupStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '0.25rem' };
-const labelStyle: React.CSSProperties = { fontSize: '0.875rem', fontWeight: 500, color: '#374151' };
-const inputStyle: React.CSSProperties = { padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '0.875rem', outline: 'none' };
-const cancelBtnStyle: React.CSSProperties = { padding: '0.5rem 1rem', border: '1px solid #d1d5db', backgroundColor: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500 };
-const saveBtnStyle: React.CSSProperties = { padding: '0.5rem 1rem', border: 'none', backgroundColor: '#2563eb', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500 };

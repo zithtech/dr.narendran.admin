@@ -29,8 +29,10 @@ export function AppProviders({ children }: Props) {
         <ConfigProvider
           theme={{
             token: {
-              colorPrimary: '#0891b2', // cyan-600
-              fontFamily: 'system-ui, sans-serif',
+              // Mirrors --ui-primary / --ui-font in src/styles/ui.css.
+              colorPrimary: '#1f63e0',
+              fontFamily: "'Inter', system-ui, sans-serif",
+              borderRadius: 8,
             },
           }}
         >
