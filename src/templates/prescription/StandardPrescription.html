@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prescription</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Great+Vibes&display=swap');
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #f1f5f9;
+      color: #1a2e2b;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.45;
+      padding: 24px 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .rx-page {
+      width: 100%;
+      max-width: 820px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 36px 40px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+      position: relative;
+      min-height: 1100px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Top Corner Decorative Gradient Wave */
+    .rx-page::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 220px;
+      height: 160px;
+      background: radial-gradient(circle at 100% 0%, #d4edea 0%, #e6f6f5 50%, rgba(255,255,255,0) 75%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Bottom Decorative Corner */
+    .rx-page::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 180px;
+      height: 120px;
+      background: radial-gradient(circle at 100% 100%, #d7eeec 0%, #eaf6f5 60%, rgba(255,255,255,0) 80%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .rx-content-wrapper {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    /* ═════════════════ TOP HEADER ═════════════════ */
+    .rx-top-header {
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 24px;
+      padding-bottom: 22px;
+      border-bottom: 1px solid #e2eceb;
+      margin-bottom: 20px;
+    }
+
+    .rx-doc-block {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex: 1.1;
+    }
+
+    .rx-doc-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: #00544d;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0, 84, 77, 0.2);
+    }
+
+    .rx-doc-avatar svg {
+      width: 28px;
+      height: 28px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .rx-doc-details {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .rx-doc-name {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0d3632;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .rx-doc-qual {
+      font-size: 12px;
+      font-weight: 600;
+      color: #3b5a57;
+      margin-top: 2px;
+    }
+
+    .rx-doc-spec {
+      font-size: 12px;
+      color: #557370;
+      margin-top: 1px;
+    }
+
+    .rx-doc-slogan {
+      font-size: 11px;
+      font-weight: 600;
+      color: #0b8074;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .rx-header-divider {
+      width: 1px;
+      background: #e2eceb;
+    }
+
+    .rx-clinic-block {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .rx-clinic-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #e6f4f3;
+      color: #00544d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .rx-clinic-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    .rx-clinic-details {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .rx-clinic-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0d3632;
+    }
+
+    .rx-clinic-address {
+      font-size: 11.5px;
+      color: #557370;
+      line-height: 1.35;
+      display: flex;
+      align-items: flex-start;
+      gap: 4px;
+    }
+
+    .rx-clinic-phone {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #214340;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* ═════════════════ TITLE & PRESCRIPTION META ═════════════════ */
+    .rx-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .rx-title-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .rx-badge-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      border: 2px solid #00544d;
+      color: #00544d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .rx-main-heading {
+      font-size: 22px;
+      font-weight: 800;
+      color: #0d3632;
+      letter-spacing: -0.01em;
+      line-height: 1.1;
+    }
+
+    .rx-sub-heading {
+      font-size: 12px;
+      color: #617d7b;
+      margin-top: 2px;
+    }
+
+    .rx-title-right {
+      text-align: right;
+      display: grid;
+      grid-template-columns: auto auto;
+      gap: 4px 16px;
+      font-size: 12px;
+    }
+
+    .rx-meta-title {
+      color: #617d7b;
+      font-weight: 500;
+    }
+
+    .rx-meta-val {
+      color: #0d3632;
+      font-weight: 700;
+    }
+
+    /* ═════════════════ PATIENT & APPOINTMENT CARDS ═════════════════ */
+    .rx-card {
+      background: #f1f8f8;
+      border: 1px solid #d9ebe9;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 14px;
+    }
+
+    .rx-two-col-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .rx-col-divider {
+      position: relative;
+    }
+
+    .rx-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #00544d;
+      margin-bottom: 10px;
+    }
+
+    .rx-card-header svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.2;
+    }
+
+    .rx-kv-grid {
+      display: grid;
+      grid-template-columns: 95px 1fr;
+      gap: 6px 12px;
+      font-size: 12px;
+      align-items: center;
+    }
+
+    .rx-k {
+      color: #557370;
+      font-weight: 500;
+    }
+
+    .rx-v {
+      color: #0d3632;
+      font-weight: 600;
+    }
+
+    /* ═════════════════ DIAGNOSIS CARD ═════════════════ */
+    .rx-diagnosis-card {
+      background: #f1f8f8;
+      border: 1px solid #d9ebe9;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 18px;
+    }
+
+    .rx-diag-text {
+      font-size: 12.5px;
+      color: #214340;
+      line-height: 1.5;
+      padding-left: 26px;
+    }
+
+    /* ═════════════════ MEDICINES SECTION ═════════════════ */
+    .rx-section-header-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 800;
+      color: #00544d;
+      margin-bottom: 10px;
+    }
+
+    .rx-section-header-row svg {
+      width: 19px;
+      height: 19px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.2;
+    }
+
+    .rx-table-container {
+      border: 1px solid #cce5e3;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .rx-med-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    .rx-med-table thead tr {
+      background: #00544d;
+      color: #ffffff;
+    }
+
+    .rx-med-table th {
+      padding: 10px 12px;
+      font-weight: 700;
+      font-size: 11.5px;
+      letter-spacing: 0.02em;
+      border-right: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .rx-med-table th:last-child {
+      border-right: none;
+    }
+
+    .rx-med-table td {
+      padding: 11px 12px;
+      border-bottom: 1px solid #e0eceb;
+      border-right: 1px solid #e0eceb;
+      color: #1a2e2b;
+      vertical-align: middle;
+    }
+
+    .rx-med-table td:last-child {
+      border-right: none;
+    }
+
+    .rx-med-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .rx-med-table tbody tr:nth-child(even) {
+      background: #f8fcfa;
+    }
+
+    .rx-med-name {
+      font-weight: 700;
+      color: #0d3632;
+      font-size: 12.5px;
+    }
+
+    .rx-med-inst-sub {
+      font-size: 11px;
+      color: #617d7b;
+      margin-top: 2px;
+    }
+
+    /* ═════════════════ ADVICE CARD ═════════════════ */
+    .rx-advice-card {
+      background: #f1f8f8;
+      border: 1px solid #d9ebe9;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+    }
+
+    .rx-advice-list {
+      padding-left: 26px;
+      font-size: 12px;
+      color: #214340;
+      line-height: 1.55;
+    }
+
+    .rx-advice-list li {
+      margin-bottom: 3px;
+    }
+
+    /* ═════════════════ SIGNATURE BLOCK ═════════════════ */
+    .rx-sig-wrapper {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: auto;
+      margin-bottom: 20px;
+      padding-right: 12px;
+    }
+
+    .rx-sig-card {
+      text-align: center;
+      min-width: 170px;
+    }
+
+    .rx-sig-art {
+      font-family: 'Great Vibes', cursive;
+      font-size: 32px;
+      color: #00544d;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .rx-sig-img {
+      max-height: 48px;
+      max-width: 140px;
+      object-fit: contain;
+      margin: 0 auto 4px auto;
+      display: block;
+    }
+
+    .rx-sig-doctor-name {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0d3632;
+    }
+
+    .rx-sig-qual {
+      font-size: 11px;
+      color: #557370;
+      margin-top: 1px;
+    }
+
+    .rx-sig-spec {
+      font-size: 11px;
+      color: #557370;
+    }
+
+    /* ═════════════════ BOTTOM FOOTER ═════════════════ */
+    .rx-footer-box {
+      background: #f1f8f8;
+      border: 1px solid #d9ebe9;
+      border-radius: 10px;
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #3d5c59;
+      margin-bottom: 12px;
+    }
+
+    .rx-footer-col {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      line-height: 1.35;
+    }
+
+    .rx-footer-divider {
+      width: 1px;
+      height: 28px;
+      background: #d0e4e2;
+    }
+
+    .rx-banner-bottom {
+      background: #00544d;
+      color: #ffffff;
+      text-align: center;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .rx-banner-line {
+      flex: 1;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* ═════════════════ PRINT OPTIMIZATION ═════════════════ */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 8mm 10mm;
+      }
+
+      body {
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      .rx-page {
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 16px 20px !important;
+        max-width: 100% !important;
+        min-height: auto !important;
+      }
+
+      .rx-med-table tr, .rx-card, .rx-diagnosis-card, .rx-advice-card {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="rx-page">
+    <div class="rx-content-wrapper">
+      <!-- 1. DOCTOR & CLINIC TOP HEADER -->
+      <header class="rx-top-header">
+        <div class="rx-doc-block">
+          <div class="rx-doc-avatar">
+            <svg viewBox="0 0 24 24">
+              <path d="M4.8 2.4A2.4 2.4 0 0 0 2.4 4.8v4.8a7.2 7.2 0 0 0 14.4 0V4.8a2.4 2.4 0 0 0-2.4-2.4h-9.6zM9.6 16.8v2.4a3.6 3.6 0 0 0 3.6 3.6h1.2a3.6 3.6 0 0 0 3.6-3.6v-2.4" />
+              <circle cx="18" cy="16.8" r="2.4" />
+            </svg>
+          </div>
+          <div class="rx-doc-details">
+            <h1 class="rx-doc-name">Dr. {{doctor_name}}</h1>
+            <div class="rx-doc-qual">{{doctor_qualification}}</div>
+            <div class="rx-doc-spec">{{doctor_specialization}}</div>
+            <div class="rx-doc-slogan">
+              <span>Better Health</span>
+              <span>•</span>
+              <span>Brighter Tomorrow</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rx-header-divider"></div>
+
+        <div class="rx-clinic-block">
+          <div class="rx-clinic-icon">
+            <svg viewBox="0 0 24 24">
+              <path d="M3 21h18M5 21V7l7-4 7 4v14M10 9h4M12 7v4M9 17h2v4H9zM13 17h2v4h-2z" />
+            </svg>
+          </div>
+          <div class="rx-clinic-details">
+            <div class="rx-clinic-name">{{hospital_name}}</div>
+            <div class="rx-clinic-address">
+              <span>📍</span>
+              <span>{{hospital_address}}</span>
+            </div>
+            {{#branch_name}}
+            <div class="rx-clinic-address" style="color: #0b8074; font-weight: 600;">
+              <span>Branch: {{branch_name}}</span>
+            </div>
+            {{/branch_name}}
+            <div class="rx-clinic-phone">
+              <span>📞</span>
+              <span>{{hospital_phone}}</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- 2. PRESCRIPTION TITLE & METADATA -->
+      <section class="rx-title-row">
+        <div class="rx-title-left">
+          <div class="rx-badge-icon">
+            ℞
+          </div>
+          <div>
+            <div class="rx-main-heading">Prescription</div>
+            <div class="rx-sub-heading">Personalized care for your better health</div>
+          </div>
+        </div>
+
+        <div class="rx-title-right">
+          <span class="rx-meta-title">Prescription ID</span>
+          <span class="rx-meta-val">#{{prescription_id}}</span>
+          <span class="rx-meta-title">Date</span>
+          <span class="rx-meta-val">{{prescription_date}}</span>
+        </div>
+      </section>
+
+      <!-- 3. PATIENT DETAILS & APPOINTMENT DETAILS CARD -->
+      <section class="rx-card">
+        <div class="rx-two-col-grid">
+          <!-- Left: Patient Details -->
+          <div>
+            <div class="rx-card-header">
+              <svg viewBox="0 0 24 24">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
+              </svg>
+              <span>Patient Details</span>
+            </div>
+            <div class="rx-kv-grid">
+              <span class="rx-k">Patient Name</span>
+              <span class="rx-v">{{patient_name}}</span>
+
+              <span class="rx-k">Age / Gender</span>
+              <span class="rx-v">{{patient_age}} / {{patient_gender}}</span>
+
+              <span class="rx-k">Patient ID</span>
+              <span class="rx-v">{{patient_id}}</span>
+            </div>
+          </div>
+
+          <!-- Right: Appointment Details -->
+          <div>
+            <div class="rx-card-header">
+              <svg viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+              <span>Appointment Details</span>
+            </div>
+            <div class="rx-kv-grid">
+              <span class="rx-k">Appointment ID</span>
+              <span class="rx-v">{{appointment_id}}</span>
+
+              <span class="rx-k">Visit Date</span>
+              <span class="rx-v">{{prescription_date}}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. DIAGNOSIS / NOTES -->
+      {{#diagnosis}}
+      <section class="rx-diagnosis-card">
+        <div class="rx-card-header">
+          <svg viewBox="0 0 24 24">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+            <path d="M9 12h6M9 16h6" />
+          </svg>
+          <span>Diagnosis / Notes</span>
+        </div>
+        <div class="rx-diag-text">
+          {{diagnosis}}
+        </div>
+      </section>
+      {{/diagnosis}}
+
+      <!-- 5. MEDICINES TABLE -->
+      <section>
+        <div class="rx-section-header-row">
+          <svg viewBox="0 0 24 24">
+            <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z" />
+            <path d="m8.5 8.5 7 7" />
+          </svg>
+          <span>Medicines</span>
+        </div>
+        {{medicines_table}}
+      </section>
+
+      <!-- 6. LAB TESTS (IF PRESCRIBED) -->
+      {{#lab_tests}}
+      <section style="margin-top: 14px;">
+        <div class="rx-section-header-row" style="color: #0b8074;">
+          <svg viewBox="0 0 24 24">
+            <path d="M9 3h6M10 9h4M10 3v6l-4 8a2 2 0 0 0 1.8 3h8.4a2 2 0 0 0 1.8-3l-4-8V3" />
+          </svg>
+          <span>Lab Tests &amp; Investigations</span>
+        </div>
+        {{lab_tests}}
+      </section>
+      {{/lab_tests}}
+
+      <!-- 7. ADDITIONAL ADVICE -->
+      {{#additional_notes}}
+      <section class="rx-advice-card" style="margin-top: 14px;">
+        <div class="rx-card-header">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41M9 18h6M10 22h4" />
+            <path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z" />
+          </svg>
+          <span>Additional Advice</span>
+        </div>
+        <div class="rx-advice-list">
+          {{additional_notes}}
+        </div>
+      </section>
+      {{/additional_notes}}
+
+      <!-- 8. DOCTOR SIGNATURE BLOCK -->
+      <section class="rx-sig-wrapper">
+        <div class="rx-sig-card">
+          <div class="rx-sig-art">
+            {{doctor_signature}}
+          </div>
+          <div class="rx-sig-doctor-name">Dr. {{doctor_name}}</div>
+          <div class="rx-sig-qual">{{doctor_qualification}}</div>
+          <div class="rx-sig-spec">{{doctor_specialization}}</div>
+        </div>
+      </section>
+
+      <!-- 9. FOOTER BAR -->
+      <footer class="rx-footer-box">
+        <div class="rx-footer-col">
+          <span>📍</span>
+          <div>
+            <strong>{{hospital_name}}</strong><br />
+            {{hospital_address}}
+          </div>
+        </div>
+
+        <div class="rx-footer-divider"></div>
+
+        <div class="rx-footer-col">
+          <span>📞</span>
+          <div>
+            {{hospital_phone}}<br />
+            {{hospital_email}}
+          </div>
+        </div>
+
+        <div class="rx-footer-divider"></div>
+
+        <div class="rx-footer-col">
+          <span>📅</span>
+          <div>
+            <strong>Generated On</strong><br />
+            {{prescription_date}}
+          </div>
+        </div>
+      </footer>
+
+      <!-- 10. BOTTOM BANNER -->
+      <div class="rx-banner-bottom">
+        <div class="rx-banner-line"></div>
+        <span>Thank You For Choosing Us</span>
+        <div class="rx-banner-line"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

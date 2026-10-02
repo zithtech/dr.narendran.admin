@@ -6,6 +6,7 @@ import Branches from './pages/Branches';
 import Doctors from './pages/Doctors';
 import Users from './pages/Users';
 import Patients from './pages/Patients';
+import { PrescriptionTemplatesPage } from './features/prescriptions/pages/PrescriptionTemplatesPage';
 import SidebarLayout from './components/SidebarLayout';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -29,6 +30,7 @@ function App() {
           <Route path="/doctors" element={<Doctors />} />
           <Route path="/patients" element={<Patients />} />
           <Route path="/users" element={<Users />} />
+          <Route path="/prescriptions" element={<PrescriptionTemplatesPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
