@@ -2,6 +2,7 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  FileText,
   GitBranch,
   HeartPulse,
   LogOut,
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { name: 'Doctors', path: '/doctors', icon: Stethoscope },
   { name: 'Patients', path: '/patients', icon: HeartPulse },
   { name: 'User Accounts', path: '/users', icon: UserCog },
+  { name: 'Prescription Templates', path: '/prescriptions', icon: FileText },
 ] as const;
 
 const EXPANDED_KEY = 'adminRailExpanded';
