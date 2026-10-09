@@ -1,13 +1,15 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Branches from './pages/Branches';
-import Doctors from './pages/Doctors';
-import Users from './pages/Users';
-import Patients from './pages/Patients';
-import { PrescriptionTemplatesPage } from './features/prescriptions/pages/PrescriptionTemplatesPage';
+import { BrowserRouter, Navigate,Route, Routes } from 'react-router';
+
 import SidebarLayout from './components/SidebarLayout';
+import { PrescriptionTemplatesPage } from './features/prescriptions/pages/PrescriptionTemplatesPage';
+import Branches from './pages/Branches';
+import Dashboard from './pages/Dashboard';
+import Doctors from './pages/Doctors';
+import Login from './pages/Login';
+import Patients from './pages/Patients';
+import Pharmacy from './pages/Pharmacy';
+import Users from './pages/Users';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('adminToken');
@@ -29,6 +31,7 @@ function App() {
           <Route path="/branches" element={<Branches />} />
           <Route path="/doctors" element={<Doctors />} />
           <Route path="/patients" element={<Patients />} />
+          <Route path="/pharmacy" element={<Pharmacy />} />
           <Route path="/users" element={<Users />} />
           <Route path="/prescriptions" element={<PrescriptionTemplatesPage />} />
         </Route>
