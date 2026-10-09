@@ -36,13 +36,13 @@ import {
   Tooltip,
   Typography,
 } from 'antd';
-import { apiClient } from '@/shared/api/client';
-import axios from 'axios';
 import type { ColumnsType } from 'antd/es/table';
+import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import { ROUTES } from '@/app/routes';
+import { apiClient } from '@/shared/api/client';
 
 const { Text } = Typography;
 const { Option } = Select;
