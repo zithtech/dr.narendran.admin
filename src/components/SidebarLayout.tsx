@@ -3,24 +3,33 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  FlaskConical,
   GitBranch,
   HeartPulse,
   LogOut,
   Stethoscope,
   UserCog,
+  Shield,
+  ExternalLink,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
+import api from '../utils/api';
 
 import { Avatar, cx } from './ui/primitives';
 
 const NAV_ITEMS = [
-  { name: 'Hospitals', path: '/', icon: Building2 },
-  { name: 'Branches', path: '/branches', icon: GitBranch },
-  { name: 'Doctors', path: '/doctors', icon: Stethoscope },
-  { name: 'Patients', path: '/patients', icon: HeartPulse },
-  { name: 'User Accounts', path: '/users', icon: UserCog },
-  { name: 'Prescription Templates', path: '/prescriptions', icon: FileText },
+  { name: 'Hospitals', path: '/', icon: Building2, slug: 'HOSPITALS' },
+  { name: 'Branches', path: '/branches', icon: GitBranch, slug: 'BRANCHES' },
+  { name: 'Doctors', path: '/doctors', icon: Stethoscope, slug: 'DOCTORS' },
+  { name: 'Patients', path: '/patients', icon: HeartPulse, slug: 'PATIENTS' },
+  { name: 'Linked Labs', path: '/labs', icon: FlaskConical, slug: 'LABS' },
+  { name: 'Lab Services', path: '/lab-services', icon: FlaskConical, slug: 'LAB_SERVICES' },
+  { name: 'Linked Medicals', path: '/linked-medicals', icon: Stethoscope, slug: 'LABS' },
+  { name: 'Client Portals', path: '/client-portals', icon: ExternalLink, slug: 'USERS' },
+  { name: 'User Accounts', path: '/users', icon: UserCog, slug: 'USERS' },
+  { name: 'Roles & Permissions', path: '/roles', icon: Shield, slug: 'USERS' },
+  { name: 'Prescription Templates', path: '/prescriptions', icon: FileText, slug: 'PRESCRIPTIONS' },
 ] as const;
 
 const EXPANDED_KEY = 'adminRailExpanded';
@@ -40,6 +49,23 @@ export default function SidebarLayout() {
 
   const currentUsername = localStorage.getItem('adminUsername') ?? 'Super Admin';
   const currentRole = localStorage.getItem('adminRole') ?? 'System Administrator';
+
+  const [roleData, setRoleData] = useState<any>(null);
+
+  useEffect(() => {
+    if (currentRole) {
+      api.get(`rbac/roles/${encodeURIComponent(currentRole)}`)
+        .then(res => setRoleData(res.data))
+        .catch(console.error);
+    }
+  }, [currentRole]);
+
+  const allowedSlugs = roleData?.permissions?.filter((p: any) => p.can_read).map((p: any) => p.module_slug) || [];
+  
+  // Filter nav items: System Admin sees everything, others only see what they have permissions for
+  const visibleNavItems = roleData?.is_system_role 
+    ? NAV_ITEMS 
+    : NAV_ITEMS.filter(item => allowedSlugs.includes(item.slug));
 
   const toggle = () => {
     setIsExpanded((prev) => {
@@ -89,7 +115,7 @@ export default function SidebarLayout() {
         <div className="ui-rail-divider" />
 
         <nav className="ui-rail-nav">
-          {NAV_ITEMS.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive =
               item.path === '/'
                 ? location.pathname === '/'
