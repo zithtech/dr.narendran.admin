@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import { ExternalLink } from 'lucide-react';
+import { Copy, ExternalLink, Mail } from 'lucide-react';
 import { useState } from 'react';
 
 import { type Column, DataView, PrimaryCell } from '../components/ui/DataView';
@@ -21,21 +21,48 @@ export default function ClientPortals() {
     setIsModalOpen(true);
   };
 
-  const deletePortalUser = (u: ClientPortalUser) => {
-    modal.confirm({
-      title: `Revoke Portal Access: ${u.email}`,
-      content: 'Are you sure you want to delete this credential? The user will immediately lose access to the portal.',
-      okText: 'Revoke Access',
-      okType: 'danger',
-      onOk: async () => {
-        try {
-          await api.delete(`client-portals/${u.id}`);
-          void message.success('Portal access revoked');
-          void resource.refresh();
-        } catch (err: any) {
-          void message.error(err.response?.data?.error || 'Failed to delete credential');
-        }
-      },
+  const getPortalUrl = (u: ClientPortalUser) => {
+    return u.portal_token
+      ? `${window.location.origin}/client/login?portal_token=${u.portal_token}`
+      : `${window.location.origin}/client/login`;
+  };
+
+  const copyPortalLink = (u: ClientPortalUser) => {
+    const url = getPortalUrl(u);
+    navigator.clipboard.writeText(url);
+    void message.success(`Copied unique Client Portal link for ${u.email}`);
+  };
+
+  const resendInvite = async (u: ClientPortalUser) => {
+    try {
+      await api.post(`client-portals/${u.id}/resend-invite`);
+      void message.success(`Invitation email with unique login link resent to ${u.email}`);
+      void resource.refresh();
+    } catch (err: any) {
+      void message.error(err.response?.data?.error || 'Failed to resend invitation email');
+    }
+  };
+
+  const deletePortalUser = (u: ClientPortalUser): Promise<void> => {
+    return new Promise((resolve) => {
+      modal.confirm({
+        title: `Revoke Portal Access: ${u.email}`,
+        content: 'Are you sure you want to delete this credential? The user will immediately lose access to the portal.',
+        okText: 'Revoke Access',
+        okType: 'danger',
+        onOk: async () => {
+          try {
+            await api.delete(`client-portals/${u.id}`);
+            void message.success('Portal access revoked');
+            void resource.refresh();
+            resolve();
+          } catch (err: any) {
+            void message.error(err.response?.data?.error || 'Failed to delete credential');
+            resolve();
+          }
+        },
+        onCancel: () => resolve(),
+      });
     });
   };
 
@@ -47,7 +74,7 @@ export default function ClientPortals() {
       cell: (u) => (
         <PrimaryCell
           name={u.email}
-          subtitle={`Portal Role: ${u.role}`}
+          sub={`Portal Role: ${u.role}`}
           onOpen={() => openEditor(u)}
         />
       ),
@@ -57,10 +84,50 @@ export default function ClientPortals() {
       header: 'Assigned Role',
       sort: (u) => u.role,
       cell: (u) => (
-        <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 font-medium">
+        <span className="px-2.5 py-1 text-xs rounded-full bg-sky-100 text-sky-800 font-medium">
           {u.role}
         </span>
       ),
+    },
+    {
+      id: 'portal_link',
+      header: 'Unique Portal Login Link',
+      cell: (u) => {
+        const url = getPortalUrl(u);
+        return (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => copyPortalLink(u)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded transition-colors"
+              title="Copy unique login URL"
+            >
+              <Copy size={13} />
+              <span>Copy Link</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void resendInvite(u)}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded transition-colors"
+              title="Resend invitation email"
+            >
+              <Mail size={13} />
+              <span>Resend Email</span>
+            </button>
+
+            <a
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center p-1 text-gray-400 hover:text-sky-600 transition-colors"
+              title="Open client portal login in new tab"
+            >
+              <ExternalLink size={14} />
+            </a>
+          </div>
+        );
+      },
     },
     {
       id: 'status',
@@ -80,7 +147,7 @@ export default function ClientPortals() {
     <>
       <DataView
         title="Client Portals"
-        subtitle="Manage credentials and email invites for external roles like Lab Admins."
+        subtitle="Manage credentials, unique portal login links, and email invites for external clients and lab partners."
         icon={ExternalLink}
         noun="portal access"
         nounPlural="portal credentials"

@@ -7,7 +7,14 @@ const api = axios.create({
 // Request interceptor for adding the auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('adminToken');
+    const isClientContext =
+      window.location.pathname.startsWith('/portal') ||
+      window.location.pathname.startsWith('/client');
+    const clientToken =
+      localStorage.getItem('labClientToken') || localStorage.getItem('clientPortalToken');
+    const adminToken = localStorage.getItem('adminToken');
+
+    const token = isClientContext ? (clientToken || adminToken) : (adminToken || clientToken);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -23,10 +30,21 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
-      localStorage.removeItem('adminToken');
+      const isClientContext =
+        window.location.pathname.startsWith('/portal') ||
+        window.location.pathname.startsWith('/client');
 
-      if (window.location.pathname !== '/login') {
-        window.location.assign('/login');
+      if (isClientContext) {
+        localStorage.removeItem('labClientToken');
+        localStorage.removeItem('clientPortalToken');
+        if (window.location.pathname !== '/client/login') {
+          window.location.assign('/client/login');
+        }
+      } else {
+        localStorage.removeItem('adminToken');
+        if (window.location.pathname !== '/login') {
+          window.location.assign('/login');
+        }
       }
     }
 

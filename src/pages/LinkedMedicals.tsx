@@ -27,21 +27,26 @@ export default function LinkedMedicals() {
     setIsModalOpen(true);
   };
 
-  const deleteMedical = (m: LinkedMedical) => {
-    modal.confirm({
-      title: `Delete ${m.name}?`,
-      content: 'Are you sure you want to delete this linked medical? This action cannot be undone.',
-      okText: 'Delete',
-      okType: 'danger',
-      onOk: async () => {
-        try {
-          await api.delete(`linked-medicals/${m.id}`);
-          void message.success('Linked medical deleted');
-          void resource.refresh();
-        } catch (err: any) {
-          void message.error(err.response?.data?.error || 'Failed to delete linked medical');
-        }
-      },
+  const deleteMedical = (m: LinkedMedical): Promise<void> => {
+    return new Promise((resolve) => {
+      modal.confirm({
+        title: `Delete ${m.name}?`,
+        content: 'Are you sure you want to delete this linked medical? This action cannot be undone.',
+        okText: 'Delete',
+        okType: 'danger',
+        onOk: async () => {
+          try {
+            await api.delete(`linked-medicals/${m.id}`);
+            void message.success('Linked medical deleted');
+            void resource.refresh();
+            resolve();
+          } catch (err: any) {
+            void message.error(err.response?.data?.error || 'Failed to delete linked medical');
+            resolve();
+          }
+        },
+        onCancel: () => resolve(),
+      });
     });
   };
 

@@ -9,6 +9,7 @@
  */
 @import 'tailwindcss';
 @import './ui.css';
+@import './client-portal.css';
 
 @theme {
   /* Placeholder brand ramp - replace with the real palette once design

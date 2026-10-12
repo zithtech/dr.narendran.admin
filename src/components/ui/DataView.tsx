@@ -3,7 +3,10 @@ import {
   ArrowDown,
   ArrowRight,
   ArrowUp,
+  Building2,
   ChevronDown,
+  GitBranch,
+  HeartPulse,
   type LucideIcon,
   Pencil,
   Plus,
@@ -12,9 +15,11 @@ import {
   Search,
   SearchX,
   SlidersHorizontal,
+  Stethoscope,
   Trash2,
 } from 'lucide-react';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 
 import type { Resource } from '../../hooks/useResource';
 import { timeAgo } from '../../lib/format';
@@ -144,6 +149,20 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
   const [panelOpen, setPanelOpen] = useState(isWide);
   const [pendingDelete, setPendingDelete] = useState<T[] | null>(null);
   const [now, setNow] = useState(() => Date.now());
+
+  const [hubDropdownOpen, setHubDropdownOpen] = useState(false);
+  const hubDropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (hubDropdownRef.current && !hubDropdownRef.current.contains(e.target as Node)) {
+        setHubDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Keeps "Last synced 2 minutes ago" honest without a refetch.
   useEffect(() => {
@@ -305,16 +324,70 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
     <div className="ui-page">
       <header className="ui-header">
         <div className="ui-header-title">
-          <button
-            type="button"
-            className="ui-header-icon"
-            onClick={() => setPanelOpen((o) => !o)}
-            aria-label={panelOpen ? 'Hide filters' : 'Show filters'}
-            title={panelOpen ? 'Hide filters' : 'Show filters'}
-          >
-            <Icon size={16} strokeWidth={2} />
-          </button>
-          <h1>{title}</h1>
+          <div className="ui-hub-selector-wrap" ref={hubDropdownRef}>
+            <button
+              type="button"
+              className={cx('ui-hub-btn', hubDropdownOpen && 'is-open')}
+              onClick={() => setHubDropdownOpen((o) => !o)}
+              aria-expanded={hubDropdownOpen}
+              aria-label={`${title} hub menu`}
+            >
+              <Icon size={16} strokeWidth={2.2} className="ui-hub-icon" />
+              <span className="ui-hub-title">{title}</span>
+              <ChevronDown size={14} className={cx('ui-hub-chevron', hubDropdownOpen && 'is-rotated')} />
+            </button>
+
+            {hubDropdownOpen && (
+              <div className="ui-hub-dropdown">
+                <div className="ui-hub-dropdown-label">Quick Switch Hub</div>
+                <button
+                  type="button"
+                  className={cx('ui-hub-dropdown-item', title === 'Hospitals' && 'is-active')}
+                  onClick={() => {
+                    setHubDropdownOpen(false);
+                    void navigate('/');
+                  }}
+                >
+                  <Building2 size={14} />
+                  <span>Hospitals</span>
+                </button>
+                <button
+                  type="button"
+                  className={cx('ui-hub-dropdown-item', title === 'Branches' && 'is-active')}
+                  onClick={() => {
+                    setHubDropdownOpen(false);
+                    void navigate('/branches');
+                  }}
+                >
+                  <GitBranch size={14} />
+                  <span>Branches</span>
+                </button>
+                <button
+                  type="button"
+                  className={cx('ui-hub-dropdown-item', title === 'Doctors' && 'is-active')}
+                  onClick={() => {
+                    setHubDropdownOpen(false);
+                    void navigate('/doctors');
+                  }}
+                >
+                  <Stethoscope size={14} />
+                  <span>Doctors</span>
+                </button>
+                <button
+                  type="button"
+                  className={cx('ui-hub-dropdown-item', title === 'Patients' && 'is-active')}
+                  onClick={() => {
+                    setHubDropdownOpen(false);
+                    void navigate('/patients');
+                  }}
+                >
+                  <HeartPulse size={14} />
+                  <span>Patients</span>
+                </button>
+              </div>
+            )}
+          </div>
+
           <span className="ui-header-sub">{subtitle}</span>
         </div>
 
@@ -344,17 +417,18 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
               }}
               aria-label={`Search ${nounPlural}`}
             />
+            <span className="ui-search-kbd">⌘K</span>
           </div>
           <button
             type="button"
-            className={cx('ui-btn', activeRules > 0 && 'ui-btn-soft')}
+            className={cx('ui-btn ui-btn-pill', activeRules > 0 && 'ui-btn-soft')}
             onClick={() => setPanelOpen((o) => !o)}
           >
             <SlidersHorizontal size={15} />
             Filters
             {activeRules > 0 && <span className="ui-btn-count">{activeRules}</span>}
           </button>
-          <button type="button" className="ui-btn ui-btn-primary" onClick={onCreate}>
+          <button type="button" className="ui-btn ui-btn-primary ui-btn-pill" onClick={onCreate}>
             <Plus size={16} strokeWidth={2.4} />
             {createLabel}
           </button>

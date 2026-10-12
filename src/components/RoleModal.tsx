@@ -104,7 +104,7 @@ export default function RoleModal({ isOpen, onClose, role, onSave }: RoleModalPr
     >
       <form onSubmit={(e) => void handleSubmit(e)} className="ui-modal-form">
         <div className="ui-modal-body">
-          <Section>
+          <Section title="Role Information">
             <Field label="Role Name" required>
               <input
                 className="ui-input"

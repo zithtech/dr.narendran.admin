@@ -1,6 +1,6 @@
 import { App } from 'antd';
 import React, { useEffect, useState } from 'react';
-import { ShieldAlert } from 'lucide-react';
+import { Copy, Mail, Send, ShieldAlert, Sparkles } from 'lucide-react';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
 import { Field, Modal, Section, StatusSegment } from './ui/Modal';
@@ -11,6 +11,8 @@ export interface ClientPortalUser {
   email: string;
   role: string;
   status: 'ACTIVE' | 'INACTIVE';
+  portal_token?: string;
+  login_url?: string;
   created_at: string;
 }
 
@@ -30,6 +32,7 @@ export default function ClientPortalModal({ isOpen, onClose, user, onSave }: Cli
   const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
   
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState('');
   const [roles, setRoles] = useState<any[]>([]);
 
@@ -59,6 +62,28 @@ export default function ClientPortalModal({ isOpen, onClose, user, onSave }: Cli
     setError('');
   }, [user, isOpen]);
 
+  const uniquePortalUrl = user?.portal_token
+    ? `${window.location.origin}/client/login?portal_token=${user.portal_token}`
+    : `${window.location.origin}/client/login`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(uniquePortalUrl);
+    void message.success('Unique Client Portal link copied to clipboard!');
+  };
+
+  const handleResendInvite = async () => {
+    if (!user) return;
+    setResending(true);
+    try {
+      await api.post(`client-portals/${user.id}/resend-invite`);
+      void message.success(`Invitation email with portal login link resent to ${user.email}`);
+    } catch (err: unknown) {
+      void message.error(getErrorMessage(err, 'Failed to resend invite email.'));
+    } finally {
+      setResending(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user && !password) {
@@ -81,16 +106,17 @@ export default function ClientPortalModal({ isOpen, onClose, user, onSave }: Cli
         method,
         url,
         data: {
-          username: email, // Backend uses username field for email
+          username: email,
           password: password || undefined,
           role,
           status,
         },
       });
 
-      // Show the mock email toast
       if (!user) {
-        void message.success(`Portal invite link sent to ${email}`);
+        void message.success(`Client portal account created! Unique link sent to ${email}`);
+      } else {
+        void message.success('Client portal account updated successfully.');
       }
 
       onSave();
@@ -106,8 +132,8 @@ export default function ClientPortalModal({ isOpen, onClose, user, onSave }: Cli
       open={isOpen}
       onClose={onClose}
       variant="drawer"
-      title={user ? 'Edit Portal Access' : 'Create Portal Access'}
-      description="Create login credentials for external users like Lab Technicians. They will receive an email invite to access their portal."
+      title={user ? 'Edit Client Portal Account' : 'Create Client Portal Account'}
+      description="Create login credentials for external users like Lab Technicians. A unique client portal link will be generated and sent via email."
     >
       <form onSubmit={(e) => void handleSubmit(e)} className="ui-modal-form" autoComplete="off">
         <div className="ui-modal-body">
@@ -122,7 +148,48 @@ export default function ClientPortalModal({ isOpen, onClose, user, onSave }: Cli
             </div>
           )}
 
-          <Section title="User Credentials">
+          {/* Unique Link preview for existing user */}
+          {user && (
+            <div className="mb-4 p-3.5 bg-sky-50/70 border border-sky-200 rounded-lg">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold uppercase tracking-wider text-sky-900 flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-sky-600" />
+                  Unique Client Portal Login Link
+                </span>
+                <button
+                  type="button"
+                  onClick={handleResendInvite}
+                  disabled={resending}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-sky-700 hover:text-sky-900 underline"
+                >
+                  <Send size={12} />
+                  <span>{resending ? 'Sending…' : 'Resend Email'}</span>
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={uniquePortalUrl}
+                  className="w-full text-xs font-mono bg-white border border-sky-200 rounded px-2.5 py-1.5 text-gray-700 select-all"
+                />
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  title="Copy link"
+                  className="px-2.5 py-1.5 text-xs font-medium text-white bg-sky-600 hover:bg-sky-700 rounded transition-colors whitespace-nowrap flex items-center gap-1"
+                >
+                  <Copy size={13} />
+                  <span>Copy</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-sky-700 mt-1.5 m-0">
+                This unique link allows the client to access only their designated Client Portal.
+              </p>
+            </div>
+          )}
+
+          <Section title="Client Credentials">
             <Field label="Email Address" required>
               <input
                 className="ui-input"
@@ -149,6 +216,15 @@ export default function ClientPortalModal({ isOpen, onClose, user, onSave }: Cli
                 autoComplete="new-password"
               />
             </Field>
+
+            {!user && (
+              <div className="mt-2 p-2.5 bg-blue-50/70 border border-blue-200/60 rounded text-xs text-blue-800 flex items-start gap-2">
+                <Mail size={15} className="flex-shrink-0 text-blue-600 mt-0.5" />
+                <span>
+                  Upon creation, the system will automatically generate a unique Client Portal link and email it to this address with their credentials.
+                </span>
+              </div>
+            )}
           </Section>
 
           <Section title="Portal Permissions">

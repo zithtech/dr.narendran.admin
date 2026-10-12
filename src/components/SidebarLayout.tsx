@@ -10,13 +10,12 @@ import {
   Stethoscope,
   UserCog,
   Shield,
-  ExternalLink,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import api from '../utils/api';
 
-import { Avatar, cx } from './ui/primitives';
+import { cx } from './ui/primitives';
 
 const NAV_ITEMS = [
   { name: 'Hospitals', path: '/', icon: Building2, slug: 'HOSPITALS' },
@@ -26,7 +25,6 @@ const NAV_ITEMS = [
   { name: 'Linked Labs', path: '/labs', icon: FlaskConical, slug: 'LABS' },
   { name: 'Lab Services', path: '/lab-services', icon: FlaskConical, slug: 'LAB_SERVICES' },
   { name: 'Linked Medicals', path: '/linked-medicals', icon: Stethoscope, slug: 'LABS' },
-  { name: 'Client Portals', path: '/client-portals', icon: ExternalLink, slug: 'USERS' },
   { name: 'User Accounts', path: '/users', icon: UserCog, slug: 'USERS' },
   { name: 'Roles & Permissions', path: '/roles', icon: Shield, slug: 'USERS' },
   { name: 'Prescription Templates', path: '/prescriptions', icon: FileText, slug: 'PRESCRIPTIONS' },
@@ -38,7 +36,7 @@ function readExpanded(): boolean {
   try {
     return localStorage.getItem(EXPANDED_KEY) === '1';
   } catch {
-    return false;
+    return true; // Default expanded for modern layout
   }
 }
 
@@ -49,6 +47,14 @@ export default function SidebarLayout() {
 
   const currentUsername = localStorage.getItem('adminUsername') ?? 'Super Admin';
   const currentRole = localStorage.getItem('adminRole') ?? 'System Administrator';
+
+  const userInitials = (currentUsername || 'SA')
+    .trim()
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'SA';
 
   const [roleData, setRoleData] = useState<any>(null);
 
@@ -73,7 +79,7 @@ export default function SidebarLayout() {
       try {
         localStorage.setItem(EXPANDED_KEY, next ? '1' : '0');
       } catch {
-        /* storage unavailable: preference just isn't remembered */
+        /* storage unavailable */
       }
       return next;
     });
@@ -90,29 +96,29 @@ export default function SidebarLayout() {
     <div className="ui-shell">
       <aside className={cx('ui-rail', isExpanded && 'is-expanded')} aria-label="Main navigation">
         <div className="ui-rail-brand">
-          <span className="ui-rail-logo">
-            <HeartPulse size={15} strokeWidth={2.4} />
-          </span>
-          {isExpanded && (
-            <span className="ui-rail-brand-text">
-              <span className="ui-rail-brand-name">HMS Admin</span>
-              <span className="ui-rail-brand-sub">Dr Narendran</span>
+          <div className="ui-rail-brand-main" onClick={!isExpanded ? toggle : undefined} role={!isExpanded ? 'button' : undefined}>
+            <span className="ui-rail-logo">
+              <HeartPulse size={16} strokeWidth={2.4} />
             </span>
-          )}
+            {isExpanded && (
+              <span className="ui-rail-brand-text">
+                <span className="ui-rail-brand-name">HMS Admin</span>
+                <span className="ui-rail-brand-sub">Dr Narendran</span>
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            className="ui-rail-collapse-btn"
+            onClick={toggle}
+            title={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+            aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+          >
+            {isExpanded ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+          </button>
         </div>
 
-        <button
-          type="button"
-          className="ui-rail-item ui-rail-toggle"
-          onClick={toggle}
-          data-tip="Expand"
-          aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
-        >
-          {isExpanded ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-          {isExpanded && <span className="ui-rail-item-label">Collapse</span>}
-        </button>
-
-        <div className="ui-rail-divider" />
+        {isExpanded && <div className="ui-rail-category">MAIN</div>}
 
         <nav className="ui-rail-nav">
           {visibleNavItems.map((item) => {
@@ -140,26 +146,47 @@ export default function SidebarLayout() {
           })}
         </nav>
 
+        {/* Footer with ACCOUNT section and User Card matching Image 2 */}
+        {/* Footer with logged-in user card */}
         <div className="ui-rail-footer">
-          <div className="ui-rail-user" title={`${currentUsername} · ${currentRole}`}>
-            <Avatar name={currentUsername} size={32} />
+          {/* User Card */}
+          <div
+            className={cx('ui-rail-user-card', !isExpanded && 'is-collapsed')}
+            title={`${currentUsername} · ${currentRole}`}
+          >
+            <div className="ui-rail-user-avatar" onClick={!isExpanded ? toggle : undefined}>
+              {userInitials}
+            </div>
             {isExpanded && (
-              <span className="ui-rail-user-meta">
-                <span className="ui-rail-user-name">{currentUsername}</span>
-                <span className="ui-rail-user-role">{currentRole}</span>
-              </span>
+              <>
+                <div className="ui-rail-user-info" onClick={toggle}>
+                  <span className="ui-rail-user-name">{currentUsername}</span>
+                  <span className="ui-rail-user-sub">{currentRole}</span>
+                </div>
+                <button
+                  type="button"
+                  className="ui-rail-user-logout-btn"
+                  onClick={handleLogout}
+                  title="Log out"
+                  aria-label="Log out"
+                >
+                  <LogOut size={16} strokeWidth={1.8} />
+                </button>
+              </>
             )}
           </div>
-          <button
-            type="button"
-            className="ui-rail-item"
-            onClick={handleLogout}
-            data-tip="Log out"
-            aria-label="Log out"
-          >
-            <LogOut size={18} strokeWidth={1.8} />
-            {isExpanded && <span className="ui-rail-item-label">Log out</span>}
-          </button>
+
+          {!isExpanded && (
+            <button
+              type="button"
+              className="ui-rail-item ui-rail-logout-collapsed"
+              onClick={handleLogout}
+              data-tip="Log out"
+              aria-label="Log out"
+            >
+              <LogOut size={18} strokeWidth={1.8} />
+            </button>
+          )}
         </div>
       </aside>
 

@@ -70,7 +70,7 @@ export default function LabServiceModal({ isOpen, onClose, service, onSave }: La
     >
       <form onSubmit={(e) => void handleSubmit(e)} className="ui-modal-form">
         <div className="ui-modal-body">
-          <Section>
+          <Section title="Service Details">
             <Field label="Service Name" required>
               <input
                 className="ui-input"

@@ -2,6 +2,7 @@ import { App } from 'antd';
 import { FlaskConical } from 'lucide-react';
 import { useState } from 'react';
 
+import CreateLabPortalModal, { type LabWithPortal } from '../components/CreateLabPortalModal';
 import LabModal, { type Lab } from '../components/LabModal';
 import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
 import { addedFacet, statusFacet } from '../components/ui/facets';
@@ -20,6 +21,9 @@ export default function Labs() {
   const { message } = App.useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLab, setEditingLab] = useState<Lab | null>(null);
+
+  const [portalLab, setPortalLab] = useState<LabWithPortal | null>(null);
+  const [isPortalModalOpen, setIsPortalModalOpen] = useState(false);
 
   const openEditor = (lab: Lab | null) => {
     setEditingLab(lab);
@@ -85,6 +89,44 @@ export default function Labs() {
       cell: (l) => <StatusDot active={l.status === 'ACTIVE'} />,
     },
     {
+      id: 'portal',
+      header: 'Client Portal',
+      cell: (l: any) => {
+        if (l.portal_account) {
+          return (
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Portal Active
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setPortalLab(l);
+                  setIsPortalModalOpen(true);
+                }}
+                className="ui-btn ui-btn-sm text-xs py-0.5 px-2 h-6"
+                title="Manage Portal Details"
+              >
+                Manage
+              </button>
+            </div>
+          );
+        }
+        return (
+          <button
+            type="button"
+            onClick={() => {
+              setPortalLab(l);
+              setIsPortalModalOpen(true);
+            }}
+            className="ui-btn ui-btn-sm text-xs py-0.5 px-2.5 h-6 text-sky-700 border-sky-300 hover:bg-sky-50 whitespace-nowrap font-medium"
+          >
+            Create Client Portal
+          </button>
+        );
+      },
+    },
+    {
       id: 'activity',
       header: 'Last activity',
       sort: (l) => new Date(l.updated_at || l.created_at).getTime(),
@@ -125,6 +167,15 @@ export default function Labs() {
         onSave={() => {
           setIsModalOpen(false);
           void message.success(editingLab ? 'Lab updated' : 'Lab created');
+          void resource.refresh();
+        }}
+      />
+
+      <CreateLabPortalModal
+        isOpen={isPortalModalOpen}
+        onClose={() => setIsPortalModalOpen(false)}
+        lab={portalLab}
+        onSuccess={() => {
           void resource.refresh();
         }}
       />

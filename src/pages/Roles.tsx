@@ -4,7 +4,6 @@ import { useState } from 'react';
 
 import RoleModal, { type Role } from '../components/RoleModal';
 import { type Column, DataView, PrimaryCell } from '../components/ui/DataView';
-import { ActivityCell, StatusDot } from '../components/ui/primitives';
 import { useResource } from '../hooks/useResource';
 import api from '../utils/api';
 
@@ -25,21 +24,26 @@ export default function Roles() {
     setIsModalOpen(true);
   };
 
-  const deleteRole = (r: Role) => {
-    modal.confirm({
-      title: `Delete Role: ${r.name}`,
-      content: 'Are you sure you want to delete this role?',
-      okText: 'Delete',
-      okType: 'danger',
-      onOk: async () => {
-        try {
-          await api.delete(`rbac/roles/${encodeURIComponent(r.name)}`);
-          void message.success('Role deleted');
-          void resource.refresh();
-        } catch (err: any) {
-          void message.error(err.response?.data?.error || 'Failed to delete role');
-        }
-      },
+  const deleteRole = (r: Role): Promise<void> => {
+    return new Promise((resolve) => {
+      modal.confirm({
+        title: `Delete Role: ${r.name}`,
+        content: 'Are you sure you want to delete this role?',
+        okText: 'Delete',
+        okType: 'danger',
+        onOk: async () => {
+          try {
+            await api.delete(`rbac/roles/${encodeURIComponent(r.name)}`);
+            void message.success('Role deleted');
+            void resource.refresh();
+            resolve();
+          } catch (err: any) {
+            void message.error(err.response?.data?.error || 'Failed to delete role');
+            resolve();
+          }
+        },
+        onCancel: () => resolve(),
+      });
     });
   };
 
@@ -51,7 +55,7 @@ export default function Roles() {
       cell: (r) => (
         <PrimaryCell
           name={r.name}
-          subtitle={r.description}
+          sub={r.description}
           onOpen={() => openEditor(r)}
         />
       ),
