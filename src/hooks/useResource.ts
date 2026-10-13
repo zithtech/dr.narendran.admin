@@ -12,6 +12,11 @@ export interface Resource<T> {
   refresh: () => Promise<void>;
 }
 
+interface ListResponse<T> {
+  data?: T[];
+  medicines?: T[];
+}
+
 /** Loads a list endpoint (`GET /api/<endpoint>`) and exposes a refresh handle. */
 export function useResource<T>(endpoint: string, errorLabel: string): Resource<T> {
   const [items, setItems] = useState<T[]>([]);
@@ -22,9 +27,17 @@ export function useResource<T>(endpoint: string, errorLabel: string): Resource<T
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get<any>(endpoint);
+      const response = await api.get<T[] | ListResponse<T>>(endpoint);
       const data = response.data;
-      setItems(Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []));
+      if (Array.isArray(data)) {
+        setItems(data);
+      } else if (Array.isArray(data.data)) {
+        setItems(data.data);
+      } else if (Array.isArray(data.medicines)) {
+        setItems(data.medicines);
+      } else {
+        setItems([]);
+      }
       setError('');
       setSyncedAt(Date.now());
     } catch (err: unknown) {

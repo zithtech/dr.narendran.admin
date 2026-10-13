@@ -8,12 +8,12 @@
 
 /* eslint-disable jsx-a11y/label-has-associated-control */
 
+import axios from 'axios';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 
 import { ROUTES } from '@/app/routes';
 import { apiClient } from '@/shared/api/client';
-import axios from 'axios';
 
 export function TenantLogin() {
   const { tenantCode } = useParams<{ tenantCode: string }>();

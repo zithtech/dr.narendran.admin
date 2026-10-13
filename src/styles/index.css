@@ -10,6 +10,8 @@
 @import 'tailwindcss';
 @import './ui.css';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* Placeholder brand ramp - replace with the real palette once design
      provides one. Named `brand` so a rename never touches components. */

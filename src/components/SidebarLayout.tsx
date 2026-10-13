@@ -6,6 +6,7 @@ import {
   GitBranch,
   HeartPulse,
   LogOut,
+  Pill,
   Stethoscope,
   UserCog,
 } from 'lucide-react';
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { name: 'Branches', path: '/branches', icon: GitBranch },
   { name: 'Doctors', path: '/doctors', icon: Stethoscope },
   { name: 'Patients', path: '/patients', icon: HeartPulse },
+  { name: 'Pharmacy', path: '/pharmacy', icon: Pill },
   { name: 'User Accounts', path: '/users', icon: UserCog },
   { name: 'Prescription Templates', path: '/prescriptions', icon: FileText },
 ] as const;

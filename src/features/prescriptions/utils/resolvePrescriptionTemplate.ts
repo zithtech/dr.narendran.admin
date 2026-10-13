@@ -6,11 +6,11 @@ import type {
 } from '../types/template';
 
 /**
- * Generates dynamic HTML table for medicines matching the teal prescription design
+ * Generates clean, professional print table for medicines on doctor letterhead
  */
 export function renderMedicinesTableHtml(medicines?: MedicineItem[]): string {
   if (!medicines || medicines.length === 0) {
-    return `<div style="padding: 12px; text-align: center; color: #829e9b; background: #f8fcfa; border: 1px dashed #cce5e3; border-radius: 8px;">No medications prescribed.</div>`;
+    return `<div style="padding: 6px 0; color: #64748b; font-style: italic; font-size: 11.5px;">No medications prescribed.</div>`;
   }
 
   const rows = medicines
@@ -21,11 +21,9 @@ export function renderMedicinesTableHtml(medicines?: MedicineItem[]): string {
 
       return `
       <tr>
-        <td style="width: 38px; text-align: center; font-weight: 700; color: #00544d;">${index + 1}</td>
-        <td>
-          <div class="rx-med-name">${escapeHtml(med.name)}</div>
-        </td>
-        <td><strong>${escapeHtml(dosageStr)}</strong></td>
+        <td style="width: 28px; text-align: center;">${index + 1}</td>
+        <td><strong>${escapeHtml(med.name)}</strong></td>
+        <td>${escapeHtml(dosageStr)}</td>
         <td>${escapeHtml(med.frequency || '-')}</td>
         <td>${escapeHtml(med.duration || '-')}</td>
         <td>${escapeHtml(instructionsText)}</td>
@@ -35,28 +33,26 @@ export function renderMedicinesTableHtml(medicines?: MedicineItem[]): string {
     .join('\n');
 
   return `
-    <div class="rx-table-container">
-      <table class="rx-med-table">
-        <thead>
-          <tr>
-            <th style="width: 38px; text-align: center;">#</th>
-            <th>Medicine</th>
-            <th>Dosage</th>
-            <th>Frequency</th>
-            <th>Duration</th>
-            <th>Instructions</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows}
-        </tbody>
-      </table>
-    </div>
+    <table class="rx-medicine-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Medicine</th>
+          <th>Dosage</th>
+          <th>Frequency</th>
+          <th>Duration</th>
+          <th>Instructions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
   `.trim();
 }
 
 /**
- * Generates dynamic HTML table/list for lab tests
+ * Generates clean, professional print table for lab tests
  */
 export function renderLabTestsHtml(labTests?: LabTestItem[]): string {
   if (!labTests || labTests.length === 0) {
@@ -69,7 +65,7 @@ export function renderLabTestsHtml(labTests?: LabTestItem[]): string {
       const inst = test.instructions || '-';
       return `
       <tr>
-        <td style="width: 38px; text-align: center; font-weight: 700; color: #0b8074;">${index + 1}</td>
+        <td style="width: 28px; text-align: center;">${index + 1}</td>
         <td><strong>${escapeHtml(name)}</strong></td>
         <td>${escapeHtml(inst)}</td>
       </tr>
@@ -78,20 +74,18 @@ export function renderLabTestsHtml(labTests?: LabTestItem[]): string {
     .join('\n');
 
   return `
-    <div class="rx-table-container" style="border-color: #bbf7d0;">
-      <table class="rx-med-table">
-        <thead>
-          <tr style="background: #0b8074;">
-            <th style="width: 38px; text-align: center;">#</th>
-            <th>Test Name</th>
-            <th>Instructions</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows}
-        </tbody>
-      </table>
-    </div>
+    <table class="rx-lab-table">
+      <thead>
+        <tr>
+          <th style="width: 28px; text-align: center;">#</th>
+          <th>Test Name</th>
+          <th>Instructions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
   `.trim();
 }
 
@@ -145,23 +139,23 @@ export function resolvePrescriptionTemplate(
   const labTestsHtml = renderLabTestsHtml(rx.lab_tests);
 
   const values: Record<string, string> = {
-    hospital_name: hosp.name || 'Dr. Narendran Clinic',
-    hospital_address: hosp.address || 'No. 12, Green Park Road, Villupuram - 605602, Tamil Nadu',
-    hospital_phone: hosp.phone || '+91 98765 43210',
-    hospital_email: hosp.email || 'care@drnarendranclinic.com',
-    hospital_website: hosp.website || 'www.drnarendranclinic.com',
+    hospital_name: hosp.name || 'Annaamalai Cancer Center',
+    hospital_address: hosp.address || 'No. 18, Kottivakkam Kuppam Rd, Thiruvalluvar Nagar, Thiruvanmiyur, Chennai, Tamil Nadu - 600 041.',
+    hospital_phone: hosp.phone || '+91 84380 56883',
+    hospital_email: hosp.email || 'narenonco@gmail.com',
+    hospital_website: hosp.website || 'www.drnarendranoncologist.com',
     hospital_logo: '',
 
     branch_name: branch.name || '',
     branch_address: branch.address || '',
     branch_phone: branch.phone || '',
 
-    doctor_name: cleanDocName || 'Narendran',
-    doctor_qualification: doc.qualification || 'MBBS, MD (Internal Medicine)',
-    doctor_specialization: doc.specialization || 'Consultant Physician',
-    doctor_registration_number: doc.medical_registration_number || '',
-    doctor_phone: doc.phone || '+91 98765 43210',
-    doctor_email: doc.email || 'care@drnarendranclinic.com',
+    doctor_name: cleanDocName || 'S. Narendran',
+    doctor_qualification: doc.qualification || 'M.D (RT)',
+    doctor_specialization: doc.specialization || 'Consultant Oncologist.',
+    doctor_registration_number: doc.medical_registration_number || '106226',
+    doctor_phone: doc.phone || '+91 84380 56883',
+    doctor_email: doc.email || 'narenonco@gmail.com',
     doctor_clinic_address: doc.clinic_address || '',
     doctor_signature: signatureHtml,
 
@@ -186,21 +180,45 @@ export function resolvePrescriptionTemplate(
     medicines_table: medicinesTableHtml,
     lab_tests: labTestsHtml,
 
+    // Backward-compatibility aliases for uppercase & alternate conventions
+    PATIENT_NAME: pat.name || 'BHARATHI M',
+    PATIENT_ID: pat.patient_id || 'HMS-2026-0456',
+    PATIENT_AGE: pat.age || '28 Years',
+    PATIENT_GENDER: pat.gender || 'Female',
+    PATIENT_DATE: rx.prescription_date ? formatDate(rx.prescription_date) : formatDate(new Date().toISOString()),
+    DIAGNOSIS: rx.diagnosis || '',
+    MEDICINES: medicinesTableHtml,
+    medicines: medicinesTableHtml,
+    LAB_TESTS: labTestsHtml,
+    ADDITIONAL_NOTES: additionalNotesHtml,
+    DOCTOR_NAME: cleanDocName || 'S. Narendran',
+    DOCTOR_REG_NO: doc.medical_registration_number || '106226',
+    DOCTOR_QUALIFICATION: doc.qualification || 'M.D (RT)',
+    DOCTOR_SPECIALIZATION: doc.specialization || 'Consultant Oncologist.',
+    E_SIGNATURE: signatureHtml,
+    e_signature: signatureHtml,
+    E_SIGN: signatureHtml,
+    e_sign: signatureHtml,
+
     ...(context.custom_data || {}),
   };
 
   let rendered = templateHtml;
   const resolvedKeys: string[] = [];
 
-  // Conditional blocks
-  rendered = rendered.replace(/\{\{#([a-zA-Z0-9_]+)\}\}([\s\S]*?)\{\{\/\1\}\}/g, (_match, key, content) => {
-    const val = values[key];
-    if (val && val.trim() !== '') {
-      resolvedKeys.push(key);
-      return content;
-    }
-    return '';
-  });
+  // Conditional blocks (loop to support nested blocks)
+  let prevRendered = '';
+  while (rendered !== prevRendered) {
+    prevRendered = rendered;
+    rendered = rendered.replace(/\{\{#([a-zA-Z0-9_]+)\}\}([\s\S]*?)\{\{\/\1\}\}/g, (_match, key, content) => {
+      const val = values[key];
+      if (val && val.trim() !== '') {
+        resolvedKeys.push(key);
+        return content;
+      }
+      return '';
+    });
+  }
 
   // Direct replacement
   rendered = rendered.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (match, key) => {
@@ -211,10 +229,10 @@ export function resolvePrescriptionTemplate(
     return match;
   });
 
-  // Strip unresolved
+  // Strip any remaining unresolved placeholders or stray tags
   const remainingMatches = rendered.match(/\{\{([a-zA-Z0-9_]+)\}\}/g) || [];
   const unresolvedPlaceholders = Array.from(new Set(remainingMatches.map((m) => m.replace(/[{}]/g, ''))));
-  rendered = rendered.replace(/\{\{[a-zA-Z0-9_]+\}\}/g, '');
+  rendered = rendered.replace(/\{\{\/?#?[a-zA-Z0-9_]+\}\}/g, '');
 
   return {
     renderedHtml: rendered,
