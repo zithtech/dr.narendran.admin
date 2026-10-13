@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Navigate,Route, Routes } from 'react-router';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 
 import SidebarLayout from './components/SidebarLayout';
 import { PrescriptionTemplatesPage } from './features/prescriptions/pages/PrescriptionTemplatesPage';
@@ -9,6 +9,7 @@ import Doctors from './pages/Doctors';
 import Login from './pages/Login';
 import Patients from './pages/Patients';
 import Pharmacy from './pages/Pharmacy';
+import MedicineInventory from './pages/MedicineInventory';
 import Users from './pages/Users';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -32,6 +33,7 @@ function App() {
           <Route path="/doctors" element={<Doctors />} />
           <Route path="/patients" element={<Patients />} />
           <Route path="/pharmacy" element={<Pharmacy />} />
+          <Route path="/inventory" element={<MedicineInventory />} />
           <Route path="/users" element={<Users />} />
           <Route path="/prescriptions" element={<PrescriptionTemplatesPage />} />
         </Route>

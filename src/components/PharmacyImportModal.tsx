@@ -15,7 +15,9 @@ import React, { useRef, useState } from 'react';
 
 import type {
   BulkImportResponse,
+  DiscountType,
   ImportPreviewResult,
+  ImportStrategy,
 } from '../types/pharmacy';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
@@ -35,7 +37,7 @@ interface PharmacyImportModalProps {
 type Step = 'UPLOAD' | 'PREVIEW' | 'IMPORTING' | 'RESULT';
 type PreviewFilter = 'ALL' | 'NEW' | 'ALREADY_EXISTS' | 'DUPLICATE_IN_EXCEL' | 'INVALID';
 
-const MAX_FILE_SIZE_MB = 5;
+const MAX_FILE_SIZE_MB = 10;
 
 const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
@@ -56,6 +58,7 @@ export default function PharmacyImportModal({
 
   const [previewResult, setPreviewResult] = useState<ImportPreviewResult | null>(null);
   const [previewFilter, setPreviewFilter] = useState<PreviewFilter>('ALL');
+  const [strategy, setStrategy] = useState<ImportStrategy>('SKIP_EXISTING');
 
   const [importResult, setImportResult] = useState<BulkImportResponse | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -71,6 +74,7 @@ export default function PharmacyImportModal({
     setIsParsing(false);
     setPreviewResult(null);
     setPreviewFilter('ALL');
+    setStrategy('SKIP_EXISTING');
     setImportResult(null);
     setImportError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -141,14 +145,38 @@ export default function PharmacyImportModal({
   const handleConfirmImport = async () => {
     if (!previewResult) return;
 
-    // Only import records marked as NEW (and valid)
-    const newRowsToImport = previewResult.previewRows
-      .filter((r) => r.classification === 'NEW' && r.isValid && r.data)
-      .map((r) => r.data ?? null)
+    const eligibleRows = previewResult.previewRows
+      .filter((r) => {
+        if (!r.isValid || !r.data) return false;
+        if (strategy === 'UPDATE_EXISTING') {
+          return r.classification === 'NEW' || r.classification === 'ALREADY_EXISTS';
+        }
+        return r.classification === 'NEW';
+      })
+      .map((r) => {
+        if (!r.data) return null;
+        let dt: DiscountType | null = null;
+        if (r.data.discountType) {
+          const s = String(r.data.discountType).trim().toLowerCase();
+          if (s.includes('percent') || s === '%') {
+            dt = 'Percentage';
+          } else if (s.includes('fixed') || s.includes('flat') || s.includes('amount') || s === '₹') {
+            dt = 'Fixed Amount';
+          }
+        }
+        return {
+          ...r.data,
+          discountType: dt,
+        };
+      })
       .filter((r) => r !== null);
 
-    if (newRowsToImport.length === 0) {
-      setImportError('There are no new medicine records to import.');
+    if (eligibleRows.length === 0) {
+      setImportError(
+        strategy === 'SKIP_EXISTING'
+          ? 'There are no new medicine variant records to import. If you want to update existing records, select "Update Existing Variants".'
+          : 'There are no valid records to import.'
+      );
       return;
     }
 
@@ -157,8 +185,8 @@ export default function PharmacyImportModal({
 
     try {
       const response = await api.post<BulkImportResponse>('medicines/bulk-import', {
-        strategy: 'SKIP_EXISTING',
-        medicines: newRowsToImport,
+        strategy,
+        medicines: eligibleRows,
       });
 
       setImportResult(response.data);
@@ -180,6 +208,16 @@ export default function PharmacyImportModal({
       })
     : [];
 
+  const eligibleCount = previewResult
+    ? previewResult.previewRows.filter((r) => {
+        if (!r.isValid) return false;
+        if (strategy === 'UPDATE_EXISTING') {
+          return r.classification === 'NEW' || r.classification === 'ALREADY_EXISTS';
+        }
+        return r.classification === 'NEW';
+      }).length
+    : 0;
+
   return (
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
@@ -192,7 +230,7 @@ export default function PharmacyImportModal({
         className="ui-modal is-xl bg-white shadow-2xl border border-slate-200/80 rounded-2xl overflow-hidden flex flex-col transition-all"
         style={{
           width: '100%',
-          maxWidth: step === 'PREVIEW' || step === 'RESULT' ? '980px' : '820px',
+          maxWidth: step === 'PREVIEW' || step === 'RESULT' ? '1060px' : '860px',
           maxHeight: '88vh',
         }}
         role="dialog"
@@ -207,10 +245,10 @@ export default function PharmacyImportModal({
             </div>
             <div>
               <h2 id="import-modal-title" className="text-[17px] font-semibold text-slate-900 leading-tight">
-                Bulk Import Medicines from Excel
+                Bulk Import Medicines & Strength Variants
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                Duplicate-safe bulk upload into the master medicines repository.
+                Upload a single Excel file with multiple strength variants per medicine into the master catalog.
               </p>
             </div>
           </div>
@@ -227,10 +265,10 @@ export default function PharmacyImportModal({
         </div>
 
         {/* Modal Content */}
-        <div className="ui-modal-body px-8 py-6 flex flex-col gap-7 overflow-y-auto flex-1 text-slate-700">
+        <div className="ui-modal-body px-8 py-6 flex flex-col gap-6 overflow-y-auto flex-1 text-slate-700">
           {/* STEP 1: UPLOAD */}
           {step === 'UPLOAD' && (
-            <div className="flex flex-col gap-7">
+            <div className="flex flex-col gap-6">
               {/* Template Download Banner */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4.5 rounded-xl bg-teal-50/70 border border-teal-200/80">
                 <div className="flex items-start sm:items-center gap-3.5">
@@ -238,165 +276,111 @@ export default function PharmacyImportModal({
                     <Download size={18} />
                   </div>
                   <div>
-                    <h4 className="text-[13px] font-bold text-slate-900">
-                      Standard Medicine Excel Template
-                    </h4>
-                    <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
-                      Download the official template pre-configured with required columns and sample rows.
+                    <h3 className="text-sm font-semibold text-teal-950">
+                      Multi-Variant Excel Template (.xlsx)
+                    </h3>
+                    <p className="text-xs text-teal-800/90 mt-0.5">
+                      Each row represents one strength variant. Multiple rows with the same medicine code map to one medicine master record.
                     </p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={downloadSampleTemplate}
-                  className="px-3.5 py-2 text-xs font-semibold text-teal-700 bg-white hover:bg-teal-50 border border-teal-300 rounded-lg shadow-2xs transition-colors flex items-center gap-1.5 shrink-0 self-start sm:self-auto cursor-pointer"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold shadow-xs transition-colors shrink-0"
                 >
-                  <Download size={13} />
-                  Download Template
+                  <Download size={14} /> Download Template
                 </button>
               </div>
 
-              {/* Upload Dropzone or Selected File Box */}
-              {!file ? (
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      fileInputRef.current?.click();
-                    }
+              {/* Drag and Drop Box */}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-2xl p-9 flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                  isDragging
+                    ? 'border-teal-500 bg-teal-50/50 scale-[0.99]'
+                    : file
+                      ? 'border-teal-300 bg-teal-50/20'
+                      : 'border-slate-200 hover:border-slate-300 bg-slate-50/40 hover:bg-slate-50/80'
+                }`}
+                onClick={() => fileInputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click();
+                }}
+                tabIndex={0}
+                role="button"
+                aria-label="Upload Excel File"
+              >
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept=".xlsx, .xls"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) handleFileChosen(e.target.files[0]);
                   }}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border border-dashed rounded-xl py-10 px-6 flex flex-col items-center gap-3 cursor-pointer transition-all ${
-                    isDragging
-                      ? 'border-teal-500 bg-teal-50/50'
-                      : 'border-slate-300 bg-slate-50/50 hover:bg-slate-50/80 hover:border-teal-500'
-                  }`}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".xlsx, .xls"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files?.[0]) {
-                        handleFileChosen(e.target.files[0]);
-                      }
-                    }}
-                  />
+                />
 
-                  <div className="w-10 h-10 bg-teal-50 text-teal-700 rounded-full flex items-center justify-center border border-teal-200/60">
-                    <UploadCloud size={20} />
-                  </div>
-
-                  <p className="text-[13px] font-medium text-slate-800">
-                    Drop your Excel file here <span className="font-normal text-slate-500">or click to browse</span>
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    .xlsx / .xls &bull; Max {MAX_FILE_SIZE_MB} MB
-                  </p>
-
-                  <div className="mt-2 px-4 py-2 rounded-full border border-slate-200 bg-white text-xs font-medium text-slate-700 shadow-2xs hover:bg-slate-50">
-                    Choose Excel File
-                  </div>
+                <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-teal-50 text-teal-700 border border-teal-200/80 mb-3.5 shadow-xs">
+                  <UploadCloud size={26} />
                 </div>
-              ) : (
-                <div className="p-4.5 rounded-xl border border-teal-200 bg-teal-50/40 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <div className="p-2.5 rounded-xl bg-teal-100 text-teal-800 shrink-0">
-                      <FileSpreadsheet size={22} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-bold text-slate-900 truncate">
-                        {file.name}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {formatFileSize(file.size)} &bull; Excel Spreadsheet
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFile(null);
-                        setParsingError(null);
-                        if (fileInputRef.current) fileInputRef.current.value = '';
-                      }}
-                      className="px-3.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              )}
 
-              {/* Parsing/Validation Error Message */}
+                {!file ? (
+                  <>
+                    <p className="text-sm font-semibold text-slate-800">
+                      Click to upload or drag and drop your Excel file
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      .xlsx / .xls &bull; Worksheet: <span className="font-mono text-teal-700 font-semibold">Medicines_Inventory</span> &bull; Max {MAX_FILE_SIZE_MB} MB
+                    </p>
+                  </>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-teal-900">{file.name}</p>
+                    <p className="text-xs text-slate-500">{formatFileSize(file.size)}</p>
+                    <p className="text-[11px] font-semibold text-teal-700 mt-2">
+                      Click or drag to choose a different file
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {parsingError && (
-                <div className="flex items-start gap-3 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
-                  <XCircle size={17} className="shrink-0 mt-0.5 text-rose-600" />
-                  <div>
-                    <strong className="block font-semibold text-rose-950">Validation Error</strong>
-                    <span className="mt-0.5 block">{parsingError}</span>
-                  </div>
+                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
+                  <XCircle size={16} className="mt-0.5 text-rose-600 shrink-0" />
+                  <span>{parsingError}</span>
                 </div>
               )}
 
-              {/* Categorized Expected Columns Guide */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="text-[13px] font-semibold text-slate-800 flex items-center gap-2">
-                    <Info size={15} className="text-teal-600" /> Expected Excel Columns
-                  </h4>
-                  <span className="text-xs text-slate-500">15 supported columns</span>
+              {/* Supported Columns Breakdown */}
+              <div className="rounded-xl border border-slate-200/90 bg-slate-50/70 p-4.5 text-xs text-slate-600">
+                <div className="flex items-center gap-2 text-slate-800 font-bold text-xs mb-3">
+                  <Info size={15} className="text-teal-700" />
+                  <span>Supported Column Structure</span>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1.4fr_1.4fr] gap-5">
-                  {/* Required Column */}
-                  <div className="bg-white rounded-lg border border-slate-200/90 p-4 min-w-0 shadow-2xs flex flex-col">
-                    <p className="text-[10px] font-bold text-rose-700 tracking-wider mb-3 uppercase">
-                      REQUIRED
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="bg-white rounded-lg border border-slate-200 p-3 shadow-2xs">
+                    <p className="text-[10px] font-bold text-teal-800 tracking-wider mb-2 uppercase">
+                      Medicine Master Fields
                     </p>
-                    <div className="space-y-2.5 text-[12.5px] leading-6">
-                      <div className="flex items-center gap-1.5 whitespace-nowrap">
-                        <span className="h-1.5 w-1.5 rounded-full bg-rose-500 shrink-0" />
-                        <span className="font-semibold text-slate-900">Medicine Name</span>
-                        <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 ml-auto">REQ</span>
-                      </div>
+                    <div className="space-y-1.5 text-[12px] text-slate-600">
+                      <div><strong className="text-slate-800 font-semibold">medicine_name</strong> (Required) &bull; medicine_code</div>
+                      <div>generic_name &bull; manufacturer</div>
+                      <div>therapeutic_category &bull; therapeutic_sub_category</div>
+                      <div>prescription_required &bull; description</div>
                     </div>
                   </div>
-
-                  {/* Medicine Details */}
-                  <div className="bg-white rounded-lg border border-slate-200/90 p-4 min-w-0 shadow-2xs flex flex-col">
-                    <p className="text-[10px] font-bold text-slate-600 tracking-wider mb-3 uppercase">
-                      MEDICINE DETAILS
+                  <div className="bg-white rounded-lg border border-slate-200 p-3 shadow-2xs">
+                    <p className="text-[10px] font-bold text-teal-800 tracking-wider mb-2 uppercase">
+                      Strength Variant & Inventory Fields
                     </p>
-                    <div className="space-y-2.5 text-[12.5px] text-slate-600 leading-6 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />Generic Name</div>
-                      <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />Strength & Unit</div>
-                      <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />Dosage Form</div>
-                      <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />Therapeutic Category</div>
-                      <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />Sub Category</div>
-                      <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />Manufacturer</div>
-                    </div>
-                  </div>
-
-                  {/* Commercial & Prescription */}
-                  <div className="bg-white rounded-lg border border-slate-200/90 p-4 min-w-0 shadow-2xs flex flex-col">
-                    <p className="text-[10px] font-bold text-slate-600 tracking-wider mb-3 uppercase">
-                      COMMERCIAL / PRESCRIPTION
-                    </p>
-                    <div className="space-y-2.5 text-[12.5px] text-slate-600 leading-6 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />Prescription Required</div>
-                      <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />Status (Active/Inactive)</div>
-                      <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />Medicine Code / SKU</div>
-                      <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />Barcode / EAN</div>
-                      <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />MRP & Final Price</div>
-                      <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />Discount Type & Value</div>
-                      <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />Default Frequency & Duration</div>
+                    <div className="space-y-1.5 text-[12px] text-slate-600">
+                      <div><strong className="text-slate-800 font-semibold">strength</strong> &bull; <strong className="text-slate-800 font-semibold">strength_unit</strong> &bull; <strong className="text-slate-800 font-semibold">dosage_form</strong></div>
+                      <div>tablets_per_strip &bull; opening_stock (new variants only)</div>
+                      <div>mrp &bull; discount_type &bull; discount_value &bull; purchase_price</div>
+                      <div>reorder_level &bull; variant_code &bull; barcode &bull; status &bull; notes</div>
                     </div>
                   </div>
                 </div>
@@ -424,7 +408,7 @@ export default function PharmacyImportModal({
                 </div>
 
                 <div className="p-3 rounded-xl border border-emerald-300 bg-emerald-50/70 shadow-2xs">
-                  <span className="text-[11px] font-semibold text-emerald-800 block">New Medicines</span>
+                  <span className="text-[11px] font-semibold text-emerald-800 block">New Variants</span>
                   <div className="text-xl font-extrabold text-emerald-700 mt-0.5">
                     {previewResult.newRows}
                   </div>
@@ -452,13 +436,37 @@ export default function PharmacyImportModal({
                 </div>
               </div>
 
-              {/* Notice Banner */}
-              <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-center justify-between shadow-2xs">
+              {/* Strategy Selector & Duplicate-Safe Banner */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-2">
-                  <Info size={16} className="text-blue-600 shrink-0" />
-                  <span className="leading-relaxed">
-                    <strong className="font-semibold text-blue-950">Duplicate-Safe Policy:</strong> Only <strong className="font-bold text-blue-950">{previewResult.newRows} NEW</strong> medicine records will be inserted. Existing database records and duplicate Excel rows will be safely skipped.
+                  <Info size={16} className="text-teal-700 shrink-0" />
+                  <span className="text-slate-700">
+                    <strong className="text-slate-900">Import Strategy:</strong> Choose how to handle rows where the strength variant already exists.
                   </span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setStrategy('SKIP_EXISTING')}
+                    className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
+                      strategy === 'SKIP_EXISTING'
+                        ? 'bg-teal-700 text-white shadow-xs'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    Skip Existing (Safe)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStrategy('UPDATE_EXISTING')}
+                    className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
+                      strategy === 'UPDATE_EXISTING'
+                        ? 'bg-teal-700 text-white shadow-xs'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    Update Existing Prices
+                  </button>
                 </div>
               </div>
 
@@ -485,7 +493,7 @@ export default function PharmacyImportModal({
                         : 'text-slate-600 hover:text-emerald-700'
                     }`}
                   >
-                    New ({previewResult.newRows})
+                    New Variants ({previewResult.newRows})
                   </button>
                   <button
                     type="button"
@@ -496,7 +504,7 @@ export default function PharmacyImportModal({
                         : 'text-slate-600 hover:text-amber-800'
                     }`}
                   >
-                    Already Exists ({previewResult.alreadyExistingRows})
+                    Already Existing ({previewResult.alreadyExistingRows})
                   </button>
                   <button
                     type="button"
@@ -507,92 +515,93 @@ export default function PharmacyImportModal({
                         : 'text-slate-600 hover:text-purple-800'
                     }`}
                   >
-                    Duplicate in Excel ({previewResult.duplicateInExcelRows})
+                    Duplicates ({previewResult.duplicateInExcelRows})
                   </button>
                   <button
                     type="button"
                     onClick={() => setPreviewFilter('INVALID')}
                     className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
                       previewFilter === 'INVALID'
-                        ? 'bg-white shadow-2xs text-rose-700 font-bold'
-                        : 'text-slate-600 hover:text-rose-700'
+                        ? 'bg-white shadow-2xs text-rose-800 font-bold'
+                        : 'text-slate-600 hover:text-rose-800'
                     }`}
                   >
                     Invalid ({previewResult.invalidRows})
                   </button>
                 </div>
-
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 shrink-0">
-                  <FileSpreadsheet size={14} className="text-slate-400" />
-                  <span>File:</span>
-                  <span className="font-semibold text-slate-800 truncate max-w-[180px]">{file?.name}</span>
+                <div className="text-[11px] text-slate-500 font-medium">
+                  Showing {filteredPreviewRows.length} of {previewResult.totalRows} rows
                 </div>
               </div>
 
               {/* Preview Table */}
-              <div className="border border-slate-200 rounded-xl overflow-hidden max-h-60 overflow-y-auto bg-white shadow-2xs">
+              <div className="border border-slate-200 rounded-xl overflow-hidden max-h-[340px] overflow-y-auto bg-white shadow-2xs">
                 <table className="w-full text-left text-xs border-collapse">
-                  <thead className="bg-slate-100 border-b border-slate-200 text-slate-700 sticky top-0 font-semibold z-10">
+                  <thead className="bg-slate-50 text-slate-700 font-bold sticky top-0 border-b border-slate-200 shadow-2xs">
                     <tr>
-                      <th className="p-2.5 w-12 text-center text-slate-600 uppercase tracking-wider text-[11px] font-bold">Row</th>
-                      <th className="p-2.5 text-slate-700 uppercase tracking-wider text-[11px] font-bold">Medicine Name</th>
-                      <th className="p-2.5 text-slate-700 uppercase tracking-wider text-[11px] font-bold">Generic Name</th>
-                      <th className="p-2.5 text-slate-700 uppercase tracking-wider text-[11px] font-bold">Strength / Form</th>
-                      <th className="p-2.5 text-slate-700 uppercase tracking-wider text-[11px] font-bold">Price</th>
-                      <th className="p-2.5 text-slate-700 uppercase tracking-wider text-[11px] font-bold">Status & Validation</th>
+                      <th className="p-2.5 w-10 text-center uppercase tracking-wider text-[10px]">Row</th>
+                      <th className="p-2.5 uppercase tracking-wider text-[10px]">Medicine Master</th>
+                      <th className="p-2.5 uppercase tracking-wider text-[10px]">Strength Variant</th>
+                      <th className="p-2.5 uppercase tracking-wider text-[10px]">Stock</th>
+                      <th className="p-2.5 uppercase tracking-wider text-[10px]">Pricing</th>
+                      <th className="p-2.5 uppercase tracking-wider text-[10px]">Classification</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+                  <tbody className="divide-y divide-slate-100">
                     {filteredPreviewRows.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="p-6 text-center text-slate-400 italic">
+                        <td colSpan={6} className="p-8 text-center text-slate-400 italic">
                           No rows match the selected filter.
                         </td>
                       </tr>
                     ) : (
                       filteredPreviewRows.map((r) => (
-                        <tr
-                          key={r.rowNumber}
-                          className={
-                            r.classification === 'INVALID'
-                              ? 'bg-rose-50/40 hover:bg-rose-50/70'
-                              : r.classification === 'ALREADY_EXISTS'
-                                ? 'bg-amber-50/40 hover:bg-amber-50/70'
-                                : r.classification === 'DUPLICATE_IN_EXCEL'
-                                  ? 'bg-purple-50/40 hover:bg-purple-50/70'
-                                  : 'hover:bg-slate-50'
-                          }
-                        >
-                          <td className="p-2.5 text-center font-mono text-slate-500 font-bold text-xs">
+                        <tr key={r.rowNumber} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="p-2.5 text-center font-mono font-bold text-slate-400">
                             {r.rowNumber}
                           </td>
-                          <td className="p-2.5 font-bold text-slate-900 text-xs">
-                            {r.medicineName ? (
-                              r.medicineName
-                            ) : (
-                              <span className="text-rose-600 italic font-normal">Missing Name</span>
+                          <td className="p-2.5">
+                            <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                              {r.medicineName}
+                              {r.medicineCode && (
+                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                                  {r.medicineCode}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-500">
+                              {r.genericName ?? '—'}
+                            </div>
+                          </td>
+                          <td className="p-2.5">
+                            <div className="font-semibold text-slate-800">
+                              {r.strength ?? 'Standard'} ({r.dosageForm ?? 'Tablet'})
+                            </div>
+                            {r.tabletsPerStrip && (
+                              <div className="text-[10px] text-slate-500 font-mono">
+                                {r.tabletsPerStrip} tablets/strip
+                              </div>
                             )}
                           </td>
-                          <td className="p-2.5 font-medium text-slate-700 text-xs">
-                            {r.genericName ?? <span className="text-slate-400">—</span>}
+                          <td className="p-2.5">
+                            <span className="font-mono font-semibold text-slate-700">
+                              {r.openingStock ?? 0} units
+                            </span>
                           </td>
-                          <td className="p-2.5 text-slate-600 text-xs">
-                            {r.strength ? <span className="font-medium text-slate-700">{r.strength}</span> : ''}
-                            {r.strength && r.dosageForm ? ' · ' : ''}
-                            {r.dosageForm ? <span className="text-slate-600">{r.dosageForm}</span> : ''}
-                            {!r.strength && !r.dosageForm && <span className="text-slate-400">—</span>}
-                          </td>
-                          <td className="p-2.5 font-bold text-slate-800 text-xs">
-                            {r.data?.finalPrice !== null && r.data?.finalPrice !== undefined
-                              ? `₹${Number(r.data.finalPrice).toFixed(2)}`
-                              : r.data?.mrp !== null && r.data?.mrp !== undefined
-                                ? `₹${Number(r.data.mrp).toFixed(2)}`
-                                : <span className="text-slate-400 font-normal">—</span>}
+                          <td className="p-2.5">
+                            <div className="font-mono text-slate-900 font-bold">
+                              ₹{r.finalPrice !== null && r.finalPrice !== undefined ? Number(r.finalPrice).toFixed(2) : '—'}
+                            </div>
+                            {r.mrp !== null && r.mrp !== undefined && (
+                              <div className="text-[10px] text-slate-400 line-through">
+                                MRP: ₹{Number(r.mrp).toFixed(2)}
+                              </div>
+                            )}
                           </td>
                           <td className="p-2.5">
                             {r.classification === 'NEW' && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                <CheckCircle2 size={11} className="text-emerald-600" /> NEW
+                                <CheckCircle2 size={11} className="text-emerald-600" /> NEW VARIANT
                               </span>
                             )}
                             {r.classification === 'ALREADY_EXISTS' && (
@@ -601,17 +610,17 @@ export default function PharmacyImportModal({
                                   ALREADY EXISTS
                                 </span>
                                 <div className="text-[10px] font-medium text-amber-800 mt-0.5">
-                                  {r.duplicateReason ?? 'Existing database record'}
+                                  {r.duplicateReason ?? 'Existing database variant'}
                                 </div>
                               </div>
                             )}
                             {r.classification === 'DUPLICATE_IN_EXCEL' && (
                               <div>
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-300">
-                                  DUPLICATE IN EXCEL
+                                  DUPLICATE IN FILE
                                 </span>
                                 <div className="text-[10px] font-medium text-purple-800 mt-0.5">
-                                  Duplicate row in file
+                                  Duplicate variant row
                                 </div>
                               </div>
                             )}
@@ -642,10 +651,10 @@ export default function PharmacyImportModal({
                 <Loader2 size={30} className="animate-spin" />
               </div>
               <h3 className="text-sm font-bold text-slate-900">
-                Importing New Medicines...
+                Importing Medicines & Variants...
               </h3>
               <p className="text-xs text-slate-500 max-w-sm">
-                Executing safe bulk database operations with transactional integrity. Duplicate records are skipped.
+                Executing safe bulk database operations with transactional integrity. Existing stock balances are strictly preserved.
               </p>
             </div>
           )}
@@ -656,9 +665,9 @@ export default function PharmacyImportModal({
               <div className="flex items-center gap-3 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900">
                 <CheckCircle2 size={22} className="text-emerald-600 shrink-0" />
                 <div>
-                  <h4 className="text-xs font-bold">Import Completed</h4>
+                  <h4 className="text-xs font-bold">Import Completed Successfully</h4>
                   <p className="text-xs text-emerald-800 mt-0.5">
-                    {importResult.insertedCount} new medicines were imported successfully. No duplicate records were inserted.
+                    {importResult.createdVariantsCount ?? importResult.insertedCount} strength variants created, {importResult.updatedVariantsCount ?? 0} updated. Existing stock preserved.
                   </p>
                 </div>
               </div>
@@ -673,24 +682,37 @@ export default function PharmacyImportModal({
                 </div>
 
                 <div className="p-3 rounded-xl border border-emerald-300 bg-emerald-50/70 shadow-2xs">
-                  <span className="text-[11px] font-semibold text-emerald-800 block">Successfully Imported</span>
+                  <span className="text-[11px] font-semibold text-emerald-800 block">Created Variants</span>
                   <div className="text-xl font-extrabold text-emerald-700 mt-0.5">
-                    {importResult.insertedCount}
+                    {importResult.createdVariantsCount ?? importResult.insertedCount}
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl border border-amber-300 bg-amber-50/70 shadow-2xs">
-                  <span className="text-[11px] font-semibold text-amber-800 block">Already Existing</span>
-                  <div className="text-xl font-extrabold text-amber-700 mt-0.5">
-                    {importResult.alreadyExistingCount}
+                <div className="p-3 rounded-xl border border-sky-300 bg-sky-50/70 shadow-2xs">
+                  <span className="text-[11px] font-semibold text-sky-800 block">Updated Variants</span>
+                  <div className="text-xl font-extrabold text-sky-700 mt-0.5">
+                    {importResult.updatedVariantsCount ?? 0}
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl border border-purple-300 bg-purple-50/70 shadow-2xs">
-                  <span className="text-[11px] font-semibold text-purple-800 block">Duplicate Excel Rows</span>
-                  <div className="text-xl font-extrabold text-purple-700 mt-0.5">
-                    {importResult.duplicateInExcelCount}
+                <div className="p-3 rounded-xl border border-teal-300 bg-teal-50/70 shadow-2xs">
+                  <span className="text-[11px] font-semibold text-teal-800 block">Stock Initialized</span>
+                  <div className="text-xl font-extrabold text-teal-700 mt-0.5">
+                    {importResult.stockInitializedCount ?? 0}
                   </div>
+                </div>
+              </div>
+
+              {/* Secondary Metrics */}
+              <div className="grid grid-cols-3 gap-2.5 text-xs text-slate-600">
+                <div className="p-2.5 rounded-lg border border-slate-200 bg-white">
+                  Medicines Master Created: <strong className="text-slate-900">{importResult.createdMedicinesCount ?? 0}</strong>
+                </div>
+                <div className="p-2.5 rounded-lg border border-slate-200 bg-white">
+                  Skipped Existing Variants: <strong className="text-slate-900">{importResult.alreadyExistingCount}</strong>
+                </div>
+                <div className="p-2.5 rounded-lg border border-slate-200 bg-white">
+                  Duplicate Rows in File: <strong className="text-slate-900">{importResult.duplicateInExcelCount}</strong>
                 </div>
               </div>
 
@@ -704,7 +726,7 @@ export default function PharmacyImportModal({
                     <button
                       type="button"
                       onClick={() => downloadErrorReport(importResult.errors)}
-                      className="text-xs font-semibold text-rose-700 hover:text-rose-800 flex items-center gap-1"
+                      className="text-xs font-semibold text-rose-700 hover:text-rose-800 flex items-center gap-1 cursor-pointer"
                     >
                       <Download size={13} /> Download Error Report (.xlsx)
                     </button>
@@ -791,10 +813,10 @@ export default function PharmacyImportModal({
                   onClick={() => {
                     void handleConfirmImport();
                   }}
-                  disabled={!previewResult || previewResult.newRows === 0}
+                  disabled={!previewResult || eligibleCount === 0}
                   className="ui-btn ui-btn-primary flex items-center gap-1.5 font-semibold"
                 >
-                  <CheckCircle2 size={15} /> Confirm & Import ({previewResult?.newRows ?? 0} New Medicines)
+                  <CheckCircle2 size={15} /> Confirm & Import ({eligibleCount} Variants)
                 </button>
               </div>
             </>

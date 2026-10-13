@@ -1,16 +1,17 @@
 import { App } from 'antd';
-import { Download, FileSpreadsheet, Pill, Power } from 'lucide-react';
+import { Download, FileSpreadsheet, Pill, Plus, Power } from 'lucide-react';
 import { useState } from 'react';
 
 import MedicineDrawer from '../components/MedicineDrawer';
 import MedicineModal from '../components/MedicineModal';
+import MedicineStrengthModal from '../components/MedicineStrengthModal';
 import PharmacyImportModal from '../components/PharmacyImportModal';
 import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
 import { addedFacet, statusFacet } from '../components/ui/facets';
 import { ActivityCell, Badge, StatusDot } from '../components/ui/primitives';
 import { useResource } from '../hooks/useResource';
 import { timeAgo } from '../lib/format';
-import type { Medicine } from '../types/pharmacy';
+import { formatDosageStrengthSummary, type Medicine } from '../types/pharmacy';
 import api from '../utils/api';
 import { downloadSampleTemplate } from '../utils/excelTemplate';
 
@@ -19,13 +20,19 @@ const FACETS: Facet<Medicine>[] = [
     id: 'category',
     label: 'Category',
     allLabel: 'All Categories',
-    value: (m) => (m.therapeutic_category?.trim() ? m.therapeutic_category.trim() : 'General / Other'),
+    value: (m) =>
+      m.therapeutic_category?.trim() ? m.therapeutic_category.trim() : 'General / Other',
   },
   {
     id: 'dosageForm',
     label: 'Dosage Form',
     allLabel: 'All Dosage Forms',
-    value: (m) => (m.dosage_form?.trim() ? m.dosage_form.trim() : 'Unspecified'),
+    value: (m) => {
+      if (m.variants && m.variants.length > 0) {
+        return m.variants[0]?.dosage_form?.trim() || 'Unspecified';
+      }
+      return m.dosage_form?.trim() ? m.dosage_form.trim() : 'Unspecified';
+    },
   },
   {
     id: 'prescription',
@@ -45,6 +52,7 @@ export default function Pharmacy() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMedicine, setEditingMedicine] = useState<Medicine | null>(null);
 
+  const [variantMedicine, setVariantMedicine] = useState<Medicine | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [viewingId, setViewingId] = useState<string | null>(null);
 
@@ -64,9 +72,7 @@ export default function Pharmacy() {
     const nextStatus = medicine.status === 'Active' ? 'Inactive' : 'Active';
     try {
       await api.put(`medicines/${medicine.id}`, { status: nextStatus });
-      message.success(
-        `Medicine "${medicine.medicine_name}" marked as ${nextStatus}.`
-      );
+      message.success(`Medicine "${medicine.medicine_name}" marked as ${nextStatus}.`);
       void resource.refresh();
     } catch {
       message.error('Failed to update medicine status.');
@@ -100,9 +106,7 @@ export default function Pharmacy() {
                 Generic: <strong>{m.generic_name}</strong>
               </span>
             ) : m.medicine_code ? (
-              <span className="text-[11px] font-mono text-slate-400">
-                Code: {m.medicine_code}
-              </span>
+              <span className="font-mono text-[11px] text-slate-400">Code: {m.medicine_code}</span>
             ) : null
           }
           onOpen={() => openDetails(m)}
@@ -110,18 +114,34 @@ export default function Pharmacy() {
       ),
     },
     {
-      id: 'strengthAndForm',
-      header: 'Dosage Form & Strength',
-      cell: (m) => (
-        <div>
-          <div className="font-medium text-slate-800 dark:text-slate-200">
-            {m.dosage_form ?? 'Tablet'}
+      id: 'dosageFormAndStrengths',
+      header: 'Dosage Forms & Strengths',
+      cell: (m) => {
+        const summary = formatDosageStrengthSummary(m.variants, m.dosage_form, m.strength);
+        return (
+          <div className="flex max-w-sm flex-col gap-1.5 py-0.5">
+            {summary.map((item, idx) => (
+              <div key={idx} className="flex flex-wrap items-center gap-1.5 text-xs">
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                  {item.form}:
+                </span>
+                {item.strengths.length > 0 ? (
+                  item.strengths.map((str, sIdx) => (
+                    <span
+                      key={sIdx}
+                      className="inline-block rounded-md border border-teal-200/60 bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-800 dark:border-teal-800/60 dark:bg-teal-950/40 dark:text-teal-300"
+                    >
+                      {str}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-[11px] text-slate-400">Standard</span>
+                )}
+              </div>
+            ))}
           </div>
-          <div className="ui-cell-sub">
-            {m.strength ? `${m.strength} ${m.strength_unit ?? ''}`.trim() : '—'}
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       id: 'category',
@@ -133,41 +153,24 @@ export default function Pharmacy() {
           <span className="ui-muted">—</span>
         ),
     },
+    // {
+    //   id: 'manufacturer',
+    //   header: 'Manufacturer',
+    //   cell: (m) => (
+    //     <span className="text-xs text-slate-700 dark:text-slate-300">
+    //       {m.manufacturer ?? <span className="ui-muted">—</span>}
+    //     </span>
+    //   ),
+    // },
     {
-      id: 'manufacturer',
-      header: 'Manufacturer',
-      cell: (m) => (
-        <span className="text-xs text-slate-700 dark:text-slate-300">
-          {m.manufacturer ?? <span className="ui-muted">—</span>}
-        </span>
-      ),
-    },
-    {
-      id: 'price',
-      header: 'MRP / Price',
-      sort: (m) => m.final_price ?? m.mrp ?? 0,
+      id: 'variants',
+      header: 'Variants',
       cell: (m) => {
-        const mrp = m.mrp !== null && m.mrp !== undefined ? `₹${Number(m.mrp).toFixed(2)}` : null;
-        const finalPrice =
-          m.final_price !== null && m.final_price !== undefined
-            ? `₹${Number(m.final_price).toFixed(2)}`
-            : mrp;
-
-        if (!mrp && !finalPrice) return <span className="ui-muted">—</span>;
-
+        const count = m.variants?.length ?? (m.strength ? 1 : 0);
         return (
-          <div>
-            <div className="font-bold text-slate-900 dark:text-slate-100">
-              {finalPrice}
-            </div>
-            {m.discount_type && m.discount_value ? (
-              <div className="text-[10px] text-emerald-600 font-semibold">
-                {m.discount_type === 'Percentage'
-                  ? `${m.discount_value}% OFF`
-                  : `₹${m.discount_value} OFF`}
-              </div>
-            ) : null}
-          </div>
+          <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            {count} {count === 1 ? 'variant' : 'variants'}
+          </span>
         );
       },
     },
@@ -175,21 +178,12 @@ export default function Pharmacy() {
       id: 'prescription',
       header: 'Policy',
       cell: (m) =>
-        m.prescription_required ? (
-          <Badge tone="red">Rx</Badge>
-        ) : (
-          <Badge tone="green">OTC</Badge>
-        ),
+        m.prescription_required ? <Badge tone="red">Rx</Badge> : <Badge tone="green">OTC</Badge>,
     },
     {
       id: 'status',
       header: 'Status',
-      cell: (m) => (
-        <StatusDot
-          active={m.status === 'Active'}
-          label={m.status ?? 'Active'}
-        />
-      ),
+      cell: (m) => <StatusDot active={m.status === 'Active'} label={m.status ?? 'Active'} />,
     },
     {
       id: 'updated',
@@ -220,6 +214,13 @@ export default function Pharmacy() {
           m.manufacturer,
           m.therapeutic_category,
           m.dosage_form,
+          ...(m.variants?.flatMap((v) => [
+            v.dosage_form,
+            v.strength,
+            v.strength_unit,
+            v.variant_code,
+            v.barcode,
+          ]) ?? []),
         ]}
         facets={FACETS}
         dateOf={(m) => m.created_at}
@@ -251,21 +252,35 @@ export default function Pharmacy() {
           </div>
         }
         rowActions={(m) => (
-          <button
-            type="button"
-            className="ui-icon-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              void handleToggleStatus(m);
-            }}
-            title={m.status === 'Active' ? 'Deactivate Medicine' : 'Activate Medicine'}
-            aria-label={m.status === 'Active' ? 'Deactivate Medicine' : 'Activate Medicine'}
-          >
-            <Power
-              size={14}
-              className={m.status === 'Active' ? 'text-emerald-600' : 'text-slate-400'}
-            />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              className="ui-btn ui-btn-xs flex cursor-pointer items-center gap-1 rounded-md border border-teal-200 bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-700 transition-colors hover:bg-teal-100 dark:border-teal-800 dark:bg-teal-950/50 dark:text-teal-300 dark:hover:bg-teal-900"
+              onClick={(e) => {
+                e.stopPropagation();
+                setVariantMedicine(m);
+              }}
+              title={`Add strength variant for ${m.medicine_name}`}
+              aria-label={`Add strength variant for ${m.medicine_name}`}
+            >
+              <Plus size={12} /> Variant
+            </button>
+            <button
+              type="button"
+              className="ui-icon-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleToggleStatus(m);
+              }}
+              title={m.status === 'Active' ? 'Deactivate Medicine' : 'Activate Medicine'}
+              aria-label={m.status === 'Active' ? 'Deactivate Medicine' : 'Activate Medicine'}
+            >
+              <Power
+                size={14}
+                className={m.status === 'Active' ? 'text-emerald-600' : 'text-slate-400'}
+              />
+            </button>
+          </div>
         )}
       />
 
@@ -277,7 +292,7 @@ export default function Pharmacy() {
           message.success(
             editingMedicine
               ? 'Medicine record updated successfully.'
-              : 'New medicine created successfully.'
+              : 'New medicine created successfully.',
           );
           void resource.refresh();
         }}
@@ -287,7 +302,19 @@ export default function Pharmacy() {
         medicine={viewingMedicine}
         onClose={() => setViewingId(null)}
         onEdit={openEditor}
+        onAddVariant={(med) => setVariantMedicine(med)}
         onStatusChange={() => {
+          void resource.refresh();
+        }}
+      />
+
+      <MedicineStrengthModal
+        isOpen={Boolean(variantMedicine)}
+        medicine={variantMedicine}
+        onClose={() => setVariantMedicine(null)}
+        onSave={() => {
+          message.success('Variant created successfully.');
+          setVariantMedicine(null);
           void resource.refresh();
         }}
       />

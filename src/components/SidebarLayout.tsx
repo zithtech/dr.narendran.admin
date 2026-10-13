@@ -1,4 +1,5 @@
 import {
+  Boxes,
   Building2,
   ChevronLeft,
   ChevronRight,
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { name: 'Doctors', path: '/doctors', icon: Stethoscope },
   { name: 'Patients', path: '/patients', icon: HeartPulse },
   { name: 'Pharmacy', path: '/pharmacy', icon: Pill },
+  { name: 'Medicine Inventory', path: '/inventory', icon: Boxes },
   { name: 'User Accounts', path: '/users', icon: UserCog },
   { name: 'Prescription Templates', path: '/prescriptions', icon: FileText },
 ] as const;
