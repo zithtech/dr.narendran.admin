@@ -2,6 +2,29 @@ export type MedicineStatus = 'Active' | 'Inactive';
 export type DiscountType = 'Percentage' | 'Fixed Amount';
 export type ImportStrategy = 'SKIP_EXISTING' | 'UPDATE_EXISTING';
 
+export interface LinkedMedicineVariant {
+  id: string;
+  strength: string;
+  strength_unit: string;
+  dosage_form: string;
+  strip_count?: number;
+  tablets_per_strip?: number | null;
+  total_tablets?: number;
+  available_quantity: number;
+  mrp?: number | null;
+  discount_type?: string | null;
+  discount_value?: number | null;
+  final_price?: number | null;
+  purchase_price?: number | null;
+  reorder_level?: number;
+  variant_code?: string | null;
+  barcode?: string | null;
+  status: 'ACTIVE' | 'INACTIVE';
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Medicine {
   id: string;
   medicine_name: string;
@@ -23,8 +46,40 @@ export interface Medicine {
   frequency: string | null;
   duration: string | null;
   description: string | null;
+  variants?: LinkedMedicineVariant[];
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Derives a structured compact summary of linked dosage forms and their respective strengths.
+ * Example output: [{ form: 'Tablet', strengths: ['500 mg', '650 mg'] }, { form: 'Syrup', strengths: ['125 mg/5 ml'] }]
+ */
+export function formatDosageStrengthSummary(
+  variants?: LinkedMedicineVariant[] | null,
+  fallbackDosage?: string | null,
+  fallbackStrength?: string | null,
+): { form: string; strengths: string[] }[] {
+  if (variants && variants.length > 0) {
+    const formMap = new Map<string, string[]>();
+    for (const v of variants) {
+      const form = v.dosage_form?.trim() || 'Unspecified';
+      const str = v.strength ? `${v.strength} ${v.strength_unit || ''}`.trim() : 'Standard';
+      if (!formMap.has(form)) {
+        formMap.set(form, []);
+      }
+      const list = formMap.get(form)!;
+      if (!list.includes(str)) {
+        list.push(str);
+      }
+    }
+    return Array.from(formMap.entries()).map(([form, strengths]) => ({ form, strengths }));
+  }
+
+  // Fallback to legacy master fields if no variants linked yet
+  const form = fallbackDosage?.trim() || 'Tablet';
+  const str = fallbackStrength?.trim() ? fallbackStrength.trim() : null;
+  return [{ form, strengths: str ? [str] : [] }];
 }
 
 export interface MedicineFormData {
@@ -67,6 +122,12 @@ export interface ParsedMedicineRow {
   discountType?: DiscountType | null;
   discountValue?: number | null;
   finalPrice?: number | null;
+  purchasePrice?: number | null;
+  tabletsPerStrip?: number | null;
+  openingStock?: number | null;
+  reorderLevel?: number | null;
+  variantCode?: string | null;
+  notes?: string | null;
   frequency?: string | null;
   duration?: string | null;
   description?: string | null;
@@ -78,10 +139,23 @@ export interface ValidationPreviewItem {
   rowNumber: number;
   medicineName: string;
   genericName?: string | null;
+  medicineCode?: string | null;
   strength?: string | null;
   dosageForm?: string | null;
   status: 'Active' | 'Inactive';
+  tabletsPerStrip?: number | null;
+  openingStock?: number;
+  mrp?: number | null;
+  discountType?: string | null;
+  discountValue?: number | null;
+  finalPrice?: number | null;
+  purchasePrice?: number | null;
+  reorderLevel?: number;
+  variantCode?: string | null;
+  notes?: string | null;
   classification: RowImportClassification;
+  medicineAction?: 'NEW_MEDICINE' | 'EXISTING_MEDICINE';
+  variantAction?: 'NEW_VARIANT' | 'EXISTING_VARIANT';
   isValid: boolean;
   isDuplicate: boolean;
   issues: string[];
@@ -104,6 +178,12 @@ export interface BulkImportResponse {
   insertedCount: number;
   alreadyExistingCount: number;
   duplicateInExcelCount: number;
+  createdMedicinesCount?: number;
+  updatedMedicinesCount?: number;
+  createdVariantsCount?: number;
+  updatedVariantsCount?: number;
+  skippedVariantsCount?: number;
+  stockInitializedCount?: number;
   failedCount: number;
   errors: { row: number; medicineName: string; error: string }[];
   skipped: { row: number; medicineName: string; reason: string }[];
@@ -134,4 +214,3 @@ export interface AIMedicineSuggestion {
 export interface AISearchMedicineResponse {
   medicines: AIMedicineSuggestion[];
 }
-

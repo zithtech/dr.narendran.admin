@@ -3,10 +3,16 @@ import { AlertCircle, Info, Loader2, Sparkles, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { searchMedicinesWithAi } from '../services/aiMedicineService';
-import type { AIMedicineSuggestion, DiscountType, Medicine, MedicineStatus } from '../types/pharmacy';
+import type {
+  AIMedicineSuggestion,
+  DiscountType,
+  Medicine,
+  MedicineStatus,
+} from '../types/pharmacy';
 import { mapAiMedicineToFormData } from '../utils/aiMedicineMapper';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
+import { calculateFinalPrice, validateDiscount } from '../utils/pricing';
 import { Field, Modal, Section, SwitchRow } from './ui/Modal';
 import { Alert } from './ui/primitives';
 
@@ -53,12 +59,15 @@ const COMMON_CATEGORIES = [
   'General / Other',
 ];
 
-export default function MedicineModal({
-  isOpen,
-  onClose,
-  medicine,
-  onSave,
-}: MedicineModalProps) {
+function normalizeMasterDiscountType(raw?: string | null): DiscountType | '' {
+  if (!raw) return '';
+  const s = String(raw).trim().toUpperCase();
+  if (s.includes('PERCENT')) return 'Percentage';
+  if (s.includes('FIXED') || s.includes('FLAT') || s.includes('AMOUNT')) return 'Fixed Amount';
+  return '';
+}
+
+export default function MedicineModal({ isOpen, onClose, medicine, onSave }: MedicineModalProps) {
   const [medicineName, setMedicineName] = useState('');
   const [genericName, setGenericName] = useState('');
   const [dosageForm, setDosageForm] = useState('Tablet');
@@ -107,16 +116,16 @@ export default function MedicineModal({
       setMedicineCode(medicine.medicine_code ?? '');
       setBarcode(medicine.barcode ?? '');
       setMrp(medicine.mrp !== null && medicine.mrp !== undefined ? String(medicine.mrp) : '');
-      setDiscountType(medicine.discount_type ?? '');
+      setDiscountType(normalizeMasterDiscountType(medicine.discount_type));
       setDiscountValue(
         medicine.discount_value !== null && medicine.discount_value !== undefined
           ? String(medicine.discount_value)
-          : ''
+          : '',
       );
       setFinalPrice(
         medicine.final_price !== null && medicine.final_price !== undefined
           ? String(medicine.final_price)
-          : ''
+          : '',
       );
       setFrequency(medicine.frequency ?? '');
       setDuration(medicine.duration ?? '');
@@ -170,7 +179,7 @@ export default function MedicineModal({
   const handleMrpOrDiscountChange = (
     newMrp: string,
     newDiscType: DiscountType | '',
-    newDiscVal: string
+    newDiscVal: string,
   ) => {
     const parsedMrp = parseFloat(newMrp);
     const parsedDisc = parseFloat(newDiscVal);
@@ -180,19 +189,13 @@ export default function MedicineModal({
       return;
     }
 
-    if (!newDiscType || isNaN(parsedDisc) || parsedDisc <= 0) {
-      setFinalPrice(parsedMrp.toFixed(2));
-      return;
-    }
+    const calculated = calculateFinalPrice(
+      parsedMrp,
+      newDiscType || null,
+      !isNaN(parsedDisc) ? parsedDisc : null,
+    );
 
-    let calculated = parsedMrp;
-    if (newDiscType === 'Percentage') {
-      calculated = parsedMrp - (parsedMrp * parsedDisc) / 100;
-    } else if (newDiscType === 'Fixed Amount') {
-      calculated = parsedMrp - parsedDisc;
-    }
-
-    setFinalPrice(Math.max(calculated, 0).toFixed(2));
+    setFinalPrice(calculated !== null ? calculated.toFixed(2) : '');
   };
 
   const handleRequestAi = async () => {
@@ -221,7 +224,9 @@ export default function MedicineModal({
         setAiEmptyNotice(false);
       }
     } catch {
-      setAiError('Unable to retrieve medicine suggestions. Please try again or enter the details manually.');
+      setAiError(
+        'Unable to retrieve medicine suggestions. Please try again or enter the details manually.',
+      );
       setAiSuggestions([]);
       setShowSuggestions(false);
     } finally {
@@ -263,6 +268,16 @@ export default function MedicineModal({
 
     if (!medicineName.trim()) {
       setError('Medicine name is required.');
+      return;
+    }
+
+    const discountValidationError = validateDiscount(
+      mrp ? parseFloat(mrp) : null,
+      discountType || null,
+      discountValue ? parseFloat(discountValue) : null,
+    );
+    if (discountValidationError) {
+      setError(discountValidationError);
       return;
     }
 
@@ -331,12 +346,12 @@ export default function MedicineModal({
           <Section title="Basic Information">
             {/* Medicine Name with Request AI button */}
             <div className="relative">
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="mb-1.5 flex items-center justify-between">
                 <label
                   htmlFor="medicine-name-input"
-                  className="ui-field-label text-xs font-semibold text-slate-800 m-0 cursor-pointer"
+                  className="ui-field-label m-0 cursor-pointer text-xs font-semibold text-slate-800"
                 >
-                  Medicine Name <em className="text-rose-500 font-bold">*</em>
+                  Medicine Name <em className="font-bold text-rose-500">*</em>
                 </label>
                 {!medicine && (
                   <button
@@ -345,7 +360,7 @@ export default function MedicineModal({
                       void handleRequestAi();
                     }}
                     disabled={aiLoading}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-teal-700 bg-teal-50/90 hover:bg-teal-100 hover:text-teal-800 border border-teal-200/80 rounded-lg shadow-2xs transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-teal-200/80 bg-teal-50/90 px-2.5 py-1 text-xs font-semibold text-teal-700 shadow-2xs transition-all hover:bg-teal-100 hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
                     title="Search and auto-fill medicine details with AI"
                   >
                     {aiLoading ? (
@@ -379,15 +394,15 @@ export default function MedicineModal({
 
               {/* AI Validation / Error notification */}
               {aiError && (
-                <div className="mt-1.5 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between">
+                <div className="mt-1.5 flex items-center justify-between rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-800">
                   <div className="flex items-center gap-1.5">
-                    <AlertCircle size={14} className="text-rose-600 shrink-0" />
+                    <AlertCircle size={14} className="shrink-0 text-rose-600" />
                     <span>{aiError}</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setAiError('')}
-                    className="text-rose-500 hover:text-rose-800 p-0.5"
+                    className="p-0.5 text-rose-500 hover:text-rose-800"
                     aria-label="Dismiss error"
                   >
                     <X size={13} />
@@ -397,15 +412,15 @@ export default function MedicineModal({
 
               {/* AI Empty result message */}
               {aiEmptyNotice && (
-                <div className="mt-1.5 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center justify-between">
+                <div className="mt-1.5 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
                   <div className="flex items-center gap-1.5">
-                    <Info size={14} className="text-amber-600 shrink-0" />
+                    <Info size={14} className="shrink-0 text-amber-600" />
                     <span>No relevant medicines found. You can enter details manually.</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setAiEmptyNotice(false)}
-                    className="text-amber-500 hover:text-amber-800 p-0.5"
+                    className="p-0.5 text-amber-500 hover:text-amber-800"
                     aria-label="Dismiss notice"
                   >
                     <X size={13} />
@@ -415,17 +430,18 @@ export default function MedicineModal({
 
               {/* AI-assisted populated notice banner */}
               {isAiAssisted && (
-                <div className="mt-2 p-2.5 rounded-lg bg-teal-50/80 border border-teal-200 text-teal-900 text-xs flex items-center justify-between animate-in fade-in">
+                <div className="animate-in fade-in mt-2 flex items-center justify-between rounded-lg border border-teal-200 bg-teal-50/80 p-2.5 text-xs text-teal-900">
                   <div className="flex items-center gap-1.5">
-                    <Sparkles size={14} className="text-teal-600 shrink-0" />
+                    <Sparkles size={14} className="shrink-0 text-teal-600" />
                     <span>
-                      <strong>AI-assisted details populated</strong> &bull; please review before saving.
+                      <strong>AI-assisted details populated</strong> &bull; please review before
+                      saving.
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsAiAssisted(false)}
-                    className="text-teal-600 hover:text-teal-800 p-0.5"
+                    className="p-0.5 text-teal-600 hover:text-teal-800"
                     title="Dismiss"
                     aria-label="Dismiss notice"
                   >
@@ -438,55 +454,63 @@ export default function MedicineModal({
               {showSuggestions && aiSuggestions.length > 0 && (
                 <div
                   ref={dropdownRef}
-                  className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden divide-y divide-slate-100 max-h-72 overflow-y-auto"
+                  className="absolute top-full right-0 left-0 z-50 mt-1.5 max-h-72 divide-y divide-slate-100 overflow-hidden overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl"
                 >
-                  <div className="px-3 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                  <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-3 py-2 text-xs">
+                    <span className="flex items-center gap-1.5 font-bold text-slate-700">
                       <Sparkles size={13} className="text-teal-600" />
                       AI Medicine Suggestions ({aiSuggestions.length})
                     </span>
-                    <span className="text-[11px] text-slate-400">Click a formulation to auto-fill</span>
+                    <span className="text-[11px] text-slate-400">
+                      Click a formulation to auto-fill
+                    </span>
                   </div>
-                  <div className="p-1 space-y-0.5">
+                  <div className="space-y-0.5 p-1">
                     {aiSuggestions.map((item, idx) => (
                       <button
                         key={idx}
                         type="button"
                         onClick={() => handleSelectAiSuggestion(item)}
-                        className="w-full text-left p-2.5 rounded-lg hover:bg-teal-50/70 focus:bg-teal-50/90 transition-colors group flex flex-col gap-1 cursor-pointer border border-transparent hover:border-teal-200"
+                        className="group flex w-full cursor-pointer flex-col gap-1 rounded-lg border border-transparent p-2.5 text-left transition-colors hover:border-teal-200 hover:bg-teal-50/70 focus:bg-teal-50/90"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-slate-900 text-xs group-hover:text-teal-900">
+                          <span className="text-xs font-bold text-slate-900 group-hover:text-teal-900">
                             {item.medicineName}
                           </span>
                           {item.prescriptionRequired ? (
-                            <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                            <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
                               Rx Required
                             </span>
                           ) : (
-                            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                            <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
                               OTC
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-slate-500 flex flex-wrap items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
                           {item.genericName && (
                             <span className="font-medium text-slate-700">{item.genericName}</span>
                           )}
-                          {item.genericName && (item.strength ?? item.dosageForm) && <span>&bull;</span>}
+                          {item.genericName && (item.strength ?? item.dosageForm) && (
+                            <span>&bull;</span>
+                          )}
                           {item.strength && (
                             <span>
                               {item.strength} {item.strengthUnit}
                             </span>
                           )}
                           {item.dosageForm && <span>&bull; {item.dosageForm}</span>}
-                          {item.manufacturer && <span className="text-slate-400">({item.manufacturer})</span>}
+                          {item.manufacturer && (
+                            <span className="text-slate-400">({item.manufacturer})</span>
+                          )}
                           {item.mrp !== null && item.mrp !== undefined && (
-                            <span className="text-slate-600 font-semibold">&bull; ₹{Number(item.mrp).toFixed(2)}</span>
+                            <span className="font-semibold text-slate-600">
+                              &bull; ₹{Number(item.mrp).toFixed(2)}
+                            </span>
                           )}
                         </div>
                         {item.description && (
-                          <div className="text-[10px] text-slate-500 line-clamp-1 italic">
+                          <div className="line-clamp-1 text-[10px] text-slate-500 italic">
                             {item.description}
                           </div>
                         )}
@@ -610,7 +634,24 @@ export default function MedicineModal({
             />
           </Section>
 
-          <Section title="Pricing & Inventory">
+          <Section
+            title={
+              medicine
+                ? 'Master Pricing & Barcode Defaults'
+                : 'Initial Variant Formulation & Pricing'
+            }
+          >
+            {medicine ? (
+              <p className="mb-3 text-xs text-slate-500">
+                These serve as fallback master defaults. To manage individual strength variants,
+                packaging, and real-time inventory, use the Variants actions or Medicine Inventory.
+              </p>
+            ) : (
+              <p className="mb-3 text-xs text-slate-500">
+                Configure the initial baseline variant for this new medicine. Additional strength
+                variants can be added at any time.
+              </p>
+            )}
             <div className="ui-grid-2">
               <Field label="MRP (₹)" hint="Maximum Retail Price">
                 <input
