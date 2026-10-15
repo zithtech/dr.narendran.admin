@@ -9,6 +9,8 @@ import Branches from './pages/Branches';
 import Doctors from './pages/Doctors';
 import Users from './pages/Users';
 import Patients from './pages/Patients';
+import Pharmacy from './pages/Pharmacy';
+import MedicineInventory from './pages/MedicineInventory';
 import { PrescriptionTemplatesPage } from './features/prescriptions/pages/PrescriptionTemplatesPage';
 import Labs from './pages/Labs';
 import LabServices from './pages/LabServices';
@@ -108,6 +110,8 @@ function App() {
           <Route path="/branches" element={<Branches />} />
           <Route path="/doctors" element={<Doctors />} />
           <Route path="/patients" element={<Patients />} />
+          <Route path="/pharmacy" element={<Pharmacy />} />
+          <Route path="/inventory" element={<MedicineInventory />} />
           <Route path="/labs" element={<Labs />} />
           <Route path="/lab-services" element={<LabServices />} />
           <Route path="/linked-medicals" element={<LinkedMedicals />} />

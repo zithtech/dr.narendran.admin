@@ -104,7 +104,7 @@ export const PrescriptionPreviewModal: React.FC<PrescriptionPreviewModalProps> =
         {/* Modal Footer */}
         <div className="px-6 py-3 border-t border-slate-200 flex items-center justify-between bg-slate-50 shrink-0 text-xs text-slate-500">
           <div>
-            Design is predefined in <code className="font-mono bg-slate-200 px-1 py-0.5 rounded text-slate-800">src/templates/prescription/StandardPrescription.html</code>
+            Design is predefined in <code className="font-mono bg-slate-200 px-1 py-0.5 rounded text-slate-800">src/templates/prescription/StandardPrescription_Annaamalai.html</code>
           </div>
           <button
             type="button"

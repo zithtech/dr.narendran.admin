@@ -76,6 +76,8 @@ interface DataViewProps<T extends { id: string }> {
   onRowClick?: (item: T) => void;
   /** Highlights the row whose details are currently open. */
   activeId?: string | null;
+  /** Optional extra action buttons (e.g. Import Excel, Export Template) */
+  extraActions?: ReactNode;
 }
 
 type TimePreset = 'any' | 'today' | '7' | '30' | '90' | 'year';
@@ -128,6 +130,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
     rowActions,
     onRowClick,
     activeId,
+    extraActions,
   } = props;
   const { items, loading, error, syncedAt, refresh } = resource;
   const { message } = App.useApp();
@@ -422,6 +425,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
             Filters
             {activeRules > 0 && <span className="ui-btn-count">{activeRules}</span>}
           </button>
+          {extraActions}
           <button type="button" className="ui-btn ui-btn-primary ui-btn-pill" onClick={onCreate}>
             <Plus size={16} strokeWidth={2.4} />
             {createLabel}

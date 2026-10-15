@@ -10,6 +10,7 @@ export interface PrescriptionTemplate {
   status: 'ACTIVE' | 'INACTIVE';
   created_at?: string;
   updated_at?: string;
+  version?: number;
 }
 
 export interface LetterPadHospitalData {

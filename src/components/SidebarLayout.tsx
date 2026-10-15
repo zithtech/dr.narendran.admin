@@ -1,4 +1,5 @@
 import {
+  Boxes,
   Building2,
   ChevronLeft,
   ChevronRight,
@@ -7,6 +8,7 @@ import {
   GitBranch,
   HeartPulse,
   LogOut,
+  Pill,
   Stethoscope,
   UserCog,
   Shield,
@@ -22,6 +24,8 @@ const NAV_ITEMS = [
   { name: 'Branches', path: '/branches', icon: GitBranch, slug: 'BRANCHES' },
   { name: 'Doctors', path: '/doctors', icon: Stethoscope, slug: 'DOCTORS' },
   { name: 'Patients', path: '/patients', icon: HeartPulse, slug: 'PATIENTS' },
+  { name: 'Pharmacy', path: '/pharmacy', icon: Pill, slug: 'PRESCRIPTIONS' },
+  { name: 'Medicine Inventory', path: '/inventory', icon: Boxes, slug: 'PRESCRIPTIONS' },
   { name: 'Linked Labs', path: '/labs', icon: FlaskConical, slug: 'LABS' },
   { name: 'Lab Services', path: '/lab-services', icon: FlaskConical, slug: 'LAB_SERVICES' },
   { name: 'Linked Medicals', path: '/linked-medicals', icon: Stethoscope, slug: 'LABS' },
