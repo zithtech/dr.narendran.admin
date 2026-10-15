@@ -13,7 +13,7 @@ import {
 import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 
-import { Avatar, cx } from './ui/primitives';
+import { cx } from './ui/primitives';
 
 interface NavItem {
   name: string;
@@ -53,6 +53,15 @@ export default function LabClientLayout() {
 
   const username = user?.username || 'Lab User';
   const labName = lab?.name || 'Diagnostic Laboratory';
+
+  const userInitials = (username || 'LU')
+    .replace(/[._-]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .map((w: string) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'LU';
 
   const toggle = () => {
     setIsExpanded((prev) => {
@@ -136,31 +145,46 @@ export default function LabClientLayout() {
           })}
         </nav>
 
-        {/* Footer with User Meta & Logout */}
+        {/* Footer with logged-in user card matching admin app */}
         <div className="ui-rail-footer">
-          <div className="ui-rail-user" title={`${username} · ${labName}`}>
-            <Avatar name={username} size={32} />
+          {/* User Card */}
+          <div
+            className={cx('ui-rail-user-card', !isExpanded && 'is-collapsed')}
+            title={`${username} · ${labName}`}
+          >
+            <div className="ui-rail-user-avatar" onClick={!isExpanded ? toggle : undefined}>
+              {userInitials}
+            </div>
             {isExpanded && (
-              <span className="ui-rail-user-meta">
-                <span className="ui-rail-user-name" title={username}>
-                  {username}
-                </span>
-                <span className="ui-rail-user-role" title={labName}>
-                  {labName}
-                </span>
-              </span>
+              <>
+                <div className="ui-rail-user-info" onClick={toggle}>
+                  <span className="ui-rail-user-name" title={username}>{username}</span>
+                  <span className="ui-rail-user-sub" title={labName}>{labName}</span>
+                </div>
+                <button
+                  type="button"
+                  className="ui-rail-user-logout-btn"
+                  onClick={handleLogout}
+                  title="Log out"
+                  aria-label="Log out"
+                >
+                  <LogOut size={16} strokeWidth={1.8} />
+                </button>
+              </>
             )}
           </div>
-          <button
-            type="button"
-            className="ui-rail-item"
-            onClick={handleLogout}
-            data-tip="Log out"
-            aria-label="Log out"
-          >
-            <LogOut size={18} strokeWidth={1.8} />
-            {isExpanded && <span className="ui-rail-item-label">Log out</span>}
-          </button>
+
+          {!isExpanded && (
+            <button
+              type="button"
+              className="ui-rail-item ui-rail-logout-collapsed"
+              onClick={handleLogout}
+              data-tip="Log out"
+              aria-label="Log out"
+            >
+              <LogOut size={18} strokeWidth={1.8} />
+            </button>
+          )}
         </div>
       </aside>
 

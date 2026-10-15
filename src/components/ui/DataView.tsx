@@ -11,7 +11,6 @@ import {
   Pencil,
   Plus,
   RefreshCw,
-  RotateCcw,
   Search,
   SearchX,
   SlidersHorizontal,
@@ -105,9 +104,6 @@ function presetStart(preset: TimePreset): number | null {
   }
 }
 
-function isWide() {
-  return typeof window === 'undefined' || window.matchMedia('(min-width: 721px)').matches;
-}
 
 export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
   const {
@@ -145,8 +141,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
-  const [panelOpen, setPanelOpen] = useState(isWide);
+  const [filterbarOpen, setFilterbarOpen] = useState(true);
   const [pendingDelete, setPendingDelete] = useState<T[] | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
@@ -246,10 +241,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
   const startIdx = (current - 1) * perPage;
   const pageRows = filtered.slice(startIdx, startIdx + perPage);
 
-  const setFacet = (id: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [id]: prev[id] === value ? '' : value }));
-    setPage(1);
-  };
+
 
   const clearAll = () => {
     setFilters({});
@@ -388,7 +380,9 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
             )}
           </div>
 
-          <span className="ui-header-sub">{subtitle}</span>
+          <span className="ui-header-sub" title={subtitle}>
+            {subtitle}
+          </span>
         </div>
 
         <div className="ui-header-actions">
@@ -422,7 +416,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
           <button
             type="button"
             className={cx('ui-btn ui-btn-pill', activeRules > 0 && 'ui-btn-soft')}
-            onClick={() => setPanelOpen((o) => !o)}
+            onClick={() => setFilterbarOpen((o) => !o)}
           >
             <SlidersHorizontal size={15} />
             Filters
@@ -435,165 +429,77 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
         </div>
       </header>
 
-      <div className={cx('ui-workspace', !panelOpen && 'is-panel-hidden')}>
-        {/* ── Filter panel ── */}
-        <aside className="ui-card ui-panel" aria-label="Filters">
-          <div className="ui-panel-head">
-            <span className="ui-eyebrow">Filters</span>
-            <button
-              type="button"
-              className="ui-icon-btn"
-              onClick={clearAll}
-              aria-label="Reset filters"
-              title="Reset filters"
-            >
-              <RotateCcw size={14} />
-            </button>
-          </div>
-
-          <div className="ui-panel-body">
-            <button
-              type="button"
-              className={cx('ui-panel-all', activeRules === 0 && 'is-active')}
-              onClick={clearAll}
-            >
-              <span>All {nounPlural}</span>
-              <span className="ui-count">{items.length}</span>
-            </button>
-
-            {facetOptions
-              .filter(({ facet }) => facet.inPanel !== false)
-              .map(({ facet, options, total }) => {
-                const isCollapsed = collapsed.has(facet.id);
-                return (
-                  <div className="ui-group" key={facet.id}>
-                    <button
-                      type="button"
-                      className={cx('ui-group-head', isCollapsed && 'is-collapsed')}
-                      aria-expanded={!isCollapsed}
-                      onClick={() =>
-                        setCollapsed((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(facet.id)) next.delete(facet.id);
-                          else next.add(facet.id);
-                          return next;
-                        })
-                      }
-                    >
-                      <ChevronDown size={15} />
-                      <span className="ui-group-name">{facet.label}</span>
-                      <span className="ui-count">{total}</span>
-                    </button>
-                    {!isCollapsed && (
-                      <div className="ui-group-items">
-                        {options.length === 0 && (
-                          <div className="ui-group-empty">Nothing here yet</div>
-                        )}
-                        {options.map((o) => {
-                          const active = filters[facet.id] === o.value;
-                          return (
-                            <button
-                              type="button"
-                              key={o.value}
-                              className={cx('ui-group-item', active && 'is-active')}
-                              aria-pressed={active}
-                              onClick={() => setFacet(facet.id, o.value)}
-                            >
-                              <span className="ui-group-item-label">{o.label}</span>
-                              <span className="ui-count">{o.count}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-          </div>
-
-          <div className="ui-panel-foot">
-            <span>
-              {activeRules} rule{activeRules === 1 ? '' : 's'} applied
-            </span>
-            <button
-              type="button"
-              className="ui-btn ui-btn-sm"
-              onClick={clearAll}
-              disabled={activeRules === 0}
-            >
-              Clear
-            </button>
-          </div>
-        </aside>
-
+      <div className="ui-workspace">
         {/* ── Content ── */}
         <section className="ui-content">
           {error && <Alert>{error}</Alert>}
 
-          <div className="ui-card ui-filterbar">
-            {facetOptions.map(({ facet, options }) => (
-              <select
-                key={facet.id}
-                className={cx('ui-select', filters[facet.id] && 'is-set')}
-                value={filters[facet.id] ?? ''}
-                onChange={(e) => {
-                  setFilters((prev) => ({ ...prev, [facet.id]: e.target.value }));
-                  setPage(1);
-                }}
-                aria-label={facet.label}
-              >
-                <option value="">{facet.allLabel}</option>
-                {options.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            ))}
-            {dateOf && (
-              <>
+          {filterbarOpen && (
+            <div className="ui-card ui-filterbar">
+              {facetOptions.map(({ facet, options }) => (
                 <select
-                  className={cx('ui-select', preset !== 'any' && 'is-set')}
-                  value={preset}
+                  key={facet.id}
+                  className={cx('ui-select', filters[facet.id] && 'is-set')}
+                  value={filters[facet.id] ?? ''}
                   onChange={(e) => {
-                    setPreset(e.target.value as TimePreset);
+                    setFilters((prev) => ({ ...prev, [facet.id]: e.target.value }));
                     setPage(1);
                   }}
-                  aria-label="Time range"
+                  aria-label={facet.label}
                 >
-                  {TIME_PRESETS.map((p) => (
-                    <option key={p.value} value={p.value}>
-                      {p.value === 'any' ? p.label : `${dateLabel} · ${p.label.toLowerCase()}`}
+                  <option value="">{facet.allLabel}</option>
+                  {options.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
                     </option>
                   ))}
                 </select>
-                <div className="ui-daterange">
-                  <span>{dateLabel}</span>
-                  <input
-                    type="date"
-                    value={from}
-                    max={to || undefined}
+              ))}
+              {dateOf && (
+                <>
+                  <select
+                    className={cx('ui-select', preset !== 'any' && 'is-set')}
+                    value={preset}
                     onChange={(e) => {
-                      setFrom(e.target.value);
+                      setPreset(e.target.value as TimePreset);
                       setPage(1);
                     }}
-                    aria-label={`${dateLabel} from`}
-                  />
-                  <ArrowRight size={13} />
-                  <input
-                    type="date"
-                    value={to}
-                    min={from || undefined}
-                    onChange={(e) => {
-                      setTo(e.target.value);
-                      setPage(1);
-                    }}
-                    aria-label={`${dateLabel} to`}
-                  />
-                </div>
-              </>
-            )}
-          </div>
+                    aria-label="Time range"
+                  >
+                    {TIME_PRESETS.map((p) => (
+                      <option key={p.value} value={p.value}>
+                        {p.value === 'any' ? p.label : `${dateLabel} · ${p.label.toLowerCase()}`}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="ui-daterange">
+                    <span>{dateLabel}</span>
+                    <input
+                      type="date"
+                      value={from}
+                      max={to || undefined}
+                      onChange={(e) => {
+                        setFrom(e.target.value);
+                        setPage(1);
+                      }}
+                      aria-label={`${dateLabel} from`}
+                    />
+                    <ArrowRight size={13} />
+                    <input
+                      type="date"
+                      value={to}
+                      min={from || undefined}
+                      onChange={(e) => {
+                        setTo(e.target.value);
+                        setPage(1);
+                      }}
+                      aria-label={`${dateLabel} to`}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           <div className="ui-card ui-table-card">
             <div className="ui-table-scroll">
@@ -723,11 +629,11 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                           onClick={
                             onRowClick
                               ? (e) => {
-                                  // Checkboxes, buttons and links inside the row keep their own behaviour.
-                                  if ((e.target as HTMLElement).closest('button, input, a, label'))
-                                    return;
-                                  onRowClick(item);
-                                }
+                                // Checkboxes, buttons and links inside the row keep their own behaviour.
+                                if ((e.target as HTMLElement).closest('button, input, a, label'))
+                                  return;
+                                onRowClick(item);
+                              }
                               : undefined
                           }
                         >

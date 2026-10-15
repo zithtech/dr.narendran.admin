@@ -1,12 +1,12 @@
 import { App } from 'antd';
 import {
   Building2,
-  CheckCircle2,
   Clock,
   Edit3,
   ExternalLink,
   Eye,
   EyeOff,
+  FlaskConical,
   Mail,
   MapPin,
   Phone,
@@ -44,7 +44,7 @@ export default function LabProfilePage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Edit Form Fields
+  // Form Fields for Edit Modal
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -120,7 +120,7 @@ export default function LabProfilePage() {
       const res = await api.put('lab-portal/profile', payload);
       setProfile(res.data);
 
-      // Update cached lab object in localStorage so sidebar updates instantly
+      // Update cached lab object in localStorage so sidebar user footer updates instantly
       const currentLabStr = localStorage.getItem('labClientLab');
       if (currentLabStr) {
         try {
@@ -149,59 +149,61 @@ export default function LabProfilePage() {
     );
   }
 
-  const isContactVisible =
+  const isPublic =
     profile?.contact_visibility !== undefined ? Boolean(profile.contact_visibility) : true;
 
+  const operatingHours =
+    profile?.start_time && profile?.end_time
+      ? `${profile.start_time} — ${profile.end_time}`
+      : profile?.start_time || profile?.end_time || 'Schedule not configured';
+
+  const fullStreetAddress = [profile?.address_line_1, profile?.address_line_2]
+    .filter(Boolean)
+    .join(', ');
+
+  const cityStatePincode = [profile?.city, profile?.state, profile?.pincode]
+    .filter(Boolean)
+    .join(', ');
+
   return (
-    <div className="w-full p-6 space-y-6">
-      {/* ── View-Only Hero Banner ── */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-7 relative overflow-hidden">
+    <div className="w-full p-5 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto box-border">
+      {/* ── 1. Clean Light Header ── */}
+      <div className="rounded-2xl bg-white p-6 sm:p-7 border border-slate-200/80 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-          <div className="flex items-start sm:items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-600 to-teal-500 text-white flex items-center justify-center shadow-md shadow-sky-500/20 flex-shrink-0">
-              <Building2 size={30} strokeWidth={2.2} />
+          <div className="flex items-center gap-4 sm:gap-5">
+            <div className="w-13 h-13 sm:w-15 sm:h-15 rounded-2xl bg-sky-50 text-sky-600 border border-sky-100 flex items-center justify-center shrink-0">
+              <Building2 size={26} strokeWidth={2.2} />
             </div>
             <div>
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">
                   {profile?.name || 'Laboratory Profile'}
                 </h1>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  <CheckCircle2 size={12} />
-                  <span>Verified Facility</span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Verified Facility
                 </span>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 flex items-center gap-2">
-                <span>Diagnostic Center</span>
                 {profile?.city && (
-                  <>
-                    <span>•</span>
-                    <span className="inline-flex items-center gap-1 text-slate-600">
-                      <MapPin size={13} className="text-slate-400" />
-                      {profile.city}
-                    </span>
-                  </>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-xs font-medium">
+                    <MapPin size={11} className="text-slate-500" />
+                    {profile.city}
+                  </span>
                 )}
-                {profile?.total_services !== undefined && (
-                  <>
-                    <span>•</span>
-                    <span className="text-sky-700 font-medium">
-                      {profile.total_services} Services Offered
-                    </span>
-                  </>
-                )}
+              </div>
+              <p className="text-slate-500 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
+                Diagnostic facility operational profile, contact details, operating schedule, and location coordinates.
               </p>
             </div>
           </div>
 
-          {/* Edit Profile Action Button */}
-          <div className="flex items-center gap-3 self-start sm:self-auto">
+          {/* Quick Header Actions */}
+          <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
             {profile?.map_link && (
               <a
                 href={profile.map_link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all border border-slate-200"
               >
                 <span>Google Maps</span>
                 <ExternalLink size={13} />
@@ -210,7 +212,7 @@ export default function LabProfilePage() {
             <button
               type="button"
               onClick={openEditModal}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-medium text-xs sm:text-sm transition-colors shadow-sm"
+              className="inline-flex items-center justify-center gap-2 px-4.5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs sm:text-sm transition-all shadow-xs cursor-pointer active:scale-[0.98]"
             >
               <Edit3 size={15} />
               <span>Edit Profile</span>
@@ -219,223 +221,191 @@ export default function LabProfilePage() {
         </div>
       </div>
 
-      {/* ── View-Only Structured Detail Cards ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Card 1: Contact Information */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-sky-50 text-sky-600">
-                <Phone size={17} />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">Communication & Contact</h2>
-                <p className="text-xs text-slate-400">Direct referral and patient outreach lines</p>
-              </div>
-            </div>
+      {/* ── Single View-Only Details Card ── */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 sm:p-8 space-y-6">
+        {/* Facility Title & Avatar Banner */}
+        <div className="flex items-center gap-4.5 pb-6 border-b border-slate-100">
+          <div className="w-16 h-16 rounded-2xl bg-sky-100 text-sky-700 border border-sky-200 flex items-center justify-center text-2xl font-extrabold shrink-0">
+            {profile?.name ? profile.name.slice(0, 2).toUpperCase() : 'LP'}
           </div>
-
-          <div className="space-y-3.5 text-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-slate-50 gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Phone Number
-              </span>
-              {profile?.phone ? (
-                <a
-                  href={`tel:${profile.phone}`}
-                  className="font-medium text-sky-600 hover:underline flex items-center gap-1.5"
-                >
-                  <Phone size={13} className="text-slate-400" />
-                  <span>{profile.phone}</span>
-                </a>
-              ) : (
-                <span className="text-xs text-slate-400 italic">Not provided</span>
-              )}
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-slate-50 gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Official Email
-              </span>
-              {profile?.email ? (
-                <a
-                  href={`mailto:${profile.email}`}
-                  className="font-medium text-sky-600 hover:underline flex items-center gap-1.5"
-                >
-                  <Mail size={13} className="text-slate-400" />
-                  <span>{profile.email}</span>
-                </a>
-              ) : (
-                <span className="text-xs text-slate-400 italic">Not provided</span>
-              )}
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Patient Visibility
-              </span>
+          <div>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+                {profile?.name || 'Diagnostic Laboratory'}
+              </h2>
               <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                  isContactVisible
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    : 'bg-slate-100 text-slate-600'
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                  isPublic
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-slate-100 text-slate-600 border-slate-200'
                 }`}
               >
-                {isContactVisible ? (
-                  <>
-                    <Eye size={13} />
-                    <span>Public in Directory</span>
-                  </>
+                {isPublic ? <Eye size={12} /> : <EyeOff size={12} />}
+                <span>{isPublic ? 'Public in Directory' : 'Private / Unlisted'}</span>
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              {fullStreetAddress || cityStatePincode || 'Complete diagnostic center profile'}
+            </p>
+          </div>
+        </div>
+
+        {/* ── All Details in Single Organized Grid ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4.5 text-sm">
+          {/* 1. Laboratory Name */}
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100/90 flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Building2 size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Laboratory Name
+              </div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">
+                {profile?.name || '—'}
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Contact Phone */}
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100/90 flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Phone size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Contact Phone
+              </div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">
+                {profile?.phone ? (
+                  <a href={`tel:${profile.phone}`} className="hover:text-sky-600 transition-colors">
+                    {profile.phone}
+                  </a>
                 ) : (
-                  <>
-                    <EyeOff size={13} />
-                    <span>Private / Hidden</span>
-                  </>
+                  <span className="text-slate-400 italic font-normal">Not configured</span>
                 )}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: Operating Schedule */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-teal-50 text-teal-600">
-                <Clock size={17} />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">Operating Schedule</h2>
-                <p className="text-xs text-slate-400">Facility timings for sample drop-off & tests</p>
               </div>
             </div>
           </div>
 
-          <div className="space-y-3.5 text-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-slate-50 gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Opening Hours
-              </span>
-              <span className="font-semibold text-slate-800">
-                {profile?.start_time && profile?.end_time
-                  ? `${profile.start_time} — ${profile.end_time}`
-                  : profile?.start_time || profile?.end_time || (
-                      <span className="text-xs text-slate-400 italic font-normal">
-                        Schedule not configured
-                      </span>
-                    )}
-              </span>
+          {/* 3. Official Email */}
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100/90 flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Mail size={16} />
             </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-slate-50 gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Current Status
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Operational</span>
-              </span>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Linked Services
-              </span>
-              <span className="font-semibold text-slate-800">
-                {profile?.total_services || 0} Diagnostic Investigations
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Physical Address & Map Location (Spans full width) */}
-        <div className="md:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-sky-50 text-sky-600">
-                <MapPin size={17} />
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Official Email
               </div>
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">Physical Facility & Location</h2>
-                <p className="text-xs text-slate-400">Complete clinic / diagnostic center address</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
-            <div className="space-y-3">
-              <div>
-                <span className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                  Street Address
-                </span>
-                <p className="font-medium text-slate-800 leading-relaxed">
-                  {profile?.address_line_1 || (
-                    <span className="text-xs text-slate-400 italic font-normal">
-                      No street address provided
-                    </span>
-                  )}
-                  {profile?.address_line_2 && (
-                    <>
-                      <br />
-                      <span className="text-slate-600 text-xs">{profile.address_line_2}</span>
-                    </>
-                  )}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-50">
-                <div>
-                  <span className="block text-[11px] font-semibold uppercase text-slate-400">
-                    City
-                  </span>
-                  <span className="text-xs font-medium text-slate-800">
-                    {profile?.city || '—'}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-[11px] font-semibold uppercase text-slate-400">
-                    State
-                  </span>
-                  <span className="text-xs font-medium text-slate-800">
-                    {profile?.state || '—'}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-[11px] font-semibold uppercase text-slate-400">
-                    Pincode
-                  </span>
-                  <span className="text-xs font-medium text-slate-800">
-                    {profile?.pincode || '—'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3 sm:border-l sm:border-slate-100 sm:pl-6">
-              <div>
-                <span className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                  Google Maps Location Link
-                </span>
-                {profile?.map_link ? (
-                  <div className="space-y-2">
-                    <p className="text-xs text-slate-500 font-mono truncate max-w-sm bg-slate-50 p-2 rounded border border-slate-200">
-                      {profile.map_link}
-                    </p>
-                    <a
-                      href={profile.map_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 hover:text-sky-700 hover:underline"
-                    >
-                      <span>Open in Google Maps</span>
-                      <ExternalLink size={12} />
-                    </a>
-                  </div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">
+                {profile?.email ? (
+                  <a href={`mailto:${profile.email}`} className="hover:text-sky-600 transition-colors">
+                    {profile.email}
+                  </a>
                 ) : (
-                  <p className="text-xs text-slate-400 italic">
-                    No map coordinate or location link added. Click "Edit Profile" to provide a map
-                    URL for referrals.
-                  </p>
+                  <span className="text-slate-400 italic font-normal">Not configured</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Operating Hours */}
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100/90 flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Clock size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Sample Collection Hours
+              </div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">
+                {operatingHours}
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Directory Presence */}
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100/90 flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+              {isPublic ? <Eye size={16} /> : <EyeOff size={16} />}
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Referral Directory Visibility
+              </div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">
+                {isPublic ? 'Public in Doctor Referral List' : 'Direct Referrals Only'}
+              </div>
+            </div>
+          </div>
+
+          {/* 6. Diagnostic Catalog */}
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100/90 flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center shrink-0 mt-0.5">
+              <FlaskConical size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Configured Investigations
+              </div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">
+                {profile?.total_services || 0} Clinical Tests Offered
+              </div>
+            </div>
+          </div>
+
+          {/* 7. Street Address */}
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100/90 flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 mt-0.5">
+              <MapPin size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Street Address
+              </div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">
+                {fullStreetAddress || <span className="text-slate-400 italic font-normal">Not provided</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* 8. City, State & Pincode */}
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100/90 flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0 mt-0.5">
+              <MapPin size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                City / State / Pincode
+              </div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">
+                {cityStatePincode || <span className="text-slate-400 italic font-normal">Not provided</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* 9. Google Maps Link */}
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100/90 flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+              <ExternalLink size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Google Maps Location
+              </div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">
+                {profile?.map_link ? (
+                  <a
+                    href={profile.map_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sky-600 hover:text-sky-700 inline-flex items-center gap-1"
+                  >
+                    <span>Open Navigation Link</span>
+                    <ExternalLink size={12} />
+                  </a>
+                ) : (
+                  <span className="text-slate-400 italic font-normal">No map link added</span>
                 )}
               </div>
             </div>
@@ -456,14 +426,14 @@ export default function LabProfilePage() {
                 <div>
                   <h2 className="text-base font-bold text-slate-900">Edit Laboratory Profile</h2>
                   <p className="text-xs text-slate-500">
-                    Update facility details, operating hours, and location
+                    Update facility details, contact information, hours, and address
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsEditModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg transition-colors"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -471,7 +441,6 @@ export default function LabProfilePage() {
 
             {/* Modal Form */}
             <form onSubmit={handleSave} className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
-              {/* General Info */}
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
                   General & Communication
@@ -486,7 +455,7 @@ export default function LabProfilePage() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. City Center Lab"
+                    placeholder="e.g. City Central Lab"
                     className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                   />
                 </div>
@@ -518,11 +487,78 @@ export default function LabProfilePage() {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="e.g. lab@metrodiagnostics.com"
+                        placeholder="e.g. lab@example.com"
                         className="w-full pl-10 pr-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                       />
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Operating Hours & Visibility */}
+              <div className="space-y-4 pt-2">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
+                  Operating Hours & Public Directory
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Opening Time
+                    </label>
+                    <div className="relative">
+                      <Clock size={15} className="absolute left-3.5 top-3 text-slate-400" />
+                      <input
+                        type="text"
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                        placeholder="e.g. 07:30 AM"
+                        className="w-full pl-10 pr-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Closing Time
+                    </label>
+                    <div className="relative">
+                      <Clock size={15} className="absolute left-3.5 top-3 text-slate-400" />
+                      <input
+                        type="text"
+                        value={endTime}
+                        onChange={(e) => setEndTime(e.target.value)}
+                        placeholder="e.g. 09:30 PM"
+                        className="w-full pl-10 pr-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-4">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">
+                      Public Referral Directory Visibility
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      Display phone and email on doctor referral sheets and patient receipts
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setContactVisibility(!contactVisibility)}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      contactVisibility ? 'bg-sky-600' : 'bg-slate-300'
+                    }`}
+                    role="switch"
+                    aria-checked={contactVisibility}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        contactVisibility ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
                 </div>
               </div>
 
@@ -616,86 +652,19 @@ export default function LabProfilePage() {
                 </div>
               </div>
 
-              {/* Operating Hours & Visibility */}
-              <div className="space-y-4 pt-2">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
-                  Hours & Public Directory
-                </h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Opening Time
-                    </label>
-                    <div className="relative">
-                      <Clock size={15} className="absolute left-3.5 top-3 text-slate-400" />
-                      <input
-                        type="text"
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                        placeholder="e.g. 07:30 AM"
-                        className="w-full pl-10 pr-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Closing Time
-                    </label>
-                    <div className="relative">
-                      <Clock size={15} className="absolute left-3.5 top-3 text-slate-400" />
-                      <input
-                        type="text"
-                        value={endTime}
-                        onChange={(e) => setEndTime(e.target.value)}
-                        placeholder="e.g. 09:30 PM"
-                        className="w-full pl-10 pr-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-4">
-                  <div>
-                    <span className="text-xs font-bold text-slate-800 block">
-                      Public Contact Visibility
-                    </span>
-                    <span className="text-[11px] text-slate-500">
-                      Display phone and email on patient referral confirmations
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setContactVisibility(!contactVisibility)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      contactVisibility ? 'bg-sky-600' : 'bg-slate-300'
-                    }`}
-                    role="switch"
-                    aria-checked={contactVisibility}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                        contactVisibility ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
-
               {/* Modal Footer */}
               <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50"
+                  className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium shadow-sm disabled:opacity-50 inline-flex items-center gap-2"
+                  className="px-5 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium shadow-sm disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer"
                 >
                   {saving ? (
                     <>

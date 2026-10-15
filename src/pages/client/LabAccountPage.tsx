@@ -82,99 +82,26 @@ export default function LabAccountPage() {
   };
 
   return (
-    <div className="w-full p-6 space-y-6">
-      {/* Header */}
-      <div className="pb-4 border-b border-slate-200">
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-          <User className="text-sky-600" size={24} />
-          <span>My Client Account</span>
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Registered credentials, security state, and linked facility association for this portal session.
-        </p>
-      </div>
-
-      {/* Account Overview Card */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
-        <div className="flex items-center gap-4 pb-5 border-b border-slate-100">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-600 to-teal-500 text-white flex items-center justify-center text-xl font-bold shadow-md shadow-sky-500/20">
-            {account?.username ? account.username.slice(0, 2).toUpperCase() : 'LA'}
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-slate-900">{account?.username}</h2>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <CheckCircle2 size={12} />
-                <span>{account?.status || 'ACTIVE'}</span>
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">{account?.email}</p>
-          </div>
-        </div>
-
-        {/* Account Details Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm">
-          <div className="p-4 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              <User size={13} />
-              <span>Username</span>
-            </div>
-            <div className="font-semibold text-slate-800">{account?.username}</div>
-          </div>
-
-          <div className="p-4 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              <Mail size={13} />
-              <span>Registered Email</span>
-            </div>
-            <div className="font-semibold text-slate-800">{account?.email}</div>
-          </div>
-
-          <div className="p-4 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              <Building2 size={13} />
-              <span>Linked Laboratory</span>
-            </div>
-            <div className="font-semibold text-slate-800">{account?.lab_name}</div>
-          </div>
-
-          <div className="p-4 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              <Phone size={13} />
-              <span>Facility Phone</span>
-            </div>
-            <div className="font-semibold text-slate-800">{account?.lab_phone || 'Not set'}</div>
-          </div>
-
-          <div className="p-4 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              <Calendar size={13} />
-              <span>Account Created</span>
-            </div>
-            <div className="font-semibold text-slate-800">{formatDate(account?.created_at)}</div>
-          </div>
-
-          <div className="p-4 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              <Clock size={13} />
-              <span>Last Login</span>
-            </div>
-            <div className="font-semibold text-slate-800">{formatDate(account?.last_login_at)}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Security & Password Card */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="p-2.5 rounded-lg bg-sky-50 text-sky-600 mt-0.5">
-              <ShieldCheck size={20} />
+    <div className="w-full p-5 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto box-border">
+      {/* ── 1. Clean Light Header ── */}
+      <div className="rounded-2xl bg-white p-6 sm:p-7 border border-slate-200/80 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+          <div className="flex items-center gap-4 sm:gap-5">
+            <div className="w-13 h-13 sm:w-15 sm:h-15 rounded-2xl bg-sky-50 text-sky-600 border border-sky-100 flex items-center justify-center shrink-0">
+              <User size={26} strokeWidth={2.2} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">Security & Password Management</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-md">
-                Keep your laboratory portal credentials secure. Update your password regularly to protect patient referral records.
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">
+                  My Client Portal Account
+                </h1>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Active Portal Session
+                </span>
+              </div>
+              <p className="text-slate-500 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
+                Registered credentials, facility association, and encryption security state for this laboratory user.
               </p>
             </div>
           </div>
@@ -182,18 +109,138 @@ export default function LabAccountPage() {
           <button
             type="button"
             onClick={() => void navigate('/client/change-password')}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-colors shadow-sm"
+            className="inline-flex items-center justify-center gap-2 px-4.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold transition-all border border-slate-200 cursor-pointer self-start sm:self-auto"
           >
-            <KeyRound size={14} />
+            <KeyRound size={15} className="text-slate-600" />
             <span>Change Password</span>
           </button>
         </div>
+      </div>
 
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span>Portal Session Encryption: <strong className="text-slate-700">Argon2id + JWT</strong></span>
-          <span className="text-emerald-600 font-medium flex items-center gap-1">
-            <Shield size={13} />
-            Protected
+      {/* ── Account Overview Card ── */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-6">
+        <div className="flex items-center gap-4.5 pb-6 border-b border-slate-100">
+          <div className="w-16 h-16 rounded-2xl bg-sky-100 text-sky-700 border border-sky-200 flex items-center justify-center text-2xl font-extrabold shrink-0">
+            {account?.username ? account.username.slice(0, 2).toUpperCase() : 'LA'}
+          </div>
+          <div>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">{account?.username}</h2>
+              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <CheckCircle2 size={13} className="text-emerald-600" />
+                <span>{account?.status || 'ACTIVE'}</span>
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">{account?.email}</p>
+          </div>
+        </div>
+
+        {/* ── Account Details Grid ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4.5 text-sm">
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100/90 flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0 mt-0.5">
+              <User size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Portal Username
+              </div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">{account?.username}</div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100/90 flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Mail size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Registered Email
+              </div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">{account?.email}</div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100/90 flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Building2 size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Linked Facility
+              </div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">{account?.lab_name}</div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100/90 flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Phone size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Facility Phone
+              </div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">{account?.lab_phone || 'Not set'}</div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100/90 flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Calendar size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Account Created
+              </div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">{formatDate(account?.created_at)}</div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100/90 flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Clock size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Last Login
+              </div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">{formatDate(account?.last_login_at)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Security & Encryption Card ── */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="p-2.5 rounded-xl bg-sky-50 text-sky-600 border border-sky-100 shrink-0 mt-0.5">
+              <ShieldCheck size={22} />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Security & Authentication Management</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-lg leading-relaxed">
+                Protect sensitive patient referral and clinical report data by using strong passphrases and rotating passwords periodically.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void navigate('/client/change-password')}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors shadow-xs cursor-pointer self-start sm:self-auto shrink-0"
+          >
+            <KeyRound size={14} />
+            <span>Update Password</span>
+          </button>
+        </div>
+
+        <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <span>Portal Session Encryption: <strong className="text-slate-800 font-bold">Argon2id + JWT Bearer</strong></span>
+          <span className="text-emerald-700 font-bold flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/60">
+            <Shield size={13} className="text-emerald-600" />
+            <span>Active Protection</span>
           </span>
         </div>
       </div>

@@ -438,16 +438,19 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   padding: 6px 4px 4px;
+  min-width: 0;
 }
 
 .ui-header-title {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   min-width: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .ui-header-sub {
@@ -457,13 +460,16 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 450;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .ui-header-actions {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .ui-synced {
@@ -667,7 +673,8 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .ui-synced {
@@ -860,8 +867,18 @@ body {
   position: relative;
   display: flex;
   align-items: center;
-  width: 320px;
+  width: 260px;
   max-width: 100%;
+}
+
+@media (max-width: 1280px) {
+  .ui-synced {
+    display: none;
+  }
+
+  .ui-search {
+    width: 220px;
+  }
 }
 
 .ui-search svg {
@@ -994,19 +1011,18 @@ body {
 .ui-workspace {
   flex: 1;
   min-height: 0;
-  display: grid;
-  grid-template-columns: 290px minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   padding: 0;
 }
 
-.ui-workspace.is-panel-hidden {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-/* The Filters button collapses the panel in place; the table takes the space. */
-.ui-workspace.is-panel-hidden .ui-panel {
-  display: none;
+.ui-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .ui-card {
@@ -1079,7 +1095,7 @@ body {
   color: var(--ui-primary);
 }
 
-.ui-group + .ui-group {
+.ui-group+.ui-group {
   margin-top: 8px;
 }
 
@@ -1463,6 +1479,7 @@ body {
   from {
     background-position: 200% 0;
   }
+
   to {
     background-position: -200% 0;
   }
@@ -1778,7 +1795,7 @@ body {
   gap: 12px;
 }
 
-.ui-section + .ui-section {
+.ui-section+.ui-section {
   padding-top: 18px;
   border-top: 1px dashed var(--ui-border);
 }
@@ -2198,7 +2215,7 @@ body {
   border-radius: 10px;
 }
 
-.ui-contact-card + .ui-contact-card {
+.ui-contact-card+.ui-contact-card {
   margin-top: 8px;
 }
 
@@ -2304,7 +2321,7 @@ body {
   position: relative;
 }
 
-.ui-input-icon > svg {
+.ui-input-icon>svg {
   position: absolute;
   left: 12px;
   top: 50%;
@@ -2364,7 +2381,7 @@ body {
     flex: 1 1 100%;
   }
 
-  .ui-daterange > span {
+  .ui-daterange>span {
     display: none;
   }
 
