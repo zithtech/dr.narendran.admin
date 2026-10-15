@@ -1,4 +1,4 @@
-import { HeartPulse, Lock, User } from 'lucide-react';
+import { ExternalLink, HeartPulse, Lock, User } from 'lucide-react';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -36,6 +36,8 @@ export default function Login() {
     }
   };
 
+  const isClientPortalError = error.includes('Client portal') || error.includes('client portal');
+
   return (
     <div className="ui-auth">
       <div className="ui-auth-card">
@@ -58,7 +60,32 @@ export default function Login() {
           }}
           style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
         >
-          {error && <Alert>{error}</Alert>}
+          {error && (
+            <div>
+              <Alert>{error}</Alert>
+              {isClientPortalError && (
+                <div style={{ marginTop: 8, textAlign: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => void navigate('/client/login')}
+                    className="ui-btn ui-btn-primary"
+                    style={{
+                      width: '100%',
+                      height: 36,
+                      fontSize: 13,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <span>Go to Client Portal Login</span>
+                    <ExternalLink size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           <Field label="Email or username">
             <div className="ui-input-icon">
@@ -101,6 +128,25 @@ export default function Login() {
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        <div style={{ marginTop: 16, textAlign: 'center', fontSize: 13, color: '#64748b' }}>
+          <span>External partner or diagnostic lab? </span>
+          <button
+            type="button"
+            onClick={() => void navigate('/client/login')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#0284c7',
+              cursor: 'pointer',
+              fontWeight: 500,
+              textDecoration: 'underline',
+              padding: 0,
+            }}
+          >
+            Access Client Portal &rarr;
+          </button>
+        </div>
 
         <div className="ui-auth-foot">Protected area · Authorised staff only</div>
       </div>
