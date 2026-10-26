@@ -1,5 +1,6 @@
 import {
   Boxes,
+  LifeBuoy,
   Building2,
   ChevronLeft,
   ChevronRight,
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
   { name: 'Medicine Inventory', path: '/inventory', icon: Boxes },
   { name: 'User Accounts', path: '/users', icon: UserCog },
   { name: 'Prescription Templates', path: '/prescriptions', icon: FileText },
+  { name: 'Support Center', path: '/support', icon: LifeBuoy },
 ] as const;
 
 const EXPANDED_KEY = 'adminRailExpanded';

@@ -11,6 +11,7 @@ import Patients from './pages/Patients';
 import Pharmacy from './pages/Pharmacy';
 import MedicineInventory from './pages/MedicineInventory';
 import Users from './pages/Users';
+import SupportCenterPage from './features/support/pages/SupportCenterPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('adminToken');
@@ -36,6 +37,7 @@ function App() {
           <Route path="/inventory" element={<MedicineInventory />} />
           <Route path="/users" element={<Users />} />
           <Route path="/prescriptions" element={<PrescriptionTemplatesPage />} />
+          <Route path="/support" element={<SupportCenterPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

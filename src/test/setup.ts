@@ -36,3 +36,11 @@ if (!globalThis.crypto.randomUUID) {
     randomUUID: () => '00000000-0000-4000-8000-000000000000',
   });
 }
+
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+  };
+}
