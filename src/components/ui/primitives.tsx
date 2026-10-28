@@ -1,5 +1,5 @@
 import { AlertCircle } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 
 import { initials, toneFor } from '../../lib/format';
 
@@ -20,18 +20,56 @@ export function Avatar({
   src?: string | null | undefined;
   size?: number;
 }) {
-  if (src) {
+  const [imgSrc, setImgSrc] = useState<string | null>(null);
+  const [triedProxy, setTriedProxy] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    if (!src || !src.trim()) {
+      setImgSrc(null);
+      setHasError(false);
+      setTriedProxy(false);
+      return;
+    }
+
+    const trimmed = src.trim();
+    // Unsigned AWS S3 bucket URLs cannot be directly accessed due to 403 AccessDenied.
+    // If unsigned S3, immediately route through proxy.
+    if (trimmed.includes('amazonaws.com') && !trimmed.includes('X-Amz-Signature')) {
+      setImgSrc(`/api/proxy/image?url=${encodeURIComponent(trimmed)}`);
+      setTriedProxy(true);
+    } else {
+      setImgSrc(trimmed);
+      setTriedProxy(false);
+    }
+    setHasError(false);
+  }, [src]);
+
+  const handleError = () => {
+    // If direct load fails (CORS, blocked referrer, forbidden), try via backend proxy
+    if (!triedProxy && src && src.trim() && !imgSrc?.startsWith('/api/proxy/image')) {
+      setTriedProxy(true);
+      setImgSrc(`/api/proxy/image?url=${encodeURIComponent(src.trim())}`);
+    } else {
+      setHasError(true);
+    }
+  };
+
+  if (imgSrc && !hasError) {
     return (
       <img
         className="ui-avatar"
-        src={src}
+        src={imgSrc}
         alt=""
         width={size}
         height={size}
-        style={{ width: size, height: size }}
+        style={{ width: size, height: size, objectFit: 'cover' }}
+        onError={handleError}
+        referrerPolicy="no-referrer"
       />
     );
   }
+
   const tone = toneFor(name);
   return (
     <span

@@ -68,7 +68,7 @@ interface DataViewProps<T extends { id: string }> {
   createLabel: string;
   onCreate: () => void;
   onEdit: (item: T) => void;
-  onDelete: (item: T) => Promise<unknown>;
+  onDelete?: (item: T) => Promise<unknown>;
   nameOf: (item: T) => string;
   deleteWarning?: string;
   rowActions?: (item: T) => ReactNode;
@@ -290,6 +290,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
   };
 
   const runDelete = async (targets: T[]) => {
+    if (!onDelete) return;
     const results = await Promise.allSettled(targets.map((t) => onDelete(t)));
     const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
     const done = targets.length - failed.length;
@@ -665,15 +666,17 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                               >
                                 <Pencil size={15} />
                               </button>
-                              <button
-                                type="button"
-                                className="ui-icon-btn is-danger"
-                                onClick={() => setPendingDelete([item])}
-                                aria-label={`Delete ${nameOf(item)}`}
-                                title="Delete"
-                              >
-                                <Trash2 size={15} />
-                              </button>
+                              {onDelete && (
+                                <button
+                                  type="button"
+                                  className="ui-icon-btn is-danger"
+                                  onClick={() => setPendingDelete([item])}
+                                  aria-label={`Delete ${nameOf(item)}`}
+                                  title="Delete"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -684,7 +687,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
               </table>
             </div>
 
-            {selectedItems.length > 0 && (
+            {onDelete && selectedItems.length > 0 && (
               <div className="ui-bulkbar" role="toolbar" aria-label="Bulk actions">
                 <span>
                   <strong>{selectedItems.length}</strong> selected
@@ -779,28 +782,30 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
         </div>
       </footer>
 
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        title={
-          pendingDelete && pendingDelete.length > 1
-            ? `Delete ${pendingDelete.length} ${nounPlural}?`
-            : `Delete ${noun}?`
-        }
-        message={
-          <>
-            {pendingDelete?.length === 1 && pendingDelete[0] ? (
-              <>
-                <strong>{nameOf(pendingDelete[0])}</strong> will be permanently removed.
-              </>
-            ) : (
-              <>The selected {nounPlural} will be permanently removed.</>
-            )}{' '}
-            {deleteWarning ?? 'This cannot be undone.'}
-          </>
-        }
-        onClose={() => setPendingDelete(null)}
-        onConfirm={() => (pendingDelete ? runDelete(pendingDelete) : undefined)}
-      />
+      {onDelete && (
+        <ConfirmDialog
+          open={pendingDelete !== null}
+          title={
+            pendingDelete && pendingDelete.length > 1
+              ? `Delete ${pendingDelete.length} ${nounPlural}?`
+              : `Delete ${noun}?`
+          }
+          message={
+            <>
+              {pendingDelete?.length === 1 && pendingDelete[0] ? (
+                <>
+                  <strong>{nameOf(pendingDelete[0])}</strong> will be permanently removed.
+                </>
+              ) : (
+                <>The selected {nounPlural} will be permanently removed.</>
+              )}{' '}
+              {deleteWarning ?? 'This cannot be undone.'}
+            </>
+          }
+          onClose={() => setPendingDelete(null)}
+          onConfirm={() => (pendingDelete ? runDelete(pendingDelete) : undefined)}
+        />
+      )}
     </div>
   );
 }

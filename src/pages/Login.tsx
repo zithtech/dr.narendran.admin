@@ -1,4 +1,4 @@
-import { ExternalLink, HeartPulse, Lock, User } from 'lucide-react';
+import { ExternalLink, Eye, EyeOff, HeartPulse, Lock, User } from 'lucide-react';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -11,6 +11,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -109,13 +110,24 @@ export default function Login() {
               <input
                 id="password"
                 className="ui-input"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 required
+                style={{ paddingRight: 38 }}
               />
+              <button
+                type="button"
+                className="ui-input-password-toggle"
+                onClick={() => setShowPassword((prev) => !prev)}
+                title={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </Field>
 
