@@ -5,7 +5,7 @@ import { getErrorMessage } from '../utils/errors';
 import { type Branch } from './BranchModal';
 import { type Hospital } from './HospitalModal';
 import { Field, Modal, Section, StatusSegment, SwitchRow } from './ui/Modal';
-import { Alert } from './ui/primitives';
+import { Alert, Avatar } from './ui/primitives';
 import { type UserAccount } from './UserModal';
 
 export interface Patient {
@@ -247,13 +247,17 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
                 </select>
               </Field>
               <Field label="Profile image URL">
-                <input
-                  className="ui-input"
-                  type="url"
-                  value={profileImageUrl}
-                  onChange={(e) => setProfileImageUrl(e.target.value)}
-                  placeholder="https://…"
-                />
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <Avatar name={name || 'Patient'} src={profileImageUrl} size={40} />
+                  <input
+                    className="ui-input"
+                    style={{ flex: 1 }}
+                    type="url"
+                    value={profileImageUrl}
+                    onChange={(e) => setProfileImageUrl(e.target.value)}
+                    placeholder="https://… (Direct or external image URL)"
+                  />
+                </div>
               </Field>
             </div>
           </Section>

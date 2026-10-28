@@ -2351,6 +2351,33 @@ body {
   padding-left: 38px;
 }
 
+.ui-input-password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 6px;
+  color: var(--ui-subtle);
+  cursor: pointer;
+  border-radius: var(--ui-radius-sm, 6px);
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.ui-input-password-toggle:hover {
+  color: var(--ui-text);
+  background-color: var(--ui-hover);
+}
+
+.ui-input-password-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--ui-ring);
+}
+
 .ui-auth-foot {
   margin-top: 20px;
   text-align: center;

@@ -5,7 +5,7 @@ import { getErrorMessage } from '../utils/errors';
 import { type Branch } from './BranchModal';
 import { type Hospital } from './HospitalModal';
 import { Field, Modal, Section, StatusSegment, SwitchRow } from './ui/Modal';
-import { Alert } from './ui/primitives';
+import { Alert, Avatar } from './ui/primitives';
 import { type UserAccount } from './UserModal';
 
 export interface Doctor {
@@ -24,6 +24,7 @@ export interface Doctor {
   medical_registration_number?: string | null;
   clinic_address?: string | null;
   years_of_experience?: number | null;
+  profile_image_url?: string | null;
   is_active?: boolean | null;
   created_at: string;
   updated_at: string;
@@ -49,6 +50,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
   const [medicalRegistrationNumber, setMedicalRegistrationNumber] = useState('');
   const [clinicAddress, setClinicAddress] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState<string>('');
+  const [profileImageUrl, setProfileImageUrl] = useState('');
   const [isActive, setIsActive] = useState<boolean>(true);
 
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
@@ -92,6 +94,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
       setMedicalRegistrationNumber(doctor.medical_registration_number || '');
       setClinicAddress(doctor.clinic_address || '');
       setYearsOfExperience(doctor.years_of_experience ? doctor.years_of_experience.toString() : '');
+      setProfileImageUrl(doctor.profile_image_url || '');
       setIsActive(
         doctor.is_active !== undefined && doctor.is_active !== null ? doctor.is_active : true,
       );
@@ -108,6 +111,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
       setMedicalRegistrationNumber('');
       setClinicAddress('');
       setYearsOfExperience('');
+      setProfileImageUrl('');
       setIsActive(true);
     }
     setError('');
@@ -146,6 +150,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
           medical_registration_number: medicalRegistrationNumber,
           clinic_address: clinicAddress,
           years_of_experience: yearsOfExperience ? parseInt(yearsOfExperience, 10) : null,
+          profile_image_url: profileImageUrl || null,
           is_active: isActive,
         },
       });
@@ -206,6 +211,19 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                 />
               </Field>
             </div>
+            <Field label="Profile image URL">
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <Avatar name={name || 'Doctor'} src={profileImageUrl} size={40} />
+                <input
+                  className="ui-input"
+                  style={{ flex: 1 }}
+                  type="url"
+                  value={profileImageUrl}
+                  onChange={(e) => setProfileImageUrl(e.target.value)}
+                  placeholder="https://… (Direct or external image URL)"
+                />
+              </div>
+            </Field>
           </Section>
 
           <Section title="Assignment">

@@ -82,6 +82,7 @@ export default function Doctors() {
               <span className="ui-muted">No contact info</span>
             )
           }
+          avatarSrc={d.profile_image_url}
           onOpen={() => openDetails(d)}
         />
       ),
