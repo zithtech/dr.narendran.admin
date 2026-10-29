@@ -264,7 +264,18 @@ export const SupportCenterPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+    <div
+      style={{
+        flex: 1,
+        minHeight: 0,
+        height: "100%",
+        overflow: "hidden",
+        padding: "20px 24px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+      }}
+    >
       {/* Page Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
@@ -332,9 +343,14 @@ export const SupportCenterPage: React.FC = () => {
       </Row>
 
       {/* Main Tabs */}
-      <Card size="small" style={{ borderRadius: 8 }}>
+      <Card
+        size="small"
+        style={{ borderRadius: 8, flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+        styles={{ body: { flex: 1, minHeight: 0, display: "flex", flexDirection: "column", padding: "12px 16px" } }}
+      >
         <Tabs
           defaultActiveKey="queue"
+          style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
           items={[
             {
               key: "queue",
@@ -345,7 +361,7 @@ export const SupportCenterPage: React.FC = () => {
                 </Space>
               ),
               children: (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1, minHeight: 0 }}>
                   {/* Filter Toolbar */}
                   <div
                     style={{
@@ -422,6 +438,7 @@ export const SupportCenterPage: React.FC = () => {
                     loading={loading}
                     dataSource={tickets}
                     columns={columns}
+                    scroll={{ y: 'calc(100vh - 430px)', x: 'max-content' }}
                     pagination={{
                       current: page,
                       pageSize: limit,

@@ -273,10 +273,10 @@ export default function MedicineInventory() {
         </div>
       </header>
 
-      {/* Main Scrollable Body with consistent horizontal padding */}
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-4">
+      {/* Main non-scrolling container */}
+      <div className="min-h-0 flex-1 flex flex-col gap-4 px-6 pb-4 overflow-hidden">
         {/* Summary KPI Cards */}
-        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5 shrink-0">
           <div className="ui-card p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -381,9 +381,9 @@ export default function MedicineInventory() {
         </div>
 
         {/* Main Table Card with Integrated Search & Filter Controls */}
-        <div className="ui-card overflow-hidden">
+        <div className="ui-card flex flex-col flex-1 min-h-0 overflow-hidden">
           {/* Filter Toolbar */}
-          <div className="border-b border-slate-200/80 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/40">
+          <div className="border-b border-slate-200/80 bg-slate-50/50 p-3.5 shrink-0 dark:border-slate-800 dark:bg-slate-900/40">
             <div className="flex flex-col gap-3.5 xl:flex-row xl:items-center xl:justify-between">
               {/* Left: Quick stock filter tabs */}
               <div className="flex shrink-0 items-center gap-1 rounded-xl bg-slate-200/70 p-1 dark:bg-slate-800/80">
@@ -476,10 +476,10 @@ export default function MedicineInventory() {
             </div>
           </div>
 
-          {/* Variants Data Table */}
-          <div className="overflow-x-auto">
+          {/* Variants Data Table - scrollable table data body */}
+          <div className="overflow-auto flex-1 min-h-0">
             <table className="min-w-full divide-y divide-slate-200 text-left text-xs dark:divide-slate-800">
-              <thead className="bg-slate-50 font-semibold text-slate-600 dark:bg-slate-900/60 dark:text-slate-300">
+              <thead className="sticky top-0 z-10 bg-slate-50 font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300 shadow-xs">
                 <tr>
                   <th className="px-4 py-3">Medicine & Strength</th>
                   <th className="px-4 py-3">Dosage & Packaging</th>
@@ -704,7 +704,7 @@ export default function MedicineInventory() {
 
           {/* Pagination Footer */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-slate-200/80 px-4 py-3 dark:border-slate-800">
+            <div className="flex items-center justify-between border-t border-slate-200/80 px-4 py-3 shrink-0 bg-white dark:border-slate-800 dark:bg-slate-950">
               <span className="text-xs text-slate-500">
                 Showing {variants.length} of {totalVariants} formulations (Page {page} of{' '}
                 {totalPages})

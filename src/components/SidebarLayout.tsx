@@ -9,6 +9,7 @@ import {
   HeartPulse,
   LogOut,
   Pill,
+  ShoppingBag,
   Stethoscope,
   UserCog,
 } from 'lucide-react';
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
   { name: 'Patients', path: '/patients', icon: HeartPulse },
   { name: 'Pharmacy', path: '/pharmacy', icon: Pill },
   { name: 'Medicine Inventory', path: '/inventory', icon: Boxes },
+  { name: 'Orders', path: '/orders', icon: ShoppingBag },
   { name: 'User Accounts', path: '/users', icon: UserCog },
   { name: 'Prescription Templates', path: '/prescriptions', icon: FileText },
   { name: 'Support Center', path: '/support', icon: LifeBuoy },

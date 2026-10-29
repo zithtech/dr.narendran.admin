@@ -96,7 +96,8 @@ export const PrescriptionTemplatesPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6 animate-fadeIn w-full">
+    <div className="min-h-0 flex-1 overflow-y-auto p-6 animate-fadeIn w-full">
+      <div className="max-w-6xl mx-auto space-y-6">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-200">
         <div>
@@ -414,6 +415,7 @@ export const PrescriptionTemplatesPage: React.FC = () => {
         </div>
       )}
 
+      </div>
       {/* Preview Modal */}
       <PrescriptionPreviewModal
         isOpen={isPreviewOpen}

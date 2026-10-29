@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import Patients from './pages/Patients';
 import Pharmacy from './pages/Pharmacy';
 import MedicineInventory from './pages/MedicineInventory';
+import OrdersPage from './features/orders/pages/OrdersPage';
 import Users from './pages/Users';
 import SupportCenterPage from './features/support/pages/SupportCenterPage';
 
@@ -35,6 +36,7 @@ function App() {
           <Route path="/patients" element={<Patients />} />
           <Route path="/pharmacy" element={<Pharmacy />} />
           <Route path="/inventory" element={<MedicineInventory />} />
+          <Route path="/orders" element={<OrdersPage />} />
           <Route path="/users" element={<Users />} />
           <Route path="/prescriptions" element={<PrescriptionTemplatesPage />} />
           <Route path="/support" element={<SupportCenterPage />} />

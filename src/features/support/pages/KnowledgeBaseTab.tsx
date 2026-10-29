@@ -1,6 +1,5 @@
 import {
   Button,
-  Card,
   Col,
   Form,
   Input,
@@ -225,7 +224,7 @@ export const KnowledgeBaseTab: React.FC = () => {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1, minHeight: 0 }}>
       {/* Search & Actions Bar */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <Space wrap>
@@ -258,15 +257,14 @@ export const KnowledgeBaseTab: React.FC = () => {
       </div>
 
       {/* Articles Table */}
-      <Card size="small" style={{ borderRadius: 8 }}>
-        <Table
-          rowKey="id"
-          loading={loading}
-          dataSource={articles}
-          columns={columns}
-          pagination={{ pageSize: 10 }}
-        />
-      </Card>
+      <Table
+        rowKey="id"
+        loading={loading}
+        dataSource={articles}
+        columns={columns}
+        scroll={{ y: 'calc(100vh - 430px)', x: 'max-content' }}
+        pagination={{ pageSize: 10 }}
+      />
 
       {/* Create / Edit Article Modal */}
       <Modal
