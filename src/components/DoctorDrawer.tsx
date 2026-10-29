@@ -82,7 +82,7 @@ export default function DoctorDrawer({
       label="Doctor details"
       hero={
         <>
-          <Avatar name={doctor.name} size={56} />
+          <Avatar name={doctor.name} src={doctor.profile_image_url} size={56} />
           <div style={{ minWidth: 0 }}>
             <h2>{doctor.name}</h2>
             <div className="ui-drawer-hero-sub">

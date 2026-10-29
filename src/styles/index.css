@@ -9,6 +9,7 @@
  */
 @import 'tailwindcss';
 @import './ui.css';
+@import './client-portal.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
 

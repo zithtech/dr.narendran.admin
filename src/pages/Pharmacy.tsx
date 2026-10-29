@@ -79,19 +79,6 @@ export default function Pharmacy() {
     }
   };
 
-  const handleDelete = async (medicineToDelete: Medicine) => {
-    try {
-      await api.delete(`medicines/${medicineToDelete.id}`);
-      message.success(`Deactivated "${medicineToDelete.medicine_name}".`);
-      if (viewingId === medicineToDelete.id) {
-        setViewingId(null);
-      }
-      void resource.refresh();
-    } catch {
-      message.error('Failed to deactivate medicine record.');
-    }
-  };
-
   const columns: Column<Medicine>[] = [
     {
       id: 'name',
@@ -228,7 +215,6 @@ export default function Pharmacy() {
         createLabel="Add Medicine"
         onCreate={() => openEditor(null)}
         onEdit={openEditor}
-        onDelete={handleDelete}
         onRowClick={openDetails}
         nameOf={(m) => m.medicine_name}
         activeId={viewingId}
