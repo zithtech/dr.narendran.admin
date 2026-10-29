@@ -7,16 +7,18 @@ import {
   FlaskConical,
   GitBranch,
   HeartPulse,
+  LifeBuoy,
   LogOut,
   Pill,
+  Shield,
+  ShoppingBag,
   Stethoscope,
   UserCog,
-  Shield,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
-import api from '../utils/api';
 
+import api from '../utils/api';
 import { cx } from './ui/primitives';
 
 const NAV_ITEMS = [
@@ -29,9 +31,11 @@ const NAV_ITEMS = [
   { name: 'Linked Labs', path: '/labs', icon: FlaskConical, slug: 'LABS' },
   { name: 'Lab Services', path: '/lab-services', icon: FlaskConical, slug: 'LAB_SERVICES' },
   { name: 'Linked Medicals', path: '/linked-medicals', icon: Stethoscope, slug: 'LABS' },
+  { name: 'Orders', path: '/orders', icon: ShoppingBag, slug: 'ORDERS' },
   { name: 'User Accounts', path: '/users', icon: UserCog, slug: 'USERS' },
   { name: 'Roles & Permissions', path: '/roles', icon: Shield, slug: 'USERS' },
   { name: 'Prescription Templates', path: '/prescriptions', icon: FileText, slug: 'PRESCRIPTIONS' },
+  { name: 'Support Center', path: '/support', icon: LifeBuoy, slug: 'SUPPORT' },
 ] as const;
 
 const EXPANDED_KEY = 'adminRailExpanded';
@@ -71,10 +75,10 @@ export default function SidebarLayout() {
   }, [currentRole]);
 
   const allowedSlugs = roleData?.permissions?.filter((p: any) => p.can_read).map((p: any) => p.module_slug) || [];
-  
+
   // Filter nav items: System Admin sees everything, others only see what they have permissions for
-  const visibleNavItems = roleData?.is_system_role 
-    ? NAV_ITEMS 
+  const visibleNavItems = roleData?.is_system_role
+    ? NAV_ITEMS
     : NAV_ITEMS.filter(item => allowedSlugs.includes(item.slug));
 
   const toggle = () => {

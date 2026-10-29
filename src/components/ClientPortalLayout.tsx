@@ -8,9 +8,9 @@ import {
   HeartPulse,
   LayoutDashboard,
   LogOut,
+  type LucideIcon,
   ShieldAlert,
   Stethoscope,
-  type LucideIcon,
 } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate, useOutletContext } from 'react-router';

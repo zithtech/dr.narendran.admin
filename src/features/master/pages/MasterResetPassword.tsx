@@ -3,9 +3,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 
 /* eslint-disable @typescript-eslint/no-floating-promises */
-/* eslint-disable @typescript-eslint/no-misused-promises */
-/* eslint-disable @typescript-eslint/prefer-nullish-coalescing */
-/* eslint-disable react-hooks/set-state-in-effect */
+ 
+ 
+ 
 
 import axios from 'axios';
 import { useEffect, useState } from 'react';

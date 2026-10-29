@@ -11,6 +11,7 @@ import Users from './pages/Users';
 import Patients from './pages/Patients';
 import Pharmacy from './pages/Pharmacy';
 import MedicineInventory from './pages/MedicineInventory';
+import OrdersPage from './features/orders/pages/OrdersPage';
 import { PrescriptionTemplatesPage } from './features/prescriptions/pages/PrescriptionTemplatesPage';
 import Labs from './pages/Labs';
 import LabServices from './pages/LabServices';
@@ -28,7 +29,8 @@ import LabAccountPage from './pages/client/LabAccountPage';
 import LabChangePasswordPage from './pages/client/LabChangePasswordPage';
 import LabReportsPage from './pages/client/LabReportsPage';
 
-/** Guard for Hospital Admin Portal routes */
+/** Guard for Hospital Admin Portal routes */import SupportCenterPage from './features/support/pages/SupportCenterPage';
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('adminToken');
   if (!token) {
@@ -53,7 +55,7 @@ function LabClientProtectedRoute({ children }: { children: React.ReactNode }) {
       if (user.must_change_password && location.pathname !== '/client/change-password') {
         return <Navigate to="/client/change-password" replace />;
       }
-    } catch {}
+    } catch { }
   }
 
   return <>{children}</>;
@@ -112,6 +114,7 @@ function App() {
           <Route path="/patients" element={<Patients />} />
           <Route path="/pharmacy" element={<Pharmacy />} />
           <Route path="/inventory" element={<MedicineInventory />} />
+          <Route path="/orders" element={<OrdersPage />} />
           <Route path="/labs" element={<Labs />} />
           <Route path="/lab-services" element={<LabServices />} />
           <Route path="/linked-medicals" element={<LinkedMedicals />} />
@@ -119,6 +122,43 @@ function App() {
           <Route path="/users" element={<Users />} />
           <Route path="/roles" element={<Roles />} />
           <Route path="/prescriptions" element={<PrescriptionTemplatesPage />} />
+          <Route path="/support" element={<SupportCenterPage />} />
+        </Route>
+
+        {/* Legacy /portal fallback */}
+        <Route
+          path="/portal"
+          element={
+            <ClientProtectedRoute>
+              <ClientPortalLayout />
+            </ClientProtectedRoute>
+          }
+        >
+          <Route index element={<ClientDashboard />} />
+          <Route
+            path="labs"
+            element={
+              <ClientPermissionGate slug="LABS">
+                <Labs />
+              </ClientPermissionGate>
+            }
+          />
+          <Route
+            path="lab-services"
+            element={
+              <ClientPermissionGate slug="LAB_SERVICES">
+                <LabServices />
+              </ClientPermissionGate>
+            }
+          />
+          <Route
+            path="linked-medicals"
+            element={
+              <ClientPermissionGate slug="LABS">
+                <LinkedMedicals />
+              </ClientPermissionGate>
+            }
+          />
         </Route>
 
         {/* Legacy /portal fallback */}

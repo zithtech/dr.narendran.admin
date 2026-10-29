@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+
 import { searchMedicinesWithAi } from '../services/aiMedicineService';
 import type { AIMedicineSuggestion } from '../types/pharmacy';
 import { mapAiMedicineToFormData } from '../utils/aiMedicineMapper';
