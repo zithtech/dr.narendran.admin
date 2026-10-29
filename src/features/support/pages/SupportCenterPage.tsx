@@ -127,13 +127,13 @@ export const SupportCenterPage: React.FC = () => {
   }, [statusFilter, priorityFilter, categoryFilter, assignedFilter, search, page, limit]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     void fetchMetrics();
     void fetchAgents();
   }, [fetchMetrics, fetchAgents]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     void fetchTickets();
   }, [fetchTickets]);
 

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
 import { Select } from 'antd';
+import React, { useEffect, useState } from 'react';
 
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';

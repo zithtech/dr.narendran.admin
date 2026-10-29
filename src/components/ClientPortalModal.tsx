@@ -1,6 +1,7 @@
 import { App } from 'antd';
-import React, { useEffect, useState } from 'react';
 import { Copy, Mail, Send, ShieldAlert, Sparkles } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
 import { Field, Modal, Section, StatusSegment } from './ui/Modal';

@@ -15,6 +15,7 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 
+import { getErrorMessage } from '../../../utils/errors';
 import { OrderDetailsDrawer } from '../components/OrderDetailsDrawer';
 import { OrderStatusBadge } from '../components/OrderStatusBadge';
 import { PaymentStatusBadge } from '../components/PaymentStatusBadge';
@@ -25,7 +26,6 @@ import type {
   OrderListItem,
   PaginationMeta,
 } from '../types/orders';
-import { getErrorMessage } from '../../../utils/errors';
 
 function formatCurrency(val: number | string | null | undefined): string {
   if (val === null || val === undefined || isNaN(Number(val))) return '₹0.00';

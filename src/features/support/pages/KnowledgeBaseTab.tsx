@@ -79,7 +79,7 @@ export const KnowledgeBaseTab: React.FC = () => {
   }, [categoryFilter, search]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     void fetchArticles();
   }, [fetchArticles]);
 

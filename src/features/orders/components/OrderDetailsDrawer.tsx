@@ -1,3 +1,4 @@
+import { App } from 'antd';
 import {
   AlertCircle,
   Clock,
@@ -14,13 +15,13 @@ import {
   XCircle,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { App } from 'antd';
+
+import { getErrorMessage } from '../../../utils/errors';
 import { ordersApi } from '../services/ordersApi';
 import type { OrderDetails } from '../types/orders';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 import { UpdateOrderStatusModal } from './UpdateOrderStatusModal';
-import { getErrorMessage } from '../../../utils/errors';
 
 interface OrderDetailsDrawerProps {
   orderId: string | null;

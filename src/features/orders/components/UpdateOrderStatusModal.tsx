@@ -1,9 +1,10 @@
+import { App } from 'antd';
 import { AlertTriangle, CheckCircle, RefreshCw, X } from 'lucide-react';
 import React, { useState } from 'react';
-import { App } from 'antd';
+
+import { getErrorMessage } from '../../../utils/errors';
 import { ordersApi } from '../services/ordersApi';
 import { VALID_STATUS_TRANSITIONS } from '../types/orders';
-import { getErrorMessage } from '../../../utils/errors';
 
 interface UpdateOrderStatusModalProps {
   isOpen: boolean;
@@ -127,13 +128,12 @@ export const UpdateOrderStatusModal: React.FC<UpdateOrderStatusModalProps> = ({
                 {allowedTransitions.map((statusKey) => (
                   <label
                     key={statusKey}
-                    className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition-all ${
-                      selectedStatus === statusKey
+                    className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition-all ${selectedStatus === statusKey
                         ? statusKey === 'cancelled'
                           ? 'border-rose-500 bg-rose-50/50 dark:bg-rose-950/20 text-rose-900 dark:text-rose-200 ring-2 ring-rose-500/20'
                           : 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 text-indigo-950 dark:text-indigo-200 ring-2 ring-indigo-500/20'
                         : 'border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50'
-                    }`}
+                      }`}
                   >
                     <input
                       type="radio"
@@ -195,9 +195,8 @@ export const UpdateOrderStatusModal: React.FC<UpdateOrderStatusModalProps> = ({
               <button
                 type="submit"
                 disabled={submitting || !selectedStatus}
-                className={`ui-btn ${
-                  isCancelling ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'ui-btn-primary'
-                }`}
+                className={`ui-btn ${isCancelling ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'ui-btn-primary'
+                  }`}
               >
                 {submitting && <RefreshCw size={14} className="animate-spin" />}
                 {isCancelling ? 'Confirm Cancellation' : 'Update Status'}

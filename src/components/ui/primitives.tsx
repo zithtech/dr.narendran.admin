@@ -25,7 +25,7 @@ export function Avatar({
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    if (!src || !src.trim()) {
+    if (!src?.trim()) {
       setImgSrc(null);
       setHasError(false);
       setTriedProxy(false);
@@ -47,7 +47,7 @@ export function Avatar({
 
   const handleError = () => {
     // If direct load fails (CORS, blocked referrer, forbidden), try via backend proxy
-    if (!triedProxy && src && src.trim() && !imgSrc?.startsWith('/api/proxy/image')) {
+    if (!triedProxy && src?.trim() && !imgSrc?.startsWith('/api/proxy/image')) {
       setTriedProxy(true);
       setImgSrc(`/api/proxy/image?url=${encodeURIComponent(src.trim())}`);
     } else {

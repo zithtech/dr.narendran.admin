@@ -7,8 +7,8 @@ import {
   KeyRound,
   LayoutDashboard,
   LogOut,
-  User,
   type LucideIcon,
+  User,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';

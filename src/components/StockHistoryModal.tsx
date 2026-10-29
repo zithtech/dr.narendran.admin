@@ -30,7 +30,7 @@ export default function StockHistoryModal({ isOpen, onClose, variant }: StockHis
 
     try {
       const params: Record<string, any> = { page, limit: 15 };
-      if (typeFilter) params['transaction_type'] = typeFilter;
+      if (typeFilter) params.transaction_type = typeFilter;
 
       const res = await api.get<{
         items: StockHistoryItem[];

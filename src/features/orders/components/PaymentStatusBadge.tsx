@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { Badge, type BadgeTone } from '../../../components/ui/primitives';
 
 interface PaymentStatusBadgeProps {

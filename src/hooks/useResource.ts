@@ -49,7 +49,7 @@ export function useResource<T>(endpoint: string, errorLabel: string): Resource<T
 
   useEffect(() => {
     // Fetch on mount; the state updates happen after the await, not synchronously.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     void refresh();
   }, [refresh]);
 

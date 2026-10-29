@@ -87,7 +87,7 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
 
   useEffect(() => {
     if (visible && ticketId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       void fetchDetails();
       setAiSummary(null);
       setReplyText("");

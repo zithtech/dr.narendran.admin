@@ -1,6 +1,5 @@
 import {
   Boxes,
-  LifeBuoy,
   Building2,
   ChevronLeft,
   ChevronRight,
@@ -8,17 +7,18 @@ import {
   FlaskConical,
   GitBranch,
   HeartPulse,
+  LifeBuoy,
   LogOut,
   Pill,
+  Shield,
   ShoppingBag,
   Stethoscope,
   UserCog,
-  Shield,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
-import api from '../utils/api';
 
+import api from '../utils/api';
 import { cx } from './ui/primitives';
 
 const NAV_ITEMS = [
