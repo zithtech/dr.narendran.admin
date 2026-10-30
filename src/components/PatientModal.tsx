@@ -147,6 +147,15 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
     setLoading(true);
     setError('');
 
+    const normalizeUrl = (val: string) => {
+      const trimmed = val.trim();
+      if (!trimmed) return null;
+      if (!/^https?:\/\//i.test(trimmed) && !trimmed.startsWith('/')) {
+        return `https://${trimmed}`;
+      }
+      return trimmed;
+    };
+
     try {
       const url = patient ? `patients/${patient.id}` : `patients`;
 
@@ -171,7 +180,7 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
           blood_group: bloodGroup || null,
           marital_status: maritalStatus || null,
           emergency_contacts: emergencyContacts ? JSON.parse(emergencyContacts) : null,
-          profile_image_url: profileImageUrl || null,
+          profile_image_url: normalizeUrl(profileImageUrl),
           is_active: isActive,
         },
       });
@@ -197,6 +206,7 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
           void handleSubmit(e);
         }}
         className="ui-modal-form"
+        noValidate
       >
         <div className="ui-modal-body">
           {error && <Alert>{error}</Alert>}
@@ -252,9 +262,16 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
                   <input
                     className="ui-input"
                     style={{ flex: 1 }}
-                    type="url"
+                    type="text"
+                    inputMode="url"
                     value={profileImageUrl}
                     onChange={(e) => setProfileImageUrl(e.target.value)}
+                    onBlur={() => {
+                      const trimmed = profileImageUrl.trim();
+                      if (trimmed && !/^https?:\/\//i.test(trimmed) && !trimmed.startsWith('/')) {
+                        setProfileImageUrl(`https://${trimmed}`);
+                      }
+                    }}
                     placeholder="https://… (Direct or external image URL)"
                   />
                 </div>

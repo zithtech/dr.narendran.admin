@@ -21,7 +21,12 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await api.post('tenant/auth/admin-login', { username, password });
+      const cleanUsername = username.trim();
+      const response = await api.post('tenant/auth/admin-login', {
+        username: cleanUsername,
+        email: cleanUsername,
+        password,
+      });
 
       const data = response.data;
 

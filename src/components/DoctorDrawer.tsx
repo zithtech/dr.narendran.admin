@@ -1,4 +1,4 @@
-import { CalendarClock, Mail, Pencil, Phone } from 'lucide-react';
+import { CalendarClock, ExternalLink, Mail, Pencil, Phone, Video } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
 
 import { formatDate, timeAgo,titleCase } from '../lib/format';
@@ -134,6 +134,38 @@ export default function DoctorDrawer({
         />
       </Section>
 
+      <Section title="Media & Channels">
+        <div className="ui-contact-card">
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            <span style={{ color: 'var(--ui-subtle)', display: 'flex' }}>
+              <Video size={15} />
+            </span>
+            {doctor.podcast_url ? (
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {doctor.podcast_url}
+              </span>
+            ) : (
+              <span className="ui-muted">No podcast or YouTube channel linked</span>
+            )}
+          </span>
+          {doctor.podcast_url && (
+            <a
+              className="ui-btn ui-btn-sm"
+              href={
+                doctor.podcast_url.startsWith('http://') || doctor.podcast_url.startsWith('https://')
+                  ? doctor.podcast_url
+                  : `https://${doctor.podcast_url}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <ExternalLink size={13} style={{ marginRight: 4 }} />
+              Open
+            </a>
+          )}
+        </div>
+      </Section>
+
       <Section title="Weekly schedule">
         {!loaded ? (
           <span className="ui-skeleton" style={{ width: '70%', height: 14 }} />
@@ -189,6 +221,27 @@ export default function DoctorDrawer({
               doctor.years_of_experience !== null && doctor.years_of_experience !== undefined
                 ? `${doctor.years_of_experience} years`
                 : null,
+          },
+          {
+            label: 'Podcast / Channel',
+            value: doctor.podcast_url ? (
+              <a
+                href={
+                  doctor.podcast_url.startsWith('http://') || doctor.podcast_url.startsWith('https://')
+                    ? doctor.podcast_url
+                    : `https://${doctor.podcast_url}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: 'var(--ui-primary)',
+                  textDecoration: 'underline',
+                  wordBreak: 'break-all',
+                }}
+              >
+                {doctor.podcast_url}
+              </a>
+            ) : null,
           },
         ]}
       />
