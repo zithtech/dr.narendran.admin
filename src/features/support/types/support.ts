@@ -1,4 +1,10 @@
-export type TicketStatus = "OPEN" | "IN_PROGRESS" | "WAITING_FOR_PATIENT" | "RESOLVED" | "CLOSED";
+export type TicketStatus =
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "WAITING_FOR_PATIENT"
+  | "WAITING_FOR_DOCTOR"
+  | "RESOLVED"
+  | "CLOSED";
 
 export type TicketPriority = "URGENT" | "HIGH" | "MEDIUM" | "LOW";
 
@@ -9,7 +15,10 @@ export type TicketCategory =
   | "LAB_REPORTS"
   | "PAYMENTS"
   | "TECHNICAL_HELP"
-  | "GENERAL_INQUIRY";
+  | "GENERAL_INQUIRY"
+  | "SCHEDULE_AVAILABILITY"
+  | "PATIENT_CONSULTATION"
+  | "PAYOUTS_SETTLEMENTS";
 
 export interface AdminAgent {
   id: string;
@@ -23,10 +32,22 @@ export interface SupportTicket {
   id: string;
   ticket_number: string;
   user_id: string;
+  user_type?: "PATIENT" | "DOCTOR" | string;
   user_name: string;
   user_phone?: string | null;
   user_email?: string | null;
+  patient_name?: string | null;
+  patient_email?: string | null;
+  patient_phone?: string | null;
+  doctor_name?: string | null;
+  doctor_email?: string | null;
+  doctor_phone?: string | null;
+  doctor_specialization?: string | null;
+  doctor_qualification?: string | null;
+  doctor_hospital_name?: string | null;
+  doctor_branch_name?: string | null;
   subject: string;
+  message?: string;
   category: TicketCategory;
   priority: TicketPriority;
   status: TicketStatus;
@@ -48,7 +69,7 @@ export interface SupportTicket {
 export interface SupportTicketMessage {
   id: string;
   ticket_id: string;
-  sender_type: "PATIENT" | "SUPPORT_AGENT" | "SYSTEM";
+  sender_type: "PATIENT" | "DOCTOR" | "SUPPORT_AGENT" | "SYSTEM";
   sender_id?: string | null;
   sender_name?: string | null;
   message_type: "MESSAGE" | "INTERNAL_NOTE" | "STATUS_CHANGE";
@@ -69,12 +90,17 @@ export interface SupportTicketAuditLog {
 }
 
 export interface SupportMetrics {
-  totalTickets: number;
-  openTickets: number;
-  inProgressTickets: number;
+  totalTickets?: number;
+  totalOpenTickets?: number;
+  openTickets?: number;
+  inProgressTickets?: number;
+  unassignedTickets?: number;
+  awaitingPatientResponse?: number;
+  awaitingDoctorResponse?: number;
   resolvedToday: number;
-  avgFirstResponseMinutes: number;
-  satisfactionRate: number;
+  avgFirstResponseMinutes?: number;
+  averageFirstResponseMinutes?: number;
+  satisfactionRate?: number;
 }
 
 export interface SupportKnowledgeArticle {
@@ -93,6 +119,7 @@ export interface SupportKnowledgeArticle {
 }
 
 export interface TicketFilterParams {
+  userType?: "PATIENT" | "DOCTOR" | string | undefined;
   status?: TicketStatus | undefined;
   category?: TicketCategory | undefined;
   priority?: TicketPriority | undefined;

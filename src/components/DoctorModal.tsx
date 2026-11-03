@@ -25,6 +25,7 @@ export interface Doctor {
   clinic_address?: string | null;
   years_of_experience?: number | null;
   profile_image_url?: string | null;
+  podcast_url?: string | null;
   is_active?: boolean | null;
   created_at: string;
   updated_at: string;
@@ -51,6 +52,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
   const [clinicAddress, setClinicAddress] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState<string>('');
   const [profileImageUrl, setProfileImageUrl] = useState('');
+  const [podcastUrl, setPodcastUrl] = useState('');
   const [isActive, setIsActive] = useState<boolean>(true);
 
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
@@ -95,6 +97,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
       setClinicAddress(doctor.clinic_address || '');
       setYearsOfExperience(doctor.years_of_experience ? doctor.years_of_experience.toString() : '');
       setProfileImageUrl(doctor.profile_image_url || '');
+      setPodcastUrl(doctor.podcast_url || '');
       setIsActive(
         doctor.is_active !== undefined && doctor.is_active !== null ? doctor.is_active : true,
       );
@@ -112,6 +115,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
       setClinicAddress('');
       setYearsOfExperience('');
       setProfileImageUrl('');
+      setPodcastUrl('');
       setIsActive(true);
     }
     setError('');
@@ -122,12 +126,25 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name.trim()) {
+      setError('Please enter doctor name.');
+      return;
+    }
     if (hospitalId === '') {
       setError('Please select a hospital.');
       return;
     }
     setLoading(true);
     setError('');
+
+    const normalizeUrl = (val: string) => {
+      const trimmed = val.trim();
+      if (!trimmed) return null;
+      if (!/^https?:\/\//i.test(trimmed) && !trimmed.startsWith('/')) {
+        return `https://${trimmed}`;
+      }
+      return trimmed;
+    };
 
     try {
       const url = doctor ? `doctors/${doctor.id}` : `doctors`;
@@ -141,16 +158,17 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
           hospital_id: hospitalId,
           branch_id: branchId === '' ? null : branchId,
           user_account_id: userAccountId === '' ? null : userAccountId,
-          name,
-          phone,
-          email,
-          specialization,
+          name: name.trim(),
+          phone: phone.trim() || null,
+          email: email.trim() || null,
+          specialization: specialization.trim() || null,
           status,
-          qualification,
-          medical_registration_number: medicalRegistrationNumber,
-          clinic_address: clinicAddress,
+          qualification: qualification.trim() || null,
+          medical_registration_number: medicalRegistrationNumber.trim() || null,
+          clinic_address: clinicAddress.trim() || null,
           years_of_experience: yearsOfExperience ? parseInt(yearsOfExperience, 10) : null,
-          profile_image_url: profileImageUrl || null,
+          profile_image_url: normalizeUrl(profileImageUrl),
+          podcast_url: normalizeUrl(podcastUrl),
           is_active: isActive,
         },
       });
@@ -176,6 +194,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
           void handleSubmit(e);
         }}
         className="ui-modal-form"
+        noValidate
       >
         <div className="ui-modal-body">
           {error && <Alert>{error}</Alert>}
@@ -217,12 +236,35 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                 <input
                   className="ui-input"
                   style={{ flex: 1 }}
-                  type="url"
+                  type="text"
+                  inputMode="url"
                   value={profileImageUrl}
                   onChange={(e) => setProfileImageUrl(e.target.value)}
+                  onBlur={() => {
+                    const trimmed = profileImageUrl.trim();
+                    if (trimmed && !/^https?:\/\//i.test(trimmed) && !trimmed.startsWith('/')) {
+                      setProfileImageUrl(`https://${trimmed}`);
+                    }
+                  }}
                   placeholder="https://… (Direct or external image URL)"
                 />
               </div>
+            </Field>
+            <Field label="Podcast / YouTube Channel Link" hint="Link to doctor's podcast, YouTube channel, or video stream.">
+              <input
+                className="ui-input"
+                type="text"
+                inputMode="url"
+                value={podcastUrl}
+                onChange={(e) => setPodcastUrl(e.target.value)}
+                onBlur={() => {
+                  const trimmed = podcastUrl.trim();
+                  if (trimmed && !/^https?:\/\//i.test(trimmed)) {
+                    setPodcastUrl(`https://${trimmed}`);
+                  }
+                }}
+                placeholder="e.g. https://youtube.com/@doctorchannel or www.youtube.com/..."
+              />
             </Field>
           </Section>
 

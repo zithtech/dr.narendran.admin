@@ -154,6 +154,7 @@ export default function Doctors() {
           d.email,
           d.phone,
           d.medical_registration_number,
+          d.podcast_url,
         ]}
         facets={FACETS}
         dateOf={(d) => d.created_at}

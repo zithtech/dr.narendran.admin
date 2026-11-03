@@ -5,6 +5,7 @@ import {
   Input,
   message,
   Row,
+  Segmented,
   Select,
   Space,
   Statistic,
@@ -24,6 +25,8 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  Stethoscope,
+  UserCheck,
 } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 
@@ -45,6 +48,7 @@ const { Title, Text } = Typography;
 const STATUS_OPTIONS: { value: TicketStatus; label: string }[] = [
   { value: "OPEN", label: "Open" },
   { value: "IN_PROGRESS", label: "In Progress" },
+  { value: "WAITING_FOR_DOCTOR", label: "Waiting for Doctor" },
   { value: "WAITING_FOR_PATIENT", label: "Waiting for Patient" },
   { value: "RESOLVED", label: "Resolved" },
   { value: "CLOSED", label: "Closed" },
@@ -58,16 +62,26 @@ const PRIORITY_OPTIONS: { value: TicketPriority; label: string }[] = [
 ];
 
 const CATEGORY_OPTIONS: { value: TicketCategory; label: string }[] = [
-  { value: "APPOINTMENTS", label: "Appointments" },
-  { value: "PRESCRIPTIONS", label: "Prescriptions" },
+  { value: "APPOINTMENTS", label: "Appointments & Bookings" },
+  { value: "PRESCRIPTIONS", label: "Prescriptions & Clinical Notes" },
+  { value: "SCHEDULE_AVAILABILITY", label: "Schedule & Availability" },
+  { value: "PATIENT_CONSULTATION", label: "Patient Consultation" },
+  { value: "PAYOUTS_SETTLEMENTS", label: "Payouts & Settlements" },
   { value: "MEDICINE_ORDERS", label: "Medicine Orders" },
-  { value: "LAB_REPORTS", label: "Lab Reports" },
-  { value: "PAYMENTS", label: "Payments" },
+  { value: "LAB_REPORTS", label: "Lab Reports & Diagnostic Tests" },
+  { value: "PAYMENTS", label: "Payments & Invoicing" },
   { value: "TECHNICAL_HELP", label: "Technical Help" },
   { value: "GENERAL_INQUIRY", label: "General Inquiry" },
 ];
 
-export const SupportCenterPage: React.FC = () => {
+export interface SupportCenterPageProps {
+  defaultUserType?: "PATIENT" | "DOCTOR" | "ALL";
+}
+
+export const SupportCenterPage: React.FC<SupportCenterPageProps> = ({
+  defaultUserType = "ALL",
+}) => {
+  const [userTypeFilter, setUserTypeFilter] = useState<"PATIENT" | "DOCTOR" | "ALL">(defaultUserType);
   const [metrics, setMetrics] = useState<SupportMetrics | null>(null);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [totalTickets, setTotalTickets] = useState(0);
@@ -87,14 +101,21 @@ export const SupportCenterPage: React.FC = () => {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [drawerVisible, setDrawerVisible] = useState(false);
 
+  // Sync state if prop changes
+  useEffect(() => {
+    setUserTypeFilter(defaultUserType);
+    setPage(1);
+  }, [defaultUserType]);
+
   const fetchMetrics = useCallback(async () => {
     try {
-      const data = await adminSupportApi.getMetrics();
+      const activeType = userTypeFilter === "ALL" ? undefined : userTypeFilter;
+      const data = await adminSupportApi.getMetrics(activeType);
       setMetrics(data);
     } catch {
       // silent or degraded
     }
-  }, []);
+  }, [userTypeFilter]);
 
   const fetchAgents = useCallback(async () => {
     try {
@@ -108,7 +129,9 @@ export const SupportCenterPage: React.FC = () => {
   const fetchTickets = useCallback(async () => {
     try {
       setLoading(true);
+      const activeType = userTypeFilter === "ALL" ? undefined : userTypeFilter;
       const res = await adminSupportApi.getTickets({
+        userType: activeType,
         status: statusFilter,
         priority: priorityFilter,
         category: categoryFilter,
@@ -124,16 +147,14 @@ export const SupportCenterPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, priorityFilter, categoryFilter, assignedFilter, search, page, limit]);
+  }, [userTypeFilter, statusFilter, priorityFilter, categoryFilter, assignedFilter, search, page, limit]);
 
   useEffect(() => {
-     
     void fetchMetrics();
     void fetchAgents();
   }, [fetchMetrics, fetchAgents]);
 
   useEffect(() => {
-     
     void fetchTickets();
   }, [fetchTickets]);
 
@@ -153,54 +174,108 @@ export const SupportCenterPage: React.FC = () => {
     }
   };
 
+  // Determine current display info
+  const isDoctorView = userTypeFilter === "DOCTOR";
+  const isPatientView = userTypeFilter === "PATIENT";
+
   const columns: ColumnsType<SupportTicket> = [
     {
       title: "Ticket #",
       dataIndex: "ticket_number",
       key: "ticket_number",
-      render: (num: string, record) => (
-        <Button
-          type="link"
-          style={{ padding: 0, fontWeight: 700 }}
-          onClick={() => handleOpenTicket(record.id)}
-        >
-          {num || "TKT-XXXX"}
-        </Button>
-      ),
+      width: 140,
+      render: (num: string, record) => {
+        const isDoc = record.user_type?.toUpperCase() === "DOCTOR";
+        return (
+          <Space orientation="horizontal" size={4}>
+            <Button
+              type="link"
+              style={{ padding: 0, fontWeight: 700 }}
+              onClick={() => handleOpenTicket(record.id)}
+            >
+              {num || (isDoc ? "DOC-XXXX" : "TKT-XXXX")}
+            </Button>
+            {userTypeFilter === "ALL" && (
+              <Tag color={isDoc ? "blue" : "cyan"} style={{ fontSize: 10, margin: 0, padding: "0 4px" }}>
+                {isDoc ? "DOC" : "PAT"}
+              </Tag>
+            )}
+          </Space>
+        );
+      },
     },
     {
-      title: "Patient",
-      key: "patient",
-      render: (_, record) => (
-        <div>
-          <div style={{ fontWeight: 600 }}>{record.user_name || "Patient"}</div>
-          {record.user_phone && (
-            <Text type="secondary" style={{ fontSize: 11 }}>
-              {record.user_phone}
-            </Text>
-          )}
-        </div>
-      ),
+      title: isDoctorView ? "Doctor" : isPatientView ? "Patient" : "Doctor / Patient",
+      key: "contact",
+      width: 220,
+      render: (_, record) => {
+        const isDoc = record.user_type?.toUpperCase() === "DOCTOR";
+        if (isDoc) {
+          const docName = record.doctor_name || record.user_name || "Doctor";
+          const formattedDocName = docName.startsWith("Dr.") ? docName : `Dr. ${docName.replace(/^Dr\.?\s*/i, "")}`;
+          const subInfo = [record.doctor_specialization, record.doctor_hospital_name]
+            .filter(Boolean)
+            .join(" • ");
+          return (
+            <div>
+              <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                <Stethoscope size={13} color="#1677ff" />
+                <span>{formattedDocName}</span>
+              </div>
+              {subInfo && (
+                <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                  {subInfo}
+                </Text>
+              )}
+              {(record.doctor_phone || record.user_phone) && (
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  {record.doctor_phone || record.user_phone}
+                </Text>
+              )}
+            </div>
+          );
+        }
+
+        return (
+          <div>
+            <div style={{ fontWeight: 600 }}>{record.patient_name || record.user_name || "Patient"}</div>
+            {(record.patient_phone || record.user_phone) && (
+              <Text type="secondary" style={{ fontSize: 11 }}>
+                {record.patient_phone || record.user_phone}
+              </Text>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: "Subject",
       dataIndex: "subject",
       key: "subject",
       ellipsis: true,
-      render: (subj: string) => <span style={{ fontSize: 13 }}>{subj}</span>,
+      render: (subj: string) => <span style={{ fontSize: 13, fontWeight: 500 }}>{subj}</span>,
     },
     {
       title: "Category",
       dataIndex: "category",
       key: "category",
-      render: (cat: string) => <Tag color="geekblue">{cat}</Tag>,
+      width: 170,
+      render: (cat: string) => {
+        const isDocCategory =
+          cat === "SCHEDULE_AVAILABILITY" ||
+          cat === "PATIENT_CONSULTATION" ||
+          cat === "PAYOUTS_SETTLEMENTS";
+        return <Tag color={isDocCategory ? "purple" : "geekblue"}>{cat.replace(/_/g, " ")}</Tag>;
+      },
     },
     {
       title: "Priority",
       dataIndex: "priority",
       key: "priority",
+      width: 100,
       render: (p: TicketPriority) => {
-        const color = p === "URGENT" ? "red" : p === "HIGH" ? "volcano" : p === "MEDIUM" ? "blue" : "default";
+        const color =
+          p === "URGENT" ? "red" : p === "HIGH" ? "volcano" : p === "MEDIUM" ? "blue" : "default";
         return <Tag color={color}>{p}</Tag>;
       },
     },
@@ -208,13 +283,14 @@ export const SupportCenterPage: React.FC = () => {
       title: "Status",
       dataIndex: "status",
       key: "status",
+      width: 160,
       render: (s: TicketStatus) => {
         const color =
           s === "OPEN"
             ? "blue"
             : s === "IN_PROGRESS"
             ? "gold"
-            : s === "WAITING_FOR_PATIENT"
+            : s === "WAITING_FOR_DOCTOR" || s === "WAITING_FOR_PATIENT"
             ? "purple"
             : s === "RESOLVED"
             ? "green"
@@ -225,10 +301,11 @@ export const SupportCenterPage: React.FC = () => {
     {
       title: "Assigned Agent",
       key: "assigned_to",
+      width: 160,
       render: (_, record) => (
         <Select
           size="small"
-          style={{ width: 150 }}
+          style={{ width: "100%" }}
           placeholder="Unassigned"
           allowClear
           value={record.assigned_to ?? undefined}
@@ -246,22 +323,36 @@ export const SupportCenterPage: React.FC = () => {
       title: "Last Update",
       dataIndex: "updated_at",
       key: "updated_at",
+      width: 140,
       render: (val: string) => (
         <Text type="secondary" style={{ fontSize: 12 }}>
-          {new Date(val).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+          {new Date(val).toLocaleDateString([], {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </Text>
       ),
     },
     {
       title: "Action",
       key: "action",
+      width: 80,
       render: (_, record) => (
-        <Button size="small" onClick={() => handleOpenTicket(record.id)}>
+        <Button size="small" type="primary" ghost onClick={() => handleOpenTicket(record.id)}>
           Open
         </Button>
       ),
     },
   ];
+
+  const awaitingResponseCount =
+    isDoctorView
+      ? (metrics?.awaitingDoctorResponse ?? 0)
+      : isPatientView
+      ? (metrics?.awaitingPatientResponse ?? 0)
+      : (metrics?.awaitingPatientResponse ?? 0) + (metrics?.awaitingDoctorResponse ?? 0);
 
   return (
     <div
@@ -277,25 +368,72 @@ export const SupportCenterPage: React.FC = () => {
       }}
     >
       {/* Page Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div>
-          <Title level={3} style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
-            <LifeBuoy size={24} color="#1677ff" />
-            Support Center
+          <Title level={3} style={{ margin: 0, display: "flex", alignItems: "center", gap: 10 }}>
+            {isDoctorView ? (
+              <Stethoscope size={26} color="#1677ff" />
+            ) : (
+              <LifeBuoy size={26} color="#1677ff" />
+            )}
+            {isDoctorView
+              ? "Doctor Support Center"
+              : isPatientView
+              ? "Patient Support Center"
+              : "Support Center"}
           </Title>
           <Text type="secondary" style={{ fontSize: 13 }}>
-            AI-powered Help Center, patient triage, and multi-agent incident resolution workspace
+            {isDoctorView
+              ? "Doctor queries, schedule changes, clinical escalations, and administrative assistance"
+              : isPatientView
+              ? "AI-powered Help Center, patient triage, and multi-agent incident resolution workspace"
+              : "Unified support management workspace for clinic doctors, patients, and healthcare staff"}
           </Text>
         </div>
-        <Button
-          icon={<RefreshCw size={14} />}
-          onClick={() => {
-            void fetchMetrics();
-            void fetchTickets();
-          }}
-        >
-          Refresh
-        </Button>
+
+        {/* View Switcher & Refresh */}
+        <Space wrap>
+          <Segmented
+            value={userTypeFilter}
+            onChange={(val) => {
+              setUserTypeFilter(val as "PATIENT" | "DOCTOR" | "ALL");
+              setPage(1);
+            }}
+            options={[
+              {
+                label: (
+                  <Space size={6}>
+                    <Stethoscope size={14} />
+                    <span>Doctor Support</span>
+                  </Space>
+                ),
+                value: "DOCTOR",
+              },
+              {
+                label: (
+                  <Space size={6}>
+                    <LifeBuoy size={14} />
+                    <span>Patient Support</span>
+                  </Space>
+                ),
+                value: "PATIENT",
+              },
+              {
+                label: "All Tickets",
+                value: "ALL",
+              },
+            ]}
+          />
+          <Button
+            icon={<RefreshCw size={14} />}
+            onClick={() => {
+              void fetchMetrics();
+              void fetchTickets();
+            }}
+          >
+            Refresh
+          </Button>
+        </Space>
       </div>
 
       {/* KPI Metrics */}
@@ -304,7 +442,7 @@ export const SupportCenterPage: React.FC = () => {
           <Card size="small" style={{ borderRadius: 8, borderLeft: "4px solid #1677ff" }}>
             <Statistic
               title="Open Tickets"
-              value={metrics?.openTickets ?? 0}
+              value={metrics?.totalOpenTickets ?? metrics?.openTickets ?? 0}
               prefix={<AlertCircle size={18} color="#1677ff" />}
               valueStyle={{ color: "#1677ff", fontWeight: 700 }}
             />
@@ -321,22 +459,28 @@ export const SupportCenterPage: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
+          <Card size="small" style={{ borderRadius: 8, borderLeft: "4px solid #722ed1" }}>
+            <Statistic
+              title={
+                isDoctorView
+                  ? "Awaiting Doctor Reply"
+                  : isPatientView
+                  ? "Awaiting Patient Reply"
+                  : "Awaiting User Reply"
+              }
+              value={awaitingResponseCount}
+              prefix={<UserCheck size={18} color="#722ed1" />}
+              valueStyle={{ color: "#722ed1", fontWeight: 700 }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
           <Card size="small" style={{ borderRadius: 8, borderLeft: "4px solid #52c41a" }}>
             <Statistic
               title="Resolved Today"
               value={metrics?.resolvedToday ?? 0}
               prefix={<CheckCircle size={18} color="#52c41a" />}
               valueStyle={{ color: "#52c41a", fontWeight: 700 }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ borderRadius: 8, borderLeft: "4px solid #722ed1" }}>
-            <Statistic
-              title="Avg Response Time"
-              value={metrics?.avgFirstResponseMinutes ? `${metrics.avgFirstResponseMinutes}m` : "< 15m"}
-              prefix={<ShieldCheck size={18} color="#722ed1" />}
-              valueStyle={{ color: "#722ed1", fontWeight: 700 }}
             />
           </Card>
         </Col>
@@ -357,7 +501,13 @@ export const SupportCenterPage: React.FC = () => {
               label: (
                 <Space>
                   <MessageSquare size={16} />
-                  <span>Tickets Queue ({totalTickets})</span>
+                  <span>
+                    {isDoctorView
+                      ? `Doctor Tickets (${totalTickets})`
+                      : isPatientView
+                      ? `Patient Tickets (${totalTickets})`
+                      : `All Tickets Queue (${totalTickets})`}
+                  </span>
                 </Space>
               ),
               children: (
@@ -374,7 +524,11 @@ export const SupportCenterPage: React.FC = () => {
                   >
                     <Space wrap>
                       <Input
-                        placeholder="Search ticket #, patient, subject..."
+                        placeholder={
+                          isDoctorView
+                            ? "Search ticket #, doctor, subject..."
+                            : "Search ticket #, patient, doctor, subject..."
+                        }
                         prefix={<Search size={15} color="#8c8c8c" />}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
@@ -382,13 +536,13 @@ export const SupportCenterPage: React.FC = () => {
                           setPage(1);
                           void fetchTickets();
                         }}
-                        style={{ width: 250 }}
+                        style={{ width: 280 }}
                         allowClear
                       />
                       <Select
                         placeholder="All Statuses"
                         allowClear
-                        style={{ width: 140 }}
+                        style={{ width: 160 }}
                         value={statusFilter}
                         onChange={(val) => {
                           setPage(1);
@@ -410,7 +564,7 @@ export const SupportCenterPage: React.FC = () => {
                       <Select
                         placeholder="All Categories"
                         allowClear
-                        style={{ width: 160 }}
+                        style={{ width: 180 }}
                         value={categoryFilter}
                         onChange={(val) => {
                           setPage(1);
@@ -458,7 +612,7 @@ export const SupportCenterPage: React.FC = () => {
               label: (
                 <Space>
                   <BookOpen size={16} />
-                  <span>Knowledge Base & AI RAG</span>
+                  <span>Knowledge Base & FAQs</span>
                 </Space>
               ),
               children: <KnowledgeBaseTab />,

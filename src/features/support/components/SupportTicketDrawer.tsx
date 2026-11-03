@@ -20,15 +20,19 @@ import {
   CheckCircle2,
   Clock,
   Lock,
+  Mail,
   MessageSquare,
   Phone,
   RefreshCw,
   Send,
   Sparkles,
+  Stethoscope,
+  User,
 } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 
 import { getErrorMessage } from "../../../utils/errors";
+// import { adminSupportApi, type TicketDetailsResponse } from "../api/adminSupportApi";
 import { adminSupportApi, type TicketDetailsResponse } from "../api/adminSupportApi";
 import type { AdminAgent, TicketPriority, TicketStatus } from "../types/support";
 
@@ -121,10 +125,15 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
       message.warning("Please enter a reply message");
       return;
     }
+    const isDoc = details?.ticket?.user_type?.toUpperCase() === "DOCTOR";
     try {
       setSubmittingReply(true);
       await adminSupportApi.replyToTicket(ticketId, replyText.trim(), replyStatusChange);
-      message.success("Reply dispatched to patient with notification");
+      message.success(
+        isDoc
+          ? "Reply dispatched to doctor with in-app notification"
+          : "Reply dispatched to patient with notification"
+      );
       setReplyText("");
       setReplyStatusChange(undefined);
       await fetchDetails();
@@ -223,12 +232,18 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
     }
   };
 
+  const isDoctor = ticket?.user_type?.toUpperCase() === "DOCTOR";
+  const rawDocName = ticket?.doctor_name || ticket?.user_name || "Doctor";
+  const formattedDocName = rawDocName.startsWith("Dr.") ? rawDocName : `Dr. ${rawDocName.replace(/^Dr\.?\s*/i, "")}`;
+
   const getStatusTag = (s: TicketStatus) => {
     switch (s) {
       case "OPEN":
         return <Tag color="blue">OPEN</Tag>;
       case "IN_PROGRESS":
         return <Tag color="gold">IN PROGRESS</Tag>;
+      case "WAITING_FOR_DOCTOR":
+        return <Tag color="purple">WAITING FOR DOCTOR</Tag>;
       case "WAITING_FOR_PATIENT":
         return <Tag color="purple">WAITING FOR PATIENT</Tag>;
       case "RESOLVED":
@@ -243,39 +258,44 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
   return (
     <Drawer
       title={
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", paddingRight: 24 }}>
-          <Space  size="middle">
-            <span style={{ fontSize: 18, fontWeight: 700, color: "#1677ff" }}>
-              {ticket?.ticket_number ?? "Ticket"}
-            </span>
-            {ticket && getStatusTag(ticket.status)}
-            {ticket && <Tag color={getPriorityBadgeColor(ticket.priority)}>{ticket.priority}</Tag>}
-            {ticket && <Tag>{ticket.category}</Tag>}
-          </Space>
-          <Space>
-            {ticket?.status !== "RESOLVED" && ticket?.status !== "CLOSED" && (
-              <Button
-                type="primary"
-                style={{ backgroundColor: "#52c41a" }}
-                icon={<CheckCircle2 size={15} />}
-                onClick={() => setResolutionModalVisible(true)}
-              >
-                Mark Resolved
-              </Button>
-            )}
-            {ticket?.status === "RESOLVED" && (
-              <Button onClick={() => { void handleCloseTicket(); }}>Close Ticket</Button>
-            )}
-            {(ticket?.status === "RESOLVED" || ticket?.status === "CLOSED") && (
-              <Button onClick={() => { void handleReopenTicket(); }} icon={<RefreshCw size={15} />}>
-                Reopen Ticket
-              </Button>
-            )}
-          </Space>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 18, fontWeight: 700, color: "#1677ff", letterSpacing: "-0.2px" }}>
+            {ticket?.ticket_number ?? "Ticket"}
+          </span>
+          {ticket && (
+            <Tag color={isDoctor ? "blue" : "cyan"} style={{ fontWeight: 600, margin: 0 }}>
+              {isDoctor ? "DOCTOR TICKET" : "PATIENT TICKET"}
+            </Tag>
+          )}
+          {ticket && getStatusTag(ticket.status)}
+          {ticket && <Tag color={getPriorityBadgeColor(ticket.priority)} style={{ margin: 0 }}>{ticket.priority}</Tag>}
+          {ticket && <Tag style={{ margin: 0 }}>{ticket.category.replace(/_/g, " ")}</Tag>}
         </div>
       }
+      extra={
+        <Space size="small" wrap>
+          {ticket?.status !== "RESOLVED" && ticket?.status !== "CLOSED" && (
+            <Button
+              type="primary"
+              style={{ backgroundColor: "#52c41a" }}
+              icon={<CheckCircle2 size={15} />}
+              onClick={() => setResolutionModalVisible(true)}
+            >
+              Mark Resolved
+            </Button>
+          )}
+          {ticket?.status === "RESOLVED" && (
+            <Button onClick={() => { void handleCloseTicket(); }}>Close Ticket</Button>
+          )}
+          {(ticket?.status === "RESOLVED" || ticket?.status === "CLOSED") && (
+            <Button onClick={() => { void handleReopenTicket(); }} icon={<RefreshCw size={15} />}>
+              Reopen Ticket
+            </Button>
+          )}
+        </Space>
+      }
       placement="right"
-      width={780}
+      width={880}
       open={visible}
       onClose={onClose}
       destroyOnClose
@@ -287,60 +307,367 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
       ) : !ticket ? (
         <Empty description="Ticket not found" />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {/* Ticket Header & Subject */}
-          <Card size="small" style={{ borderRadius: 8, backgroundColor: "#fafafa" }}>
-            <Title level={4} style={{ marginTop: 0, marginBottom: 8 }}>
-              {ticket.subject}
-            </Title>
-            <Descriptions size="small" column={{ xs: 1, sm: 2, md: 3 }}>
-              <Descriptions.Item label="Patient Name">
-                <Text strong>{ticket.user_name || "Patient"}</Text>
-              </Descriptions.Item>
-              <Descriptions.Item label="Phone">
-                {ticket.user_phone ? (
-                  <Space>
-                    <Phone size={13} orientation="horizontal" />
-                    <a href={`tel:${ticket.user_phone}`}>{ticket.user_phone}</a>
-                  </Space>
-                ) : (
-                  "-"
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label="Created">
-                <Space>
-                  <Clock size={13} />
-                  <span>{new Date(ticket.created_at).toLocaleString()}</span>
-                </Space>
-              </Descriptions.Item>
-              <Descriptions.Item label="Assigned Agent">
-                <Select
-                  style={{ width: "100%", maxWidth: 200 }}
-                  placeholder="Unassigned"
-                  allowClear
-                  value={ticket.assigned_to ?? undefined}
-                  onChange={(val) => {
-                    void handleAssignChange(val ?? null);
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {/* Ticket Header & Subject Profile Card */}
+          <Card
+            size="small"
+            style={{
+              borderRadius: 10,
+              backgroundColor: isDoctor ? "#f6faff" : "#fafafa",
+              borderColor: isDoctor ? "#b5d8ff" : "#f0f0f0",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+            }}
+            styles={{ body: { padding: "16px 20px" } }}
+          >
+            {/* Subject Title Row */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 34,
+                    height: 34,
+                    borderRadius: "50%",
+                    backgroundColor: isDoctor ? "#e6f4ff" : "#f0f5ff",
+                    color: "#1677ff",
+                    flexShrink: 0,
                   }}
-                  options={(agents || []).map((a) => ({
-                    value: a.id,
-                    label: `${a.name} (${a.role})`,
-                  }))}
-                />
-              </Descriptions.Item>
-              {ticket.related_entity_type && (
-                <Descriptions.Item label="Related To">
-                  <Tag color="cyan">
-                    {ticket.related_entity_type} {ticket.related_entity_id ? `#${ticket.related_entity_id.slice(0, 8)}` : ""}
-                  </Tag>
-                </Descriptions.Item>
-              )}
-              {ticket.resolved_at && (
-                <Descriptions.Item label="Resolved At">
-                  {new Date(ticket.resolved_at).toLocaleString()}
-                </Descriptions.Item>
-              )}
-            </Descriptions>
+                >
+                  {isDoctor ? <Stethoscope size={18} /> : <User size={18} />}
+                </span>
+                <div>
+                  <Title level={4} style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#1f1f1f" }}>
+                    {ticket.subject}
+                  </Title>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {isDoctor ? "Doctor Clinical / Operational Query" : "Patient Support Request"}
+                  </Text>
+                </div>
+              </div>
+              <Tag color={isDoctor ? "purple" : "geekblue"} style={{ margin: 0, fontWeight: 500 }}>
+                {ticket.category.replace(/_/g, " ")}
+              </Tag>
+            </div>
+
+            {/* Structured Details Grid */}
+            {isDoctor ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                  gap: "16px 20px",
+                  marginTop: 16,
+                  paddingTop: 16,
+                  borderTop: "1px solid rgba(0, 0, 0, 0.06)",
+                }}
+              >
+                {/* 1. Doctor Name */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#8c8c8c", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Doctor Name
+                  </div>
+                  <div style={{ minHeight: 28, display: "flex", alignItems: "center", fontSize: 13, fontWeight: 700, color: "#1677ff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {formattedDocName}
+                  </div>
+                </div>
+
+                {/* 2. Specialization */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#8c8c8c", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Specialization
+                  </div>
+                  <div style={{ minHeight: 28, display: "flex", alignItems: "center", fontSize: 13, fontWeight: 600, color: "#262626", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {ticket.doctor_specialization || "General Medicine"}
+                  </div>
+                </div>
+
+                {/* 3. Qualification */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#8c8c8c", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Qualification
+                  </div>
+                  <div style={{ minHeight: 28, display: "flex", alignItems: "center", fontSize: 13, color: "#595959", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {ticket.doctor_qualification || "MBBS"}
+                  </div>
+                </div>
+
+                {/* 4. Hospital & Branch */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#8c8c8c", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Hospital / Branch
+                  </div>
+                  <div
+                    style={{ minHeight: 28, display: "flex", alignItems: "center", fontSize: 13, color: "#262626", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                    title={[ticket.doctor_hospital_name, ticket.doctor_branch_name].filter(Boolean).join(" • ") || "Main Clinic"}
+                  >
+                    {[ticket.doctor_hospital_name, ticket.doctor_branch_name].filter(Boolean).join(" • ") || "Main Clinic"}
+                  </div>
+                </div>
+
+                {/* 5. Phone */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#8c8c8c", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Phone Number
+                  </div>
+                  <div style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
+                    {ticket.doctor_phone || ticket.user_phone ? (
+                      <a
+                        href={`tel:${ticket.doctor_phone || ticket.user_phone}`}
+                        style={{ fontSize: 13, fontWeight: 500, color: "#1677ff", display: "inline-flex", alignItems: "center", gap: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                      >
+                        <Phone size={13} style={{ flexShrink: 0 }} />
+                        <span>{ticket.doctor_phone || ticket.user_phone}</span>
+                      </a>
+                    ) : (
+                      <span style={{ fontSize: 13, color: "#bfbfbf" }}>—</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 6. Email */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#8c8c8c", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Email Address
+                  </div>
+                  <div style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
+                    {ticket.doctor_email || ticket.user_email ? (
+                      <a
+                        href={`mailto:${ticket.doctor_email || ticket.user_email}`}
+                        style={{
+                          fontSize: 13,
+                          color: "#1677ff",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          maxWidth: "100%",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                        title={ticket.doctor_email || ticket.user_email || ""}
+                      >
+                        <Mail size={13} style={{ flexShrink: 0 }} />
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {ticket.doctor_email || ticket.user_email}
+                        </span>
+                      </a>
+                    ) : (
+                      <span style={{ fontSize: 13, color: "#bfbfbf" }}>—</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 7. Created Date */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#8c8c8c", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Ticket Raised On
+                  </div>
+                  <div style={{ minHeight: 28, display: "flex", alignItems: "center", fontSize: 12, color: "#595959", gap: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <Clock size={13} style={{ color: "#8c8c8c", flexShrink: 0 }} />
+                    <span>
+                      {new Date(ticket.created_at).toLocaleString([], {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 8. Assigned Agent */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#8c8c8c", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Assigned Agent
+                  </div>
+                  <div style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
+                    <Select
+                      size="small"
+                      style={{ width: "100%" }}
+                      placeholder="Unassigned"
+                      allowClear
+                      value={ticket.assigned_to ?? undefined}
+                      onChange={(val) => {
+                        void handleAssignChange(val ?? null);
+                      }}
+                      options={(agents || []).map((a) => ({
+                        value: a.id,
+                        label: a.name,
+                      }))}
+                    />
+                  </div>
+                </div>
+
+                {/* 9. Resolved Date / Status */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#8c8c8c", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    {ticket.resolved_at ? "Resolved On" : "Current Status"}
+                  </div>
+                  <div style={{ minHeight: 28, display: "flex", alignItems: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {ticket.resolved_at ? (
+                      <span style={{ fontSize: 12, color: "#52c41a", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <CheckCircle2 size={13} style={{ color: "#52c41a", flexShrink: 0 }} />
+                        <span>
+                          {new Date(ticket.resolved_at).toLocaleString([], {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </span>
+                    ) : (
+                      getStatusTag(ticket.status)
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                  gap: "16px 20px",
+                  marginTop: 16,
+                  paddingTop: 16,
+                  borderTop: "1px solid rgba(0, 0, 0, 0.06)",
+                }}
+              >
+                {/* 1. Patient Name */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#8c8c8c", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Patient Name
+                  </div>
+                  <div style={{ minHeight: 28, display: "flex", alignItems: "center", fontSize: 13, fontWeight: 700, color: "#262626", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {ticket.patient_name || ticket.user_name || "Patient"}
+                  </div>
+                </div>
+
+                {/* 2. Phone */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#8c8c8c", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Phone Number
+                  </div>
+                  <div style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
+                    {ticket.patient_phone || ticket.user_phone ? (
+                      <a
+                        href={`tel:${ticket.patient_phone || ticket.user_phone}`}
+                        style={{ fontSize: 13, fontWeight: 500, color: "#1677ff", display: "inline-flex", alignItems: "center", gap: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                      >
+                        <Phone size={13} style={{ flexShrink: 0 }} />
+                        <span>{ticket.patient_phone || ticket.user_phone}</span>
+                      </a>
+                    ) : (
+                      <span style={{ fontSize: 13, color: "#bfbfbf" }}>—</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Email */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#8c8c8c", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Email Address
+                  </div>
+                  <div style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
+                    {ticket.patient_email || ticket.user_email ? (
+                      <a
+                        href={`mailto:${ticket.patient_email || ticket.user_email}`}
+                        style={{
+                          fontSize: 13,
+                          color: "#1677ff",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          maxWidth: "100%",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                        title={ticket.patient_email || ticket.user_email || ""}
+                      >
+                        <Mail size={13} style={{ flexShrink: 0 }} />
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {ticket.patient_email || ticket.user_email}
+                        </span>
+                      </a>
+                    ) : (
+                      <span style={{ fontSize: 13, color: "#bfbfbf" }}>—</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. Created Date */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#8c8c8c", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Ticket Raised On
+                  </div>
+                  <div style={{ minHeight: 28, display: "flex", alignItems: "center", fontSize: 12, color: "#595959", gap: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <Clock size={13} style={{ color: "#8c8c8c", flexShrink: 0 }} />
+                    <span>
+                      {new Date(ticket.created_at).toLocaleString([], {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 5. Assigned Agent */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#8c8c8c", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Assigned Agent
+                  </div>
+                  <div style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
+                    <Select
+                      size="small"
+                      style={{ width: "100%" }}
+                      placeholder="Unassigned"
+                      allowClear
+                      value={ticket.assigned_to ?? undefined}
+                      onChange={(val) => {
+                        void handleAssignChange(val ?? null);
+                      }}
+                      options={(agents || []).map((a) => ({
+                        value: a.id,
+                        label: a.name,
+                      }))}
+                    />
+                  </div>
+                </div>
+
+                {/* 6. Resolved Date / Status */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#8c8c8c", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    {ticket.resolved_at ? "Resolved On" : "Current Status"}
+                  </div>
+                  <div style={{ minHeight: 28, display: "flex", alignItems: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {ticket.resolved_at ? (
+                      <span style={{ fontSize: 12, color: "#52c41a", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <CheckCircle2 size={13} style={{ color: "#52c41a", flexShrink: 0 }} />
+                        <span>
+                          {new Date(ticket.resolved_at).toLocaleString([], {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </span>
+                    ) : (
+                      getStatusTag(ticket.status)
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* AI Incident Summary Card */}
@@ -403,7 +730,7 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
               </div>
             ) : (
               <Text type="secondary" style={{ fontSize: 12 }}>
-                Click &ldquo;Generate Summary&rdquo; to produce a grounded incident briefing with Gemini based on patient context and messages.
+                Click &ldquo;Generate Summary&rdquo; to produce a grounded incident briefing with Gemini based on {isDoctor ? "doctor" : "patient"} context and messages.
               </Text>
             )}
           </Card>
@@ -454,103 +781,134 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
                 flexDirection: "column",
                 gap: 14,
                 maxHeight: 380,
+                minHeight: 100,
                 overflowY: "auto",
-                padding: "8px 12px",
+                padding: "14px 16px",
                 border: "1px solid #f0f0f0",
                 borderRadius: 8,
                 backgroundColor: "#fafafa",
               }}
             >
-              {(details?.messages || []).map((m) => {
-                const isInternalNote = m.message_type === "INTERNAL_NOTE";
-                const isPatient = m.sender_type === "PATIENT";
-                const isSystem = m.sender_type === "SYSTEM";
+              {(details?.messages || []).length === 0 ? (
+                <div style={{ padding: "32px 16px", textAlign: "center" }}>
+                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No conversation messages yet" />
+                </div>
+              ) : (
+                (details?.messages || []).map((m) => {
+                  const isInternalNote = m.message_type === "INTERNAL_NOTE";
+                  const isRequester = m.sender_type === "PATIENT" || m.sender_type === "DOCTOR";
+                  const isSystem = m.sender_type === "SYSTEM";
 
-                if (isInternalNote) {
-                  return (
-                    <div
-                      key={m.id}
-                      style={{
-                        padding: "10px 14px",
-                        backgroundColor: "#fffbe6",
-                        border: "1px solid #ffe58f",
-                        borderRadius: 8,
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                        <Space>
-                          <Lock size={13} color="#d46b08" />
-                          <Text strong style={{ color: "#d46b08", fontSize: 12 }}>
-                            Internal Staff Note ({m.sender_name ?? "Admin Staff"})
+                  if (isInternalNote) {
+                    return (
+                      <div
+                        key={m.id}
+                        style={{
+                          padding: "10px 14px",
+                          backgroundColor: "#fffbe6",
+                          border: "1px solid #ffe58f",
+                          borderRadius: 8,
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, flexWrap: "wrap", gap: 6 }}>
+                          <Space size="small">
+                            <Lock size={13} color="#d46b08" />
+                            <Text strong style={{ color: "#d46b08", fontSize: 12 }}>
+                              Internal Staff Note ({m.sender_name ?? "Admin Staff"})
+                            </Text>
+                            <Tag color="warning" style={{ fontSize: 10, margin: 0 }}>
+                              Hidden from {isDoctor ? "Doctor" : "Patient"}
+                            </Tag>
+                          </Space>
+                          <Text type="secondary" style={{ fontSize: 11 }}>
+                            {new Date(m.created_at).toLocaleString([], {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
                           </Text>
-                          <Tag color="warning" style={{ fontSize: 10 }}>
-                            Hidden from Patient
-                          </Tag>
-                        </Space>
-                        <Text type="secondary" style={{ fontSize: 11 }}>
-                          {new Date(m.created_at).toLocaleString()}
-                        </Text>
+                        </div>
+                        <div style={{ fontSize: 13, color: "#595959", lineHeight: 1.5 }}>{m.message}</div>
                       </div>
-                      <div style={{ fontSize: 13, color: "#595959" }}>{m.message}</div>
-                    </div>
-                  );
-                }
+                    );
+                  }
 
-                if (isSystem) {
+                  if (isSystem) {
+                    return (
+                      <div
+                        key={m.id}
+                        style={{
+                          textAlign: "center",
+                          padding: "4px 8px",
+                        }}
+                      >
+                        <Tag color="default" style={{ fontSize: 11 }}>
+                          {m.message} · {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </Tag>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div
                       key={m.id}
                       style={{
-                        textAlign: "center",
-                        padding: "4px 8px",
-                      }}
-                    >
-                      <Tag color="default" style={{ fontSize: 11 }}>
-                        {m.message} · {new Date(m.created_at).toLocaleTimeString()}
-                      </Tag>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div
-                    key={m.id}
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: isPatient ? "flex-start" : "flex-end",
-                    }}
-                  >
-                    <div
-                      style={{
-                        maxWidth: "80%",
-                        padding: "10px 14px",
-                        borderRadius: 10,
-                        backgroundColor: isPatient ? "#ffffff" : "#1677ff",
-                        color: isPatient ? "#262626" : "#ffffff",
-                        boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
-                        border: isPatient ? "1px solid #e8e8e8" : "none",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: isRequester ? "flex-start" : "flex-end",
                       }}
                     >
                       <div
                         style={{
-                          fontSize: 11,
-                          fontWeight: 600,
-                          marginBottom: 4,
-                          color: isPatient ? "#8c8c8c" : "rgba(255,255,255,0.85)",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          gap: 12,
+                          maxWidth: "80%",
+                          padding: "10px 14px",
+                          borderRadius: 10,
+                          backgroundColor: isRequester ? "#ffffff" : "#1677ff",
+                          color: isRequester ? "#262626" : "#ffffff",
+                          boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
+                          border: isRequester ? "1px solid #e8e8e8" : "none",
                         }}
                       >
-                        <span>{isPatient ? ticket.user_name ?? "Patient" : m.sender_name ?? "Support Staff"}</span>
-                        <span>{new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            marginBottom: 4,
+                            color: isRequester ? "#8c8c8c" : "rgba(255,255,255,0.85)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 12,
+                          }}
+                        >
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                            {isRequester ? (
+                              isDoctor ? (
+                                <>
+                                  <Stethoscope size={12} color="#1677ff" />
+                                  <span>{m.sender_name ?? formattedDocName}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <User size={12} />
+                                  <span>{m.sender_name ?? ticket.patient_name ?? ticket.user_name ?? "Patient"}</span>
+                                </>
+                              )
+                            ) : (
+                              <span>{m.sender_name ?? "Support Staff"}</span>
+                            )}
+                          </span>
+                          <span style={{ fontSize: 10, opacity: 0.85 }}>
+                            {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 13, lineHeight: 1.5, wordBreak: "break-word" }}>{m.message}</div>
                       </div>
-                      <div style={{ fontSize: 13, lineHeight: 1.5 }}>{m.message}</div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
 
@@ -563,15 +921,19 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
                   key: "reply",
                   label: (
                     <Space>
-                      <MessageSquare size={14} />
-                      <span>Reply to Patient</span>
+                      {isDoctor ? <Stethoscope size={14} color="#1677ff" /> : <MessageSquare size={14} />}
+                      <span>{isDoctor ? "Reply to Doctor" : "Reply to Patient"}</span>
                     </Space>
                   ),
                   children: (
                     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                       <TextArea
                         rows={3}
-                        placeholder="Write a clear, professional reply to the patient (dispatches in-app notification)..."
+                        placeholder={
+                          isDoctor
+                            ? "Write a clear, professional reply to the doctor (dispatches in-app notification to Doctor App)..."
+                            : "Write a clear, professional reply to the patient (dispatches in-app notification)..."
+                        }
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
                       />
@@ -580,16 +942,24 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
                           <Text style={{ fontSize: 12 }}>Next Status:</Text>
                           <Select
                             size="small"
-                            style={{ width: 160 }}
+                            style={{ width: 170 }}
                             placeholder="Leave Unchanged"
                             allowClear
                             value={replyStatusChange}
                             onChange={(val) => setReplyStatusChange(val)}
-                            options={[
-                              { value: "WAITING_FOR_PATIENT", label: "Waiting for Patient" },
-                              { value: "IN_PROGRESS", label: "In Progress" },
-                              { value: "RESOLVED", label: "Resolved" },
-                            ]}
+                            options={
+                              isDoctor
+                                ? [
+                                    { value: "WAITING_FOR_DOCTOR", label: "Waiting for Doctor" },
+                                    { value: "IN_PROGRESS", label: "In Progress" },
+                                    { value: "RESOLVED", label: "Resolved" },
+                                  ]
+                                : [
+                                    { value: "WAITING_FOR_PATIENT", label: "Waiting for Patient" },
+                                    { value: "IN_PROGRESS", label: "In Progress" },
+                                    { value: "RESOLVED", label: "Resolved" },
+                                  ]
+                            }
                           />
                         </Space>
                         <Button
@@ -617,7 +987,7 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
                       <Alert
                         type="warning"
                         showIcon
-                        message="Internal notes are strictly confidential to clinic staff and are NEVER visible to the patient."
+                        message={`Internal notes are strictly confidential to clinic staff and are NEVER visible to the ${isDoctor ? "doctor" : "patient"}.`}
                       />
                       <TextArea
                         rows={3}
@@ -646,7 +1016,7 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
 
       {/* Resolution Notes Modal */}
       <Modal
-        title="Resolve Support Ticket"
+        title={`Resolve Support Ticket (${ticket?.ticket_number ?? ""})`}
         open={resolutionModalVisible}
         onOk={() => { void handleMarkResolved(); }}
         onCancel={() => setResolutionModalVisible(false)}
@@ -654,11 +1024,11 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
         okButtonProps={{ style: { backgroundColor: "#52c41a" } }}
       >
         <p style={{ fontSize: 13, color: "#595959" }}>
-          Please summarize the final resolution or actions taken for this patient. This will update the ticket to RESOLVED and notify the patient.
+          Please summarize the final resolution or actions taken for this {isDoctor ? "doctor" : "patient"}. This will update the ticket to RESOLVED and dispatch an in-app resolution notification to the {isDoctor ? "Doctor App" : "Patient"}.
         </p>
         <TextArea
           rows={3}
-          placeholder="Resolution summary (e.g. Appointment rescheduled to Oct 25th 10:00 AM; refund issued)..."
+          placeholder="Resolution summary (e.g. Schedule updated; leave approved; consultation notes synced)..."
           value={resolutionNotes}
           onChange={(e) => setResolutionNotes(e.target.value)}
         />
