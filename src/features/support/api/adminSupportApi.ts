@@ -26,8 +26,10 @@ export interface TicketDetailsResponse {
 }
 
 export const adminSupportApi = {
-  async getMetrics(): Promise<SupportMetrics> {
-    const res = await api.get<SupportMetrics>("admin/support/metrics");
+  async getMetrics(userType?: string): Promise<SupportMetrics> {
+    const res = await api.get<SupportMetrics>("admin/support/metrics", {
+      params: userType ? { userType } : undefined,
+    });
     return res.data;
   },
 

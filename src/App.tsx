@@ -122,7 +122,8 @@ function App() {
           <Route path="/users" element={<Users />} />
           <Route path="/roles" element={<Roles />} />
           <Route path="/prescriptions" element={<PrescriptionTemplatesPage />} />
-          <Route path="/support" element={<SupportCenterPage />} />
+          <Route path="/support" element={<SupportCenterPage defaultUserType="PATIENT" />} />
+          <Route path="/doctor-support" element={<SupportCenterPage defaultUserType="DOCTOR" />} />
         </Route>
 
         {/* Legacy /portal fallback */}
