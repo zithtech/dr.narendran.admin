@@ -24,7 +24,6 @@ import {
   MessageSquare,
   RefreshCw,
   Search,
-  ShieldCheck,
   Stethoscope,
   UserCheck,
 } from "lucide-react";
