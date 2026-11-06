@@ -1,22 +1,129 @@
 import { App } from 'antd';
 import {
+  Activity,
+  Building2,
+  Calendar,
   Clock,
   Eye,
+  FileCheck,
   FileText,
+  HeartPulse,
+  Mail,
+  MapPin,
+  Moon,
+  Phone,
   Power,
+  ShieldCheck,
+  Stethoscope,
+  Sun,
+  Sunset,
+  UserCheck,
   Users,
 } from 'lucide-react';
 import { useState } from 'react';
 
 import StaffDrawer from '../components/StaffDrawer';
 import StaffModal from '../components/StaffModal';
-import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
+import { type Column, DataView, type Facet } from '../components/ui/DataView';
 import { addedFacet, statusFacet } from '../components/ui/facets';
-import { Badge } from '../components/ui/primitives';
 import { useResource } from '../hooks/useResource';
 import type { StaffMember, StaffStatus } from '../types/staff';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
+
+function getStaffInitials(name: string): string {
+  if (!name) return 'ST';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return (parts[0]?.substring(0, 2) || 'ST').toUpperCase();
+  return ((parts[0]?.[0] || '') + (parts[parts.length - 1]?.[0] || '')).toUpperCase();
+}
+
+function getRoleBadgeConfig(role: string) {
+  const lower = role.toLowerCase();
+  if (lower.includes('nurse')) {
+    return {
+      icon: HeartPulse,
+      background: '#f5f3ff',
+      color: '#6d28d9',
+      border: '1px solid #ddd6fe',
+    };
+  }
+  if (lower.includes('doctor') || lower.includes('surgeon') || lower.includes('physician')) {
+    return {
+      icon: Stethoscope,
+      background: '#eff6ff',
+      color: '#1d4ed8',
+      border: '1px solid #bfdbfe',
+    };
+  }
+  if (lower.includes('technician') || lower.includes('patholog') || lower.includes('lab')) {
+    return {
+      icon: Activity,
+      background: '#ecfdf5',
+      color: '#047857',
+      border: '1px solid #a7f3d0',
+    };
+  }
+  if (lower.includes('pharmac')) {
+    return {
+      icon: ShieldCheck,
+      background: '#fffbeb',
+      color: '#b45309',
+      border: '1px solid #fde68a',
+    };
+  }
+  if (lower.includes('reception') || lower.includes('admin')) {
+    return {
+      icon: UserCheck,
+      background: '#f8fafc',
+      color: '#475569',
+      border: '1px solid #e2e8f0',
+    };
+  }
+  return {
+    icon: Users,
+    background: '#faf5ff',
+    color: '#7e22ce',
+    border: '1px solid #e9d5ff',
+  };
+}
+
+function getShiftDetails(shift: string) {
+  switch (shift.toLowerCase()) {
+    case 'morning':
+      return {
+        icon: Sun,
+        period: '08:00 AM - 04:00 PM',
+        background: '#fffbeb',
+        color: '#b45309',
+        border: '1px solid #fde68a',
+      };
+    case 'evening':
+      return {
+        icon: Sunset,
+        period: '04:00 PM - 12:00 AM',
+        background: '#fff7ed',
+        color: '#c2410c',
+        border: '1px solid #fed7aa',
+      };
+    case 'night':
+      return {
+        icon: Moon,
+        period: '12:00 AM - 08:00 AM',
+        background: '#e0e7ff',
+        color: '#4338ca',
+        border: '1px solid #c7d2fe',
+      };
+    default:
+      return {
+        icon: Clock,
+        period: 'Custom Roster',
+        background: '#f5f3ff',
+        color: '#7c3aed',
+        border: '1px solid #ddd6fe',
+      };
+  }
+}
 
 const FACETS: Facet<StaffMember>[] = [
   {
@@ -81,57 +188,116 @@ export default function StaffManagement() {
     }
   };
 
-  const getShiftBadgeTone = (shift: string) => {
-    switch (shift.toLowerCase()) {
-      case 'morning':
-        return 'blue';
-      case 'evening':
-        return 'amber';
-      case 'night':
-        return 'violet';
-      default:
-        return 'neutral';
-    }
-  };
-
   const columns: Column<StaffMember>[] = [
     {
       id: 'staff',
       header: 'Staff Member',
       sort: (s) => s.name.toLowerCase(),
-      cell: (s) => (
-        <PrimaryCell
-          name={s.name}
-          sub={
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: '#0284c7',
-                  background: '#e0f2fe',
-                  padding: '1px 5px',
-                  borderRadius: 4,
-                }}
-              >
-                {s.staffCode}
-              </span>
-              <span>{s.phone}</span>
+      cell: (s) => {
+        const initials = getStaffInitials(s.name);
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
+                border: '1.5px solid #ddd6fe',
+                color: '#6d28d9',
+                fontWeight: 700,
+                fontSize: 13,
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+                boxShadow: '0 1px 3px rgba(124, 58, 237, 0.08)',
+              }}
+            >
+              {initials}
             </div>
-          }
-          onOpen={() => openDetails(s)}
-        />
-      ),
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button
+                  type="button"
+                  onClick={() => openDetails(s)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    margin: 0,
+                    fontSize: 13.5,
+                    fontWeight: 700,
+                    color: '#0f172a',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'color 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#7c3aed')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = '#0f172a')}
+                >
+                  {s.name}
+                </button>
+                <span
+                  style={{
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    color: '#7c3aed',
+                    background: '#f5f3ff',
+                    border: '1px solid #ddd6fe',
+                    padding: '1px 6px',
+                    borderRadius: 4,
+                  }}
+                >
+                  {s.staffCode}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: '#64748b' }}>
+                  <Phone size={11} style={{ color: '#94a3b8' }} />
+                  {s.phone}
+                </span>
+                {s.email && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#94a3b8' }}>
+                    <span>·</span>
+                    <Mail size={11} />
+                    <span style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {s.email}
+                    </span>
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      },
     },
     {
       id: 'role',
       header: 'Staff Role',
       sort: (s) => s.role.toLowerCase(),
-      cell: (s) => (
-        <div>
-          <Badge tone="blue">{s.role}</Badge>
-        </div>
-      ),
+      cell: (s) => {
+        const config = getRoleBadgeConfig(s.role);
+        const RoleIcon = config.icon;
+        return (
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '3px 9px',
+              borderRadius: 9999,
+              fontSize: 12,
+              fontWeight: 600,
+              background: config.background,
+              color: config.color,
+              border: config.border,
+            }}
+          >
+            <RoleIcon size={12.5} style={{ flexShrink: 0 }} />
+            <span>{s.role}</span>
+          </div>
+        );
+      },
     },
     {
       id: 'assignment',
@@ -139,11 +305,13 @@ export default function StaffManagement() {
       sort: (s) => (s.hospitalName || '').toLowerCase(),
       cell: (s) => (
         <div>
-          <div style={{ fontWeight: 600, color: 'var(--ui-text, #1e293b)' }}>
-            {s.hospitalName || 'Main Hospital System'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#1e293b', fontSize: 12.5 }}>
+            <Building2 size={13.5} style={{ color: '#7c3aed', flexShrink: 0 }} />
+            <span>{s.hospitalName || 'Main Hospital System'}</span>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--ui-text-muted, #64748b)' }}>
-            {s.branchName || 'Central Campus'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: '#64748b', marginTop: 3 }}>
+            <MapPin size={11.5} style={{ color: '#94a3b8', flexShrink: 0 }} />
+            <span>{s.branchName || 'Central Campus'}</span>
           </div>
         </div>
       ),
@@ -152,19 +320,34 @@ export default function StaffManagement() {
       id: 'shift',
       header: 'Shift Timing',
       sort: (s) => s.shiftTiming,
-      cell: (s) => (
-        <div>
-          <Badge tone={getShiftBadgeTone(s.shiftTiming) as any}>
-            <Clock size={12} style={{ marginRight: 4 }} />
-            {s.shiftTiming}
-          </Badge>
-          {s.customShiftDetails && (
-            <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 2 }}>
-              {s.customShiftDetails}
+      cell: (s) => {
+        const shiftCfg = getShiftDetails(s.shiftTiming);
+        const ShiftIcon = shiftCfg.icon;
+        return (
+          <div>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '2.5px 8px',
+                borderRadius: 6,
+                fontSize: 11.5,
+                fontWeight: 600,
+                background: shiftCfg.background,
+                color: shiftCfg.color,
+                border: shiftCfg.border,
+              }}
+            >
+              <ShiftIcon size={12} style={{ flexShrink: 0 }} />
+              <span>{s.shiftTiming}</span>
             </div>
-          )}
-        </div>
-      ),
+            <div style={{ fontSize: 11, color: '#64748b', marginTop: 3 }}>
+              {s.customShiftDetails || shiftCfg.period}
+            </div>
+          </div>
+        );
+      },
     },
     {
       id: 'documents',
@@ -172,23 +355,64 @@ export default function StaffManagement() {
       sort: (s) => s.documents?.length || 0,
       cell: (s) => {
         const count = s.documents?.length || 0;
+        if (count === 0) {
+          return (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                fontSize: 11.5,
+                fontWeight: 500,
+                padding: '3px 8px',
+                borderRadius: 6,
+                background: '#f8fafc',
+                color: '#94a3b8',
+                border: '1px solid #e2e8f0',
+              }}
+            >
+              <FileText size={12.5} style={{ color: '#cbd5e1' }} />
+              <span>No docs</span>
+            </div>
+          );
+        }
+
         return (
           <div
+            onClick={(e) => {
+              e.stopPropagation();
+              openDetails(s);
+            }}
+            title="View stored documents in R2"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 5,
-              fontSize: 12,
+              gap: 6,
+              fontSize: 11.5,
               fontWeight: 600,
-              padding: '2px 8px',
+              padding: '3px 8px',
               borderRadius: 6,
-              background: count > 0 ? '#f0fdf4' : '#f8fafc',
-              color: count > 0 ? '#16a34a' : '#94a3b8',
-              border: count > 0 ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+              background: '#f5f3ff',
+              color: '#6d28d9',
+              border: '1px solid #ddd6fe',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
             }}
           >
-            <FileText size={13} />
-            <span>{count > 0 ? `${count} doc${count > 1 ? 's' : ''}` : 'No docs'}</span>
+            <FileCheck size={13} style={{ color: '#7c3aed' }} />
+            <span>{count === 1 ? '1 doc' : `${count} docs`}</span>
+            <span
+              style={{
+                fontSize: 9.5,
+                fontWeight: 700,
+                padding: '1px 4px',
+                borderRadius: 3,
+                background: '#ede9fe',
+                color: '#7c3aed',
+              }}
+            >
+              R2
+            </span>
           </div>
         );
       },
@@ -198,20 +422,46 @@ export default function StaffManagement() {
       header: 'Joining Date',
       sort: (s) => new Date(s.joiningDate).getTime(),
       cell: (s) => (
-        <span style={{ fontSize: 12.5, color: 'var(--ui-text-muted, #475569)' }}>
-          {s.joiningDate}
-        </span>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#475569' }}>
+          <Calendar size={12.5} style={{ color: '#94a3b8' }} />
+          <span>{s.joiningDate}</span>
+        </div>
       ),
     },
     {
       id: 'status',
       header: 'Status',
       sort: (s) => s.status,
-      cell: (s) => (
-        <Badge tone={s.status === 'ACTIVE' ? 'green' : 'neutral'}>
-          {s.status === 'ACTIVE' ? 'Active' : 'Inactive'}
-        </Badge>
-      ),
+      cell: (s) => {
+        const isActive = s.status === 'ACTIVE';
+        return (
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '3px 9px',
+              borderRadius: 9999,
+              fontSize: 11.5,
+              fontWeight: 600,
+              background: isActive ? '#ecfdf5' : '#f8fafc',
+              color: isActive ? '#047857' : '#64748b',
+              border: isActive ? '1px solid #a7f3d0' : '1px solid #cbd5e1',
+            }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: isActive ? '#10b981' : '#94a3b8',
+                boxShadow: isActive ? '0 0 0 2px #bbf7d0' : 'none',
+              }}
+            />
+            <span>{isActive ? 'Active' : 'Inactive'}</span>
+          </div>
+        );
+      },
     },
   ];
 

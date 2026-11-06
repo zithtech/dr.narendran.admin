@@ -794,11 +794,11 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
               width: 38,
               height: 38,
               borderRadius: 10,
-              background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+              background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
               color: '#ffffff',
               display: 'grid',
               placeItems: 'center',
-              boxShadow: '0 2px 8px rgba(2, 132, 199, 0.25)',
+              boxShadow: '0 2px 8px rgba(124, 58, 237, 0.28)',
               flexShrink: 0,
             }}
           >
@@ -808,78 +808,100 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
             <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--ui-text, #0f172a)' }}>
               {staff ? `Edit Staff Member · ${staff.name}` : 'Add New Hospital Staff'}
             </div>
+            <div style={{ fontSize: 12.5, color: '#64748b', marginTop: 2 }}>
+              Manage staff profile details, shift assignments, and documents.
+            </div>
           </div>
         </div>
       }
-      description="Configure staff credentials, clinical designation, shift schedule, and secure verification documents stored in Cloudflare R2."
+      description=""
     >
       <form
         id="staff-form"
         onSubmit={handleSubmit}
-        className="ui-modal-form"
+        className="ui-modal-form staff-purple-theme"
         noValidate
       >
+        <style>{`
+          .staff-purple-theme input:focus,
+          .staff-purple-theme select:focus,
+          .staff-purple-theme textarea:focus {
+            border-color: #7c3aed !important;
+            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15) !important;
+            outline: none !important;
+          }
+          .staff-section-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+          }
+          .staff-section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f1f5f9;
+          }
+          .staff-section-badge {
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            background: #f5f3ff;
+            color: #7c3aed;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+          }
+          .staff-section-tag {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #6d28d9;
+            text-transform: uppercase;
+          }
+        `}</style>
         <div
           className="ui-modal-body"
           style={{
-            background: '#f8fafc',
+            background: '#faf5ff',
             display: 'flex',
             flexDirection: 'column',
-            gap: 18,
-            padding: '22px 28px',
+            gap: 16,
+            padding: '20px 24px',
           }}
         >
         {error && <Alert>{error}</Alert>}
 
         {/* Section 1: Basic Information */}
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: 14,
-            padding: '20px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16,
-          }}
-        >
+        <div className="staff-section-card">
           {/* Section Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 10, borderBottom: '1px solid #f1f5f9' }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: '#e0f2fe',
-                color: '#0284c7',
-                display: 'grid',
-                placeItems: 'center',
-              }}
-            >
-              <User size={16} />
+          <div className="staff-section-header">
+            <div className="staff-section-badge">
+              <User size={14} />
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
-                Basic & Contact Details
-              </div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>
-                Primary identification and communication information
+              <div className="staff-section-tag">
+                Basic Details
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
             <div>
               <label htmlFor="staff-full-name" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span>Staff Full Name</span>
                   <span style={{ color: '#ef4444' }}>*</span>
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 400, color: '#64748b' }}>Letters & spaces only</span>
+                <span style={{ fontSize: 11, fontWeight: 400, color: '#7c3aed' }}>Letters & spaces only</span>
               </label>
               <div style={{ position: 'relative' }}>
-                <User size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: errors.name ? '#ef4444' : '#94a3b8' }} />
+                <User size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: errors.name ? '#ef4444' : '#7c3aed' }} />
                 <input
                   id="staff-full-name"
                   type="text"
@@ -916,10 +938,10 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                   <span>Phone Number</span>
                   <span style={{ color: '#ef4444' }}>*</span>
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 400, color: '#64748b' }}>Digits only (10-15 digits)</span>
+                <span style={{ fontSize: 11, fontWeight: 400, color: '#7c3aed' }}>10-15 digits</span>
               </label>
               <div style={{ position: 'relative' }}>
-                <Phone size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: errors.phone ? '#ef4444' : '#94a3b8' }} />
+                <Phone size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: errors.phone ? '#ef4444' : '#7c3aed' }} />
                 <input
                   id="staff-phone"
                   type="tel"
@@ -950,14 +972,14 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
             <div>
               <label htmlFor="staff-email" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span>Email Address</span>
-                <span style={{ fontSize: 11, fontWeight: 400, color: '#64748b' }}>Optional · user@domain.com</span>
+                <span style={{ fontSize: 11, fontWeight: 400, color: '#64748b' }}>Optional</span>
               </label>
               <div style={{ position: 'relative' }}>
-                <Mail size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: errors.email ? '#ef4444' : '#94a3b8' }} />
+                <Mail size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: errors.email ? '#ef4444' : '#7c3aed' }} />
                 <input
                   id="staff-email"
                   type="email"
@@ -988,13 +1010,13 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
             <div>
               <label htmlFor="staff-joining-date" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span>Date of Joining</span>
+                  <span>Joining Date</span>
                   <span style={{ color: '#ef4444' }}>*</span>
                 </span>
                 <span style={{ fontSize: 11, fontWeight: 400, color: '#64748b' }}>YYYY-MM-DD</span>
               </label>
               <div style={{ position: 'relative' }}>
-                <Calendar size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: errors.joiningDate ? '#ef4444' : '#94a3b8' }} />
+                <Calendar size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: errors.joiningDate ? '#ef4444' : '#7c3aed' }} />
                 <input
                   id="staff-joining-date"
                   type="date"
@@ -1026,8 +1048,8 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
           <div>
             <label htmlFor="staff-address" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <MapPin size={14} style={{ color: '#64748b' }} />
-                <span>Residential / Permanent Address</span>
+                <MapPin size={14} style={{ color: '#7c3aed' }} />
+                <span>Residential / Postal Address</span>
               </span>
               <span style={{ fontSize: 11, fontWeight: 400, color: '#64748b' }}>Optional · min 5 chars</span>
             </label>
@@ -1059,111 +1081,85 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
         </div>
 
         {/* Section 2: Hospital & Role Placement */}
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: 14,
-            padding: '20px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16,
-          }}
-        >
+        <div className="staff-section-card">
           {/* Section Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 10, borderBottom: '1px solid #f1f5f9' }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: '#e0e7ff',
-                color: '#4338ca',
-                display: 'grid',
-                placeItems: 'center',
+          <div className="staff-section-header">
+            <div className="staff-section-badge">
+              <Briefcase size={14} />
+            </div>
+            <div>
+              <div className="staff-section-tag">
+                Role, Hospital & Shift Assignment
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="staff-role" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+              <Briefcase size={14} style={{ color: '#7c3aed' }} />
+              <span>Staff Role</span>
+              <span style={{ color: '#ef4444' }}>*</span>
+            </label>
+            <select
+              id="staff-role"
+              className="ui-input ui-select"
+              value={role}
+              onChange={(e) => {
+                const val = e.target.value;
+                setRole(val);
+                setIsCustomRole(val === 'Other');
               }}
+              style={{ height: 38 }}
             >
-              <Building2 size={16} />
-            </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
-                Role & Hospital Placement
-              </div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>
-                Clinical designation, hospital institution, and operating branch
-              </div>
-            </div>
+              {STAFF_ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 14 }}>
+          {isCustomRole && (
             <div>
-              <label htmlFor="staff-role" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
-                <Briefcase size={14} style={{ color: '#64748b' }} />
-                <span>Staff Role</span>
-                <span style={{ color: '#ef4444' }}>*</span>
+              <label htmlFor="staff-custom-role" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span>Custom Role Title</span>
+                  <span style={{ color: '#ef4444' }}>*</span>
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 400, color: '#7c3aed' }}>Letters only</span>
               </label>
-              <select
-                id="staff-role"
-                className="ui-input ui-select"
-                value={role}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setRole(val);
-                  setIsCustomRole(val === 'Other');
+              <input
+                id="staff-custom-role"
+                type="text"
+                className="ui-input"
+                placeholder="Specify custom role title"
+                value={customRole}
+                onChange={handleCustomRoleChange}
+                onKeyDown={handleCustomRoleKeyDown}
+                onBlur={() => {
+                  setTouched((prev) => ({ ...prev, customRole: true }));
+                  setErrors((prev) => ({ ...prev, customRole: validateCustomRole(true, customRole) }));
                 }}
-                style={{ height: 38 }}
-              >
-                {STAFF_ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
+                style={{
+                  height: 38,
+                  borderColor: errors.customRole ? '#ef4444' : undefined,
+                  boxShadow: errors.customRole ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                }}
+                required
+              />
+              {errors.customRole && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, color: '#dc2626', fontSize: 11.5 }}>
+                  <AlertCircle size={13} style={{ flexShrink: 0 }} />
+                  <span>{errors.customRole}</span>
+                </div>
+              )}
             </div>
+          )}
 
-            {isCustomRole && (
-              <div>
-                <label htmlFor="staff-custom-role" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span>Custom Role Title</span>
-                    <span style={{ color: '#ef4444' }}>*</span>
-                  </span>
-                  <span style={{ fontSize: 11, fontWeight: 400, color: '#64748b' }}>Letters only</span>
-                </label>
-                <input
-                  id="staff-custom-role"
-                  type="text"
-                  className="ui-input"
-                  placeholder="Specify custom role title"
-                  value={customRole}
-                  onChange={handleCustomRoleChange}
-                  onKeyDown={handleCustomRoleKeyDown}
-                  onBlur={() => {
-                    setTouched((prev) => ({ ...prev, customRole: true }));
-                    setErrors((prev) => ({ ...prev, customRole: validateCustomRole(true, customRole) }));
-                  }}
-                  style={{
-                    height: 38,
-                    borderColor: errors.customRole ? '#ef4444' : undefined,
-                    boxShadow: errors.customRole ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                  }}
-                  required
-                />
-                {errors.customRole && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, color: '#dc2626', fontSize: 11.5 }}>
-                    <AlertCircle size={13} style={{ flexShrink: 0 }} />
-                    <span>{errors.customRole}</span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
             <div>
               <label htmlFor="staff-hospital" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                <Building2 size={14} style={{ color: '#64748b' }} />
+                <Building2 size={14} style={{ color: '#7c3aed' }} />
                 <span>Assigned Hospital</span>
               </label>
               <select
@@ -1187,7 +1183,7 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
 
             <div>
               <label htmlFor="staff-branch" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                <GitBranch size={14} style={{ color: '#64748b' }} />
+                <GitBranch size={14} style={{ color: '#7c3aed' }} />
                 <span>Hospital Branch</span>
               </label>
               <select
@@ -1206,347 +1202,256 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
               </select>
             </div>
           </div>
-        </div>
 
-        {/* Section 3: Shift Timing & Schedule */}
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: 14,
-            padding: '20px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16,
-          }}
-        >
-          {/* Section Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 10, borderBottom: '1px solid #f1f5f9' }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: '#fef3c7',
-                color: '#b45309',
-                display: 'grid',
-                placeItems: 'center',
-              }}
-            >
-              <Clock size={16} />
-            </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
-                Shift Timing & Schedule
-              </div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>
-                Select working hours or define custom shift roster
-              </div>
-            </div>
-          </div>
-
-          {/* Form control for Shift Timing */}
-          <div style={{ position: 'relative' }}>
-            <label
-              htmlFor="staff-shift-timing"
-              style={{
-                fontSize: 12.5,
-                fontWeight: 600,
-                color: '#334155',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                marginBottom: 10,
-              }}
-            >
-              <span>Shift Timing</span>
-              <span style={{ color: '#ef4444' }}>*</span>
-            </label>
-            <select
-              id="staff-shift-timing"
-              value={shiftTiming}
-              onChange={(e) => setShiftTiming(e.target.value)}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: 1,
-                height: 1,
-                opacity: 0,
-                pointerEvents: 'none',
-              }}
-              tabIndex={-1}
-              aria-label="Shift Timing"
-            >
-              {SHIFT_TIMINGS.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.id}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Interactive Shift Selector Cards */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-              gap: 10,
-            }}
-          >
-            {SHIFT_TIMINGS.map((shift) => {
-              const isSelected = shiftTiming === shift.id;
-              let Icon = Sun;
-              let iconColor = '#f59e0b';
-              if (shift.id === 'Evening') {
-                Icon = Sunset;
-                iconColor = '#ea580c';
-              } else if (shift.id === 'Night') {
-                Icon = Moon;
-                iconColor = '#6366f1';
-              } else if (shift.id === 'Custom Shift') {
-                Icon = Clock;
-                iconColor = '#0284c7';
-              }
-
-              return (
-                <button
-                  type="button"
-                  key={shift.id}
-                  onClick={() => setShiftTiming(shift.id)}
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: 10,
-                    border: isSelected ? '2px solid #0284c7' : '1px solid #e2e8f0',
-                    background: isSelected ? '#f0f9ff' : '#ffffff',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: 8,
-                    position: 'relative',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                    <Icon size={18} style={{ color: iconColor }} />
-                    {isSelected && (
-                      <span
-                        style={{
-                          width: 18,
-                          height: 18,
-                          borderRadius: '50%',
-                          background: '#0284c7',
-                          color: '#ffffff',
-                          display: 'grid',
-                          placeItems: 'center',
-                        }}
-                      >
-                        <Check size={11} strokeWidth={3} />
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: isSelected ? '#0369a1' : '#1e293b' }}>
-                      {shift.id}
-                    </div>
-                    <div style={{ fontSize: 11, color: isSelected ? '#0284c7' : '#64748b', marginTop: 2 }}>
-                      {shift.period}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {shiftTiming === 'Custom Shift' && (
-            <div style={{ marginTop: 12 }}>
-              <label htmlFor="staff-custom-shift-details" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span>Custom Shift Timing Details</span>
-                  <span style={{ color: '#ef4444' }}>*</span>
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 400, color: '#64748b' }}>e.g. 06:00 AM - 02:00 PM</span>
-              </label>
-              <input
-                id="staff-custom-shift-details"
-                type="text"
-                className="ui-input"
-                placeholder="e.g. 06:00 AM - 02:00 PM or 12hr Rotating Roster"
-                value={customShiftDetails}
-                onChange={handleCustomShiftChange}
-                onKeyDown={handleCustomShiftKeyDown}
-                onBlur={() => {
-                  setTouched((prev) => ({ ...prev, customShiftDetails: true }));
-                  setErrors((prev) => ({ ...prev, customShiftDetails: validateCustomShift(shiftTiming, customShiftDetails) }));
-                }}
+          {/* Shift Timing Selection (Select + Visual Cards) */}
+          <div>
+            <div style={{ position: 'relative' }}>
+              <label
+                htmlFor="staff-shift-timing"
                 style={{
-                  height: 38,
-                  borderColor: errors.customShiftDetails ? '#ef4444' : undefined,
-                  boxShadow: errors.customShiftDetails ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                }}
-                required
-              />
-              {errors.customShiftDetails && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, color: '#dc2626', fontSize: 11.5 }}>
-                  <AlertCircle size={13} style={{ flexShrink: 0 }} />
-                  <span>{errors.customShiftDetails}</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Section 4: Profile Status */}
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: 14,
-            padding: '20px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 14,
-          }}
-        >
-          {/* Section Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 10, borderBottom: '1px solid #f1f5f9' }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: '#dcfce7',
-                color: '#15803d',
-                display: 'grid',
-                placeItems: 'center',
-              }}
-            >
-              <ShieldCheck size={16} />
-            </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
-                Profile Status
-              </div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>
-                Control whether this staff member is active on hospital rosters
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <button
-              type="button"
-              onClick={() => setStatus('ACTIVE')}
-              style={{
-                padding: '12px 14px',
-                borderRadius: 10,
-                border: status === 'ACTIVE' ? '2px solid #16a34a' : '1px solid #e2e8f0',
-                background: status === 'ACTIVE' ? '#f0fdf4' : '#ffffff',
-                cursor: 'pointer',
-                textAlign: 'left',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <span
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: '50%',
-                  background: status === 'ACTIVE' ? '#16a34a' : '#cbd5e1',
-                  boxShadow: status === 'ACTIVE' ? '0 0 0 3px #bbf7d0' : 'none',
-                }}
-              />
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: status === 'ACTIVE' ? '#15803d' : '#334155' }}>
-                  Active Profile
-                </div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>
-                  Eligible for duties & shift allocation
-                </div>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setStatus('INACTIVE')}
-              style={{
-                padding: '12px 14px',
-                borderRadius: 10,
-                border: status === 'INACTIVE' ? '2px solid #dc2626' : '1px solid #e2e8f0',
-                background: status === 'INACTIVE' ? '#fef2f2' : '#ffffff',
-                cursor: 'pointer',
-                textAlign: 'left',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <span
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: '50%',
-                  background: status === 'INACTIVE' ? '#dc2626' : '#cbd5e1',
-                  boxShadow: status === 'INACTIVE' ? '0 0 0 3px #fecaca' : 'none',
-                }}
-              />
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: status === 'INACTIVE' ? '#991b1b' : '#334155' }}>
-                  Inactive Profile
-                </div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>
-                  Suspended or on temporary leave
-                </div>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        {/* Section 5: Document Upload (Store securely in Cloudflare R2) */}
-        {!staff && (
-          <div
-            style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: 14,
-              padding: '20px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 16,
-            }}
-          >
-            {/* Section Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 10, borderBottom: '1px solid #f1f5f9' }}>
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  background: '#f3e8ff',
-                  color: '#7e22ce',
-                  display: 'grid',
-                  placeItems: 'center',
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  color: '#334155',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  marginBottom: 6,
                 }}
               >
-                <FileUp size={16} />
+                <Clock size={14} style={{ color: '#7c3aed' }} />
+                <span>Shift Timing</span>
+                <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <select
+                id="staff-shift-timing"
+                className="ui-input ui-select"
+                value={shiftTiming}
+                onChange={(e) => setShiftTiming(e.target.value)}
+                style={{ height: 38, marginBottom: 10 }}
+              >
+                {SHIFT_TIMINGS.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Interactive Purple Shift Cards */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                gap: 8,
+              }}
+            >
+              {SHIFT_TIMINGS.map((shift) => {
+                const isSelected = shiftTiming === shift.id;
+                let ShiftIcon = Sun;
+                if (shift.id === 'Evening') ShiftIcon = Sunset;
+                else if (shift.id === 'Night') ShiftIcon = Moon;
+                else if (shift.id === 'Custom Shift') ShiftIcon = Clock;
+
+                return (
+                  <button
+                    type="button"
+                    key={shift.id}
+                    onClick={() => setShiftTiming(shift.id)}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                      border: isSelected ? '2px solid #7c3aed' : '1px solid #e2e8f0',
+                      background: isSelected ? '#f5f3ff' : '#ffffff',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: 6,
+                      position: 'relative',
+                      transition: 'all 0.15s ease',
+                      boxShadow: isSelected ? '0 2px 6px rgba(124, 58, 237, 0.12)' : 'none',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      <ShiftIcon size={16} style={{ color: isSelected ? '#7c3aed' : '#8b5cf6' }} />
+                      {isSelected && (
+                        <span
+                          style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: '50%',
+                            background: '#7c3aed',
+                            color: '#ffffff',
+                            display: 'grid',
+                            placeItems: 'center',
+                          }}
+                        >
+                          <Check size={10} strokeWidth={3} />
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: isSelected ? '#6d28d9' : '#1e293b' }}>
+                        {shift.id}
+                      </div>
+                      <div style={{ fontSize: 10.5, color: isSelected ? '#7c3aed' : '#64748b', marginTop: 1 }}>
+                        {shift.period}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {shiftTiming === 'Custom Shift' && (
+              <div style={{ marginTop: 12 }}>
+                <label htmlFor="staff-custom-shift-details" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span>Custom Shift Timing Details</span>
+                    <span style={{ color: '#ef4444' }}>*</span>
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 400, color: '#7c3aed' }}>e.g. 06:00 AM - 02:00 PM</span>
+                </label>
+                <input
+                  id="staff-custom-shift-details"
+                  type="text"
+                  className="ui-input"
+                  placeholder="e.g. 06:00 AM - 02:00 PM or 12hr Rotating Roster"
+                  value={customShiftDetails}
+                  onChange={handleCustomShiftChange}
+                  onKeyDown={handleCustomShiftKeyDown}
+                  onBlur={() => {
+                    setTouched((prev) => ({ ...prev, customShiftDetails: true }));
+                    setErrors((prev) => ({ ...prev, customShiftDetails: validateCustomShift(shiftTiming, customShiftDetails) }));
+                  }}
+                  style={{
+                    height: 38,
+                    borderColor: errors.customShiftDetails ? '#ef4444' : undefined,
+                    boxShadow: errors.customShiftDetails ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
+                  required
+                />
+                {errors.customShiftDetails && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, color: '#dc2626', fontSize: 11.5 }}>
+                    <AlertCircle size={13} style={{ flexShrink: 0 }} />
+                    <span>{errors.customShiftDetails}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Section 3: Visibility & Status */}
+        <div className="staff-section-card">
+          {/* Section Header */}
+          <div className="staff-section-header">
+            <div className="staff-section-badge">
+              <ShieldCheck size={14} />
+            </div>
+            <div>
+              <div className="staff-section-tag">
+                Visibility & Status
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 8 }}>
+              Staff Profile Status
+            </div>
+
+            <div
+              style={{
+                display: 'inline-flex',
+                background: '#f5f3ff',
+                padding: '4px',
+                borderRadius: 10,
+                border: '1px solid #ddd6fe',
+                gap: 4,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setStatus('ACTIVE')}
+                style={{
+                  padding: '7px 20px',
+                  borderRadius: 7,
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  border: status === 'ACTIVE' ? '1px solid #7c3aed' : '1px solid transparent',
+                  cursor: 'pointer',
+                  background: status === 'ACTIVE' ? '#ffffff' : 'transparent',
+                  color: status === 'ACTIVE' ? '#6d28d9' : '#64748b',
+                  boxShadow: status === 'ACTIVE' ? '0 2px 5px rgba(124, 58, 237, 0.18)' : 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: status === 'ACTIVE' ? '#7c3aed' : '#cbd5e1',
+                  }}
+                />
+                <span>Active</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatus('INACTIVE')}
+                style={{
+                  padding: '7px 20px',
+                  borderRadius: 7,
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  border: status === 'INACTIVE' ? '1px solid #94a3b8' : '1px solid transparent',
+                  cursor: 'pointer',
+                  background: status === 'INACTIVE' ? '#ffffff' : 'transparent',
+                  color: status === 'INACTIVE' ? '#475569' : '#64748b',
+                  boxShadow: status === 'INACTIVE' ? '0 2px 5px rgba(0, 0, 0, 0.08)' : 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: status === 'INACTIVE' ? '#94a3b8' : '#cbd5e1',
+                  }}
+                />
+                <span>Inactive</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 4: Document Upload (Secure R2 Storage) */}
+        {!staff && (
+          <div className="staff-section-card">
+            {/* Section Header */}
+            <div className="staff-section-header">
+              <div className="staff-section-badge">
+                <FileUp size={14} />
               </div>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
-                  Verification Documents (Cloudflare R2 Storage)
-                </div>
-                <div style={{ fontSize: 12, color: '#64748b' }}>
-                  Upload degrees, council registration, IDs, or resumes securely stored in R2
+                <div className="staff-section-tag">
+                  Staff Document Upload (Secure R2 Storage)
                 </div>
               </div>
+            </div>
+
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: -4 }}>
+              Upload qualification certificates, nursing registrations, ID proofs, or resumes stored securely in Cloudflare R2 / S3.
             </div>
 
             {errors.documentFile && (
@@ -1568,11 +1473,11 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
               <div>
                 <label htmlFor="staff-document-title" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                   <span>Document Title</span>
-                  <span style={{ fontSize: 11, fontWeight: 400, color: '#64748b' }}>Letters, numbers & (._-)</span>
+                  <span style={{ fontSize: 11, fontWeight: 400, color: '#7c3aed' }}>Letters & numbers</span>
                 </label>
                 <input
                   id="staff-document-title"
@@ -1624,7 +1529,7 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
               </div>
             </div>
 
-            {/* Stylized File Dropzone */}
+            {/* Stylized Purple File Dropzone */}
             <div
               onClick={() => fileInputRef.current?.click()}
               onDragOver={(e) => {
@@ -1645,8 +1550,8 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                 justifyContent: 'center',
                 padding: '22px 16px',
                 borderRadius: 12,
-                border: selectedFile ? '2px solid #0284c7' : '2px dashed #cbd5e1',
-                background: selectedFile ? '#f0f9ff' : '#f8fafc',
+                border: selectedFile ? '2px solid #7c3aed' : '2px dashed #c4b5fd',
+                background: selectedFile ? '#f5f3ff' : '#faf5ff',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
                 textAlign: 'center',
@@ -1658,19 +1563,19 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                   width: 44,
                   height: 44,
                   borderRadius: '50%',
-                  background: selectedFile ? '#e0f2fe' : '#ffffff',
-                  color: '#0284c7',
+                  background: selectedFile ? '#ede9fe' : '#ffffff',
+                  color: '#7c3aed',
                   display: 'grid',
                   placeItems: 'center',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
+                  boxShadow: '0 2px 5px rgba(124, 58, 237, 0.15)',
                 }}
               >
-                {selectedFile ? <CheckCircle2 size={24} style={{ color: '#16a34a' }} /> : <UploadCloud size={24} />}
+                {selectedFile ? <CheckCircle2 size={24} style={{ color: '#7c3aed' }} /> : <UploadCloud size={24} />}
               </div>
 
               {selectedFile ? (
                 <div>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0369a1' }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: '#6d28d9' }}>
                     {selectedFile.name}
                   </div>
                   <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
@@ -1688,7 +1593,7 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                       marginTop: 8,
                       fontSize: 12,
                       fontWeight: 600,
-                      color: '#dc2626',
+                      color: '#7c3aed',
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
@@ -1727,7 +1632,7 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
               />
             </div>
 
-            {/* Action Row with "+ Add Document" Button */}
+            {/* Action Row with Purple "+ Add Document" Button */}
             <div
               style={{
                 display: 'flex',
@@ -1735,13 +1640,13 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                 justifyContent: 'space-between',
                 gap: 12,
                 flexWrap: 'wrap',
-                background: '#f8fafc',
+                background: '#f5f3ff',
                 padding: '10px 14px',
                 borderRadius: 10,
-                border: '1px solid #e2e8f0',
+                border: '1px solid #ddd6fe',
               }}
             >
-              <div style={{ fontSize: 12, color: '#475569' }}>
+              <div style={{ fontSize: 12, color: '#5b21b6' }}>
                 {selectedFile ? (
                   <span>
                     Selected: <strong>{selectedFile.name}</strong> ({formatFileSize(selectedFile.size)})
@@ -1758,7 +1663,7 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                 className="ui-btn"
                 style={{
                   height: 34,
-                  padding: '0 14px',
+                  padding: '0 16px',
                   borderRadius: 8,
                   fontWeight: 600,
                   fontSize: 12.5,
@@ -1766,12 +1671,12 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                   alignItems: 'center',
                   gap: 6,
                   background: selectedFile
-                    ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
-                    : '#f1f5f9',
-                  color: selectedFile ? '#ffffff' : '#94a3b8',
+                    ? 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)'
+                    : '#ede9fe',
+                  color: selectedFile ? '#ffffff' : '#a78bfa',
                   border: 'none',
                   cursor: selectedFile ? 'pointer' : 'not-allowed',
-                  boxShadow: selectedFile ? '0 2px 4px rgba(2, 132, 199, 0.25)' : 'none',
+                  boxShadow: selectedFile ? '0 2px 6px rgba(124, 58, 237, 0.28)' : 'none',
                   transition: 'all 0.15s ease',
                 }}
               >
@@ -1801,7 +1706,7 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
                     Documents to Upload ({stagedDocuments.length})
                   </div>
-                  <div style={{ fontSize: 11.5, color: '#0284c7', fontWeight: 600 }}>
+                  <div style={{ fontSize: 11.5, color: '#6d28d9', fontWeight: 600 }}>
                     Stored in Cloudflare R2 on registration
                   </div>
                 </div>
@@ -1817,8 +1722,8 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                         padding: '10px 14px',
                         borderRadius: 10,
                         background: '#ffffff',
-                        border: '1px solid #e2e8f0',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                        border: '1px solid #ddd6fe',
+                        boxShadow: '0 1px 2px rgba(124, 58, 237, 0.05)',
                         gap: 12,
                       }}
                     >
@@ -1828,8 +1733,8 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                             width: 32,
                             height: 32,
                             borderRadius: 8,
-                            background: '#e0f2fe',
-                            color: '#0284c7',
+                            background: '#f5f3ff',
+                            color: '#7c3aed',
                             display: 'grid',
                             placeItems: 'center',
                             flexShrink: 0,
@@ -1857,9 +1762,9 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                                 fontWeight: 600,
                                 padding: '2px 8px',
                                 borderRadius: 9999,
-                                background: '#f1f5f9',
-                                color: '#475569',
-                                border: '1px solid #e2e8f0',
+                                background: '#f5f3ff',
+                                color: '#6d28d9',
+                                border: '1px solid #ddd6fe',
                               }}
                             >
                               {getDocumentTypeLabel(doc.documentType)}
@@ -1881,14 +1786,14 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                           border: 'none',
                           padding: '6px',
                           borderRadius: 6,
-                          color: '#ef4444',
+                          color: '#7c3aed',
                           cursor: 'pointer',
                           display: 'grid',
                           placeItems: 'center',
                           flexShrink: 0,
                           transition: 'background 0.15s ease',
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = '#fee2e2')}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = '#f5f3ff')}
                         onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                       >
                         <Trash2 size={15} />
@@ -1901,40 +1806,16 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
           </div>
         )}
 
-        {/* Section 6: Administrative Notes */}
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: 14,
-            padding: '20px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-          }}
-        >
+        {/* Section 5: Administrative Remarks */}
+        <div className="staff-section-card">
           {/* Section Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 10, borderBottom: '1px solid #f1f5f9' }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: '#f1f5f9',
-                color: '#475569',
-                display: 'grid',
-                placeItems: 'center',
-              }}
-            >
-              <FileText size={16} />
+          <div className="staff-section-header">
+            <div className="staff-section-badge">
+              <FileText size={14} />
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+              <div className="staff-section-tag">
                 Administrative Remarks
-              </div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>
-                Optional internal remarks visible only to hospital administrators
               </div>
             </div>
           </div>
@@ -1986,13 +1867,13 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
-              padding: '0 20px',
+              padding: '0 22px',
               fontWeight: 600,
-              background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+              background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
               color: '#ffffff',
               border: 'none',
               borderRadius: 8,
-              boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)',
+              boxShadow: '0 2px 8px rgba(124, 58, 237, 0.28)',
             }}
           >
             {loading ? (
