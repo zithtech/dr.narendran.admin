@@ -2,11 +2,68 @@ export type OrderStatus =
   | 'placed'
   | 'processing'
   | 'packed'
+  | 'shipped'
   | 'out_for_delivery'
   | 'delivered'
+  | 'delivery_failed'
   | 'cancelled';
 
 export type PaymentStatus = 'paid' | 'pending' | 'failed' | 'refunded';
+
+export type DeliveryMethodType = 'courier' | 'pharmacy_delivery';
+
+export interface CourierDetails {
+  courier_name: string;
+  tracking_number: string;
+  tracking_url?: string | null;
+  courier_phone?: string | null;
+}
+
+export interface PharmacyDeliveryDetails {
+  delivery_person_name: string;
+  delivery_person_phone: string;
+}
+
+export interface OrderDeliveryInfo {
+  delivery_method: string | null;
+  delivery_address: {
+    full_address: string;
+    lat: string | null;
+    lng: string | null;
+    city: string | null;
+    pincode: string | null;
+    state: string | null;
+  };
+  // Third-party Courier details
+  courier_name?: string | null;
+  tracking_number?: string | null;
+  tracking_url?: string | null;
+  courier_phone?: string | null;
+  // Pharmacy Delivery person details
+  delivery_person_name?: string | null;
+  delivery_person_phone?: string | null;
+  // ETA & Delay management
+  estimated_delivery_time?: string | null;
+  delay_remarks?: string | null;
+  status?: string | null;
+  // Nested structure support
+  courier?: Partial<CourierDetails> | null;
+  courier_details?: Partial<CourierDetails> | null;
+  delivery_person?: Partial<PharmacyDeliveryDetails> | null;
+  pharmacy_delivery?: Partial<PharmacyDeliveryDetails> | null;
+}
+
+export interface UpdateDeliveryPayload {
+  delivery_method?: DeliveryMethodType | (string & {}) | undefined;
+  courier_name?: string | null | undefined;
+  tracking_number?: string | null | undefined;
+  tracking_url?: string | null | undefined;
+  courier_phone?: string | null | undefined;
+  delivery_person_name?: string | null | undefined;
+  delivery_person_phone?: string | null | undefined;
+  estimated_delivery_time?: string | null | undefined;
+  delay_remarks?: string | null | undefined;
+}
 
 export interface PatientSummary {
   id: string | null;
@@ -101,17 +158,7 @@ export interface OrderDetails {
     } | null;
     prescription_url: string | null;
   } | null;
-  delivery: {
-    delivery_method: string;
-    delivery_address: {
-      full_address: string;
-      lat: string | null;
-      lng: string | null;
-      city: string | null;
-      pincode: string | null;
-      state: string | null;
-    };
-  };
+  delivery: OrderDeliveryInfo;
   medicines: OrderItemDetail[];
   payment: OrderPaymentDetail | null;
   status_timeline: OrderTimelineLog[];
@@ -165,9 +212,12 @@ export interface ListOrdersQuery {
 
 export const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
   placed: ['processing', 'cancelled'],
-  processing: ['packed', 'out_for_delivery', 'cancelled'],
-  packed: ['out_for_delivery', 'cancelled'],
-  out_for_delivery: ['delivered', 'cancelled'],
+  processing: ['packed', 'shipped', 'out_for_delivery', 'cancelled'],
+  packed: ['shipped', 'out_for_delivery', 'cancelled'],
+  shipped: ['out_for_delivery', 'delivered', 'delivery_failed', 'cancelled'],
+  dispatched: ['out_for_delivery', 'delivered', 'delivery_failed', 'cancelled'],
+  out_for_delivery: ['delivered', 'delivery_failed', 'cancelled'],
+  delivery_failed: ['out_for_delivery', 'shipped', 'cancelled'],
   delivered: [],
   cancelled: [],
 };
@@ -179,9 +229,11 @@ export const ORDER_STATUS_CONFIG: Record<
   placed: { label: 'Placed', tone: 'blue' },
   processing: { label: 'Processing', tone: 'amber' },
   packed: { label: 'Packed', tone: 'indigo' },
-  out_for_delivery: { label: 'Dispatched', tone: 'purple' },
+  shipped: { label: 'Shipped', tone: 'purple' },
+  out_for_delivery: { label: 'Out for Delivery', tone: 'purple' },
   dispatched: { label: 'Dispatched', tone: 'purple' },
   delivered: { label: 'Delivered', tone: 'green' },
+  delivery_failed: { label: 'Delivery Failed', tone: 'rose' },
   cancelled: { label: 'Cancelled', tone: 'rose' },
   return_requested: { label: 'Return Requested', tone: 'amber' },
   returned: { label: 'Returned', tone: 'slate' },

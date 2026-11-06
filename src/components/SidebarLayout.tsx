@@ -12,6 +12,7 @@ import {
   Pill,
   Shield,
   ShoppingBag,
+  Star,
   Stethoscope,
   UserCog,
 } from 'lucide-react';
@@ -35,6 +36,7 @@ const NAV_ITEMS = [
   { name: 'User Accounts', path: '/users', icon: UserCog, slug: 'USERS' },
   { name: 'Roles & Permissions', path: '/roles', icon: Shield, slug: 'USERS' },
   { name: 'Prescription Templates', path: '/prescriptions', icon: FileText, slug: 'PRESCRIPTIONS' },
+  { name: 'Ratings & Reviews', path: '/reviews', icon: Star, slug: 'REVIEWS' },
   { name: 'Patient Support', path: '/support', icon: LifeBuoy, slug: 'SUPPORT' },
   { name: 'Doctor Support', path: '/doctor-support', icon: Stethoscope, slug: 'SUPPORT' },
 ] as const;
@@ -80,7 +82,7 @@ export default function SidebarLayout() {
   // Filter nav items: System Admin sees everything, others only see what they have permissions for
   const visibleNavItems = roleData?.is_system_role
     ? NAV_ITEMS
-    : NAV_ITEMS.filter(item => allowedSlugs.includes(item.slug));
+    : NAV_ITEMS.filter(item => allowedSlugs.includes(item.slug) || (item.slug === 'REVIEWS' && allowedSlugs.includes('DOCTORS')));
 
   const toggle = () => {
     setIsExpanded((prev) => {
