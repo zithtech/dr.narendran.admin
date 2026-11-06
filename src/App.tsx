@@ -29,7 +29,8 @@ import LabAccountPage from './pages/client/LabAccountPage';
 import LabChangePasswordPage from './pages/client/LabChangePasswordPage';
 import LabReportsPage from './pages/client/LabReportsPage';
 
-/** Guard for Hospital Admin Portal routes */import SupportCenterPage from './features/support/pages/SupportCenterPage';
+import SupportCenterPage from './features/support/pages/SupportCenterPage';
+import { ReviewsManagementPage } from './features/reviews/pages/ReviewsManagementPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('adminToken');
@@ -122,6 +123,7 @@ function App() {
           <Route path="/users" element={<Users />} />
           <Route path="/roles" element={<Roles />} />
           <Route path="/prescriptions" element={<PrescriptionTemplatesPage />} />
+          <Route path="/reviews" element={<ReviewsManagementPage />} />
           <Route path="/support" element={<SupportCenterPage />} />
         </Route>
 

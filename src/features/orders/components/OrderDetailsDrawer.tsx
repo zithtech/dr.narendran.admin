@@ -5,11 +5,9 @@ import {
   Copy,
   CreditCard,
   FileText,
-  MapPin,
   Pill,
   RefreshCw,
   ShoppingBag,
-  Truck,
   User,
   X,
   XCircle,
@@ -19,6 +17,7 @@ import React, { useEffect, useState } from 'react';
 import { getErrorMessage } from '../../../utils/errors';
 import { ordersApi } from '../services/ordersApi';
 import type { OrderDetails } from '../types/orders';
+import { OrderDeliveryManager } from './OrderDeliveryManager';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 import { UpdateOrderStatusModal } from './UpdateOrderStatusModal';
@@ -213,37 +212,18 @@ export const OrderDetailsDrawer: React.FC<OrderDetailsDrawerProps> = ({
                 </div>
               </div>
 
-              {/* Delivery Information Card */}
-              <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950 shadow-2xs">
-                <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
-                  <Truck size={14} className="text-teal-600" />
-                  <span>Delivery & Fulfillment</span>
-                </div>
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Method</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">
-                      {order.delivery?.delivery_method || 'Standard Home Delivery'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[11px] mb-1">Destination Address</span>
-                    <div className="flex items-start gap-2 rounded-lg bg-slate-50 p-2.5 text-slate-700 dark:bg-slate-900/60 dark:text-slate-300">
-                      <MapPin size={15} className="mt-0.5 shrink-0 text-slate-400" />
-                      <div>
-                        <p className="font-medium leading-relaxed">
-                          {order.delivery?.delivery_address?.full_address || 'No address provided'}
-                        </p>
-                        {(order.delivery?.delivery_address?.city || order.delivery?.delivery_address?.pincode) && (
-                          <p className="text-[11px] text-slate-400 mt-0.5">
-                            {[order.delivery.delivery_address.city, order.delivery.delivery_address.state, order.delivery.delivery_address.pincode].filter(Boolean).join(', ')}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {/* Delivery & Fulfillment Card with Delivery Method Management, Conditional Forms & ETA */}
+              <OrderDeliveryManager
+                key={`${order.id}-${order.updated_at ?? ''}`}
+                orderId={order.id}
+                orderNumber={order.order_number}
+                orderStatus={order.status}
+                delivery={order.delivery}
+                onUpdated={() => {
+                  void fetchDetails(order.id);
+                  onOrderUpdated?.();
+                }}
+              />
 
               {/* Prescription Reference Card (if applicable) */}
               {order.prescription && (
