@@ -37,7 +37,8 @@ const NAV_ITEMS = [
   { name: 'Roles & Permissions', path: '/roles', icon: Shield, slug: 'USERS' },
   { name: 'Prescription Templates', path: '/prescriptions', icon: FileText, slug: 'PRESCRIPTIONS' },
   { name: 'Ratings & Reviews', path: '/reviews', icon: Star, slug: 'REVIEWS' },
-  { name: 'Support Center', path: '/support', icon: LifeBuoy, slug: 'SUPPORT' },
+  { name: 'Patient Support', path: '/support', icon: LifeBuoy, slug: 'SUPPORT' },
+  { name: 'Doctor Support', path: '/doctor-support', icon: Stethoscope, slug: 'SUPPORT' },
 ] as const;
 
 const EXPANDED_KEY = 'adminRailExpanded';
