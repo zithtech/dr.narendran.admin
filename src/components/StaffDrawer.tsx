@@ -3,16 +3,11 @@ import {
   AlertCircle,
   Building2,
   Calendar,
-  Clock,
   Download,
   ExternalLink,
   FileText,
-  GitBranch,
   Loader2,
-  Mail,
-  MapPin,
   Pencil,
-  Phone,
   Power,
   Trash2,
   Upload,
@@ -20,11 +15,26 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 
-import type { StaffDocument, StaffMember, StaffStatus } from '../types/staff';
+import {
+  DEFAULT_WORK_DAYS,
+  formatWorkDays,
+  WORK_DAY_OPTIONS,
+  type StaffDocument,
+  type StaffMember,
+  type StaffStatus,
+} from '../types/staff';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
 import { Drawer } from './ui/Drawer';
-import { Badge } from './ui/primitives';
+import { SearchableSelect, type SearchableSelectOption } from './ui/SearchableSelect';
+
+const DRAWER_DOC_TYPE_OPTIONS: SearchableSelectOption[] = [
+  { value: 'ID_PROOF', label: 'ID Proof', badge: 'ID' },
+  { value: 'CERTIFICATION', label: 'Degree / Certification', badge: 'Cert' },
+  { value: 'RESUME', label: 'Resume / CV', badge: 'CV' },
+  { value: 'CONTRACT', label: 'Employment Contract', badge: 'Contract' },
+  { value: 'OTHER', label: 'Other', badge: 'Other' },
+];
 
 interface StaffDrawerProps {
   staff: StaffMember | null;
@@ -161,7 +171,7 @@ export default function StaffDrawer({
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      message?.success?.('Document uploaded and stored securely in R2/S3.');
+      message?.success?.('Document uploaded and stored securely .');
       setDocFile(null);
       setDocName('');
       setDocType('ID_PROOF');
@@ -206,20 +216,29 @@ export default function StaffDrawer({
   };
 
   const hero = (
-    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: 12 }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        width: '100%',
+        flexWrap: 'wrap',
+        gap: 12,
+      }}
+    >
       <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
         <div
           style={{
-            width: 52,
-            height: 52,
+            width: 48,
+            height: 48,
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+            background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
             color: '#ffffff',
             display: 'grid',
             placeItems: 'center',
             fontWeight: 700,
-            fontSize: 18,
-            boxShadow: '0 4px 10px rgba(2, 132, 199, 0.25)',
+            fontSize: 17,
+            boxShadow: '0 4px 10px rgba(124, 58, 237, 0.22)',
             flexShrink: 0,
           }}
         >
@@ -227,17 +246,26 @@ export default function StaffDrawer({
         </div>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--ui-text, #0f172a)' }}>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 17.5,
+                fontWeight: 700,
+                color: '#0f172a',
+                letterSpacing: '-0.01em',
+              }}
+            >
               {staff.name}
             </h2>
             <span
               style={{
                 fontSize: 11,
                 fontWeight: 700,
-                color: '#0284c7',
-                background: '#e0f2fe',
-                padding: '2px 8px',
-                borderRadius: 4,
+                color: '#6d28d9',
+                background: '#f5f3ff',
+                border: '1px solid #ede9fe',
+                padding: '2px 7px',
+                borderRadius: 5,
               }}
             >
               {staff.staffCode}
@@ -245,10 +273,43 @@ export default function StaffDrawer({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
-            <Badge tone="blue">{staff.role}</Badge>
-            <Badge tone={isActive ? 'green' : 'neutral'}>
+            <span
+              style={{
+                fontSize: 11.5,
+                fontWeight: 650,
+                color: '#6d28d9',
+                background: '#f5f3ff',
+                border: '1px solid #ede9fe',
+                padding: '2px 8px',
+                borderRadius: 5,
+              }}
+            >
+              {staff.role}
+            </span>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 11.5,
+                fontWeight: 600,
+                padding: '2px 8px',
+                borderRadius: 5,
+                background: isActive ? '#f0fdf4' : '#f8fafc',
+                border: isActive ? '1px solid #dcfce7' : '1px solid #e2e8f0',
+                color: isActive ? '#15803d' : '#64748b',
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: isActive ? '#22c55e' : '#94a3b8',
+                }}
+              />
               {isActive ? 'Active Profile' : 'Inactive'}
-            </Badge>
+            </span>
           </div>
         </div>
       </div>
@@ -256,36 +317,42 @@ export default function StaffDrawer({
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <button
           type="button"
-          className="ui-btn ui-btn-subtle"
+          className="ui-btn ui-btn-neutral"
           onClick={() => onEdit(staff)}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 12.5,
+            height: 32,
+            padding: '0 11px',
+          }}
         >
-          <Pencil size={14} />
+          <Pencil size={13.5} />
           <span>Edit</span>
         </button>
 
         <button
           type="button"
+          className="ui-btn ui-btn-neutral"
           onClick={handleToggleStatus}
           disabled={isUpdatingStatus}
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
             gap: 6,
             fontSize: 12.5,
-            padding: '6px 12px',
-            borderRadius: 7,
-            fontWeight: 600,
-            cursor: 'pointer',
-            border: isActive ? '1px solid #fecaca' : '1px solid #bbf7d0',
-            background: isActive ? '#fef2f2' : '#f0fdf4',
-            color: isActive ? '#dc2626' : '#16a34a',
+            height: 32,
+            padding: '0 11px',
+            color: isActive ? '#991b1b' : '#166534',
+            border: '1px solid #e2e8f0',
+            background: '#ffffff',
           }}
         >
           {isUpdatingStatus ? (
-            <Loader2 size={14} className="is-spinning" />
+            <Loader2 size={13.5} className="is-spinning" />
           ) : (
-            <Power size={14} />
+            <Power size={13.5} />
           )}
           <span>{isActive ? 'Deactivate' : 'Activate'}</span>
         </button>
@@ -296,12 +363,12 @@ export default function StaffDrawer({
   const stats = [
     {
       label: 'Staff Role',
-      value: <span style={{ fontWeight: 600, color: '#1e293b' }}>{staff.role}</span>,
+      value: <span style={{ fontWeight: 650, color: '#0f172a', fontSize: 13 }}>{staff.role}</span>,
     },
     {
       label: 'Shift Timing',
       value: (
-        <span style={{ fontWeight: 600, color: '#0369a1' }}>
+        <span style={{ fontWeight: 650, color: '#6d28d9', fontSize: 13 }}>
           {staff.shiftTiming}
           {staff.customShiftDetails ? ` (${staff.customShiftDetails})` : ''}
         </span>
@@ -309,22 +376,41 @@ export default function StaffDrawer({
     },
     {
       label: 'Joining Date',
-      value: <span style={{ fontWeight: 600, color: '#1e293b' }}>{staff.joiningDate}</span>,
+      value: <span style={{ fontWeight: 650, color: '#0f172a', fontSize: 13 }}>{staff.joiningDate}</span>,
     },
   ];
 
   const footer = (
     <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', gap: 10 }}>
-      <button type="button" className="ui-btn" onClick={onClose}>
+      <button
+        type="button"
+        className="ui-btn ui-btn-neutral"
+        onClick={onClose}
+        style={{ fontSize: 12.5, height: 35, padding: '0 14px' }}
+      >
         Close
       </button>
       <button
         type="button"
-        className="ui-btn ui-btn-primary"
+        className="ui-btn"
         onClick={() => onEdit(staff)}
-        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+        style={{
+          fontSize: 12.5,
+          background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+          color: '#ffffff',
+          border: 'none',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          borderRadius: 8,
+          padding: '0 16px',
+          height: 35,
+          cursor: 'pointer',
+          fontWeight: 600,
+          boxShadow: '0 2px 6px rgba(124, 58, 237, 0.28)',
+        }}
       >
-        <Pencil size={15} />
+        <Pencil size={14} />
         <span>Edit Staff Details</span>
       </button>
     </div>
@@ -338,163 +424,141 @@ export default function StaffDrawer({
       hero={hero}
       stats={stats}
       footer={footer}
+      size="lg"
+      className="staff-view-drawer"
+      width="min(740px, 100vw)"
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {/* Hospital & Branch Placement */}
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: 12,
-            padding: '16px 18px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 14,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 10, borderBottom: '1px solid #f1f5f9' }}>
-            <div
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: 8,
-                background: '#e0e7ff',
-                color: '#4338ca',
-                display: 'grid',
-                placeItems: 'center',
-              }}
-            >
-              <Building2 size={15} />
+        <div className="staff-view-card">
+          <div className="staff-view-header">
+            <div className="staff-view-badge">
+              <Building2 size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
             </div>
             <div>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
-                Hospital & Branch Assignment
-              </div>
-              <div style={{ fontSize: 11.5, color: '#64748b' }}>
-                Operational location, branch unit, and shift details
-              </div>
+              <div className="staff-view-title">Hospital & Branch Assignment</div>
+              <div className="staff-view-subtitle">Operational location, branch unit, and shift details</div>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 10, background: '#f8fafc', borderRadius: 8, border: '1px solid #f1f5f9' }}>
-              <Building2 size={16} style={{ color: '#0284c7', marginTop: 2, flexShrink: 0 }} />
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Assigned Hospital
-                </div>
-                <div style={{ fontSize: 13.5, fontWeight: 600, color: '#1e293b', marginTop: 2 }}>
-                  {staff.hospitalName || 'Main Hospital System'}
-                </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+            <div className="staff-view-item">
+              <span className="staff-view-label">Assigned Hospital</span>
+              <span className="staff-view-val" style={{ fontWeight: 600 }}>
+                {staff.hospitalName || 'Main Hospital System'}
+              </span>
+            </div>
+
+            <div className="staff-view-item">
+              <span className="staff-view-label">Hospital Branch</span>
+              <span className="staff-view-val" style={{ fontWeight: 600 }}>
+                {staff.branchName || 'Central Campus'}
+              </span>
+            </div>
+
+            <div className="staff-view-item">
+              <span className="staff-view-label">Scheduled Shift</span>
+              <span className="staff-view-val" style={{ fontWeight: 600 }}>
+                {staff.shiftTiming}
+                {staff.customShiftDetails && (
+                  <span style={{ display: 'block', fontSize: 11.5, color: '#64748b', fontWeight: 400, marginTop: 2 }}>
+                    {staff.customShiftDetails}
+                  </span>
+                )}
+              </span>
+            </div>
+
+            <div className="staff-view-item">
+              <span className="staff-view-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Calendar size={11.5} style={{ color: '#7c3aed' }} />
+                <span>Work Days</span>
+              </span>
+              <span className="staff-view-val" style={{ fontWeight: 600, color: '#6d28d9' }}>
+                {formatWorkDays(staff.workDays || staff.work_days)}
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 3.5, flexWrap: 'wrap', marginTop: 4 }}>
+                {WORK_DAY_OPTIONS.map((day) => {
+                  const rawDays = staff.workDays || staff.work_days;
+                  const daysList: string[] = Array.isArray(rawDays)
+                    ? rawDays
+                    : typeof rawDays === 'string'
+                      ? rawDays.split(',').map((s) => s.trim()).filter(Boolean)
+                      : DEFAULT_WORK_DAYS;
+                  const isWorking = daysList.includes(day.id);
+                  return (
+                    <span
+                      key={day.id}
+                      style={{
+                        fontSize: 10,
+                        fontWeight: isWorking ? 700 : 500,
+                        padding: '1px 5px',
+                        borderRadius: 4,
+                        background: isWorking ? '#f5f3ff' : '#f8fafc',
+                        border: isWorking ? '1px solid #ede9fe' : '1px solid #e2e8f0',
+                        color: isWorking ? '#6d28d9' : '#94a3b8',
+                      }}
+                    >
+                      {day.label}
+                    </span>
+                  );
+                })}
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 10, background: '#f8fafc', borderRadius: 8, border: '1px solid #f1f5f9' }}>
-              <GitBranch size={16} style={{ color: '#0284c7', marginTop: 2, flexShrink: 0 }} />
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Hospital Branch
-                </div>
-                <div style={{ fontSize: 13.5, fontWeight: 600, color: '#1e293b', marginTop: 2 }}>
-                  {staff.branchName || 'Central Campus'}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 10, background: '#f8fafc', borderRadius: 8, border: '1px solid #f1f5f9' }}>
-              <Clock size={16} style={{ color: '#0284c7', marginTop: 2, flexShrink: 0 }} />
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Scheduled Shift
-                </div>
-                <div style={{ fontSize: 13.5, fontWeight: 600, color: '#1e293b', marginTop: 2 }}>
-                  {staff.shiftTiming}
-                  {staff.customShiftDetails && (
-                    <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 400 }}>{staff.customShiftDetails}</div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 10, background: '#f8fafc', borderRadius: 8, border: '1px solid #f1f5f9' }}>
-              <Calendar size={16} style={{ color: '#0284c7', marginTop: 2, flexShrink: 0 }} />
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Date of Joining
-                </div>
-                <div style={{ fontSize: 13.5, fontWeight: 600, color: '#1e293b', marginTop: 2 }}>
-                  {staff.joiningDate}
-                </div>
-              </div>
+            <div className="staff-view-item">
+              <span className="staff-view-label">Date of Joining</span>
+              <span className="staff-view-val" style={{ fontWeight: 600 }}>
+                {staff.joiningDate}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Contact Information */}
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: 12,
-            padding: '16px 18px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 10, borderBottom: '1px solid #f1f5f9' }}>
-            <div
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: 8,
-                background: '#e0f2fe',
-                color: '#0284c7',
-                display: 'grid',
-                placeItems: 'center',
-              }}
-            >
-              <User size={15} />
+        <div className="staff-view-card">
+          <div className="staff-view-header">
+            <div className="staff-view-badge">
+              <User size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
             </div>
             <div>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
-                Contact & Address
-              </div>
-              <div style={{ fontSize: 11.5, color: '#64748b' }}>
-                Direct communication channels and physical address
-              </div>
+              <div className="staff-view-title">Contact Information</div>
+              <div className="staff-view-subtitle">Direct communication channels and physical address</div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#f8fafc', borderRadius: 8 }}>
-              <Phone size={15} style={{ color: '#0284c7' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+            <div className="staff-view-item">
+              <span className="staff-view-label">Phone Number</span>
               <a
                 href={`tel:${staff.phone}`}
-                style={{ fontSize: 13.5, fontWeight: 600, color: '#0284c7', textDecoration: 'none' }}
+                className="staff-view-val"
+                style={{ fontWeight: 600, color: '#7c3aed', textDecoration: 'none' }}
               >
                 {staff.phone}
               </a>
             </div>
 
-            {staff.email && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#f8fafc', borderRadius: 8 }}>
-                <Mail size={15} style={{ color: '#0284c7' }} />
+            <div className="staff-view-item">
+              <span className="staff-view-label">Email Address</span>
+              {staff.email ? (
                 <a
                   href={`mailto:${staff.email}`}
-                  style={{ fontSize: 13.5, color: '#0284c7', textDecoration: 'none' }}
+                  className="staff-view-val"
+                  style={{ color: '#7c3aed', textDecoration: 'none' }}
                 >
                   {staff.email}
                 </a>
-              </div>
-            )}
+              ) : (
+                <span className="staff-view-val" style={{ color: '#94a3b8' }}>
+                  Not provided
+                </span>
+              )}
+            </div>
 
             {staff.address && (
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 12px', background: '#f8fafc', borderRadius: 8 }}>
-                <MapPin size={15} style={{ color: '#64748b', marginTop: 2, flexShrink: 0 }} />
-                <span style={{ fontSize: 13, color: '#334155', lineHeight: 1.5 }}>
+              <div className="staff-view-item" style={{ gridColumn: '1 / -1' }}>
+                <span className="staff-view-label">Residential Address</span>
+                <span className="staff-view-val" style={{ lineHeight: 1.5 }}>
                   {staff.address}
                 </span>
               </div>
@@ -503,48 +567,32 @@ export default function StaffDrawer({
         </div>
 
         {/* Staff Documents (Stored in R2 / S3) */}
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: 12,
-            padding: '16px 18px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 14,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10, borderBottom: '1px solid #f1f5f9' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 8,
-                  background: '#fef3c7',
-                  color: '#b45309',
-                  display: 'grid',
-                  placeItems: 'center',
-                }}
-              >
-                <FileText size={15} />
+        <div className="staff-view-card">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingBottom: 8,
+              borderBottom: '1px solid #f1f5f9',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="staff-view-badge">
+                <FileText size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
               </div>
               <div>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
-                  Staff Documents & Certifications
-                </div>
-                <div style={{ fontSize: 11.5, color: '#64748b' }}>
-                  Verified attachments stored in Cloudflare R2
-                </div>
+                <div className="staff-view-title">Staff Documents & Certifications</div>
+                <div className="staff-view-subtitle">Verified attachments stored</div>
               </div>
             </div>
             <span
               style={{
-                fontSize: 11.5,
-                fontWeight: 600,
-                color: '#0369a1',
-                background: '#e0f2fe',
+                fontSize: 11,
+                fontWeight: 650,
+                color: '#6d28d9',
+                background: '#f5f3ff',
+                border: '1px solid #ede9fe',
                 padding: '2px 8px',
                 borderRadius: 9999,
               }}
@@ -553,7 +601,7 @@ export default function StaffDrawer({
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* List existing documents */}
             {staff.documents && staff.documents.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -565,9 +613,9 @@ export default function StaffDrawer({
                       key={doc.id}
                       style={{
                         padding: '10px 14px',
-                        borderRadius: 10,
+                        borderRadius: 9,
                         border: '1px solid #e2e8f0',
-                        background: '#ffffff',
+                        background: '#f8fafc',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
@@ -577,22 +625,23 @@ export default function StaffDrawer({
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
                         <div
                           style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 8,
-                            background: '#f1f5f9',
-                            color: '#0284c7',
+                            width: 32,
+                            height: 32,
+                            borderRadius: 6,
+                            background: '#ffffff',
+                            color: '#7c3aed',
+                            border: '1px solid #ede9fe',
                             display: 'grid',
                             placeItems: 'center',
                             flexShrink: 0,
                           }}
                         >
-                          <FileText size={18} />
+                          <FileText size={16} />
                         </div>
                         <div style={{ minWidth: 0 }}>
                           <div
                             style={{
-                              fontSize: 13.5,
+                              fontSize: 13,
                               fontWeight: 600,
                               color: '#0f172a',
                               whiteSpace: 'nowrap',
@@ -602,7 +651,16 @@ export default function StaffDrawer({
                           >
                             {doc.name}
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: '#64748b', marginTop: 2 }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              fontSize: 11,
+                              color: '#64748b',
+                              marginTop: 2,
+                            }}
+                          >
                             <span style={{ textTransform: 'capitalize' }}>
                               {doc.documentType.replace('_', ' ').toLowerCase()}
                             </span>
@@ -630,11 +688,12 @@ export default function StaffDrawer({
                             e.preventDefault();
                             void handleViewDocument(doc);
                           }}
+                          style={{ width: 28, height: 28 }}
                         >
                           {viewingDocId === doc.id ? (
-                            <Loader2 size={14} className="is-spinning" />
+                            <Loader2 size={13} className="is-spinning" />
                           ) : (
-                            <ExternalLink size={15} />
+                            <ExternalLink size={13.5} />
                           )}
                         </a>
 
@@ -647,11 +706,12 @@ export default function StaffDrawer({
                             e.preventDefault();
                             void handleDownloadDocument(doc);
                           }}
+                          style={{ width: 28, height: 28 }}
                         >
                           {downloadingDocId === doc.id ? (
-                            <Loader2 size={14} className="is-spinning" />
+                            <Loader2 size={13} className="is-spinning" />
                           ) : (
-                            <Download size={15} />
+                            <Download size={13.5} />
                           )}
                         </a>
 
@@ -661,8 +721,9 @@ export default function StaffDrawer({
                           title="Delete Document"
                           disabled={isDeleting}
                           onClick={() => handleDeleteDocument(doc.id, doc.name)}
+                          style={{ width: 28, height: 28 }}
                         >
-                          {isDeleting ? <Loader2 size={14} className="is-spinning" /> : <Trash2 size={14} />}
+                          {isDeleting ? <Loader2 size={13} className="is-spinning" /> : <Trash2 size={13} />}
                         </button>
                       </div>
                     </div>
@@ -677,7 +738,7 @@ export default function StaffDrawer({
                   background: '#f8fafc',
                   border: '1px dashed #cbd5e1',
                   textAlign: 'center',
-                  fontSize: 13,
+                  fontSize: 12.5,
                   color: '#64748b',
                 }}
               >
@@ -689,7 +750,7 @@ export default function StaffDrawer({
             <form
               onSubmit={handleUploadDocument}
               style={{
-                marginTop: 8,
+                marginTop: 4,
                 padding: '14px',
                 borderRadius: 10,
                 background: '#f8fafc',
@@ -699,15 +760,26 @@ export default function StaffDrawer({
                 gap: 12,
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>
-                Upload New Document (Cloudflare R2 / S3)
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0f172a' }}>
+                Upload New Document
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
                 <div>
-                  <label htmlFor="staff-drawer-doc-title" style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <label
+                    htmlFor="staff-drawer-doc-title"
+                    style={{
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      color: '#475569',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: 4,
+                    }}
+                  >
                     <span>Document Title</span>
-                    <span style={{ fontSize: 10.5, fontWeight: 400, color: '#94a3b8' }}>Letters & numbers</span>
+                    <span style={{ fontSize: 10, fontWeight: 400, color: '#94a3b8' }}>Letters & numbers</span>
                   </label>
                   <input
                     id="staff-drawer-doc-title"
@@ -745,12 +817,23 @@ export default function StaffDrawer({
                       }
                     }}
                     style={{
+                      height: 34,
+                      fontSize: 12.5,
                       borderColor: docNameError ? '#ef4444' : undefined,
                       boxShadow: docNameError ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
                     }}
                   />
                   {docNameError && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, color: '#dc2626', fontSize: 11.5 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        marginTop: 4,
+                        color: '#dc2626',
+                        fontSize: 11.5,
+                      }}
+                    >
                       <AlertCircle size={12} style={{ flexShrink: 0 }} />
                       <span>{docNameError}</span>
                     </div>
@@ -758,26 +841,31 @@ export default function StaffDrawer({
                 </div>
 
                 <div>
-                  <label htmlFor="staff-drawer-doc-type" style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                  <label
+                    htmlFor="staff-drawer-doc-type"
+                    style={{ fontSize: 11.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}
+                  >
                     Category
                   </label>
-                  <select
+                  <SearchableSelect
                     id="staff-drawer-doc-type"
-                    className="ui-input ui-select"
+                    name="docType"
+                    aria-label="Category"
+                    options={DRAWER_DOC_TYPE_OPTIONS}
                     value={docType}
-                    onChange={(e) => setDocType(e.target.value)}
-                  >
-                    <option value="ID_PROOF">ID Proof</option>
-                    <option value="CERTIFICATION">Degree / Certification</option>
-                    <option value="RESUME">Resume / CV</option>
-                    <option value="CONTRACT">Employment Contract</option>
-                    <option value="OTHER">Other</option>
-                  </select>
+                    onChange={(val) => setDocType(val)}
+                    searchable={false}
+                    size="sm"
+                    placeholder="Select category..."
+                  />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="staff-drawer-file-input" style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                <label
+                  htmlFor="staff-drawer-file-input"
+                  style={{ fontSize: 11.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}
+                >
                   File (PDF, PNG, JPG, DOCX)
                 </label>
                 <input
@@ -792,6 +880,7 @@ export default function StaffDrawer({
                     }
                   }}
                   accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                  style={{ height: 34, fontSize: 12, padding: '4px 8px' }}
                 />
               </div>
 
@@ -800,12 +889,19 @@ export default function StaffDrawer({
                   type="submit"
                   className="ui-btn ui-btn-primary"
                   disabled={isUploading || !docFile}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: 12.5,
+                    height: 34,
+                    padding: '0 14px',
+                  }}
                 >
                   {isUploading ? (
-                    <Loader2 size={14} className="is-spinning" />
+                    <Loader2 size={13.5} className="is-spinning" />
                   ) : (
-                    <Upload size={14} />
+                    <Upload size={13.5} />
                   )}
                   <span>Upload Document</span>
                 </button>
@@ -816,43 +912,23 @@ export default function StaffDrawer({
 
         {/* Administrative Notes */}
         {staff.notes && (
-          <div
-            style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: 12,
-              padding: '16px 18px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 10, borderBottom: '1px solid #f1f5f9' }}>
-              <div
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 8,
-                  background: '#f1f5f9',
-                  color: '#475569',
-                  display: 'grid',
-                  placeItems: 'center',
-                }}
-              >
-                <FileText size={15} />
+          <div className="staff-view-card">
+            <div className="staff-view-header">
+              <div className="staff-view-badge">
+                <FileText size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
               </div>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
-                Internal Administrative Remarks
+              <div>
+                <div className="staff-view-title">Internal Administrative Remarks</div>
+                <div className="staff-view-subtitle">Staff management records and internal notes</div>
               </div>
             </div>
             <div
               style={{
-                padding: 12,
+                padding: '10px 12px',
                 borderRadius: 8,
                 background: '#f8fafc',
                 border: '1px solid #e2e8f0',
-                fontSize: 13,
+                fontSize: 12.5,
                 color: '#334155',
                 lineHeight: 1.5,
               }}
@@ -863,10 +939,86 @@ export default function StaffDrawer({
         )}
 
         {/* Metadata */}
-        <div style={{ fontSize: 11.5, color: '#94a3b8', borderTop: '1px solid #e2e8f0', paddingTop: 10 }}>
-          Created: {new Date(staff.createdAt).toLocaleString()} · ID: {staff.id}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: 11,
+            color: '#94a3b8',
+            borderTop: '1px solid #e2e8f0',
+            paddingTop: 8,
+          }}
+        >
+          <span>Created: {new Date(staff.createdAt).toLocaleString()}</span>
+          <span>ID: {staff.id}</span>
         </div>
       </div>
+
+      <style>{`
+        .staff-view-drawer {
+          width: min(740px, 100vw) !important;
+          max-width: 740px !important;
+          box-shadow: -12px 0 36px rgba(15, 23, 42, 0.14) !important;
+        }
+        .staff-view-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 14px 16px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .staff-view-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        .staff-view-badge {
+          width: 26px;
+          height: 26px;
+          border-radius: 6px;
+          background: #f5f3ff;
+          border: 1px solid #ede9fe;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          margin: 0;
+        }
+        .staff-view-title {
+          font-size: 13px;
+          font-weight: 700;
+          color: #0f172a;
+          letter-spacing: -0.01em;
+        }
+        .staff-view-subtitle {
+          font-size: 11px;
+          color: #64748b;
+          margin-top: 1px;
+        }
+        .staff-view-item {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          padding: 6px 8px;
+          background: #f8fafc;
+          border-radius: 6px;
+          border: 1px solid #f1f5f9;
+        }
+        .staff-view-label {
+          font-size: 11px;
+          color: #64748b;
+        }
+        .staff-view-val {
+          color: #0f172a;
+          font-size: 12.5px;
+        }
+      `}</style>
     </Drawer>
   );
 }

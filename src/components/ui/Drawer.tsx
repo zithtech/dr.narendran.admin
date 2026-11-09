@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import { type ReactNode, useEffect, useId } from 'react';
 
 import { Section } from './Modal';
+import { cx } from './primitives';
 
 interface DrawerProps {
   open: boolean;
@@ -13,6 +14,9 @@ interface DrawerProps {
   /** Optional row of key figures under the hero. */
   stats?: { label: string; value: ReactNode }[];
   footer?: ReactNode;
+  className?: string;
+  width?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   children: ReactNode;
 }
 
@@ -20,7 +24,18 @@ interface DrawerProps {
  * Right-hand slide-over for read-only details. Esc closes it unless a modal
  * is open on top (the modal handles Esc itself).
  */
-export function Drawer({ open, onClose, label, hero, stats, footer, children }: DrawerProps) {
+export function Drawer({
+  open,
+  onClose,
+  label,
+  hero,
+  stats,
+  footer,
+  className,
+  width,
+  size,
+  children,
+}: DrawerProps) {
   const labelId = useId();
 
   useEffect(() => {
@@ -39,7 +54,13 @@ export function Drawer({ open, onClose, label, hero, stats, footer, children }: 
       {/* Backdrop click is a mouse shortcut only; keyboard users close with Esc. */}
       {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
       <div className="ui-drawer-overlay" onClick={onClose} />
-      <aside className="ui-drawer" role="dialog" aria-modal="true" aria-labelledby={labelId}>
+      <aside
+        className={cx('ui-drawer', size && `is-${size}`, className)}
+        style={width ? { width, maxWidth: width } : undefined}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={labelId}
+      >
         <div className="ui-drawer-top">
           <span id={labelId} className="ui-eyebrow">
             {label}

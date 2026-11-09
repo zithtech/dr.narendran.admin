@@ -1,4 +1,8 @@
-import { App } from 'antd';
+import { App, Modal as AntdModal, TimePicker } from 'antd';
+import dayjs, { type Dayjs } from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+
+dayjs.extend(customParseFormat);
 import {
   AlertCircle,
   Briefcase,
@@ -26,11 +30,14 @@ import {
   UserPlus,
   X,
 } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
+  DEFAULT_WORK_DAYS,
   SHIFT_TIMINGS,
   STAFF_ROLES,
+  WORK_DAY_OPTIONS,
+  WORK_DAY_PRESETS,
   type StaffMember,
   type StaffStatus,
 } from '../types/staff';
@@ -40,6 +47,7 @@ import type { Branch } from './BranchModal';
 import type { Hospital } from './HospitalModal';
 import { Modal } from './ui/Modal';
 import { Alert } from './ui/primitives';
+import { SearchableSelect, type SearchableSelectOption } from './ui/SearchableSelect';
 
 interface StaffModalProps {
   isOpen: boolean;
@@ -76,6 +84,56 @@ function getDocumentTypeLabel(type: string): string {
     default:
       return 'Other Verification Document';
   }
+}
+
+const DOCUMENT_TYPE_OPTIONS: SearchableSelectOption[] = [
+  { value: 'ID_PROOF', label: 'Government ID Proof', badge: 'ID' },
+  { value: 'CERTIFICATION', label: 'Degree / Council Certification', badge: 'Cert' },
+  { value: 'RESUME', label: 'Resume / CV', badge: 'CV' },
+  { value: 'CONTRACT', label: 'Employment Contract', badge: 'Contract' },
+  { value: 'OTHER', label: 'Other Verification Document', badge: 'Other' },
+];
+
+export const CUSTOM_SHIFT_PRESETS = [
+  { label: '06:00 AM - 02:00 PM', desc: 'Early Morning (8 hrs)' },
+  { label: '08:00 AM - 04:00 PM', desc: 'General Shift (8 hrs)' },
+  { label: '09:00 AM - 05:00 PM', desc: 'Standard Day (8 hrs)' },
+  { label: '10:00 AM - 06:00 PM', desc: 'Mid Day (8 hrs)' },
+  { label: '02:00 PM - 10:00 PM', desc: 'Evening Shift (8 hrs)' },
+  { label: '08:00 PM - 08:00 AM', desc: '12-Hour Night Shift' },
+  { label: '10:00 PM - 06:00 AM', desc: 'Night Roster (8 hrs)' },
+] as const;
+
+export function parseTimePart(str?: string | null): Dayjs | null {
+  if (!str) return null;
+  const s = str.trim();
+  const formats = ['hh:mm A', 'h:mm A', 'hh:mm a', 'h:mm a', 'HH:mm', 'H:mm'];
+  for (const f of formats) {
+    const d = dayjs(s, f);
+    if (d.isValid()) return d;
+  }
+  return null;
+}
+
+export function parseShiftRange(val?: string | null): [Dayjs | null, Dayjs | null] {
+  if (!val || !val.includes('-')) return [null, null];
+  const parts = val.split('-');
+  const start = parseTimePart(parts[0]);
+  const end = parseTimePart(parts.slice(1).join('-'));
+  return [start, end];
+}
+
+export function getShiftDuration(val?: string | null): string | null {
+  if (!val || !val.includes('-')) return null;
+  const [start, end] = parseShiftRange(val);
+  if (!start || !end) return null;
+  const startMins = start.hour() * 60 + start.minute();
+  const endMins = end.hour() * 60 + end.minute();
+  let diff = endMins - startMins;
+  if (diff <= 0) diff += 24 * 60; // Overnight
+  const hrs = Math.floor(diff / 60);
+  const mins = diff % 60;
+  return mins > 0 ? `${hrs}h ${mins}m` : `${hrs} hours`;
 }
 
 const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.doc', '.docx'];
@@ -265,6 +323,10 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
   // Shift & Status
   const [shiftTiming, setShiftTiming] = useState<string>('Morning');
   const [customShiftDetails, setCustomShiftDetails] = useState('');
+  const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
+  const [modalStartTime, setModalStartTime] = useState<Dayjs | null>(null);
+  const [modalEndTime, setModalEndTime] = useState<Dayjs | null>(null);
+  const [workDays, setWorkDays] = useState<string[]>(DEFAULT_WORK_DAYS);
   const [joiningDate, setJoiningDate] = useState(new Date().toISOString().split('T')[0] ?? '');
   const [status, setStatus] = useState<StaffStatus>('ACTIVE');
   const [notes, setNotes] = useState('');
@@ -327,6 +389,19 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
       setBranchId(staff.branchId || staff.branch_id || '');
       setShiftTiming(staff.shiftTiming || staff.shift_timing || 'Morning');
       setCustomShiftDetails(staff.customShiftDetails || staff.custom_shift_details || '');
+
+      const rawDays = staff.workDays || staff.work_days;
+      if (rawDays) {
+        const parsed = Array.isArray(rawDays)
+          ? rawDays
+          : typeof rawDays === 'string'
+            ? rawDays.split(',').map((s) => s.trim()).filter(Boolean)
+            : DEFAULT_WORK_DAYS;
+        setWorkDays(parsed.length > 0 ? parsed : DEFAULT_WORK_DAYS);
+      } else {
+        setWorkDays(DEFAULT_WORK_DAYS);
+      }
+
       setJoiningDate(staff.joiningDate || staff.joining_date || (new Date().toISOString().split('T')[0] ?? ''));
       setStatus(staff.status || 'ACTIVE');
       setNotes(staff.notes || '');
@@ -342,6 +417,7 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
       setBranchId('');
       setShiftTiming('Morning');
       setCustomShiftDetails('');
+      setWorkDays(DEFAULT_WORK_DAYS);
       setJoiningDate(new Date().toISOString().split('T')[0] ?? '');
       setStatus('ACTIVE');
       setNotes('');
@@ -490,25 +566,13 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
     }
   };
 
-  // Handlers for custom shift details
+  // Handlers for custom shift details (not typeable via keyboard)
   const handleCustomShiftKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (
-      e.key === 'Backspace' ||
-      e.key === 'Tab' ||
-      e.key === 'Enter' ||
-      e.key === 'Delete' ||
-      e.key === 'Escape' ||
-      e.key.startsWith('Arrow') ||
-      e.key === 'Home' ||
-      e.key === 'End' ||
-      e.ctrlKey ||
-      e.metaKey
-    ) {
+    if (e.key === 'Tab' || e.key === 'Escape' || e.ctrlKey || e.metaKey) {
       return;
     }
-    if (!/^[a-zA-Z0-9\s:(),./&-]$/.test(e.key)) {
-      e.preventDefault();
-    }
+    // Prevent direct typing - time must be chosen via Ant Design TimePicker or Modal
+    e.preventDefault();
   };
 
   const handleCustomShiftChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -517,6 +581,67 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
     setCustomShiftDetails(sanitized);
     if (touched.customShiftDetails) {
       setErrors((prev) => ({ ...prev, customShiftDetails: validateCustomShift(shiftTiming, sanitized) }));
+    }
+  };
+
+  // Memoized RangePicker value parsed from customShiftDetails string
+  const shiftRangeValue = useMemo<[Dayjs | null, Dayjs | null]>(() => {
+    return parseShiftRange(customShiftDetails);
+  }, [customShiftDetails]);
+
+  // Computed shift duration for display
+  const currentShiftDuration = useMemo(() => {
+    return getShiftDuration(customShiftDetails);
+  }, [customShiftDetails]);
+
+  // Open the Ant Design modal to pick time
+  const handleOpenTimeModal = () => {
+    const [start, end] = parseShiftRange(customShiftDetails);
+    setModalStartTime(start || dayjs('08:00 AM', 'hh:mm A'));
+    setModalEndTime(end || dayjs('04:00 PM', 'hh:mm A'));
+    setIsTimeModalOpen(true);
+  };
+
+  // Modal duration preview
+  const modalDuration = useMemo(() => {
+    if (!modalStartTime || !modalEndTime) return null;
+    const sMins = modalStartTime.hour() * 60 + modalStartTime.minute();
+    const eMins = modalEndTime.hour() * 60 + modalEndTime.minute();
+    let diff = eMins - sMins;
+    if (diff <= 0) diff += 24 * 60;
+    const h = Math.floor(diff / 60);
+    const m = diff % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h} hours`;
+  }, [modalStartTime, modalEndTime]);
+
+  // Apply time selected inside the Ant Design modal
+  const handleApplyModalTime = () => {
+    if (!modalStartTime || !modalEndTime) {
+      message?.warning?.('Please select both start time and end time.');
+      return;
+    }
+    const formatted = `${modalStartTime.format('hh:mm A')} - ${modalEndTime.format('hh:mm A')}`;
+    setCustomShiftDetails(formatted);
+    setTouched((prev) => ({ ...prev, customShiftDetails: true }));
+    setErrors((prev) => ({ ...prev, customShiftDetails: validateCustomShift(shiftTiming, formatted) }));
+    setIsTimeModalOpen(false);
+    message?.success?.(`Custom shift set to ${formatted}`);
+  };
+
+  // Ant Design RangePicker change handler (inputReadOnly ensures not typeable)
+  const handleTimePickerRangeChange = (
+    _dates: [Dayjs | null, Dayjs | null] | null,
+    dateStrings: [string, string]
+  ) => {
+    if (dateStrings[0] && dateStrings[1]) {
+      const formatted = `${dateStrings[0]} - ${dateStrings[1]}`;
+      setCustomShiftDetails(formatted);
+      setTouched((prev) => ({ ...prev, customShiftDetails: true }));
+      setErrors((prev) => ({ ...prev, customShiftDetails: validateCustomShift(shiftTiming, formatted) }));
+    } else if (!dateStrings[0] && !dateStrings[1]) {
+      setCustomShiftDetails('');
+      setTouched((prev) => ({ ...prev, customShiftDetails: true }));
+      setErrors((prev) => ({ ...prev, customShiftDetails: validateCustomShift(shiftTiming, '') }));
     }
   };
 
@@ -651,6 +776,42 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
     ? branches.filter((b) => b.hospital_id === hospitalId)
     : branches;
 
+  // Memoized options for SearchableSelect
+  const roleOptions = useMemo<SearchableSelectOption[]>(() => {
+    return STAFF_ROLES.map((r) => ({
+      value: r,
+      label: r,
+      badge: r === 'Other' ? 'Custom' : undefined,
+      badgeTone: r === 'Other' ? 'amber' : 'neutral',
+    }));
+  }, []);
+
+  const hospitalOptions = useMemo<SearchableSelectOption[]>(() => {
+    return hospitals.map((h) => ({
+      value: h.id,
+      label: h.name,
+      badge: h.status === 'ACTIVE' ? 'Active' : 'Inactive',
+      badgeTone: h.status === 'ACTIVE' ? 'green' : 'neutral',
+    }));
+  }, [hospitals]);
+
+  const branchOptions = useMemo<SearchableSelectOption[]>(() => {
+    return filteredBranches.map((b) => ({
+      value: b.id,
+      label: b.name,
+      badge: b.status === 'ACTIVE' ? 'Active' : 'Inactive',
+      badgeTone: b.status === 'ACTIVE' ? 'green' : 'neutral',
+    }));
+  }, [filteredBranches]);
+
+  const shiftTimingOptions = useMemo<SearchableSelectOption[]>(() => {
+    return SHIFT_TIMINGS.map((s) => ({
+      value: s.id,
+      label: s.label,
+      sublabel: s.period,
+    }));
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -694,6 +855,11 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
       return;
     }
 
+    if (workDays.length === 0) {
+      setError('Please select at least one working day.');
+      return;
+    }
+
     const finalRole = isCustomRole ? customRole.trim() : role;
     setLoading(true);
     setError('');
@@ -709,6 +875,7 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
         branchId: branchId || undefined,
         shiftTiming,
         customShiftDetails: shiftTiming === 'Custom Shift' ? customShiftDetails.trim() || undefined : undefined,
+        workDays: workDays.length > 0 ? workDays : DEFAULT_WORK_DAYS,
         joiningDate: joiningDate || undefined,
         status,
         notes: notes.trim() || undefined,
@@ -760,8 +927,8 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
         if (uploadedCount > 0 && failedCount === 0) {
           message?.success?.(
             uploadedCount === 1
-              ? 'Staff verification document uploaded and stored in Cloudflare R2.'
-              : `${uploadedCount} staff verification documents uploaded and stored in Cloudflare R2.`
+              ? 'Staff verification document uploaded.'
+              : `${uploadedCount} staff verification documents uploaded.`
           );
         } else if (uploadedCount > 0 && failedCount > 0) {
           message?.warning?.(
@@ -782,63 +949,87 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
   };
 
   return (
-    <Modal
-      open={isOpen}
-      onClose={onClose}
-      variant="drawer"
-      size="lg"
-      title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 10,
-              background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-              color: '#ffffff',
-              display: 'grid',
-              placeItems: 'center',
-              boxShadow: '0 2px 8px rgba(124, 58, 237, 0.28)',
-              flexShrink: 0,
-            }}
-          >
-            {staff ? <Pencil size={18} /> : <UserPlus size={18} />}
-          </div>
-          <div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--ui-text, #0f172a)' }}>
-              {staff ? `Edit Staff Member · ${staff.name}` : 'Add New Hospital Staff'}
+    <>
+      <Modal
+        open={isOpen}
+        onClose={onClose}
+        variant="drawer"
+        size="lg"
+        className="staff-create-drawer-modal"
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
+                color: '#7c3aed',
+                border: '1px solid #c4b5fd',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+                boxShadow: '0 2px 6px rgba(124, 58, 237, 0.16)',
+              }}
+            >
+              {staff ? <Pencil size={18} /> : <UserPlus size={18} />}
             </div>
-            <div style={{ fontSize: 12.5, color: '#64748b', marginTop: 2 }}>
-              Manage staff profile details, shift assignments, and documents.
+            <div>
+              <div style={{ fontSize: 16.5, fontWeight: 700, color: 'var(--ui-text, #0f172a)', letterSpacing: '-0.01em' }}>
+                {staff ? `Edit Staff Member · ${staff.name}` : 'Add New Hospital Staff'}
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
+                {staff
+                  ? 'Update staff profile details, shift assignments, and credentials.'
+                  : 'Enter staff profile details, department assignments, shift schedule & verification documents.'}
+              </div>
             </div>
           </div>
-        </div>
-      }
-      description=""
-    >
-      <form
-        id="staff-form"
-        onSubmit={handleSubmit}
-        className="ui-modal-form staff-purple-theme"
-        noValidate
+        }
+        description=""
       >
-        <style>{`
-          .staff-purple-theme input:focus,
-          .staff-purple-theme select:focus,
-          .staff-purple-theme textarea:focus {
-            border-color: #7c3aed !important;
-            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15) !important;
-            outline: none !important;
+        <form
+          id="staff-form"
+          onSubmit={handleSubmit}
+          className="ui-modal-form"
+          noValidate
+        >
+          <style>{`
+          .staff-create-drawer-modal {
+            width: min(740px, 100vw) !important;
+            max-width: 740px !important;
+            background: #ffffff;
+            box-shadow: -12px 0 36px rgba(15, 23, 42, 0.14) !important;
+          }
+          .staff-create-drawer-modal .ui-modal-head {
+            padding: 18px 26px;
+            background: linear-gradient(180deg, #faf5ff 0%, #ffffff 100%);
+            border-bottom: 1px solid #f1f5f9;
+          }
+          .staff-create-drawer-modal .ui-modal-head h2 {
+            font-size: 16.5px;
+            margin: 0;
+          }
+          .staff-create-drawer-modal .ui-modal-body {
+            padding: 20px 24px;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
           }
           .staff-section-card {
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 12px;
             padding: 18px 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 14px;
+            transition: border-color 0.15s ease;
+          }
+          .staff-section-card:hover {
+            border-color: #cbd5e1;
           }
           .staff-section-header {
             display: flex;
@@ -850,1052 +1041,1562 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
           .staff-section-badge {
             width: 26px;
             height: 26px;
-            border-radius: 6px;
+            border-radius: 7px;
             background: #f5f3ff;
             color: #7c3aed;
-            display: grid;
-            place-items: center;
+            border: 1px solid #ede9fe;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             flex-shrink: 0;
+          }
+          .staff-section-badge svg {
+            display: block;
+            margin: auto;
           }
           .staff-section-tag {
             font-size: 11px;
             font-weight: 700;
-            letter-spacing: 0.08em;
-            color: #6d28d9;
+            letter-spacing: 0.06em;
+            color: #475569;
             text-transform: uppercase;
           }
+          .staff-create-drawer-modal .ui-input {
+            height: 38px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            font-size: 13px;
+            transition: all 0.15s ease;
+          }
+          .staff-create-drawer-modal .ui-input:focus {
+            border-color: #7c3aed !important;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12) !important;
+            outline: none;
+          }
+          .shift-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+          }
+          @media (max-width: 600px) {
+            .shift-grid {
+              grid-template-columns: repeat(2, 1fr);
+            }
+          }
+          .shift-card-btn {
+            padding: 10px 12px;
+            border-radius: 9px;
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 5px;
+            transition: all 0.15s ease;
+            position: relative;
+          }
+          .shift-card-btn.is-active {
+            border: 1.5px solid #7c3aed !important;
+            background: #f5f3ff !important;
+            box-shadow: 0 2px 6px rgba(124, 58, 237, 0.12);
+          }
+          .shift-card-btn:not(.is-active) {
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+          }
+          .shift-card-btn:not(.is-active):hover {
+            background: #fafafa;
+            border-color: #cbd5e1;
+          }
+          .staff-dropzone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 16px;
+            border-radius: 11px;
+            border: 2px dashed #cbd5e1;
+            background: #fafafa;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: center;
+            gap: 6px;
+          }
+          .staff-dropzone:hover,
+          .staff-dropzone.has-file {
+            border-color: #7c3aed;
+            background: #faf5ff;
+          }
+          .staff-submit-btn {
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
+            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.28) !important;
+            border: none !important;
+            color: #ffffff !important;
+          }
+          .staff-submit-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%) !important;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.36) !important;
+          }
         `}</style>
-        <div
-          className="ui-modal-body"
-          style={{
-            background: '#faf5ff',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16,
-            padding: '20px 24px',
-          }}
-        >
-        {error && <Alert>{error}</Alert>}
+          <div className="ui-modal-body">
+            {error && <Alert>{error}</Alert>}
 
-        {/* Section 1: Basic Information */}
-        <div className="staff-section-card">
-          {/* Section Header */}
-          <div className="staff-section-header">
-            <div className="staff-section-badge">
-              <User size={14} />
-            </div>
-            <div>
-              <div className="staff-section-tag">
-                Basic Details
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
-            <div>
-              <label htmlFor="staff-full-name" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span>Staff Full Name</span>
-                  <span style={{ color: '#ef4444' }}>*</span>
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 400, color: '#7c3aed' }}>Letters & spaces only</span>
-              </label>
-              <div style={{ position: 'relative' }}>
-                <User size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: errors.name ? '#ef4444' : '#7c3aed' }} />
-                <input
-                  id="staff-full-name"
-                  type="text"
-                  className="ui-input"
-                  placeholder="e.g. Sister Mary Joseph"
-                  value={name}
-                  onChange={handleNameChange}
-                  onKeyDown={handleNameKeyDown}
-                  onPaste={handleNamePaste}
-                  onBlur={() => {
-                    setTouched((prev) => ({ ...prev, name: true }));
-                    setErrors((prev) => ({ ...prev, name: validateStaffName(name) }));
-                  }}
-                  style={{
-                    paddingLeft: 36,
-                    height: 38,
-                    borderColor: errors.name ? '#ef4444' : undefined,
-                    boxShadow: errors.name ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                  }}
-                  required
-                />
-              </div>
-              {errors.name && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, color: '#dc2626', fontSize: 11.5 }}>
-                  <AlertCircle size={13} style={{ flexShrink: 0 }} />
-                  <span>{errors.name}</span>
+            {/* Section 1: Basic Information */}
+            <div className="staff-section-card">
+              <div className="staff-section-header">
+                <div className="staff-section-badge">
+                  <User size={13} />
                 </div>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="staff-phone" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span>Phone Number</span>
-                  <span style={{ color: '#ef4444' }}>*</span>
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 400, color: '#7c3aed' }}>10-15 digits</span>
-              </label>
-              <div style={{ position: 'relative' }}>
-                <Phone size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: errors.phone ? '#ef4444' : '#7c3aed' }} />
-                <input
-                  id="staff-phone"
-                  type="tel"
-                  className="ui-input"
-                  placeholder="e.g. +91 98765 43210"
-                  value={phone}
-                  onChange={handlePhoneChange}
-                  onKeyDown={handlePhoneKeyDown}
-                  onBlur={() => {
-                    setTouched((prev) => ({ ...prev, phone: true }));
-                    setErrors((prev) => ({ ...prev, phone: validateStaffPhone(phone) }));
-                  }}
-                  style={{
-                    paddingLeft: 36,
-                    height: 38,
-                    borderColor: errors.phone ? '#ef4444' : undefined,
-                    boxShadow: errors.phone ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                  }}
-                  required
-                />
-              </div>
-              {errors.phone && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, color: '#dc2626', fontSize: 11.5 }}>
-                  <AlertCircle size={13} style={{ flexShrink: 0 }} />
-                  <span>{errors.phone}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
-            <div>
-              <label htmlFor="staff-email" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span>Email Address</span>
-                <span style={{ fontSize: 11, fontWeight: 400, color: '#64748b' }}>Optional</span>
-              </label>
-              <div style={{ position: 'relative' }}>
-                <Mail size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: errors.email ? '#ef4444' : '#7c3aed' }} />
-                <input
-                  id="staff-email"
-                  type="email"
-                  className="ui-input"
-                  placeholder="e.g. staff@hospital.com"
-                  value={email}
-                  onChange={handleEmailChange}
-                  onBlur={() => {
-                    setTouched((prev) => ({ ...prev, email: true }));
-                    setErrors((prev) => ({ ...prev, email: validateStaffEmail(email) }));
-                  }}
-                  style={{
-                    paddingLeft: 36,
-                    height: 38,
-                    borderColor: errors.email ? '#ef4444' : undefined,
-                    boxShadow: errors.email ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                  }}
-                />
-              </div>
-              {errors.email && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, color: '#dc2626', fontSize: 11.5 }}>
-                  <AlertCircle size={13} style={{ flexShrink: 0 }} />
-                  <span>{errors.email}</span>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="staff-joining-date" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span>Joining Date</span>
-                  <span style={{ color: '#ef4444' }}>*</span>
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 400, color: '#64748b' }}>YYYY-MM-DD</span>
-              </label>
-              <div style={{ position: 'relative' }}>
-                <Calendar size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: errors.joiningDate ? '#ef4444' : '#7c3aed' }} />
-                <input
-                  id="staff-joining-date"
-                  type="date"
-                  className="ui-input"
-                  value={joiningDate}
-                  onChange={handleJoiningDateChange}
-                  onBlur={() => {
-                    setTouched((prev) => ({ ...prev, joiningDate: true }));
-                    setErrors((prev) => ({ ...prev, joiningDate: validateJoiningDate(joiningDate) }));
-                  }}
-                  style={{
-                    paddingLeft: 36,
-                    height: 38,
-                    borderColor: errors.joiningDate ? '#ef4444' : undefined,
-                    boxShadow: errors.joiningDate ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                  }}
-                  required
-                />
-              </div>
-              {errors.joiningDate && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, color: '#dc2626', fontSize: 11.5 }}>
-                  <AlertCircle size={13} style={{ flexShrink: 0 }} />
-                  <span>{errors.joiningDate}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="staff-address" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <MapPin size={14} style={{ color: '#7c3aed' }} />
-                <span>Residential / Postal Address</span>
-              </span>
-              <span style={{ fontSize: 11, fontWeight: 400, color: '#64748b' }}>Optional · min 5 chars</span>
-            </label>
-            <textarea
-              id="staff-address"
-              className="ui-input"
-              rows={2}
-              placeholder="e.g. 12/B Health Colony, Opp. Apollo Hospital, Chennai"
-              value={address}
-              onChange={handleAddressChange}
-              onBlur={() => {
-                setTouched((prev) => ({ ...prev, address: true }));
-                setErrors((prev) => ({ ...prev, address: validateAddress(address) }));
-              }}
-              style={{
-                minHeight: 64,
-                lineHeight: 1.4,
-                borderColor: errors.address ? '#ef4444' : undefined,
-                boxShadow: errors.address ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-              }}
-            />
-            {errors.address && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, color: '#dc2626', fontSize: 11.5 }}>
-                <AlertCircle size={13} style={{ flexShrink: 0 }} />
-                <span>{errors.address}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Section 2: Hospital & Role Placement */}
-        <div className="staff-section-card">
-          {/* Section Header */}
-          <div className="staff-section-header">
-            <div className="staff-section-badge">
-              <Briefcase size={14} />
-            </div>
-            <div>
-              <div className="staff-section-tag">
-                Role, Hospital & Shift Assignment
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="staff-role" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
-              <Briefcase size={14} style={{ color: '#7c3aed' }} />
-              <span>Staff Role</span>
-              <span style={{ color: '#ef4444' }}>*</span>
-            </label>
-            <select
-              id="staff-role"
-              className="ui-input ui-select"
-              value={role}
-              onChange={(e) => {
-                const val = e.target.value;
-                setRole(val);
-                setIsCustomRole(val === 'Other');
-              }}
-              style={{ height: 38 }}
-            >
-              {STAFF_ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {isCustomRole && (
-            <div>
-              <label htmlFor="staff-custom-role" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span>Custom Role Title</span>
-                  <span style={{ color: '#ef4444' }}>*</span>
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 400, color: '#7c3aed' }}>Letters only</span>
-              </label>
-              <input
-                id="staff-custom-role"
-                type="text"
-                className="ui-input"
-                placeholder="Specify custom role title"
-                value={customRole}
-                onChange={handleCustomRoleChange}
-                onKeyDown={handleCustomRoleKeyDown}
-                onBlur={() => {
-                  setTouched((prev) => ({ ...prev, customRole: true }));
-                  setErrors((prev) => ({ ...prev, customRole: validateCustomRole(true, customRole) }));
-                }}
-                style={{
-                  height: 38,
-                  borderColor: errors.customRole ? '#ef4444' : undefined,
-                  boxShadow: errors.customRole ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                }}
-                required
-              />
-              {errors.customRole && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, color: '#dc2626', fontSize: 11.5 }}>
-                  <AlertCircle size={13} style={{ flexShrink: 0 }} />
-                  <span>{errors.customRole}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
-            <div>
-              <label htmlFor="staff-hospital" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                <Building2 size={14} style={{ color: '#7c3aed' }} />
-                <span>Assigned Hospital</span>
-              </label>
-              <select
-                id="staff-hospital"
-                className="ui-input ui-select"
-                value={hospitalId}
-                onChange={(e) => {
-                  setHospitalId(e.target.value);
-                  setBranchId('');
-                }}
-                style={{ height: 38 }}
-              >
-                <option value="">-- Select Hospital --</option>
-                {hospitals.map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {h.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="staff-branch" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                <GitBranch size={14} style={{ color: '#7c3aed' }} />
-                <span>Hospital Branch</span>
-              </label>
-              <select
-                id="staff-branch"
-                className="ui-input ui-select"
-                value={branchId}
-                onChange={(e) => setBranchId(e.target.value)}
-                style={{ height: 38 }}
-              >
-                <option value="">-- Select Branch --</option>
-                {filteredBranches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Shift Timing Selection (Select + Visual Cards) */}
-          <div>
-            <div style={{ position: 'relative' }}>
-              <label
-                htmlFor="staff-shift-timing"
-                style={{
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                  color: '#334155',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  marginBottom: 6,
-                }}
-              >
-                <Clock size={14} style={{ color: '#7c3aed' }} />
-                <span>Shift Timing</span>
-                <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <select
-                id="staff-shift-timing"
-                className="ui-input ui-select"
-                value={shiftTiming}
-                onChange={(e) => setShiftTiming(e.target.value)}
-                style={{ height: 38, marginBottom: 10 }}
-              >
-                {SHIFT_TIMINGS.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Interactive Purple Shift Cards */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-                gap: 8,
-              }}
-            >
-              {SHIFT_TIMINGS.map((shift) => {
-                const isSelected = shiftTiming === shift.id;
-                let ShiftIcon = Sun;
-                if (shift.id === 'Evening') ShiftIcon = Sunset;
-                else if (shift.id === 'Night') ShiftIcon = Moon;
-                else if (shift.id === 'Custom Shift') ShiftIcon = Clock;
-
-                return (
-                  <button
-                    type="button"
-                    key={shift.id}
-                    onClick={() => setShiftTiming(shift.id)}
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: 10,
-                      border: isSelected ? '2px solid #7c3aed' : '1px solid #e2e8f0',
-                      background: isSelected ? '#f5f3ff' : '#ffffff',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      gap: 6,
-                      position: 'relative',
-                      transition: 'all 0.15s ease',
-                      boxShadow: isSelected ? '0 2px 6px rgba(124, 58, 237, 0.12)' : 'none',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                      <ShiftIcon size={16} style={{ color: isSelected ? '#7c3aed' : '#8b5cf6' }} />
-                      {isSelected && (
-                        <span
-                          style={{
-                            width: 16,
-                            height: 16,
-                            borderRadius: '50%',
-                            background: '#7c3aed',
-                            color: '#ffffff',
-                            display: 'grid',
-                            placeItems: 'center',
-                          }}
-                        >
-                          <Check size={10} strokeWidth={3} />
-                        </span>
-                      )}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 12.5, fontWeight: 700, color: isSelected ? '#6d28d9' : '#1e293b' }}>
-                        {shift.id}
-                      </div>
-                      <div style={{ fontSize: 10.5, color: isSelected ? '#7c3aed' : '#64748b', marginTop: 1 }}>
-                        {shift.period}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {shiftTiming === 'Custom Shift' && (
-              <div style={{ marginTop: 12 }}>
-                <label htmlFor="staff-custom-shift-details" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span>Custom Shift Timing Details</span>
-                    <span style={{ color: '#ef4444' }}>*</span>
-                  </span>
-                  <span style={{ fontSize: 11, fontWeight: 400, color: '#7c3aed' }}>e.g. 06:00 AM - 02:00 PM</span>
-                </label>
-                <input
-                  id="staff-custom-shift-details"
-                  type="text"
-                  className="ui-input"
-                  placeholder="e.g. 06:00 AM - 02:00 PM or 12hr Rotating Roster"
-                  value={customShiftDetails}
-                  onChange={handleCustomShiftChange}
-                  onKeyDown={handleCustomShiftKeyDown}
-                  onBlur={() => {
-                    setTouched((prev) => ({ ...prev, customShiftDetails: true }));
-                    setErrors((prev) => ({ ...prev, customShiftDetails: validateCustomShift(shiftTiming, customShiftDetails) }));
-                  }}
-                  style={{
-                    height: 38,
-                    borderColor: errors.customShiftDetails ? '#ef4444' : undefined,
-                    boxShadow: errors.customShiftDetails ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                  }}
-                  required
-                />
-                {errors.customShiftDetails && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, color: '#dc2626', fontSize: 11.5 }}>
-                    <AlertCircle size={13} style={{ flexShrink: 0 }} />
-                    <span>{errors.customShiftDetails}</span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Section 3: Visibility & Status */}
-        <div className="staff-section-card">
-          {/* Section Header */}
-          <div className="staff-section-header">
-            <div className="staff-section-badge">
-              <ShieldCheck size={14} />
-            </div>
-            <div>
-              <div className="staff-section-tag">
-                Visibility & Status
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 8 }}>
-              Staff Profile Status
-            </div>
-
-            <div
-              style={{
-                display: 'inline-flex',
-                background: '#f5f3ff',
-                padding: '4px',
-                borderRadius: 10,
-                border: '1px solid #ddd6fe',
-                gap: 4,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setStatus('ACTIVE')}
-                style={{
-                  padding: '7px 20px',
-                  borderRadius: 7,
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                  border: status === 'ACTIVE' ? '1px solid #7c3aed' : '1px solid transparent',
-                  cursor: 'pointer',
-                  background: status === 'ACTIVE' ? '#ffffff' : 'transparent',
-                  color: status === 'ACTIVE' ? '#6d28d9' : '#64748b',
-                  boxShadow: status === 'ACTIVE' ? '0 2px 5px rgba(124, 58, 237, 0.18)' : 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: status === 'ACTIVE' ? '#7c3aed' : '#cbd5e1',
-                  }}
-                />
-                <span>Active</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setStatus('INACTIVE')}
-                style={{
-                  padding: '7px 20px',
-                  borderRadius: 7,
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                  border: status === 'INACTIVE' ? '1px solid #94a3b8' : '1px solid transparent',
-                  cursor: 'pointer',
-                  background: status === 'INACTIVE' ? '#ffffff' : 'transparent',
-                  color: status === 'INACTIVE' ? '#475569' : '#64748b',
-                  boxShadow: status === 'INACTIVE' ? '0 2px 5px rgba(0, 0, 0, 0.08)' : 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: status === 'INACTIVE' ? '#94a3b8' : '#cbd5e1',
-                  }}
-                />
-                <span>Inactive</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 4: Document Upload (Secure R2 Storage) */}
-        {!staff && (
-          <div className="staff-section-card">
-            {/* Section Header */}
-            <div className="staff-section-header">
-              <div className="staff-section-badge">
-                <FileUp size={14} />
-              </div>
-              <div>
-                <div className="staff-section-tag">
-                  Staff Document Upload (Secure R2 Storage)
-                </div>
-              </div>
-            </div>
-
-            <div style={{ fontSize: 12, color: '#64748b', marginTop: -4 }}>
-              Upload qualification certificates, nursing registrations, ID proofs, or resumes stored securely in Cloudflare R2 / S3.
-            </div>
-
-            {errors.documentFile && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '9px 12px',
-                  borderRadius: 8,
-                  background: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  color: '#991b1b',
-                  fontSize: 12,
-                }}
-              >
-                <AlertCircle size={15} style={{ flexShrink: 0 }} />
-                <span>{errors.documentFile}</span>
-              </div>
-            )}
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
-              <div>
-                <label htmlFor="staff-document-title" style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span>Document Title</span>
-                  <span style={{ fontSize: 11, fontWeight: 400, color: '#7c3aed' }}>Letters & numbers</span>
-                </label>
-                <input
-                  id="staff-document-title"
-                  type="text"
-                  className="ui-input"
-                  placeholder="e.g. Nursing Registration Certificate"
-                  value={documentName}
-                  onChange={handleDocumentNameChange}
-                  onKeyDown={handleDocumentNameKeyDown}
-                  onBlur={() => {
-                    if (documentName.trim()) {
-                      setTouched((prev) => ({ ...prev, documentTitle: true }));
-                      setErrors((prev) => ({
-                        ...prev,
-                        documentTitle: validateDocumentTitle(documentName),
-                      }));
-                    }
-                  }}
-                  style={{
-                    height: 38,
-                    borderColor: errors.documentTitle ? '#ef4444' : undefined,
-                    boxShadow: errors.documentTitle ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                  }}
-                />
-                {errors.documentTitle && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, color: '#dc2626', fontSize: 11.5 }}>
-                    <AlertCircle size={13} style={{ flexShrink: 0 }} />
-                    <span>{errors.documentTitle}</span>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12.5, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 6 }}>
-                  Document Category
-                </label>
-                <select
-                  className="ui-input ui-select"
-                  value={documentType}
-                  onChange={(e) => setDocumentType(e.target.value)}
-                  style={{ height: 38 }}
-                >
-                  <option value="ID_PROOF">Government ID Proof</option>
-                  <option value="CERTIFICATION">Degree / Council Certification</option>
-                  <option value="RESUME">Resume / CV</option>
-                  <option value="CONTRACT">Employment Contract</option>
-                  <option value="OTHER">Other Verification Document</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Stylized Purple File Dropzone */}
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (e.dataTransfer.files) {
-                  processFiles(e.dataTransfer.files);
-                }
-              }}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '22px 16px',
-                borderRadius: 12,
-                border: selectedFile ? '2px solid #7c3aed' : '2px dashed #c4b5fd',
-                background: selectedFile ? '#f5f3ff' : '#faf5ff',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                textAlign: 'center',
-                gap: 8,
-              }}
-            >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: '50%',
-                  background: selectedFile ? '#ede9fe' : '#ffffff',
-                  color: '#7c3aed',
-                  display: 'grid',
-                  placeItems: 'center',
-                  boxShadow: '0 2px 5px rgba(124, 58, 237, 0.15)',
-                }}
-              >
-                {selectedFile ? <CheckCircle2 size={24} style={{ color: '#7c3aed' }} /> : <UploadCloud size={24} />}
-              </div>
-
-              {selectedFile ? (
                 <div>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: '#6d28d9' }}>
-                    {selectedFile.name}
+                  <div className="staff-section-tag">
+                    Basic Information
                   </div>
-                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                    {formatFileSize(selectedFile.size)} · Click "+ Add Document" below to stage
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                <div>
+                  <label htmlFor="staff-full-name" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span>Staff Full Name</span>
+                      <span style={{ color: '#ef4444' }}>*</span>
+                    </span>
+                    <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>Letters & spaces only</span>
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <User size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: errors.name ? '#ef4444' : '#94a3b8' }} />
+                    <input
+                      id="staff-full-name"
+                      type="text"
+                      className="ui-input"
+                      placeholder="e.g. Sister Mary Joseph"
+                      value={name}
+                      onChange={handleNameChange}
+                      onKeyDown={handleNameKeyDown}
+                      onPaste={handleNamePaste}
+                      onBlur={() => {
+                        setTouched((prev) => ({ ...prev, name: true }));
+                        setErrors((prev) => ({ ...prev, name: validateStaffName(name) }));
+                      }}
+                      style={{
+                        paddingLeft: 34,
+                        borderColor: errors.name ? '#ef4444' : undefined,
+                        boxShadow: errors.name ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                      required
+                    />
                   </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setSelectedFile(null);
-                      if (fileInputRef.current) fileInputRef.current.value = '';
+                  {errors.name && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.name}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="staff-phone" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span>Phone Number</span>
+                      <span style={{ color: '#ef4444' }}>*</span>
+                    </span>
+                    <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>10-15 digits</span>
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Phone size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: errors.phone ? '#ef4444' : '#94a3b8' }} />
+                    <input
+                      id="staff-phone"
+                      type="tel"
+                      className="ui-input"
+                      placeholder="e.g. +91 98765 43210"
+                      value={phone}
+                      onChange={handlePhoneChange}
+                      onKeyDown={handlePhoneKeyDown}
+                      onBlur={() => {
+                        setTouched((prev) => ({ ...prev, phone: true }));
+                        setErrors((prev) => ({ ...prev, phone: validateStaffPhone(phone) }));
+                      }}
+                      style={{
+                        paddingLeft: 34,
+                        borderColor: errors.phone ? '#ef4444' : undefined,
+                        boxShadow: errors.phone ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                      required
+                    />
+                  </div>
+                  {errors.phone && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.phone}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                <div>
+                  <label htmlFor="staff-email" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <span>Email Address</span>
+                    <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>Optional</span>
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Mail size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: errors.email ? '#ef4444' : '#94a3b8' }} />
+                    <input
+                      id="staff-email"
+                      type="email"
+                      className="ui-input"
+                      placeholder="e.g. staff@hospital.com"
+                      value={email}
+                      onChange={handleEmailChange}
+                      onBlur={() => {
+                        setTouched((prev) => ({ ...prev, email: true }));
+                        setErrors((prev) => ({ ...prev, email: validateStaffEmail(email) }));
+                      }}
+                      style={{
+                        paddingLeft: 34,
+                        borderColor: errors.email ? '#ef4444' : undefined,
+                        boxShadow: errors.email ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                    />
+                  </div>
+                  {errors.email && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.email}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="staff-joining-date" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span>Joining Date</span>
+                      <span style={{ color: '#ef4444' }}>*</span>
+                    </span>
+                    <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>YYYY-MM-DD</span>
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Calendar size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: errors.joiningDate ? '#ef4444' : '#94a3b8' }} />
+                    <input
+                      id="staff-joining-date"
+                      type="date"
+                      className="ui-input"
+                      value={joiningDate}
+                      onChange={handleJoiningDateChange}
+                      onBlur={() => {
+                        setTouched((prev) => ({ ...prev, joiningDate: true }));
+                        setErrors((prev) => ({ ...prev, joiningDate: validateJoiningDate(joiningDate) }));
+                      }}
+                      style={{
+                        paddingLeft: 34,
+                        borderColor: errors.joiningDate ? '#ef4444' : undefined,
+                        boxShadow: errors.joiningDate ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                      required
+                    />
+                  </div>
+                  {errors.joiningDate && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.joiningDate}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="staff-address" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <MapPin size={13} style={{ color: '#94a3b8' }} />
+                    <span>Residential / Postal Address</span>
+                  </span>
+                  <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>Optional · min 5 chars</span>
+                </label>
+                <textarea
+                  id="staff-address"
+                  className="ui-input"
+                  rows={2}
+                  placeholder="e.g. 12/B Health Colony, Opp. Apollo Hospital, Chennai"
+                  value={address}
+                  onChange={handleAddressChange}
+                  onBlur={() => {
+                    setTouched((prev) => ({ ...prev, address: true }));
+                    setErrors((prev) => ({ ...prev, address: validateAddress(address) }));
+                  }}
+                  style={{
+                    minHeight: 58,
+                    lineHeight: 1.4,
+                    padding: '8px 12px',
+                    borderColor: errors.address ? '#ef4444' : undefined,
+                    boxShadow: errors.address ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
+                />
+                {errors.address && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                    <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                    <span>{errors.address}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Section 2: Hospital & Role Placement */}
+            <div className="staff-section-card">
+              <div className="staff-section-header">
+                <div className="staff-section-badge">
+                  <Briefcase size={13} />
+                </div>
+                <div>
+                  <div className="staff-section-tag">
+                    Role, Hospital & Shift Assignment
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="staff-role" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 5 }}>
+                  <Briefcase size={13} style={{ color: '#94a3b8' }} />
+                  <span>Staff Role</span>
+                  <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <SearchableSelect
+                  id="staff-role"
+                  name="role"
+                  aria-label="Staff Role"
+                  options={roleOptions}
+                  value={role}
+                  onChange={(val) => {
+                    setRole(val);
+                    setIsCustomRole(val === 'Other');
+                  }}
+                  searchable={true}
+                  placeholder="Select staff role..."
+                  searchPlaceholder="Search staff role..."
+                  required
+                />
+              </div>
+
+              {isCustomRole && (
+                <div>
+                  <label htmlFor="staff-custom-role" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span>Custom Role Title</span>
+                      <span style={{ color: '#ef4444' }}>*</span>
+                    </span>
+                    <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>Letters only</span>
+                  </label>
+                  <input
+                    id="staff-custom-role"
+                    type="text"
+                    className="ui-input"
+                    placeholder="Specify custom role title"
+                    value={customRole}
+                    onChange={handleCustomRoleChange}
+                    onKeyDown={handleCustomRoleKeyDown}
+                    onBlur={() => {
+                      setTouched((prev) => ({ ...prev, customRole: true }));
+                      setErrors((prev) => ({ ...prev, customRole: validateCustomRole(true, customRole) }));
                     }}
                     style={{
-                      marginTop: 8,
+                      borderColor: errors.customRole ? '#ef4444' : undefined,
+                      boxShadow: errors.customRole ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                    }}
+                    required
+                  />
+                  {errors.customRole && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.customRole}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                <div>
+                  <label htmlFor="staff-hospital" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+                    <Building2 size={13} style={{ color: '#94a3b8' }} />
+                    <span>Assigned Hospital</span>
+                  </label>
+                  <SearchableSelect
+                    id="staff-hospital"
+                    name="hospitalId"
+                    aria-label="Assigned Hospital"
+                    options={hospitalOptions}
+                    value={hospitalId}
+                    onChange={(val) => {
+                      setHospitalId(val);
+                      setBranchId('');
+                    }}
+                    searchable={true}
+                    clearable={true}
+                    onClear={() => {
+                      setHospitalId('');
+                      setBranchId('');
+                    }}
+                    placeholder="-- Select Hospital --"
+                    searchPlaceholder="Search hospital by name..."
+                    emptyText="No hospitals found"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="staff-branch" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+                    <GitBranch size={13} style={{ color: '#94a3b8' }} />
+                    <span>Hospital Branch</span>
+                  </label>
+                  <SearchableSelect
+                    id="staff-branch"
+                    name="branchId"
+                    aria-label="Hospital Branch"
+                    options={branchOptions}
+                    value={branchId}
+                    onChange={(val) => setBranchId(val)}
+                    searchable={true}
+                    clearable={true}
+                    onClear={() => setBranchId('')}
+                    placeholder={hospitalId ? '-- Select Branch --' : 'Select a hospital first'}
+                    searchPlaceholder="Search branch by name..."
+                    emptyText={hospitalId ? 'No branches found for this hospital' : 'Please select a hospital first'}
+                    disabled={!hospitalId || filteredBranches.length === 0}
+                  />
+                </div>
+              </div>
+
+              {/* Shift Timing Selection (SearchableSelect + Visual Interactive Cards) */}
+              <div>
+                <div style={{ position: 'relative', marginBottom: 8 }}>
+                  <label
+                    htmlFor="staff-shift-timing"
+                    style={{
                       fontSize: 12,
                       fontWeight: 600,
-                      color: '#7c3aed',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
+                      color: '#334155',
+                      display: 'flex',
                       alignItems: 'center',
                       gap: 4,
+                      marginBottom: 5,
                     }}
                   >
-                    <X size={13} />
-                    <span>Choose different file</span>
-                  </button>
+                    <Clock size={13} style={{ color: '#94a3b8' }} />
+                    <span>Shift Timing</span>
+                    <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <SearchableSelect
+                    id="staff-shift-timing"
+                    name="shiftTiming"
+                    aria-label="Shift Timing"
+                    options={shiftTimingOptions}
+                    value={shiftTiming}
+                    onChange={(val) => setShiftTiming(val)}
+                    searchable={false}
+                    placeholder="Select shift timing..."
+                    required
+                  />
                 </div>
-              ) : (
-                <div>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: '#1e293b' }}>
-                    Click to browse or drop document here
-                  </div>
-                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                    PDF, PNG, JPG, or DOCX (Up to 20MB) · Select multiple or add one by one
-                  </div>
-                </div>
-              )}
 
-              <input
-                ref={fileInputRef}
-                id="staff-document-file-input"
-                type="file"
-                multiple
-                style={{ display: 'none' }}
-                onChange={(e) => {
-                  if (e.target.files) {
-                    processFiles(e.target.files);
-                  }
-                }}
-                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
-              />
+                {/* Interactive Shift Cards */}
+                <div className="shift-grid">
+                  {SHIFT_TIMINGS.map((shift) => {
+                    const isSelected = shiftTiming === shift.id;
+                    let ShiftIcon = Sun;
+                    if (shift.id === 'Evening') ShiftIcon = Sunset;
+                    else if (shift.id === 'Night') ShiftIcon = Moon;
+                    else if (shift.id === 'Custom Shift') ShiftIcon = Clock;
+
+                    return (
+                      <button
+                        type="button"
+                        key={shift.id}
+                        onClick={() => setShiftTiming(shift.id)}
+                        className={`shift-card-btn ${isSelected ? 'is-active' : ''}`}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                          <ShiftIcon size={15} style={{ color: isSelected ? '#7c3aed' : '#64748b' }} />
+                          {isSelected && (
+                            <span
+                              style={{
+                                width: 15,
+                                height: 15,
+                                borderRadius: '50%',
+                                background: '#7c3aed',
+                                color: '#ffffff',
+                                display: 'grid',
+                                placeItems: 'center',
+                              }}
+                            >
+                              <Check size={10} strokeWidth={3} />
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: isSelected ? '#5b21b6' : '#1e293b' }}>
+                            {shift.id}
+                          </div>
+                          <div style={{ fontSize: 10, color: isSelected ? '#7c3aed' : '#64748b', marginTop: 1 }}>
+                            {shift.period}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {shiftTiming === 'Custom Shift' && (
+                  <div
+                    style={{
+                      marginTop: 12,
+                      padding: 12,
+                      borderRadius: 10,
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: 8,
+                        flexWrap: 'wrap',
+                        gap: 6,
+                      }}
+                    >
+                      <label
+                        htmlFor="staff-custom-shift-details"
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: '#334155',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          margin: 0,
+                        }}
+                      >
+                        <Clock size={13} style={{ color: '#7c3aed' }} />
+                        <span>Custom Shift Timing Details</span>
+                        <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={handleOpenTimeModal}
+                        style={{
+                          border: '1px solid #c4b5fd',
+                          background: '#f5f3ff',
+                          color: '#6d28d9',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          borderRadius: 6,
+                          padding: '3px 10px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                        title="Open Ant Design Time Modal"
+                      >
+                        <Clock size={12} />
+                        <span>Choose in Time Modal</span>
+                      </button>
+                    </div>
+
+                    {/* Primary interactive TimePicker.RangePicker (inputReadOnly prevents manual typing) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <div style={{ flex: 1, minWidth: 220 }}>
+                        <TimePicker.RangePicker
+                          format="hh:mm A"
+                          use12Hours
+                          minuteStep={5}
+                          inputReadOnly={true}
+                          value={shiftRangeValue}
+                          onChange={handleTimePickerRangeChange}
+                          placeholder={['Start Time', 'End Time']}
+                          style={{
+                            width: '100%',
+                            borderRadius: 8,
+                            height: 38,
+                            borderColor: errors.customShiftDetails ? '#ef4444' : '#cbd5e1',
+                          }}
+                          needConfirm={false}
+                          aria-label="Custom Shift Time Picker"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleOpenTimeModal}
+                        className="ui-btn"
+                        style={{
+                          height: 38,
+                          padding: '0 12px',
+                          borderRadius: 8,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          background: '#ede9fe',
+                          color: '#5b21b6',
+                          border: '1px solid #c4b5fd',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        <Clock size={13} />
+                        <span>Time Modal</span>
+                      </button>
+                    </div>
+
+                    {/* Non-typeable display input (readOnly ensures not typeable, click opens modal) */}
+                    <div style={{ marginTop: 8 }}>
+                      <input
+                        id="staff-custom-shift-details"
+                        type="text"
+                        className="ui-input"
+                        placeholder="e.g. 06:00 AM - 02:00 PM or 12hr Rotating Roster"
+                        value={customShiftDetails}
+                        readOnly={true}
+                        onClick={handleOpenTimeModal}
+                        onChange={handleCustomShiftChange}
+                        onKeyDown={handleCustomShiftKeyDown}
+                        onBlur={() => {
+                          setTouched((prev) => ({ ...prev, customShiftDetails: true }));
+                          setErrors((prev) => ({
+                            ...prev,
+                            customShiftDetails: validateCustomShift(shiftTiming, customShiftDetails),
+                          }));
+                        }}
+                        style={{
+                          borderColor: errors.customShiftDetails ? '#ef4444' : undefined,
+                          boxShadow: errors.customShiftDetails ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                          cursor: 'pointer',
+                          background: '#ffffff',
+                          fontSize: 12,
+                          fontWeight: customShiftDetails ? 600 : 400,
+                          color: customShiftDetails ? '#1e293b' : '#64748b',
+                        }}
+                        title="Click to choose time in modal"
+                        required
+                      />
+                    </div>
+
+                    {errors.customShiftDetails && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          marginTop: 6,
+                          color: '#dc2626',
+                          fontSize: 11,
+                        }}
+                      >
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.customShiftDetails}</span>
+                      </div>
+                    )}
+
+                    {/* Quick Shift Presets */}
+                    <div style={{ marginTop: 10 }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginBottom: 6,
+                        }}
+                      >
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#475569' }}>
+                          Quick Presets:
+                        </span>
+                        {currentShiftDuration && (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: '#6d28d9',
+                              background: '#ede9fe',
+                              padding: '1px 8px',
+                              borderRadius: 10,
+                            }}
+                          >
+                            Duration: {currentShiftDuration}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {CUSTOM_SHIFT_PRESETS.map((preset) => {
+                          const isActive = customShiftDetails === preset.label;
+                          return (
+                            <button
+                              key={preset.label}
+                              type="button"
+                              onClick={() => {
+                                setCustomShiftDetails(preset.label);
+                                setTouched((prev) => ({ ...prev, customShiftDetails: true }));
+                                setErrors((prev) => ({ ...prev, customShiftDetails: undefined }));
+                              }}
+                              style={{
+                                fontSize: 11,
+                                padding: '3px 8px',
+                                borderRadius: 6,
+                                border: isActive ? '1px solid #7c3aed' : '1px solid #cbd5e1',
+                                background: isActive ? '#7c3aed' : '#ffffff',
+                                color: isActive ? '#ffffff' : '#334155',
+                                cursor: 'pointer',
+                                fontWeight: isActive ? 600 : 500,
+                                transition: 'all 0.15s ease',
+                              }}
+                              title={preset.desc}
+                            >
+                              {preset.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Work Days Selection */}
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
+                    <label
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#334155',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        margin: 0,
+                      }}
+                    >
+                      <Calendar size={13} style={{ color: '#94a3b8' }} />
+                      <span>Work Days</span>
+                      <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      {WORK_DAY_PRESETS.map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => setWorkDays([...preset.days])}
+                          style={{
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: 5,
+                            padding: '2px 7px',
+                            fontSize: 11,
+                            color: '#64748b',
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                          }}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Day Buttons */}
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {WORK_DAY_OPTIONS.map((day) => {
+                      const isSelected = workDays.includes(day.id);
+                      return (
+                        <button
+                          key={day.id}
+                          type="button"
+                          aria-pressed={isSelected}
+                          aria-label={`Work day ${day.fullLabel}`}
+                          onClick={() => {
+                            setWorkDays((prev) =>
+                              prev.includes(day.id)
+                                ? prev.filter((d) => d !== day.id)
+                                : [...prev, day.id]
+                            );
+                          }}
+                          style={{
+                            flex: '1 1 0%',
+                            minWidth: 42,
+                            height: 36,
+                            borderRadius: 8,
+                            fontSize: 12,
+                            fontWeight: isSelected ? 650 : 500,
+                            border: isSelected ? '1.5px solid #7c3aed' : '1px solid #e2e8f0',
+                            background: isSelected ? '#f5f3ff' : '#ffffff',
+                            color: isSelected ? '#6d28d9' : '#475569',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 1,
+                            boxShadow: isSelected ? '0 1px 3px rgba(124, 58, 237, 0.12)' : 'none',
+                          }}
+                        >
+                          <span>{day.label}</span>
+                          <span
+                            style={{
+                              width: 4,
+                              height: 4,
+                              borderRadius: '50%',
+                              background: isSelected ? '#7c3aed' : 'transparent',
+                            }}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {workDays.length === 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>Please select at least one work day.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* Action Row with Purple "+ Add Document" Button */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 12,
-                flexWrap: 'wrap',
-                background: '#f5f3ff',
-                padding: '10px 14px',
-                borderRadius: 10,
-                border: '1px solid #ddd6fe',
-              }}
-            >
-              <div style={{ fontSize: 12, color: '#5b21b6' }}>
-                {selectedFile ? (
-                  <span>
-                    Selected: <strong>{selectedFile.name}</strong> ({formatFileSize(selectedFile.size)})
-                  </span>
-                ) : (
-                  <span>Choose a file above, then click <strong>Add Document</strong> to add more.</span>
-                )}
+            {/* Section 3: Visibility & Status */}
+            <div className="staff-section-card">
+              <div className="staff-section-header">
+                <div className="staff-section-badge">
+                  <ShieldCheck size={13} />
+                </div>
+                <div>
+                  <div className="staff-section-tag">
+                    Profile Status
+                  </div>
+                </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleAddDocument}
-                disabled={!selectedFile}
-                className="ui-btn"
-                style={{
-                  height: 34,
-                  padding: '0 16px',
-                  borderRadius: 8,
-                  fontWeight: 600,
-                  fontSize: 12.5,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  background: selectedFile
-                    ? 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)'
-                    : '#ede9fe',
-                  color: selectedFile ? '#ffffff' : '#a78bfa',
-                  border: 'none',
-                  cursor: selectedFile ? 'pointer' : 'not-allowed',
-                  boxShadow: selectedFile ? '0 2px 6px rgba(124, 58, 237, 0.28)' : 'none',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <Plus size={15} />
-                <span>Add Document</span>
-              </button>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                  Staff Profile Status
+                </div>
+
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    background: '#f1f5f9',
+                    padding: '3px',
+                    borderRadius: 8,
+                    border: '1px solid #e2e8f0',
+                    gap: 3,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setStatus('ACTIVE')}
+                    style={{
+                      padding: '5px 16px',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      border: status === 'ACTIVE' ? '1px solid #a7f3d0' : '1px solid transparent',
+                      cursor: 'pointer',
+                      background: status === 'ACTIVE' ? '#ffffff' : 'transparent',
+                      color: status === 'ACTIVE' ? '#047857' : '#64748b',
+                      boxShadow: status === 'ACTIVE' ? '0 1px 2px rgba(0, 0, 0, 0.05)' : 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: '50%',
+                        background: status === 'ACTIVE' ? '#10b981' : '#cbd5e1',
+                      }}
+                    />
+                    <span>Active Profile</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStatus('INACTIVE')}
+                    style={{
+                      padding: '5px 16px',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      border: status === 'INACTIVE' ? '1px solid #cbd5e1' : '1px solid transparent',
+                      cursor: 'pointer',
+                      background: status === 'INACTIVE' ? '#ffffff' : 'transparent',
+                      color: status === 'INACTIVE' ? '#334155' : '#64748b',
+                      boxShadow: status === 'INACTIVE' ? '0 1px 2px rgba(0, 0, 0, 0.05)' : 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: '50%',
+                        background: status === 'INACTIVE' ? '#94a3b8' : '#cbd5e1',
+                      }}
+                    />
+                    <span>Inactive</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
-            {/* Staged Documents List */}
-            {stagedDocuments.length > 0 && (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 8,
-                  paddingTop: 8,
-                  borderTop: '1px solid #f1f5f9',
-                }}
-              >
+            {/* Section 4: Document Upload (Secure R2 Storage) */}
+            {!staff && (
+              <div className="staff-section-card">
+                <div className="staff-section-header">
+                  <div className="staff-section-badge">
+                    <FileUp size={13} />
+                  </div>
+                  <div>
+                    <div className="staff-section-tag">
+                      Staff Documents
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: 11.5, color: '#64748b', marginTop: -4 }}>
+                  Upload qualification certificates, council registration, ID proofs, or resumes.
+                </div>
+
+                {errors.documentFile && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 7,
+                      padding: '8px 11px',
+                      borderRadius: 8,
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      color: '#991b1b',
+                      fontSize: 11.5,
+                    }}
+                  >
+                    <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                    <span>{errors.documentFile}</span>
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                  <div>
+                    <label htmlFor="staff-document-title" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <span>Document Title</span>
+                      <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>Letters & numbers</span>
+                    </label>
+                    <input
+                      id="staff-document-title"
+                      type="text"
+                      className="ui-input"
+                      placeholder="e.g. Nursing Registration Certificate"
+                      value={documentName}
+                      onChange={handleDocumentNameChange}
+                      onKeyDown={handleDocumentNameKeyDown}
+                      onBlur={() => {
+                        if (documentName.trim()) {
+                          setTouched((prev) => ({ ...prev, documentTitle: true }));
+                          setErrors((prev) => ({
+                            ...prev,
+                            documentTitle: validateDocumentTitle(documentName),
+                          }));
+                        }
+                      }}
+                      style={{
+                        borderColor: errors.documentTitle ? '#ef4444' : undefined,
+                        boxShadow: errors.documentTitle ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                    />
+                    {errors.documentTitle && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.documentTitle}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="staff-document-category"
+                      style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 5 }}
+                    >
+                      Document Category
+                    </label>
+                    <SearchableSelect
+                      id="staff-document-category"
+                      name="documentType"
+                      aria-label="Document Category"
+                      options={DOCUMENT_TYPE_OPTIONS}
+                      value={documentType}
+                      onChange={(val) => setDocumentType(val)}
+                      searchable={false}
+                      placeholder="Select document category..."
+                    />
+                  </div>
+                </div>
+
+                {/* File Dropzone */}
+                <div
+                  className={`staff-dropzone ${selectedFile ? 'has-file' : ''}`}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (e.dataTransfer.files) {
+                      processFiles(e.dataTransfer.files);
+                    }
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      background: '#ffffff',
+                      color: selectedFile ? '#7c3aed' : '#7c3aed',
+                      display: 'grid',
+                      placeItems: 'center',
+                      border: '1px solid #ede9fe',
+                      boxShadow: '0 1px 3px rgba(124, 58, 237, 0.12)',
+                    }}
+                  >
+                    {selectedFile ? <CheckCircle2 size={22} style={{ color: '#7c3aed' }} /> : <UploadCloud size={22} />}
+                  </div>
+
+                  {selectedFile ? (
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
+                        {selectedFile.name}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 2 }}>
+                        {formatFileSize(selectedFile.size)} · Click "+ Add Document" below to stage
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedFile(null);
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}
+                        style={{
+                          marginTop: 6,
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          color: '#64748b',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                        }}
+                      >
+                        <X size={12} />
+                        <span>Choose different file</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>
+                        Click to browse or drop document here
+                      </div>
+                      <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 2 }}>
+                        PDF, PNG, JPG, or DOCX (Up to 20MB) · Select multiple or add one by one
+                      </div>
+                    </div>
+                  )}
+
+                  <input
+                    ref={fileInputRef}
+                    id="staff-document-file-input"
+                    type="file"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        processFiles(e.target.files);
+                      }
+                    }}
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                  />
+                </div>
+
+                {/* Action Row with "+ Add Document" Button */}
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
+                    gap: 12,
+                    flexWrap: 'wrap',
+                    background: '#f8fafc',
+                    padding: '9px 12px',
+                    borderRadius: 8,
+                    border: '1px solid #e2e8f0',
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
-                    Documents to Upload ({stagedDocuments.length})
+                  <div style={{ fontSize: 11.5, color: '#475569' }}>
+                    {selectedFile ? (
+                      <span>
+                        Ready: <strong style={{ color: '#0f172a' }}>{selectedFile.name}</strong> ({formatFileSize(selectedFile.size)})
+                      </span>
+                    ) : (
+                      <span>Choose a file above, then click <strong>Add Document</strong> to add more.</span>
+                    )}
                   </div>
-                  <div style={{ fontSize: 11.5, color: '#6d28d9', fontWeight: 600 }}>
-                    Stored in Cloudflare R2 on registration
-                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAddDocument}
+                    disabled={!selectedFile}
+                    className="ui-btn"
+                    style={{
+                      height: 32,
+                      padding: '0 14px',
+                      borderRadius: 7,
+                      fontWeight: 600,
+                      fontSize: 12,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      background: selectedFile ? '#7c3aed' : '#e2e8f0',
+                      color: selectedFile ? '#ffffff' : '#94a3b8',
+                      border: 'none',
+                      cursor: selectedFile ? 'pointer' : 'not-allowed',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <Plus size={14} />
+                    <span>Add Document</span>
+                  </button>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {stagedDocuments.map((doc) => (
+                {/* Staged Documents List */}
+                {stagedDocuments.length > 0 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 7,
+                      paddingTop: 8,
+                      borderTop: '1px solid #f1f5f9',
+                    }}
+                  >
                     <div
-                      key={doc.id}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '10px 14px',
-                        borderRadius: 10,
-                        background: '#ffffff',
-                        border: '1px solid #ddd6fe',
-                        boxShadow: '0 1px 2px rgba(124, 58, 237, 0.05)',
-                        gap: 12,
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0f172a' }}>
+                        Documents to Upload ({stagedDocuments.length})
+                      </div>
+                      <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600 }}>
+                        Stored in Cloudflare R2 on registration
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                      {stagedDocuments.map((doc) => (
                         <div
+                          key={doc.id}
                           style={{
-                            width: 32,
-                            height: 32,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '9px 12px',
                             borderRadius: 8,
-                            background: '#f5f3ff',
-                            color: '#7c3aed',
-                            display: 'grid',
-                            placeItems: 'center',
-                            flexShrink: 0,
+                            background: '#ffffff',
+                            border: '1px solid #e2e8f0',
+                            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+                            gap: 10,
                           }}
                         >
-                          <FileText size={16} />
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            <span
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                            <div
                               style={{
-                                fontSize: 13,
-                                fontWeight: 600,
-                                color: '#0f172a',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                              }}
-                            >
-                              {doc.name}
-                            </span>
-                            <span
-                              style={{
-                                fontSize: 10.5,
-                                fontWeight: 600,
-                                padding: '2px 8px',
-                                borderRadius: 9999,
+                                width: 30,
+                                height: 30,
+                                borderRadius: 7,
                                 background: '#f5f3ff',
-                                color: '#6d28d9',
-                                border: '1px solid #ddd6fe',
+                                color: '#7c3aed',
+                                display: 'grid',
+                                placeItems: 'center',
+                                flexShrink: 0,
+                                border: '1px solid #ede9fe',
                               }}
                             >
-                              {getDocumentTypeLabel(doc.documentType)}
-                            </span>
+                              <FileText size={15} />
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                                <span
+                                  style={{
+                                    fontSize: 12.5,
+                                    fontWeight: 600,
+                                    color: '#0f172a',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                  }}
+                                >
+                                  {doc.name}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: 600,
+                                    padding: '1px 6px',
+                                    borderRadius: 9999,
+                                    background: '#f5f3ff',
+                                    color: '#6d28d9',
+                                    border: '1px solid #ddd6fe',
+                                  }}
+                                >
+                                  {getDocumentTypeLabel(doc.documentType)}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>
+                                {doc.file.name} · {formatFileSize(doc.file.size)}
+                              </div>
+                            </div>
                           </div>
-                          <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 2 }}>
-                            {doc.file.name} · {formatFileSize(doc.file.size)}
-                          </div>
-                        </div>
-                      </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveStagedDocument(doc.id)}
-                        title="Remove document"
-                        aria-label={`Remove document ${doc.name}`}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          padding: '6px',
-                          borderRadius: 6,
-                          color: '#7c3aed',
-                          cursor: 'pointer',
-                          display: 'grid',
-                          placeItems: 'center',
-                          flexShrink: 0,
-                          transition: 'background 0.15s ease',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = '#f5f3ff')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveStagedDocument(doc.id)}
+                            title="Remove document"
+                            aria-label={`Remove document ${doc.name}`}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              padding: '5px',
+                              borderRadius: 6,
+                              color: '#94a3b8',
+                              cursor: 'pointer',
+                              display: 'grid',
+                              placeItems: 'center',
+                              flexShrink: 0,
+                              transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#fee2e2';
+                              e.currentTarget.style.color = '#dc2626';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                              e.currentTarget.style.color = '#94a3b8';
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Section 5: Administrative Remarks */}
+            <div className="staff-section-card">
+              <div className="staff-section-header">
+                <div className="staff-section-badge">
+                  <FileText size={13} />
+                </div>
+                <div>
+                  <div className="staff-section-tag">
+                    Administrative Remarks
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
-        )}
 
-        {/* Section 5: Administrative Remarks */}
-        <div className="staff-section-card">
-          {/* Section Header */}
-          <div className="staff-section-header">
-            <div className="staff-section-badge">
-              <FileText size={14} />
+              <textarea
+                className="ui-input"
+                rows={2}
+                placeholder="e.g. Certified in ACLS, experienced in ICU triage and medication protocol"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                style={{ minHeight: 58, lineHeight: 1.4, padding: '8px 12px' }}
+              />
+            </div>
+          </div>
+
+          {/* Docked Action Footer */}
+          <div
+            className="ui-modal-foot"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '14px 22px',
+              borderTop: '1px solid #e2e8f0',
+              background: '#ffffff',
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ fontSize: 11.5, color: '#64748b' }}>
+              Fields marked with <span style={{ color: '#ef4444' }}>*</span> are required
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button
+                type="button"
+                onClick={onClose}
+                className="ui-btn ui-btn-subtle"
+                disabled={loading}
+                style={{ height: 36, padding: '0 14px', borderRadius: 8, fontSize: 12.5 }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="ui-btn ui-btn-primary staff-submit-btn"
+                style={{
+                  height: 36,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 7,
+                  padding: '0 18px',
+                  fontWeight: 600,
+                  fontSize: 12.5,
+                  borderRadius: 8,
+                }}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={15} className="is-spinning" />
+                    <span>Saving...</span>
+                  </>
+                ) : staff ? (
+                  <>
+                    <CheckCircle2 size={15} />
+                    <span>Save Changes</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus size={15} />
+                    <span>Register Staff</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Ant Design Modal for Custom Shift Timing (not typeable, chooses time in modal) */}
+      <AntdModal
+        open={isTimeModalOpen}
+        onCancel={() => setIsTimeModalOpen(false)}
+        onOk={handleApplyModalTime}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 4 }}>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: '#f5f3ff',
+                display: 'grid',
+                placeItems: 'center',
+                color: '#7c3aed',
+              }}
+            >
+              <Clock size={18} />
             </div>
             <div>
-              <div className="staff-section-tag">
-                Administrative Remarks
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b' }}>
+                Choose Custom Shift Timing
+              </div>
+              <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 400 }}>
+                Select start & end time using Ant Design time pickers
               </div>
             </div>
           </div>
-
-          <textarea
-            className="ui-input"
-            rows={2}
-            placeholder="e.g. Certified in ACLS, experienced in ICU triage and medication protocol"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            style={{ minHeight: 64, lineHeight: 1.4 }}
-          />
-        </div>
-      </div>
-
-      {/* Docked Action Footer */}
-      <div
-        className="ui-modal-foot"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '16px 28px',
-          borderTop: '1px solid #e2e8f0',
-          background: '#ffffff',
-          flexShrink: 0,
+        }
+        okText="Apply Shift Timing"
+        cancelText="Cancel"
+        okButtonProps={{
+          style: {
+            background: '#7c3aed',
+            borderColor: '#7c3aed',
+            borderRadius: 6,
+            fontWeight: 600,
+          },
         }}
+        cancelButtonProps={{
+          style: {
+            borderRadius: 6,
+          },
+        }}
+        width={460}
+        centered
       >
-        <div style={{ fontSize: 12, color: '#64748b' }}>
-          Fields marked with <span style={{ color: '#ef4444' }}>*</span> are required
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            type="button"
-            onClick={onClose}
-            className="ui-btn ui-btn-subtle"
-            disabled={loading}
-            style={{ height: 38, padding: '0 16px' }}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="ui-btn ui-btn-primary"
+        <div style={{ paddingTop: 14, paddingBottom: 6 }}>
+          <div
             style={{
-              height: 38,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '0 22px',
-              fontWeight: 600,
-              background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: 8,
-              boxShadow: '0 2px 8px rgba(124, 58, 237, 0.28)',
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 14,
+              background: '#f8fafc',
+              padding: 14,
+              borderRadius: 10,
+              border: '1px solid #e2e8f0',
+              marginBottom: 14,
             }}
           >
-            {loading ? (
-              <>
-                <Loader2 size={16} className="is-spinning" />
-                <span>Saving...</span>
-              </>
-            ) : staff ? (
-              <>
-                <CheckCircle2 size={16} />
-                <span>Save Changes</span>
-              </>
-            ) : (
-              <>
-                <UserPlus size={16} />
-                <span>Register Staff</span>
-              </>
-            )}
-          </button>
+            <div>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  color: '#475569',
+                  marginBottom: 5,
+                }}
+              >
+                Start Time <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <TimePicker
+                format="hh:mm A"
+                use12Hours
+                minuteStep={5}
+                inputReadOnly={true}
+                value={modalStartTime}
+                onChange={(val) => setModalStartTime(val)}
+                placeholder="Start Time"
+                style={{ width: '100%', borderRadius: 6, height: 38 }}
+                needConfirm={false}
+              />
+            </div>
+            <div>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  color: '#475569',
+                  marginBottom: 5,
+                }}
+              >
+                End Time <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <TimePicker
+                format="hh:mm A"
+                use12Hours
+                minuteStep={5}
+                inputReadOnly={true}
+                value={modalEndTime}
+                onChange={(val) => setModalEndTime(val)}
+                placeholder="End Time"
+                style={{ width: '100%', borderRadius: 6, height: 38 }}
+                needConfirm={false}
+              />
+            </div>
+          </div>
+
+          {/* Live Duration and Shift Preview Card */}
+          {modalStartTime && modalEndTime && (
+            <div
+              style={{
+                background: '#f5f3ff',
+                border: '1px solid #ddd6fe',
+                borderRadius: 8,
+                padding: '10px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 14,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Clock size={16} style={{ color: '#7c3aed' }} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#5b21b6' }}>
+                    {modalStartTime.format('hh:mm A')} - {modalEndTime.format('hh:mm A')}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#7c3aed' }}>Selected Custom Shift</div>
+                </div>
+              </div>
+              {modalDuration && (
+                <span
+                  style={{
+                    background: '#7c3aed',
+                    color: '#ffffff',
+                    padding: '3px 10px',
+                    borderRadius: 12,
+                    fontSize: 11,
+                    fontWeight: 600,
+                  }}
+                >
+                  {modalDuration}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Presets in Modal */}
+          <div>
+            <div style={{ fontSize: 11.5, fontWeight: 600, color: '#475569', marginBottom: 6 }}>
+              Quick Shift Presets:
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
+              {CUSTOM_SHIFT_PRESETS.map((preset) => {
+                const [pStart, pEnd] = parseShiftRange(preset.label);
+                const isMatch =
+                  modalStartTime?.format('hh:mm A') === pStart?.format('hh:mm A') &&
+                  modalEndTime?.format('hh:mm A') === pEnd?.format('hh:mm A');
+                return (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => {
+                      setModalStartTime(pStart);
+                      setModalEndTime(pEnd);
+                    }}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      border: isMatch ? '1.5px solid #7c3aed' : '1px solid #e2e8f0',
+                      background: isMatch ? '#f5f3ff' : '#ffffff',
+                      color: isMatch ? '#6d28d9' : '#334155',
+                      fontSize: 11.5,
+                      fontWeight: isMatch ? 700 : 500,
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span>{preset.label}</span>
+                    <span style={{ fontSize: 10, color: isMatch ? '#7c3aed' : '#94a3b8' }}>
+                      {preset.desc}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
-      </div>
-    </form>
-  </Modal>
-);
+      </AntdModal>
+    </>
+  );
 }

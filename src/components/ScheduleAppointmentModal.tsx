@@ -3,10 +3,10 @@ import {
   CalendarPlus,
   Clock,
   Loader2,
-  Search,
   Stethoscope,
   Sun,
   Sunset,
+  User,
   UserCheck,
   UserPlus,
 } from 'lucide-react';
@@ -19,6 +19,7 @@ import type { Doctor } from './DoctorModal';
 import type { Patient } from './PatientModal';
 import { Field, Modal } from './ui/Modal';
 import { Alert, Badge, cx } from './ui/primitives';
+import { SearchableSelect, type SearchableSelectOption } from './ui/SearchableSelect';
 
 interface ScheduleAppointmentModalProps {
   isOpen: boolean;
@@ -53,7 +54,6 @@ export default function ScheduleAppointmentModal({
   // Existing Patient state
   const [patients, setPatients] = useState<Patient[]>([]);
   const [patientsLoading, setPatientsLoading] = useState(false);
-  const [patientSearch, setPatientSearch] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
   // New Patient state
@@ -161,7 +161,6 @@ export default function ScheduleAppointmentModal({
       }
       if (!preselectedPatientId) {
         setSelectedPatient(null);
-        setPatientSearch('');
       }
       setNewPatientName('');
       setNewPatientPhone('');
@@ -175,19 +174,17 @@ export default function ScheduleAppointmentModal({
     }
   }, [isOpen, selectedDoctorId, appointmentDate, fetchSlots]);
 
-  // Filter patients by search query
-  const filteredPatients = useMemo(() => {
-    if (!patientSearch.trim()) return patients.slice(0, 8);
-    const q = patientSearch.toLowerCase();
-    return patients
-      .filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          (p.phone && p.phone.toLowerCase().includes(q)) ||
-          (p.email && p.email.toLowerCase().includes(q))
-      )
-      .slice(0, 10);
-  }, [patients, patientSearch]);
+  // Map patient list to SearchableSelect options with rich search terms
+  const patientOptions = useMemo<SearchableSelectOption[]>(() => {
+    return patients.map((pat) => ({
+      value: pat.id,
+      label: pat.name,
+      sublabel: [pat.phone, pat.email].filter(Boolean).join(' · ') || undefined,
+      badge: pat.branch_name || undefined,
+      badgeTone: 'neutral' as const,
+      extraSearchTerms: [pat.phone, pat.email, pat.blood_group, pat.branch_name].filter(Boolean) as string[],
+    }));
+  }, [patients]);
 
   const selectedDoctor = useMemo(
     () => doctors.find((d) => d.id === selectedDoctorId) || null,
@@ -313,30 +310,32 @@ export default function ScheduleAppointmentModal({
         title={isBooked ? 'Slot already booked (Double booking prevented)' : `Book for ${timeLabel}`}
         style={{
           padding: '8px 10px',
-          borderRadius: 6,
+          borderRadius: 8,
           fontSize: 12.5,
-          fontWeight: 500,
+          fontWeight: isSelected ? 700 : 500,
           border: isSelected
-            ? '2px solid var(--ui-primary, #0284c7)'
+            ? '1.5px solid #7c3aed'
             : isBooked
-              ? '1px dashed var(--ui-border, #cbd5e1)'
-              : '1px solid var(--ui-border, #cbd5e1)',
+              ? '1px dashed #cbd5e1'
+              : '1px solid #e2e8f0',
           background: isSelected
-            ? 'var(--ui-primary-subtle, #e0f2fe)'
+            ? '#f5f3ff'
             : isBooked
-              ? 'var(--ui-surface-disabled, #f1f5f9)'
-              : 'var(--ui-surface, #ffffff)',
+              ? '#f8fafc'
+              : '#ffffff',
           color: isSelected
-            ? 'var(--ui-primary, #0284c7)'
+            ? '#6d28d9'
             : isBooked
-              ? 'var(--ui-text-muted, #94a3b8)'
-              : 'var(--ui-text, #1e293b)',
+              ? '#94a3b8'
+              : '#1e293b',
+          boxShadow: isSelected ? '0 2px 6px rgba(124, 58, 237, 0.18)' : 'none',
           cursor: isBooked ? 'not-allowed' : 'pointer',
           opacity: isBooked ? 0.6 : 1,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: 2,
+          transition: 'all 0.15s ease',
         }}
       >
         <span>{timeLabel}</span>
@@ -357,36 +356,160 @@ export default function ScheduleAppointmentModal({
     <Modal
       open={isOpen}
       onClose={submitting ? () => undefined : onClose}
+      variant="drawer"
+      size="lg"
+      className="schedule-appointment-drawer-modal"
       title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <CalendarPlus size={20} className="text-primary" />
-          <span>Schedule New Appointment</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
+              color: '#7c3aed',
+              border: '1px solid #c4b5fd',
+              display: 'grid',
+              placeItems: 'center',
+              flexShrink: 0,
+              boxShadow: '0 2px 6px rgba(124, 58, 237, 0.16)',
+            }}
+          >
+            <CalendarPlus size={18} />
+          </div>
+          <div>
+            <div style={{ fontSize: 16.5, fontWeight: 700, color: 'var(--ui-text, #0f172a)', letterSpacing: '-0.01em' }}>
+              Schedule New Appointment
+            </div>
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
+              Book an appointment for an existing patient or register a new patient booking
+            </div>
+          </div>
         </div>
       }
-      description="Book an appointment for an existing patient or register a new patient booking"
-      size="lg"
+      description=""
     >
-      <form onSubmit={handleSubmit}>
-        <div className="ui-modal-body" style={{ maxHeight: '72vh', overflowY: 'auto' }}>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+        <style>{`
+          .schedule-appointment-drawer-modal {
+            width: min(740px, 100vw) !important;
+            max-width: 740px !important;
+            background: #ffffff;
+            box-shadow: -12px 0 36px rgba(15, 23, 42, 0.14) !important;
+          }
+          .schedule-appointment-drawer-modal .ui-modal-head {
+            padding: 18px 26px;
+            background: linear-gradient(180deg, #faf5ff 0%, #ffffff 100%);
+            border-bottom: 1px solid #f1f5f9;
+          }
+          .schedule-appointment-drawer-modal .ui-modal-head h2 {
+            font-size: 16.5px;
+            margin: 0;
+          }
+          .schedule-appointment-drawer-modal .ui-modal-body {
+            padding: 20px 24px;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            max-height: none !important;
+            flex: 1;
+            overflow-y: auto;
+          }
+          .sched-section-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            transition: border-color 0.15s ease;
+          }
+          .sched-section-card:hover {
+            border-color: #cbd5e1;
+          }
+          .sched-section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f1f5f9;
+          }
+          .sched-section-badge {
+            width: 26px;
+            height: 26px;
+            border-radius: 7px;
+            background: #f5f3ff;
+            color: #7c3aed;
+            border: 1px solid #ede9fe;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+          .sched-section-badge svg {
+            display: block;
+            margin: auto;
+          }
+          .sched-section-tag {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            color: #475569;
+            text-transform: uppercase;
+          }
+          .schedule-appointment-drawer-modal .ui-input {
+            height: 38px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            font-size: 13px;
+            transition: all 0.15s ease;
+          }
+          .schedule-appointment-drawer-modal .ui-input:focus {
+            border-color: #7c3aed !important;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12) !important;
+            outline: none;
+          }
+          .sched-submit-btn {
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
+            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.28) !important;
+            border: none !important;
+            color: #ffffff !important;
+          }
+          .sched-submit-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%) !important;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.36) !important;
+          }
+        `}</style>
+        <div className="ui-modal-body">
           {error && <Alert>{error}</Alert>}
 
-          {/* Patient Mode Tabs: Existing vs New Patient */}
-          <div style={{ marginBottom: 18 }}>
+          {/* Section 1: Patient Selection */}
+          <div className="sched-section-card">
+            <div className="sched-section-header">
+              <div className="sched-section-badge">
+                <User size={13} />
+              </div>
+              <div className="sched-section-tag">
+                Patient Selection
+              </div>
+            </div>
+
+            {/* Patient Mode Tabs: Existing vs New Patient */}
             <div
               style={{
                 display: 'flex',
-                background: 'var(--ui-surface-2, #f1f5f9)',
+                background: '#f1f5f9',
                 padding: 3,
                 borderRadius: 8,
-                marginBottom: 12,
+                border: '1px solid #e2e8f0',
               }}
             >
               <button
                 type="button"
-                className={cx(
-                  'ui-btn',
-                  patientMode === 'existing' && 'ui-btn-primary'
-                )}
+                className={cx('ui-btn', patientMode === 'existing' && 'is-active')}
                 style={{
                   flex: 1,
                   display: 'flex',
@@ -394,29 +517,28 @@ export default function ScheduleAppointmentModal({
                   justifyContent: 'center',
                   gap: 6,
                   borderRadius: 6,
-                  height: 36,
-                  fontSize: 13,
+                  height: 34,
+                  fontSize: 12.5,
                   fontWeight: 600,
-                  boxShadow: patientMode === 'existing' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  background: patientMode === 'existing' ? undefined : 'transparent',
-                  color: patientMode === 'existing' ? undefined : 'var(--ui-text, #334155)',
+                  boxShadow: patientMode === 'existing' ? '0 1px 3px rgba(124, 58, 237, 0.2)' : 'none',
+                  background: patientMode === 'existing' ? '#7c3aed' : 'transparent',
+                  color: patientMode === 'existing' ? '#ffffff' : '#475569',
                   border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
                 }}
                 onClick={() => {
                   setPatientMode('existing');
                   setError('');
                 }}
               >
-                <UserCheck size={16} />
+                <UserCheck size={15} />
                 <span>Existing Patient</span>
               </button>
 
               <button
                 type="button"
-                className={cx(
-                  'ui-btn',
-                  patientMode === 'new' && 'ui-btn-primary'
-                )}
+                className={cx('ui-btn', patientMode === 'new' && 'is-active')}
                 style={{
                   flex: 1,
                   display: 'flex',
@@ -424,152 +546,103 @@ export default function ScheduleAppointmentModal({
                   justifyContent: 'center',
                   gap: 6,
                   borderRadius: 6,
-                  height: 36,
-                  fontSize: 13,
+                  height: 34,
+                  fontSize: 12.5,
                   fontWeight: 600,
-                  boxShadow: patientMode === 'new' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  background: patientMode === 'new' ? undefined : 'transparent',
-                  color: patientMode === 'new' ? undefined : 'var(--ui-text, #334155)',
+                  boxShadow: patientMode === 'new' ? '0 1px 3px rgba(124, 58, 237, 0.2)' : 'none',
+                  background: patientMode === 'new' ? '#7c3aed' : 'transparent',
+                  color: patientMode === 'new' ? '#ffffff' : '#475569',
                   border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
                 }}
                 onClick={() => {
                   setPatientMode('new');
                   setError('');
                 }}
               >
-                <UserPlus size={16} />
+                <UserPlus size={15} />
                 <span>New Patient</span>
               </button>
             </div>
 
             {patientMode === 'existing' ? (
-              <div>
-                {selectedPatient ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Field label="Select Patient" required hint="Search registered patients by name, phone, or email">
+                  <SearchableSelect
+                    id="schedule-patient-select"
+                    value={selectedPatient?.id || ''}
+                    onChange={(patId) => {
+                      const found = patients.find((p) => p.id === patId);
+                      setSelectedPatient(found || null);
+                      setError('');
+                    }}
+                    disabled={patientsLoading || submitting}
+                    required
+                    clearable={true}
+                    onClear={() => setSelectedPatient(null)}
+                    searchable={true}
+                    placeholder={patientsLoading ? 'Loading patients...' : 'Search or choose patient...'}
+                    searchPlaceholder="Search by name, phone number, email, branch..."
+                    options={patientOptions}
+                    emptyText='No matching patients found. Switch to "New Patient" above to register.'
+                  />
+                </Field>
+
+                {selectedPatient && (
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '10px 14px',
-                      background: 'var(--ui-surface-2, #f0fdf4)',
-                      border: '1px solid #bbf7d0',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
                       borderRadius: 8,
+                      fontSize: 12.5,
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div
                         style={{
-                          width: 36,
-                          height: 36,
+                          width: 34,
+                          height: 34,
                           borderRadius: '50%',
-                          background: '#dcfce7',
-                          color: '#16a34a',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
+                          background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                          color: '#ffffff',
+                          display: 'grid',
+                          placeItems: 'center',
                           fontWeight: 700,
+                          fontSize: 13,
+                          boxShadow: '0 2px 4px rgba(124, 58, 237, 0.2)',
+                          flexShrink: 0,
                         }}
                       >
                         {selectedPatient.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: 14, color: '#166534' }}>
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>
                           {selectedPatient.name}
                         </div>
-                        <div style={{ fontSize: 12, color: '#15803d' }}>
+                        <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>
                           {[selectedPatient.phone, selectedPatient.email, selectedPatient.blood_group]
                             .filter(Boolean)
                             .join(' · ') || 'No contact details'}
                         </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      className="ui-btn ui-btn-subtle"
-                      style={{ fontSize: 12, height: 30 }}
-                      onClick={() => setSelectedPatient(null)}
-                    >
-                      Change Patient
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <div style={{ position: 'relative', marginBottom: 8 }}>
-                      <Search
-                        size={16}
-                        style={{
-                          position: 'absolute',
-                          left: 10,
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          color: '#94a3b8',
-                        }}
-                      />
-                      <input
-                        type="text"
-                        className="ui-input"
-                        style={{ paddingLeft: 34 }}
-                        placeholder="Search patient by name, phone number, or email..."
-                        value={patientSearch}
-                        onChange={(e) => setPatientSearch(e.target.value)}
-                        autoFocus
-                      />
-                    </div>
-
-                    <div
-                      style={{
-                        maxHeight: 180,
-                        overflowY: 'auto',
-                        border: '1px solid var(--ui-border, #e2e8f0)',
-                        borderRadius: 6,
-                        background: 'var(--ui-surface, #ffffff)',
-                      }}
-                    >
-                      {patientsLoading ? (
-                        <div style={{ padding: 16, textAlign: 'center', color: '#64748b' }}>
-                          <Loader2 size={16} className="animate-spin inline mr-2" />
-                          Loading patients...
-                        </div>
-                      ) : filteredPatients.length === 0 ? (
-                        <div style={{ padding: 16, textAlign: 'center', color: '#64748b', fontSize: 13 }}>
-                          No patient matches "{patientSearch}". Try switching to "New Patient" above.
-                        </div>
-                      ) : (
-                        filteredPatients.map((pat) => (
-                          <div
-                            key={pat.id}
-                            onClick={() => {
-                              setSelectedPatient(pat);
-                              setPatientSearch('');
-                              setError('');
-                            }}
-                            role="button"
-                            tabIndex={0}
-                            style={{
-                              padding: '8px 12px',
-                              borderBottom: '1px solid var(--ui-border, #f1f5f9)',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              fontSize: 13,
-                              transition: 'background 0.15s ease',
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                          >
-                            <div>
-                              <strong style={{ color: 'var(--ui-text, #1e293b)' }}>{pat.name}</strong>
-                              <span style={{ color: '#64748b', marginLeft: 8, fontSize: 12 }}>
-                                {pat.phone || 'No phone'}
-                              </span>
-                            </div>
-                            {pat.branch_name && (
-                              <span style={{ fontSize: 11, color: '#94a3b8' }}>{pat.branch_name}</span>
-                            )}
-                          </div>
-                        ))
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {selectedPatient.branch_name && (
+                        <Badge tone="violet">{selectedPatient.branch_name}</Badge>
                       )}
+                      <button
+                        type="button"
+                        className="ui-btn ui-btn-subtle"
+                        style={{ fontSize: 11.5, height: 28, padding: '0 10px', borderRadius: 6 }}
+                        onClick={() => setSelectedPatient(null)}
+                      >
+                        Clear
+                      </button>
                     </div>
                   </div>
                 )}
@@ -578,7 +651,7 @@ export default function ScheduleAppointmentModal({
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
                   gap: 12,
                 }}
               >
@@ -640,92 +713,105 @@ export default function ScheduleAppointmentModal({
             )}
           </div>
 
-          <hr style={{ border: 'none', borderTop: '1px solid var(--ui-border, #e2e8f0)', margin: '16px 0' }} />
-
-          {/* Doctor & Date Selection */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: 14,
-              marginBottom: 16,
-            }}
-          >
-            <Field label="Select Doctor" required hint="Choose the consulting physician">
-              <select
-                className="ui-input"
-                value={selectedDoctorId}
-                onChange={(e) => {
-                  setSelectedDoctorId(e.target.value);
-                  setSelectedSlotId('');
-                }}
-                disabled={doctorsLoading || submitting}
-                required
-              >
-                {doctors.map((doc) => (
-                  <option key={doc.id} value={doc.id}>
-                    {doc.name.startsWith('Dr.') ? doc.name : `Dr. ${doc.name}`} (
-                    {doc.specialization || 'General'})
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            <Field label="Appointment Date" required hint="Select target date">
-              <input
-                type="date"
-                className="ui-input"
-                min={todayStr}
-                value={appointmentDate}
-                onChange={(e) => {
-                  setAppointmentDate(e.target.value);
-                  setSelectedSlotId('');
-                }}
-                disabled={submitting}
-                required
-              />
-            </Field>
-          </div>
-
-          {/* Doctor Details summary & Availability Status */}
-          {selectedDoctor && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '8px 12px',
-                borderRadius: 6,
-                background: 'var(--ui-surface-2, #f8fafc)',
-                border: '1px solid var(--ui-border, #e2e8f0)',
-                marginBottom: 14,
-                fontSize: 12.5,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Stethoscope size={16} className="text-primary" />
-                <span style={{ fontWeight: 600, color: 'var(--ui-text, #1e293b)' }}>
-                  {selectedDoctor.name.startsWith('Dr.') ? selectedDoctor.name : `Dr. ${selectedDoctor.name}`}
-                </span>
-                <span style={{ color: '#64748b' }}>· {selectedDoctor.specialization || 'General'}</span>
+          {/* Section 2: Doctor & Consultation Date */}
+          <div className="sched-section-card">
+            <div className="sched-section-header">
+              <div className="sched-section-badge">
+                <Stethoscope size={13} />
               </div>
-              <div>
-                <Badge tone="blue">
-                  {selectedDoctor.branch_name || selectedDoctor.hospital_name || 'Main Clinic'}
-                </Badge>
+              <div className="sched-section-tag">
+                Doctor & Date Selection
               </div>
             </div>
-          )}
 
-          {/* Doctor Availability & Slot Selector */}
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span className="ui-field-label">
-                Select Consultation Slot <em>*</em>
-              </span>
-              <span style={{ fontSize: 11.5, color: '#64748b' }}>
-                Double-booking strictly prohibited
-              </span>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gap: 14,
+              }}
+            >
+              <Field label="Select Doctor" required hint="Choose the consulting physician">
+                <SearchableSelect
+                  value={selectedDoctorId}
+                  onChange={(val) => {
+                    setSelectedDoctorId(val);
+                    setSelectedSlotId('');
+                  }}
+                  disabled={doctorsLoading || submitting}
+                  required
+                  searchable={true}
+                  placeholder="Select a doctor..."
+                  searchPlaceholder="Search doctor or specialty..."
+                  options={doctors.map((doc) => ({
+                    value: doc.id,
+                    label: doc.name.startsWith('Dr.') ? doc.name : `Dr. ${doc.name}`,
+                    sublabel: doc.specialization || 'General',
+                    badge: doc.branch_name || doc.hospital_name || undefined,
+                    badgeTone: 'violet' as const,
+                  }))}
+                />
+              </Field>
+
+              <Field label="Appointment Date" required hint="Select target date">
+                <input
+                  type="date"
+                  className="ui-input"
+                  min={todayStr}
+                  value={appointmentDate}
+                  onChange={(e) => {
+                    setAppointmentDate(e.target.value);
+                    setSelectedSlotId('');
+                  }}
+                  disabled={submitting}
+                  required
+                />
+              </Field>
+            </div>
+
+            {selectedDoctor && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '9px 14px',
+                  borderRadius: 8,
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  fontSize: 12.5,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <Stethoscope size={15} style={{ color: '#7c3aed' }} />
+                  <span style={{ fontWeight: 600, color: '#0f172a' }}>
+                    {selectedDoctor.name.startsWith('Dr.') ? selectedDoctor.name : `Dr. ${selectedDoctor.name}`}
+                  </span>
+                  <span style={{ color: '#64748b' }}>· {selectedDoctor.specialization || 'General'}</span>
+                </div>
+                <div>
+                  <Badge tone="violet">
+                    {selectedDoctor.branch_name || selectedDoctor.hospital_name || 'Main Clinic'}
+                  </Badge>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Section 3: Consultation Slots */}
+          <div className="sched-section-card">
+            <div className="sched-section-header">
+              <div className="sched-section-badge">
+                <Clock size={13} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <span className="sched-section-tag">
+                  Consultation Slots
+                </span>
+                <span style={{ fontSize: 11, color: '#64748b' }}>
+                  Double-booking strictly prohibited
+                </span>
+              </div>
             </div>
 
             {slotsLoading ? (
@@ -740,7 +826,7 @@ export default function ScheduleAppointmentModal({
                   gap: 8,
                 }}
               >
-                <Loader2 size={16} className="animate-spin text-primary" />
+                <Loader2 size={16} className="is-spinning" style={{ color: '#7c3aed' }} />
                 <span>Checking doctor availability...</span>
               </div>
             ) : slots.length === 0 ? (
@@ -748,17 +834,17 @@ export default function ScheduleAppointmentModal({
                 style={{
                   padding: 18,
                   textAlign: 'center',
-                  borderRadius: 6,
-                  background: 'var(--ui-surface-2, #f8fafc)',
-                  border: '1px dashed var(--ui-border, #cbd5e1)',
+                  borderRadius: 8,
+                  background: '#f8fafc',
+                  border: '1px dashed #cbd5e1',
                   color: '#64748b',
-                  fontSize: 13,
+                  fontSize: 12.5,
                 }}
               >
                 No consultation slots available for this doctor on {appointmentDate}. Doctor may be off duty or date is blocked.
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {morningSlots.length > 0 && (
                   <div>
                     <div
@@ -767,21 +853,21 @@ export default function ScheduleAppointmentModal({
                         alignItems: 'center',
                         gap: 5,
                         fontSize: 11.5,
-                        fontWeight: 600,
-                        color: 'var(--ui-text-2, #475569)',
-                        marginBottom: 6,
+                        fontWeight: 700,
+                        color: '#475569',
+                        marginBottom: 7,
                         textTransform: 'uppercase',
                         letterSpacing: '0.04em',
                       }}
                     >
-                      <Sun size={13} className="text-amber-500" />
+                      <Sun size={13} style={{ color: '#d97706' }} />
                       <span>Morning Slots</span>
                     </div>
                     <div
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(105px, 1fr))',
-                        gap: 6,
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
+                        gap: 7,
                       }}
                     >
                       {morningSlots.map(renderSlotButton)}
@@ -797,21 +883,21 @@ export default function ScheduleAppointmentModal({
                         alignItems: 'center',
                         gap: 5,
                         fontSize: 11.5,
-                        fontWeight: 600,
-                        color: 'var(--ui-text-2, #475569)',
-                        marginBottom: 6,
+                        fontWeight: 700,
+                        color: '#475569',
+                        marginBottom: 7,
                         textTransform: 'uppercase',
                         letterSpacing: '0.04em',
                       }}
                     >
-                      <Clock size={13} className="text-blue-500" />
+                      <Clock size={13} style={{ color: '#7c3aed' }} />
                       <span>Afternoon Slots</span>
                     </div>
                     <div
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(105px, 1fr))',
-                        gap: 6,
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
+                        gap: 7,
                       }}
                     >
                       {afternoonSlots.map(renderSlotButton)}
@@ -827,21 +913,21 @@ export default function ScheduleAppointmentModal({
                         alignItems: 'center',
                         gap: 5,
                         fontSize: 11.5,
-                        fontWeight: 600,
-                        color: 'var(--ui-text-2, #475569)',
-                        marginBottom: 6,
+                        fontWeight: 700,
+                        color: '#475569',
+                        marginBottom: 7,
                         textTransform: 'uppercase',
                         letterSpacing: '0.04em',
                       }}
                     >
-                      <Sunset size={13} className="text-purple-500" />
+                      <Sunset size={13} style={{ color: '#6d28d9' }} />
                       <span>Evening Slots</span>
                     </div>
                     <div
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(105px, 1fr))',
-                        gap: 6,
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
+                        gap: 7,
                       }}
                     >
                       {eveningSlots.map(renderSlotButton)}
@@ -852,61 +938,104 @@ export default function ScheduleAppointmentModal({
             )}
           </div>
 
-          <hr style={{ border: 'none', borderTop: '1px solid var(--ui-border, #e2e8f0)', margin: '16px 0' }} />
-
-          {/* Purpose & Notes */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Field label="Purpose of Visit" required hint="Select common reason or type custom">
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
-                {COMMON_PURPOSES.map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    className="ui-btn ui-btn-subtle"
-                    style={{
-                      fontSize: 11.5,
-                      height: 26,
-                      padding: '0 8px',
-                      background: purpose === p ? 'var(--ui-primary-subtle, #e0f2fe)' : undefined,
-                      borderColor: purpose === p ? 'var(--ui-primary, #0284c7)' : undefined,
-                      color: purpose === p ? 'var(--ui-primary, #0284c7)' : undefined,
-                    }}
-                    onClick={() => setPurpose(p)}
-                  >
-                    {p}
-                  </button>
-                ))}
+          {/* Section 4: Purpose & Notes */}
+          <div className="sched-section-card">
+            <div className="sched-section-header">
+              <div className="sched-section-badge">
+                <CalendarPlus size={13} />
               </div>
-              <input
-                type="text"
-                className="ui-input"
-                placeholder="e.g. Consultation, Blood sugar follow-up, etc."
-                value={purpose}
-                onChange={(e) => setPurpose(e.target.value)}
-                required
-              />
-            </Field>
+              <div className="sched-section-tag">
+                Purpose & Notes
+              </div>
+            </div>
 
-            <Field label="Clinical / Administrative Notes" hint="Optional notes for the doctor or records">
-              <textarea
-                className="ui-input"
-                rows={2}
-                placeholder="e.g. Patient complains of headache, referred by Branch A..."
-                value={patientNote}
-                onChange={(e) => setPatientNote(e.target.value)}
-              />
-            </Field>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Field label="Purpose of Visit" required hint="Select common reason or type custom">
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                  {COMMON_PURPOSES.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className="ui-btn"
+                      style={{
+                        fontSize: 11.5,
+                        height: 28,
+                        padding: '0 10px',
+                        borderRadius: 6,
+                        fontWeight: purpose === p ? 600 : 500,
+                        background: purpose === p ? '#f5f3ff' : '#f8fafc',
+                        border: purpose === p ? '1.5px solid #7c3aed' : '1px solid #e2e8f0',
+                        color: purpose === p ? '#6d28d9' : '#475569',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onClick={() => setPurpose(p)}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  className="ui-input"
+                  placeholder="e.g. Consultation, Blood sugar follow-up, etc."
+                  value={purpose}
+                  onChange={(e) => setPurpose(e.target.value)}
+                  required
+                />
+              </Field>
+
+              <Field label="Clinical / Administrative Notes" hint="Optional notes for the doctor or records">
+                <textarea
+                  className="ui-input"
+                  rows={2}
+                  placeholder="e.g. Patient complains of headache, referred by Branch A..."
+                  value={patientNote}
+                  onChange={(e) => setPatientNote(e.target.value)}
+                  style={{ minHeight: 56, lineHeight: 1.4, padding: '8px 12px' }}
+                />
+              </Field>
+            </div>
           </div>
         </div>
 
-        <div className="ui-modal-foot">
-          <button type="button" className="ui-btn" onClick={onClose} disabled={submitting}>
+        {/* Docked Action Footer */}
+        <div
+          className="ui-modal-foot"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: 10,
+            padding: '14px 24px',
+            borderTop: '1px solid #e2e8f0',
+            background: '#ffffff',
+            flexShrink: 0,
+          }}
+        >
+          <button
+            type="button"
+            className="ui-btn ui-btn-subtle"
+            onClick={onClose}
+            disabled={submitting}
+            style={{ height: 36, padding: '0 14px', borderRadius: 8, fontSize: 12.5 }}
+          >
             Cancel
           </button>
           <button
             type="submit"
-            className="ui-btn ui-btn-primary"
+            className="ui-btn ui-btn-primary sched-submit-btn"
             disabled={submitting || !selectedSlotId}
+            style={{
+              height: 36,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 7,
+              padding: '0 18px',
+              fontWeight: 600,
+              fontSize: 12.5,
+              borderRadius: 8,
+            }}
           >
             {submitting ? 'Scheduling...' : 'Schedule Appointment'}
           </button>

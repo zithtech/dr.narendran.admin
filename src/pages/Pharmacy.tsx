@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import { Download, FileSpreadsheet, Pill, Plus, Power } from 'lucide-react';
+import { Download, FileSpreadsheet, Pencil, Pill, Plus, Power } from 'lucide-react';
 import { useState } from 'react';
 
 import MedicineDrawer from '../components/MedicineDrawer';
@@ -241,7 +241,7 @@ export default function Pharmacy() {
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              className="ui-btn ui-btn-xs flex cursor-pointer items-center gap-1 rounded-md border border-teal-200 bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-700 transition-colors hover:bg-teal-100 dark:border-teal-800 dark:bg-teal-950/50 dark:text-teal-300 dark:hover:bg-teal-900"
+              className="ui-btn ui-btn-xs flex cursor-pointer items-center gap-1 rounded-md border border-purple-200 bg-purple-50 px-2 py-1 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-100 dark:border-purple-800 dark:bg-purple-950/50 dark:text-purple-300 dark:hover:bg-purple-900"
               onClick={(e) => {
                 e.stopPropagation();
                 setVariantMedicine(m);
@@ -250,6 +250,18 @@ export default function Pharmacy() {
               aria-label={`Add strength variant for ${m.medicine_name}`}
             >
               <Plus size={12} /> Variant
+            </button>
+            <button
+              type="button"
+              className="ui-icon-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                openEditor(m);
+              }}
+              title={`Edit ${m.medicine_name}`}
+              aria-label={`Edit ${m.medicine_name}`}
+            >
+              <Pencil size={14} />
             </button>
             <button
               type="button"

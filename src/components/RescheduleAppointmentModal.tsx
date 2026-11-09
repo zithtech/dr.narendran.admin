@@ -1,5 +1,15 @@
 import { App } from 'antd';
-import { CalendarClock, Clock, Loader2, Sun, Sunset } from 'lucide-react';
+import {
+  CalendarClock,
+  CalendarDays,
+  Clock,
+  FileText,
+  Loader2,
+  Stethoscope,
+  Sun,
+  Sunset,
+  User,
+} from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 
 import type { Appointment, AppointmentSlot, DateSlotSummary } from '../types/appointment';
@@ -32,7 +42,7 @@ export default function RescheduleAppointmentModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Fetch doctor's availability slots for the chosen date
+  // Fetch doctor availability slots for the chosen date
   const fetchDoctorSlots = useCallback(
     async (doctorId: string, date: string) => {
       setSlotsLoading(true);
@@ -66,7 +76,9 @@ export default function RescheduleAppointmentModal({
 
   useEffect(() => {
     if (isOpen && appointment) {
-      const initialDate = appointment.date ? todayStr : todayStr;
+      const initialDate = appointment.date && /^\d{4}-\d{2}-\d{2}$/.test(appointment.date)
+        ? appointment.date
+        : todayStr;
       setSelectedDate(initialDate);
       setSelectedSlotId('');
       setReason('');
@@ -112,6 +124,9 @@ export default function RescheduleAppointmentModal({
 
   if (!isOpen || !appointment) return null;
 
+  const rawToken = appointment.tokenNumber ? String(appointment.tokenNumber).trim() : '01';
+  const tokenDisplay = rawToken.startsWith('#') ? rawToken : `#${rawToken}`;
+
   // Group slots by session
   const morningSlots = slots.filter((s) => s.session === 'morning');
   const afternoonSlots = slots.filter((s) => s.session === 'afternoon');
@@ -148,42 +163,42 @@ export default function RescheduleAppointmentModal({
         }}
         title={isBooked ? 'Slot already booked (Prevent double booking)' : `Select ${timeLabel}`}
         style={{
-          padding: '8px 12px',
-          borderRadius: 6,
-          fontSize: 13,
-          fontWeight: 500,
+          padding: '8px 10px',
+          borderRadius: 8,
+          fontSize: 12.5,
+          fontWeight: 600,
           border: isSelected
-            ? '2px solid var(--ui-primary, #0284c7)'
+            ? '2px solid #7c3aed'
             : isBooked
-              ? '1px dashed var(--ui-border, #cbd5e1)'
-              : '1px solid var(--ui-border, #cbd5e1)',
+              ? '1px dashed #cbd5e1'
+              : '1px solid #e2e8f0',
           background: isSelected
-            ? 'var(--ui-primary-subtle, #e0f2fe)'
+            ? '#f5f3ff'
             : isBooked
-              ? 'var(--ui-surface-disabled, #f1f5f9)'
-              : 'var(--ui-surface, #ffffff)',
+              ? '#f8fafc'
+              : '#ffffff',
           color: isSelected
-            ? 'var(--ui-primary, #0284c7)'
+            ? '#6d28d9'
             : isBooked
-              ? 'var(--ui-text-muted, #94a3b8)'
-              : 'var(--ui-text, #1e293b)',
+              ? '#94a3b8'
+              : '#1e293b',
           cursor: isBooked ? 'not-allowed' : 'pointer',
           opacity: isBooked ? 0.6 : 1,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: 2,
-          position: 'relative',
+          transition: 'all 0.15s ease',
         }}
       >
         <span>{timeLabel}</span>
         {isBooked && (
           <span
             style={{
-              fontSize: 10,
+              fontSize: 9.5,
               textTransform: 'uppercase',
               color: '#ef4444',
-              fontWeight: 600,
+              fontWeight: 700,
             }}
           >
             Booked
@@ -197,71 +212,153 @@ export default function RescheduleAppointmentModal({
     <Modal
       open={isOpen}
       onClose={submitting ? () => undefined : onClose}
-      title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <CalendarClock size={20} className="text-primary" />
-          <span>Reschedule Appointment</span>
-        </div>
-      }
-      description={`Rescheduling appointment for ${appointment.patientName} with ${appointment.doctorName}`}
       size="md"
-    >
-      <form onSubmit={handleSubmit}>
-        <div className="ui-modal-body">
-          {error && <Alert>{error}</Alert>}
-
-          {/* Current appointment info */}
+      className="reschedule-appointment-modal"
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div
             style={{
-              padding: '12px 14px',
-              borderRadius: 8,
-              background: 'var(--ui-surface-2, #f8fafc)',
-              border: '1px solid var(--ui-border, #e2e8f0)',
-              marginBottom: 16,
-              fontSize: 13,
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
+              color: '#7c3aed',
+              border: '1px solid #c4b5fd',
               display: 'flex',
-              flexDirection: 'column',
-              gap: 4,
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              boxShadow: '0 2px 6px rgba(124, 58, 237, 0.16)',
             }}
           >
-            <div>
-              <strong style={{ color: 'var(--ui-text, #1e293b)' }}>Patient:</strong>{' '}
-              {appointment.patientName}
+            <CalendarClock size={18} style={{ display: 'block', margin: 'auto' }} />
+          </div>
+          <div>
+            <div
+              style={{
+                fontSize: 16,
+                fontWeight: 700,
+                color: '#0f172a',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Reschedule Appointment
             </div>
-            <div>
-              <strong style={{ color: 'var(--ui-text, #1e293b)' }}>Doctor:</strong>{' '}
-              {appointment.doctorName} ({appointment.doctorSpecialty || 'General'})
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
+              Select a new consultation date and available doctor time slot
             </div>
-            <div>
-              <strong style={{ color: 'var(--ui-text, #1e293b)' }}>Current Schedule:</strong>{' '}
-              <span style={{ color: '#0284c7', fontWeight: 600 }}>
-                {appointment.date} at {appointment.time} (Token {appointment.tokenNumber})
+          </div>
+        </div>
+      }
+    >
+      <form onSubmit={handleSubmit} className="ui-modal-form">
+        <div className="ui-modal-body" style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {error && <Alert>{error}</Alert>}
+
+          {/* Current Booking Summary Card */}
+          <div
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: 10,
+              padding: '12px 14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              fontSize: 12.5,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 650, color: '#0f172a' }}>
+                <User size={13.5} style={{ color: '#64748b' }} />
+                <span>{appointment.patientName}</span>
+                {appointment.patientPhone && (
+                  <span style={{ fontSize: 11.5, color: '#64748b', fontWeight: 500 }}>
+                    ({appointment.patientPhone})
+                  </span>
+                )}
+              </div>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: '#6d28d9',
+                  background: '#f5f3ff',
+                  border: '1px solid #ede9fe',
+                  padding: '1.5px 6.5px',
+                  borderRadius: 4,
+                }}
+              >
+                Token {tokenDisplay}
               </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#475569' }}>
+              <Stethoscope size={13.5} style={{ color: '#64748b' }} />
+              <span>{appointment.doctorName}</span>
+              {appointment.doctorSpecialty && (
+                <span style={{ color: '#94a3b8' }}>· {appointment.doctorSpecialty}</span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#475569' }}>
+              <Clock size={13.5} style={{ color: '#64748b' }} />
+              <span style={{ fontWeight: 600, color: '#334155' }}>Current:</span>
+              <span>{appointment.date} at {appointment.time}</span>
             </div>
           </div>
 
-          {/* New Date Picker */}
-          <Field label="Select New Date" required hint="Choose the target consultation date">
-            <input
-              type="date"
-              className="ui-input"
-              min={todayStr}
-              value={selectedDate}
-              onChange={handleDateChange}
-              disabled={submitting}
-              required
-            />
-          </Field>
+          {/* Date Picker Card */}
+          <div className="resched-section-card">
+            <div className="resched-section-header">
+              <div className="resched-section-badge">
+                <CalendarDays size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+              </div>
+              <div>
+                <div className="resched-section-title">Select New Date</div>
+                <div className="resched-section-subtitle">Choose the target consultation date for the patient</div>
+              </div>
+            </div>
 
-          {/* Time Slot Picker */}
-          <div style={{ marginTop: 16, marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span className="ui-field-label">
-                Select Available Time Slot <em>*</em>
-              </span>
-              <span style={{ fontSize: 12, color: 'var(--ui-text-muted, #64748b)' }}>
-                Double-booking protected
-              </span>
+            <Field label="Target Consultation Date" required>
+              <input
+                type="date"
+                className="ui-input"
+                min={todayStr}
+                value={selectedDate}
+                onChange={handleDateChange}
+                disabled={submitting}
+                required
+                style={{ height: 38 }}
+              />
+            </Field>
+          </div>
+
+          {/* Slot Selection Card */}
+          <div className="resched-section-card">
+            <div className="resched-section-header">
+              <div className="resched-section-badge">
+                <Clock size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: 6 }}>
+                <div>
+                  <div className="resched-section-title">Select Available Time Slot</div>
+                  <div className="resched-section-subtitle">Choose from verified open intervals</div>
+                </div>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 650,
+                    color: '#6d28d9',
+                    background: '#f5f3ff',
+                    border: '1px solid #ede9fe',
+                    padding: '2px 7px',
+                    borderRadius: 4,
+                  }}
+                >
+                  Double-booking protected
+                </span>
+              </div>
             </div>
 
             {slotsLoading ? (
@@ -269,57 +366,50 @@ export default function RescheduleAppointmentModal({
                 style={{
                   padding: 24,
                   textAlign: 'center',
-                  color: 'var(--ui-text-muted, #64748b)',
+                  color: '#64748b',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 8,
+                  fontSize: 13,
                 }}
               >
-                <Loader2 size={18} className="animate-spin text-primary" />
-                <span>Checking doctor availability...</span>
+                <Loader2 size={16} className="animate-spin" style={{ color: '#7c3aed' }} />
+                <span>Checking doctor availability slots...</span>
               </div>
             ) : slots.length === 0 ? (
               <div
                 style={{
-                  padding: 20,
+                  padding: 16,
                   textAlign: 'center',
-                  borderRadius: 6,
-                  background: 'var(--ui-surface-2, #f8fafc)',
-                  border: '1px dashed var(--ui-border, #cbd5e1)',
-                  color: 'var(--ui-text-muted, #64748b)',
-                  fontSize: 13,
+                  borderRadius: 8,
+                  background: '#f8fafc',
+                  border: '1px dashed #cbd5e1',
+                  color: '#64748b',
+                  fontSize: 12.5,
                 }}
               >
-                No consultation slots available for this doctor on this date.
+                No consultation slots available for this doctor on {selectedDate}.
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {morningSlots.length > 0 && (
                   <div>
                     <div
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: 'var(--ui-text-2, #475569)',
+                        gap: 5,
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        color: '#b45309',
                         marginBottom: 6,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
                       }}
                     >
-                      <Sun size={14} className="text-amber-500" />
+                      <Sun size={12} />
                       <span>Morning Slots</span>
                     </div>
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(105px, 1fr))',
-                        gap: 8,
-                      }}
-                    >
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(95px, 1fr))', gap: 6 }}>
                       {morningSlots.map(renderSlotButton)}
                     </div>
                   </div>
@@ -331,25 +421,17 @@ export default function RescheduleAppointmentModal({
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: 'var(--ui-text-2, #475569)',
+                        gap: 5,
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        color: '#c2410c',
                         marginBottom: 6,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
                       }}
                     >
-                      <Clock size={14} className="text-blue-500" />
+                      <Sun size={12} />
                       <span>Afternoon Slots</span>
                     </div>
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(105px, 1fr))',
-                        gap: 8,
-                      }}
-                    >
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(95px, 1fr))', gap: 6 }}>
                       {afternoonSlots.map(renderSlotButton)}
                     </div>
                   </div>
@@ -361,25 +443,17 @@ export default function RescheduleAppointmentModal({
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: 'var(--ui-text-2, #475569)',
+                        gap: 5,
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        color: '#4338ca',
                         marginBottom: 6,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
                       }}
                     >
-                      <Sunset size={14} className="text-purple-500" />
+                      <Sunset size={12} />
                       <span>Evening Slots</span>
                     </div>
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(105px, 1fr))',
-                        gap: 8,
-                      }}
-                    >
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(95px, 1fr))', gap: 6 }}>
                       {eveningSlots.map(renderSlotButton)}
                     </div>
                   </div>
@@ -388,32 +462,127 @@ export default function RescheduleAppointmentModal({
             )}
           </div>
 
-          {/* Reschedule Reason */}
-          <Field label="Reschedule Reason" hint="Optional explanation for the patient and audit log">
-            <textarea
-              className="ui-input"
-              rows={2}
-              placeholder="e.g. Doctor schedule changed, patient requested adjustment..."
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              disabled={submitting}
-            />
-          </Field>
+          {/* Reschedule Reason Card */}
+          <div className="resched-section-card">
+            <div className="resched-section-header">
+              <div className="resched-section-badge">
+                <FileText size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+              </div>
+              <div>
+                <div className="resched-section-title">Reason for Reschedule</div>
+                <div className="resched-section-subtitle">Optional record for patient notes and audit history</div>
+              </div>
+            </div>
+
+            <Field label="Reschedule Reason">
+              <textarea
+                className="ui-input"
+                rows={2}
+                placeholder="e.g. Doctor schedule changed, patient requested adjustment..."
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                disabled={submitting}
+                style={{ resize: 'vertical' }}
+              />
+            </Field>
+          </div>
         </div>
 
-        <div className="ui-modal-foot">
-          <button type="button" className="ui-btn" onClick={onClose} disabled={submitting}>
+        <div
+          className="ui-modal-foot"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: 10,
+            padding: '12px 22px',
+            borderTop: '1px solid #e2e8f0',
+            background: '#ffffff',
+          }}
+        >
+          <button
+            type="button"
+            className="ui-btn ui-btn-neutral"
+            onClick={onClose}
+            disabled={submitting}
+            style={{ fontSize: 13 }}
+          >
             Cancel
           </button>
           <button
             type="submit"
             className="ui-btn ui-btn-primary"
             disabled={submitting || !selectedSlotId}
+            style={{
+              fontSize: 13,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '0 18px',
+              height: 36,
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+              color: '#ffffff',
+              border: 'none',
+              boxShadow: '0 2px 6px rgba(124, 58, 237, 0.25)',
+              cursor: submitting || !selectedSlotId ? 'not-allowed' : 'pointer',
+            }}
           >
-            {submitting ? 'Rescheduling...' : 'Confirm Reschedule'}
+            {submitting ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                <span>Rescheduling...</span>
+              </>
+            ) : (
+              <span>Confirm Reschedule</span>
+            )}
           </button>
         </div>
       </form>
+
+      <style>{`
+        .reschedule-appointment-modal {
+          max-width: 600px !important;
+        }
+        .resched-section-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 12px 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .resched-section-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding-bottom: 6px;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        .resched-section-badge {
+          width: 26px;
+          height: 26px;
+          border-radius: 6px;
+          background: #f5f3ff;
+          border: 1px solid #ede9fe;
+          display: flex;
+          align-items: center;
+          justifyContent: center;
+          flex-shrink: 0;
+          margin: 0;
+        }
+        .resched-section-title {
+          font-size: 12.5px;
+          font-weight: 700;
+          color: #0f172a;
+          letter-spacing: -0.01em;
+        }
+        .resched-section-subtitle {
+          font-size: 11px;
+          color: #64748b;
+        }
+      `}</style>
     </Modal>
   );
 }

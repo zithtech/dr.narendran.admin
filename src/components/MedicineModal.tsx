@@ -1,6 +1,18 @@
- 
-import { AlertCircle, Info, Loader2, Sparkles, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import {
+  AlertCircle,
+  Check,
+  FileText,
+  FlaskConical,
+  IndianRupee,
+  Info,
+  Loader2,
+  Pill,
+  ShieldCheck,
+  Sparkles,
+  Tag,
+  X,
+} from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { searchMedicinesWithAi } from '../services/aiMedicineService';
 import type {
@@ -13,8 +25,8 @@ import { mapAiMedicineToFormData } from '../utils/aiMedicineMapper';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
 import { calculateFinalPrice, validateDiscount } from '../utils/pricing';
-import { Field, Modal, Section, SwitchRow } from './ui/Modal';
-import { Alert } from './ui/primitives';
+import { Modal } from './ui/Modal';
+import SearchableSelect, { type SearchableSelectOption } from './ui/SearchableSelect';
 
 interface MedicineModalProps {
   isOpen: boolean;
@@ -57,6 +69,12 @@ const COMMON_CATEGORIES = [
   'ENT & Oral Care',
   'Orthopedic & Anti-inflammatory',
   'General / Other',
+];
+
+const DISCOUNT_TYPE_OPTIONS: SearchableSelectOption[] = [
+  { value: '', label: 'No Discount' },
+  { value: 'Percentage', label: 'Percentage (%)', badgeTone: 'violet' },
+  { value: 'Fixed Amount', label: 'Fixed Amount (₹)', badgeTone: 'violet' },
 ];
 
 function normalizeMasterDiscountType(raw?: string | null): DiscountType | '' {
@@ -174,6 +192,31 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showSuggestions]);
+
+  // Options memoization for SearchableSelect
+  const dosageFormOptions = useMemo<SearchableSelectOption[]>(() => {
+    const forms = [...COMMON_DOSAGE_FORMS];
+    if (dosageForm && !forms.includes(dosageForm)) {
+      forms.unshift(dosageForm);
+    }
+    return forms.map((f) => ({ value: f, label: f }));
+  }, [dosageForm]);
+
+  const strengthUnitOptions = useMemo<SearchableSelectOption[]>(() => {
+    const units = [...COMMON_STRENGTH_UNITS];
+    if (strengthUnit && !units.includes(strengthUnit)) {
+      units.unshift(strengthUnit);
+    }
+    return units.map((u) => ({ value: u, label: u }));
+  }, [strengthUnit]);
+
+  const categoryOptions = useMemo<SearchableSelectOption[]>(() => {
+    const categories = [...COMMON_CATEGORIES];
+    if (therapeuticCategory && !categories.includes(therapeuticCategory)) {
+      categories.unshift(therapeuticCategory);
+    }
+    return categories.map((c) => ({ value: c, label: c }));
+  }, [therapeuticCategory]);
 
   // Recalculate final price when MRP, discount type, or discount value change
   const handleMrpOrDiscountChange = (
@@ -324,14 +367,47 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
   return (
     <Modal
       open={isOpen}
-      onClose={onClose}
+      onClose={loading ? () => undefined : onClose}
       variant="drawer"
-      size="xl"
-      title={medicine ? 'Edit Medicine' : 'Add New Medicine'}
-      description={
-        medicine
-          ? `Editing master record for ${medicine.medicine_name}`
-          : 'Add a new medicine record to the clinical database.'
+      size="lg"
+      className="medicine-drawer-modal"
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
+              color: '#7c3aed',
+              border: '1px solid #c4b5fd',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              boxShadow: '0 2px 6px rgba(124, 58, 237, 0.16)',
+            }}
+          >
+            <Pill size={19} style={{ display: 'block', margin: 'auto' }} />
+          </div>
+          <div>
+            <div
+              style={{
+                fontSize: 16.5,
+                fontWeight: 700,
+                color: 'var(--ui-text, #0f172a)',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              {medicine ? 'Edit Medicine' : 'Create New Medicine'}
+            </div>
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
+              {medicine
+                ? `Editing master record for ${medicine.medicine_name}${medicine.medicine_code ? ` · ${medicine.medicine_code}` : ''}`
+                : 'Add a new medicine record to the clinical database'}
+            </div>
+          </div>
+        </div>
       }
     >
       <form
@@ -339,441 +415,789 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
           void handleSubmit(e);
         }}
         className="ui-modal-form"
+        style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
       >
+        <style>{`
+          .medicine-drawer-modal {
+            width: min(740px, 100vw) !important;
+            max-width: 740px !important;
+            background: #ffffff;
+            box-shadow: -12px 0 36px rgba(15, 23, 42, 0.14) !important;
+          }
+          .medicine-drawer-modal .ui-modal-head {
+            padding: 18px 24px;
+            background: linear-gradient(180deg, #faf5ff 0%, #ffffff 100%);
+            border-bottom: 1px solid #f1f5f9;
+          }
+          .medicine-drawer-modal .ui-modal-body {
+            padding: 20px 24px;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            overflow-y: auto;
+          }
+          .med-section-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            transition: border-color 0.15s ease;
+          }
+          .med-section-card:hover {
+            border-color: #cbd5e1;
+          }
+          .med-section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f1f5f9;
+          }
+          .med-section-badge {
+            width: 26px;
+            height: 26px;
+            border-radius: 7px;
+            background: #f5f3ff;
+            color: #7c3aed;
+            border: 1px solid #ede9fe;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+          .med-section-badge svg {
+            display: block;
+            margin: auto;
+          }
+          .med-section-tag {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            color: #475569;
+            text-transform: uppercase;
+          }
+          .med-section-subtitle {
+            font-size: 12px;
+            color: #64748b;
+            margin-left: auto;
+          }
+          .medicine-drawer-modal .ui-input,
+          .medicine-drawer-modal .ui-textarea {
+            height: 38px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            font-size: 13px;
+            padding: 0 12px;
+            transition: all 0.15s ease;
+          }
+          .medicine-drawer-modal .ui-textarea {
+            height: auto;
+            padding: 8px 12px;
+          }
+          .medicine-drawer-modal .ui-input:focus,
+          .medicine-drawer-modal .ui-textarea:focus {
+            border-color: #7c3aed !important;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12) !important;
+            outline: none;
+          }
+          .med-status-btn {
+            flex: 1;
+            padding: 12px 14px;
+            border-radius: 9px;
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            transition: all 0.15s ease;
+            position: relative;
+          }
+          .med-status-btn.is-active {
+            border: 1.5px solid #7c3aed !important;
+            background: #f5f3ff !important;
+            box-shadow: 0 2px 6px rgba(124, 58, 237, 0.12);
+          }
+          .med-status-btn:not(.is-active) {
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+          }
+          .med-status-btn:not(.is-active):hover {
+            border-color: #cbd5e1;
+            background: #fafafa;
+          }
+          .med-radio-circle {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid #cbd5e1;
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.15s ease;
+          }
+          .med-status-btn.is-active .med-radio-circle {
+            border-color: #7c3aed;
+            background: #7c3aed;
+          }
+          .med-radio-inner {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #ffffff;
+          }
+          .medicine-drawer-modal .ui-modal-foot {
+            padding: 14px 24px;
+            background: #ffffff;
+            border-top: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+          }
+        `}</style>
+
         <div className="ui-modal-body">
-          {error && <Alert>{error}</Alert>}
+          {error && (
+            <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+              <AlertCircle size={15} className="shrink-0 text-rose-600" />
+              <span>{error}</span>
+            </div>
+          )}
 
-          <Section title="Basic Information">
-            {/* Medicine Name with Request AI button */}
-            <div className="relative">
-              <div className="mb-1.5 flex items-center justify-between">
-                <label
-                  htmlFor="medicine-name-input"
-                  className="ui-field-label m-0 cursor-pointer text-xs font-semibold text-slate-800"
-                >
-                  Medicine Name <em className="font-bold text-rose-500">*</em>
-                </label>
-                {!medicine && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void handleRequestAi();
-                    }}
-                    disabled={aiLoading}
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-teal-200/80 bg-teal-50/90 px-2.5 py-1 text-xs font-semibold text-teal-700 shadow-2xs transition-all hover:bg-teal-100 hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
-                    title="Search and auto-fill medicine details with AI"
-                  >
-                    {aiLoading ? (
-                      <>
-                        <Loader2 size={13} className="animate-spin text-teal-600" />
-                        <span>Searching...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={13} className="text-teal-600" />
-                        <span>Research Medicine using AI</span>
-                      </>
-                    )}
-                  </button>
-                )}
+          {/* Section 1: Basic Information & AI Research */}
+          <div className="med-section-card">
+            <div className="med-section-header">
+              <div className="med-section-badge">
+                <Pill size={14} />
               </div>
-              <input
-                id="medicine-name-input"
-                className="ui-input w-full"
-                type="text"
-                value={medicineName}
-                onChange={(e) => {
-                  setMedicineName(e.target.value);
-                  setAiError('');
-                  setAiEmptyNotice(false);
-                }}
-                required
-                placeholder="e.g. Paracetamol 500mg, Augmentin 625 Duo"
-              />
-              <span className="ui-field-hint">Brand or trade name as dispensed</span>
-
-              {/* AI Validation / Error notification */}
-              {aiError && (
-                <div className="mt-1.5 flex items-center justify-between rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-800">
-                  <div className="flex items-center gap-1.5">
-                    <AlertCircle size={14} className="shrink-0 text-rose-600" />
-                    <span>{aiError}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setAiError('')}
-                    className="p-0.5 text-rose-500 hover:text-rose-800"
-                    aria-label="Dismiss error"
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              )}
-
-              {/* AI Empty result message */}
-              {aiEmptyNotice && (
-                <div className="mt-1.5 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
-                  <div className="flex items-center gap-1.5">
-                    <Info size={14} className="shrink-0 text-amber-600" />
-                    <span>No relevant medicines found. You can enter details manually.</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setAiEmptyNotice(false)}
-                    className="p-0.5 text-amber-500 hover:text-amber-800"
-                    aria-label="Dismiss notice"
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              )}
-
-              {/* AI-assisted populated notice banner */}
-              {isAiAssisted && (
-                <div className="animate-in fade-in mt-2 flex items-center justify-between rounded-lg border border-teal-200 bg-teal-50/80 p-2.5 text-xs text-teal-900">
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles size={14} className="shrink-0 text-teal-600" />
-                    <span>
-                      <strong>AI-assisted details populated</strong> &bull; please review before
-                      saving.
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsAiAssisted(false)}
-                    className="p-0.5 text-teal-600 hover:text-teal-800"
-                    title="Dismiss"
-                    aria-label="Dismiss notice"
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              )}
-
-              {/* AI Suggestions Dropdown Popover */}
-              {showSuggestions && aiSuggestions.length > 0 && (
-                <div
-                  ref={dropdownRef}
-                  className="absolute top-full right-0 left-0 z-50 mt-1.5 max-h-72 divide-y divide-slate-100 overflow-hidden overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl"
-                >
-                  <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-3 py-2 text-xs">
-                    <span className="flex items-center gap-1.5 font-bold text-slate-700">
-                      <Sparkles size={13} className="text-teal-600" />
-                      AI Medicine Suggestions ({aiSuggestions.length})
-                    </span>
-                    <span className="text-[11px] text-slate-400">
-                      Click a formulation to auto-fill
-                    </span>
-                  </div>
-                  <div className="space-y-0.5 p-1">
-                    {aiSuggestions.map((item, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => handleSelectAiSuggestion(item)}
-                        className="group flex w-full cursor-pointer flex-col gap-1 rounded-lg border border-transparent p-2.5 text-left transition-colors hover:border-teal-200 hover:bg-teal-50/70 focus:bg-teal-50/90"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-900 group-hover:text-teal-900">
-                            {item.medicineName}
-                          </span>
-                          {item.prescriptionRequired ? (
-                            <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
-                              Rx Required
-                            </span>
-                          ) : (
-                            <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
-                              OTC
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
-                          {item.genericName && (
-                            <span className="font-medium text-slate-700">{item.genericName}</span>
-                          )}
-                          {item.genericName && (item.strength ?? item.dosageForm) && (
-                            <span>&bull;</span>
-                          )}
-                          {item.strength && (
-                            <span>
-                              {item.strength} {item.strengthUnit}
-                            </span>
-                          )}
-                          {item.dosageForm && <span>&bull; {item.dosageForm}</span>}
-                          {item.manufacturer && (
-                            <span className="text-slate-400">({item.manufacturer})</span>
-                          )}
-                          {item.mrp !== null && item.mrp !== undefined && (
-                            <span className="font-semibold text-slate-600">
-                              &bull; ₹{Number(item.mrp).toFixed(2)}
-                            </span>
-                          )}
-                        </div>
-                        {item.description && (
-                          <div className="line-clamp-1 text-[10px] text-slate-500 italic">
-                            {item.description}
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <span className="med-section-tag">Basic Information</span>
+              <span className="med-section-subtitle hidden sm:inline">
+                Trade name and active chemical ingredient
+              </span>
             </div>
 
-            <div className="ui-grid-2">
-              <Field label="Generic / Chemical Name" hint="Active pharmaceutical ingredient">
+            <div className="space-y-3.5">
+              {/* Medicine Name with AI research trigger */}
+              <div className="relative">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label
+                    htmlFor="medicine-name-input"
+                    className="text-xs font-semibold text-slate-800 cursor-pointer"
+                  >
+                    Medicine Name <span className="font-bold text-rose-500">*</span>
+                  </label>
+                  {!medicine && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleRequestAi();
+                      }}
+                      disabled={aiLoading}
+                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50/90 px-2.5 py-1 text-xs font-semibold text-purple-700 shadow-2xs transition-all hover:bg-purple-100 hover:text-purple-800 hover:border-purple-300 disabled:cursor-not-allowed disabled:opacity-50"
+                      title="Search and auto-fill medicine details using AI"
+                    >
+                      {aiLoading ? (
+                        <>
+                          <Loader2 size={13} className="animate-spin text-purple-600" />
+                          <span>Searching...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={13} className="text-purple-600" />
+                          <span>Research Medicine with AI</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
                 <input
-                  className="ui-input"
+                  id="medicine-name-input"
+                  className="ui-input w-full"
+                  type="text"
+                  value={medicineName}
+                  onChange={(e) => {
+                    setMedicineName(e.target.value);
+                    setAiError('');
+                    setAiEmptyNotice(false);
+                  }}
+                  required
+                  placeholder="e.g. Paracetamol 500mg, Augmentin 625 Duo"
+                />
+                <span className="mt-1 block text-[11px] text-slate-500">
+                  Brand or commercial trade name as dispensed
+                </span>
+
+                {/* AI Error Alert */}
+                {aiError && (
+                  <div className="mt-2 flex items-center justify-between rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-800">
+                    <div className="flex items-center gap-1.5">
+                      <AlertCircle size={14} className="shrink-0 text-rose-600" />
+                      <span>{aiError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAiError('')}
+                      className="p-0.5 text-rose-500 hover:text-rose-800 cursor-pointer"
+                      aria-label="Dismiss error"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                )}
+
+                {/* AI Empty Notice */}
+                {aiEmptyNotice && (
+                  <div className="mt-2 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
+                    <div className="flex items-center gap-1.5">
+                      <Info size={14} className="shrink-0 text-amber-600" />
+                      <span>No matching medicines found. You can enter details manually below.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAiEmptyNotice(false)}
+                      className="p-0.5 text-amber-500 hover:text-amber-800 cursor-pointer"
+                      aria-label="Dismiss notice"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                )}
+
+                {/* AI-populated Notification */}
+                {isAiAssisted && (
+                  <div className="mt-2 flex items-center justify-between rounded-lg border border-purple-200 bg-purple-50/80 p-2.5 text-xs text-purple-900">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles size={14} className="shrink-0 text-purple-600" />
+                      <span>
+                        <strong>AI details populated</strong> &bull; please review formulation and pricing before saving.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsAiAssisted(false)}
+                      className="p-0.5 text-purple-600 hover:text-purple-800 cursor-pointer"
+                      title="Dismiss"
+                      aria-label="Dismiss notice"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                )}
+
+                {/* AI Suggestions Popover Dropdown */}
+                {showSuggestions && aiSuggestions.length > 0 && (
+                  <div
+                    ref={dropdownRef}
+                    className="absolute top-full right-0 left-0 z-50 mt-1.5 max-h-72 divide-y divide-slate-100 overflow-hidden overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl"
+                  >
+                    <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-3 py-2 text-xs">
+                      <span className="flex items-center gap-1.5 font-bold text-slate-700">
+                        <Sparkles size={13} className="text-purple-600" />
+                        AI Medicine Formulations ({aiSuggestions.length})
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        Click a suggestion to auto-fill
+                      </span>
+                    </div>
+                    <div className="space-y-0.5 p-1">
+                      {aiSuggestions.map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleSelectAiSuggestion(item)}
+                          className="group flex w-full cursor-pointer flex-col gap-1 rounded-lg border border-transparent p-2.5 text-left transition-colors hover:border-purple-200 hover:bg-purple-50/70 focus:bg-purple-50/90"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-900 group-hover:text-purple-900">
+                              {item.medicineName}
+                            </span>
+                            {item.prescriptionRequired ? (
+                              <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+                                Rx Required
+                              </span>
+                            ) : (
+                              <span className="rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-[10px] font-bold text-purple-800">
+                                OTC
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+                            {item.genericName && (
+                              <span className="font-medium text-slate-700">{item.genericName}</span>
+                            )}
+                            {item.genericName && (item.strength ?? item.dosageForm) && (
+                              <span>&bull;</span>
+                            )}
+                            {item.strength && (
+                              <span>
+                                {item.strength} {item.strengthUnit}
+                              </span>
+                            )}
+                            {item.dosageForm && <span>&bull; {item.dosageForm}</span>}
+                            {item.manufacturer && (
+                              <span className="text-slate-400">({item.manufacturer})</span>
+                            )}
+                            {item.mrp !== null && item.mrp !== undefined && (
+                              <span className="font-semibold text-slate-700">
+                                &bull; ₹{Number(item.mrp).toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                          {item.description && (
+                            <div className="line-clamp-1 text-[10px] text-slate-500 italic">
+                              {item.description}
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Generic Name */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  Generic / Chemical Name
+                </label>
+                <input
+                  className="ui-input w-full"
                   type="text"
                   value={genericName}
                   onChange={(e) => setGenericName(e.target.value)}
                   placeholder="e.g. Paracetamol, Amoxicillin + Clavulanic Acid"
                 />
-              </Field>
+                <span className="mt-1 block text-[11px] text-slate-500">
+                  Active pharmaceutical ingredient (API)
+                </span>
+              </div>
+            </div>
+          </div>
 
-              <Field label="Dosage Form">
-                <input
-                  className="ui-input"
-                  list="dosage-forms"
-                  value={dosageForm}
-                  onChange={(e) => setDosageForm(e.target.value)}
-                  placeholder="e.g. Tablet, Capsule, Syrup"
-                />
-                <datalist id="dosage-forms">
-                  {COMMON_DOSAGE_FORMS.map((f) => (
-                    <option key={f} value={f} />
-                  ))}
-                </datalist>
-              </Field>
+          {/* Section 2: Formulation & Dosage */}
+          <div className="med-section-card">
+            <div className="med-section-header">
+              <div className="med-section-badge">
+                <FlaskConical size={14} />
+              </div>
+              <span className="med-section-tag">Formulation & Dosage</span>
+              <span className="med-section-subtitle hidden sm:inline">
+                Form, strength value, and measurement unit
+              </span>
             </div>
 
-            <div className="ui-grid-2">
-              <Field label="Strength (Value)">
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  Dosage Form <span className="font-bold text-rose-500">*</span>
+                </label>
+                <SearchableSelect
+                  value={dosageForm}
+                  onChange={(val) => setDosageForm(val)}
+                  options={dosageFormOptions}
+                  placeholder="Select dosage form..."
+                  searchPlaceholder="Search forms (e.g. Tablet, Syrup)..."
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  Strength Value
+                </label>
                 <input
-                  className="ui-input"
+                  className="ui-input w-full"
                   type="text"
                   value={strength}
                   onChange={(e) => setStrength(e.target.value)}
-                  placeholder="e.g. 500, 10, 250"
+                  placeholder="e.g. 500, 625, 10"
                 />
-              </Field>
+              </div>
 
-              <Field label="Strength Unit">
-                <input
-                  className="ui-input"
-                  list="strength-units"
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  Strength Unit
+                </label>
+                <SearchableSelect
                   value={strengthUnit}
-                  onChange={(e) => setStrengthUnit(e.target.value)}
-                  placeholder="e.g. mg, mcg, ml, IU"
+                  onChange={(val) => setStrengthUnit(val)}
+                  options={strengthUnitOptions}
+                  placeholder="Select unit..."
+                  searchPlaceholder="Search unit (e.g. mg, ml)..."
                 />
-                <datalist id="strength-units">
-                  {COMMON_STRENGTH_UNITS.map((u) => (
-                    <option key={u} value={u} />
-                  ))}
-                </datalist>
-              </Field>
+              </div>
             </div>
-          </Section>
+          </div>
 
-          <Section title="Classification & Manufacturer">
-            <div className="ui-grid-2">
-              <Field label="Therapeutic Category">
-                <input
-                  className="ui-input"
-                  list="therapeutic-categories"
-                  value={therapeuticCategory}
-                  onChange={(e) => setTherapeuticCategory(e.target.value)}
-                  placeholder="e.g. Analgesics, Antibiotics"
-                />
-                <datalist id="therapeutic-categories">
-                  {COMMON_CATEGORIES.map((c) => (
-                    <option key={c} value={c} />
-                  ))}
-                </datalist>
-              </Field>
-
-              <Field label="Sub Category">
-                <input
-                  className="ui-input"
-                  type="text"
-                  value={subCategory}
-                  onChange={(e) => setSubCategory(e.target.value)}
-                  placeholder="e.g. Pain Relief, NSAIDs"
-                />
-              </Field>
+          {/* Section 3: Classification & Manufacturer */}
+          <div className="med-section-card">
+            <div className="med-section-header">
+              <div className="med-section-badge">
+                <Tag size={14} />
+              </div>
+              <span className="med-section-tag">Classification & Manufacturer</span>
+              <span className="med-section-subtitle hidden sm:inline">
+                Therapeutic category, pharma manufacturer, and Rx status
+              </span>
             </div>
 
-            <div className="ui-grid-2">
-              <Field label="Manufacturer / Company">
-                <input
-                  className="ui-input"
-                  type="text"
-                  value={manufacturer}
-                  onChange={(e) => setManufacturer(e.target.value)}
-                  placeholder="e.g. Cipla, Sun Pharma, Dr. Reddy's"
-                />
-              </Field>
+            <div className="space-y-3.5">
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                    Therapeutic Category
+                  </label>
+                  <SearchableSelect
+                    value={therapeuticCategory}
+                    onChange={(val) => setTherapeuticCategory(val)}
+                    options={categoryOptions}
+                    placeholder="Select category..."
+                    searchPlaceholder="Search categories..."
+                  />
+                </div>
 
-              <Field label="Medicine Code / SKU">
-                <input
-                  className="ui-input"
-                  type="text"
-                  value={medicineCode}
-                  onChange={(e) => setMedicineCode(e.target.value)}
-                  placeholder="e.g. MED-PARA-500"
-                />
-              </Field>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                    Sub Category
+                  </label>
+                  <input
+                    className="ui-input w-full"
+                    type="text"
+                    value={subCategory}
+                    onChange={(e) => setSubCategory(e.target.value)}
+                    placeholder="e.g. Pain Relief, NSAIDs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                    Manufacturer / Pharma Company
+                  </label>
+                  <input
+                    className="ui-input w-full"
+                    type="text"
+                    value={manufacturer}
+                    onChange={(e) => setManufacturer(e.target.value)}
+                    placeholder="e.g. Cipla, Sun Pharma, Dr. Reddy's"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                    Medicine Code / SKU
+                  </label>
+                  <input
+                    className="ui-input w-full"
+                    type="text"
+                    value={medicineCode}
+                    onChange={(e) => setMedicineCode(e.target.value)}
+                    placeholder="e.g. MED-PARA-500"
+                  />
+                </div>
+              </div>
+
+              {/* Prescription Requirement Switch Card */}
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
+                <div className="flex items-center gap-3">
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      background: prescriptionRequired ? '#ede9fe' : '#f1f5f9',
+                      color: prescriptionRequired ? '#7c3aed' : '#64748b',
+                      border: prescriptionRequired ? '1px solid #c4b5fd' : '1px solid #e2e8f0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <ShieldCheck size={17} style={{ display: 'block', margin: 'auto' }} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
+                      Prescription Required (Rx Schedule)
+                      <span
+                        className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          prescriptionRequired
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {prescriptionRequired ? 'Mandatory Rx' : 'OTC Allowed'}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      {prescriptionRequired
+                        ? 'Requires a registered doctor prescription before patient orders can be completed.'
+                        : 'Over-the-counter medicine. Can be dispensed without medical prescription.'}
+                    </div>
+                  </div>
+                </div>
+
+                <label className="relative inline-flex cursor-pointer items-center shrink-0 ml-3">
+                  <input
+                    type="checkbox"
+                    checked={prescriptionRequired}
+                    onChange={(e) => setPrescriptionRequired(e.target.checked)}
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-6 w-11 rounded-full bg-slate-200 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-slate-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-purple-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none" />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Master Pricing Defaults */}
+          <div className="med-section-card">
+            <div className="med-section-header">
+              <div className="med-section-badge">
+                <IndianRupee size={14} />
+              </div>
+              <span className="med-section-tag">
+                {medicine ? 'Master Pricing Defaults' : 'Initial Variant Formulation & Pricing'}
+              </span>
+              <span className="med-section-subtitle hidden sm:inline">
+                MRP, standard discounts, and effective selling price
+              </span>
             </div>
 
-            <SwitchRow
-              checked={prescriptionRequired}
-              onChange={setPrescriptionRequired}
-              title="Prescription Required (Rx)"
-              description="Requires a valid doctor's prescription for patient orders."
-            />
-          </Section>
+            <div className="space-y-3.5">
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                    MRP (₹) <span className="text-[11px] font-normal text-slate-500">(Max Retail Price)</span>
+                  </label>
+                  <input
+                    className="ui-input w-full font-medium"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={mrp}
+                    onChange={(e) => {
+                      setMrp(e.target.value);
+                      handleMrpOrDiscountChange(e.target.value, discountType, discountValue);
+                    }}
+                    placeholder="0.00"
+                  />
+                </div>
 
-          <Section
-            title={
-              medicine
-                ? 'Master Pricing & Barcode Defaults'
-                : 'Initial Variant Formulation & Pricing'
-            }
-          >
-            {medicine ? (
-              <p className="mb-3 text-xs text-slate-500">
-                These serve as fallback master defaults. To manage individual strength variants,
-                packaging, and real-time inventory, use the Variants actions or Medicine Inventory.
-              </p>
-            ) : (
-              <p className="mb-3 text-xs text-slate-500">
-                Configure the initial baseline variant for this new medicine. Additional strength
-                variants can be added at any time.
-              </p>
-            )}
-            <div className="ui-grid-2">
-              <Field label="MRP (₹)" hint="Maximum Retail Price">
-                <input
-                  className="ui-input"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={mrp}
-                  onChange={(e) => {
-                    setMrp(e.target.value);
-                    handleMrpOrDiscountChange(e.target.value, discountType, discountValue);
-                  }}
-                  placeholder="0.00"
-                />
-              </Field>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                    Barcode / EAN
+                  </label>
+                  <input
+                    className="ui-input w-full"
+                    type="text"
+                    value={barcode}
+                    onChange={(e) => setBarcode(e.target.value)}
+                    placeholder="e.g. 8901234567890"
+                  />
+                </div>
+              </div>
 
-              <Field label="Barcode / EAN">
-                <input
-                  className="ui-input"
-                  type="text"
-                  value={barcode}
-                  onChange={(e) => setBarcode(e.target.value)}
-                  placeholder="e.g. 8901234567890"
-                />
-              </Field>
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                    Discount Type
+                  </label>
+                  <SearchableSelect
+                    value={discountType}
+                    onChange={(val) => {
+                      const newType = val as DiscountType | '';
+                      setDiscountType(newType);
+                      handleMrpOrDiscountChange(mrp, newType, discountValue);
+                    }}
+                    options={DISCOUNT_TYPE_OPTIONS}
+                    placeholder="Select discount..."
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                    Discount Value
+                  </label>
+                  <input
+                    className="ui-input w-full"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={discountValue}
+                    onChange={(e) => {
+                      setDiscountValue(e.target.value);
+                      handleMrpOrDiscountChange(mrp, discountType, e.target.value);
+                    }}
+                    disabled={!discountType}
+                    placeholder={discountType === 'Percentage' ? 'e.g. 10' : 'e.g. 5.00'}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                    Final Price (₹) <span className="text-[11px] font-normal text-slate-500">(Effective rate)</span>
+                  </label>
+                  <input
+                    className="ui-input w-full font-bold text-emerald-700"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={finalPrice}
+                    onChange={(e) => setFinalPrice(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 5: Clinical Instructions & Master Status */}
+          <div className="med-section-card">
+            <div className="med-section-header">
+              <div className="med-section-badge">
+                <FileText size={14} />
+              </div>
+              <span className="med-section-tag">Prescription Instructions & Status</span>
+              <span className="med-section-subtitle hidden sm:inline">
+                Default schedules and catalog availability
+              </span>
             </div>
 
-            <div className="ui-grid-3">
-              <Field label="Discount Type">
-                <select
-                  className="ui-select"
-                  value={discountType}
-                  onChange={(e) => {
-                    const newType = e.target.value as DiscountType | '';
-                    setDiscountType(newType);
-                    handleMrpOrDiscountChange(mrp, newType, discountValue);
-                  }}
-                >
-                  <option value="">No Discount</option>
-                  <option value="Percentage">Percentage (%)</option>
-                  <option value="Fixed Amount">Fixed Amount (₹)</option>
-                </select>
-              </Field>
+            <div className="space-y-3.5">
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                    Default Frequency
+                  </label>
+                  <input
+                    className="ui-input w-full"
+                    type="text"
+                    value={frequency}
+                    onChange={(e) => setFrequency(e.target.value)}
+                    placeholder="e.g. 1-0-1, 1-1-1, Once daily"
+                  />
+                  <span className="mt-1 block text-[11px] text-slate-500">
+                    Suggested dosage schedule for prescription orders
+                  </span>
+                </div>
 
-              <Field label="Discount Value">
-                <input
-                  className="ui-input"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={discountValue}
-                  onChange={(e) => {
-                    setDiscountValue(e.target.value);
-                    handleMrpOrDiscountChange(mrp, discountType, e.target.value);
-                  }}
-                  disabled={!discountType}
-                  placeholder={discountType === 'Percentage' ? 'e.g. 10' : 'e.g. 5.00'}
-                />
-              </Field>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                    Default Duration
+                  </label>
+                  <input
+                    className="ui-input w-full"
+                    type="text"
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
+                    placeholder="e.g. 5 days, 14 days, 1 month"
+                  />
+                  <span className="mt-1 block text-[11px] text-slate-500">
+                    Suggested treatment length
+                  </span>
+                </div>
+              </div>
 
-              <Field label="Final Price (₹)" hint="Effective selling price">
-                <input
-                  className="ui-input"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={finalPrice}
-                  onChange={(e) => setFinalPrice(e.target.value)}
-                  placeholder="0.00"
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  Clinical Description & Usage Notes
+                </label>
+                <textarea
+                  className="ui-textarea w-full"
+                  rows={2}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="e.g. Take after meals with a glass of water. Store in a cool dry place away from sunlight."
                 />
-              </Field>
+              </div>
+
+              {/* Master Status Selection Cards */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  Master Catalog Status <span className="font-bold text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    className={`med-status-btn ${status === 'Active' ? 'is-active' : ''}`}
+                    onClick={() => setStatus('Active')}
+                  >
+                    <div className="med-radio-circle">
+                      {status === 'Active' && <div className="med-radio-inner" />}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        Active in Catalog
+                        <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">
+                          Live
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        Available for prescription selection, stock tracking, and pharmacy sales.
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`med-status-btn ${status === 'Inactive' ? 'is-active' : ''}`}
+                    onClick={() => setStatus('Inactive')}
+                  >
+                    <div className="med-radio-circle">
+                      {status === 'Inactive' && <div className="med-radio-inner" />}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        Inactive / Suspended
+                        <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                          Disabled
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        Temporarily hidden from prescribing doctors and new order creation.
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
             </div>
-          </Section>
-
-          <Section title="Prescription Defaults & Instructions">
-            <div className="ui-grid-2">
-              <Field label="Default Frequency" hint="Suggested dosage schedule">
-                <input
-                  className="ui-input"
-                  type="text"
-                  value={frequency}
-                  onChange={(e) => setFrequency(e.target.value)}
-                  placeholder="e.g. 1-0-1, 1-1-1, Once daily"
-                />
-              </Field>
-
-              <Field label="Default Duration" hint="Suggested treatment length">
-                <input
-                  className="ui-input"
-                  type="text"
-                  value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
-                  placeholder="e.g. 5 days, 14 days, 1 month"
-                />
-              </Field>
-            </div>
-
-            <Field label="Description & Usage Notes">
-              <textarea
-                className="ui-textarea"
-                rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. Take after meals with a glass of water. Store in a cool dry place."
-              />
-            </Field>
-
-            <SwitchRow
-              checked={status === 'Active'}
-              onChange={(active) => setStatus(active ? 'Active' : 'Inactive')}
-              title="Active in Clinical Master"
-              description="Make this medicine available for prescription selection and pharmacy order flows."
-            />
-          </Section>
+          </div>
         </div>
 
+        {/* Docked Drawer Footer */}
         <div className="ui-modal-foot">
-          <button type="button" onClick={onClose} className="ui-btn" disabled={loading}>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={loading}
+          >
             Cancel
           </button>
-          <button type="submit" disabled={loading} className="ui-btn ui-btn-primary">
-            {loading ? 'Saving...' : medicine ? 'Save Changes' : 'Create Medicine'}
+          <button
+            type="submit"
+            disabled={loading}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-purple-600 bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-2 text-xs font-semibold text-white shadow-sm hover:from-purple-700 hover:to-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? (
+              <>
+                <Loader2 size={13} className="animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Check size={14} />
+                <span>{medicine ? 'Save Changes' : 'Create Medicine'}</span>
+              </>
+            )}
           </button>
         </div>
       </form>

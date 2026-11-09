@@ -110,7 +110,7 @@ export default function LinkedMedicals() {
         facets={FACETS}
         dateOf={(m) => m.created_at}
         columns={columns}
-        createLabel="New linked medical"
+        createLabel="Add Linked Medical"
         onCreate={() => openEditor(null)}
         onEdit={openEditor}
         onDelete={deleteMedical}

@@ -1,7 +1,6 @@
 import {
   Boxes,
   Building2,
-  CalendarClock,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -30,7 +29,6 @@ const NAV_ITEMS = [
   { name: 'Doctors', path: '/doctors', icon: Stethoscope, slug: 'DOCTORS' },
   { name: 'Patients', path: '/patients', icon: HeartPulse, slug: 'PATIENTS' },
   { name: 'Appointments', path: '/appointments', icon: CalendarDays, slug: 'DOCTORS' },
-  { name: 'Doctors Today', path: '/appointments/today', icon: CalendarClock, slug: 'DOCTORS' },
   { name: 'Pharmacy', path: '/pharmacy', icon: Pill, slug: 'PRESCRIPTIONS' },
   { name: 'Medicine Inventory', path: '/inventory', icon: Boxes, slug: 'PRESCRIPTIONS' },
   { name: 'Linked Labs', path: '/labs', icon: FlaskConical, slug: 'LABS' },

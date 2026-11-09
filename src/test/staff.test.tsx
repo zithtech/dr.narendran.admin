@@ -32,6 +32,7 @@ const mockStaffMembers: StaffMember[] = [
     branchId: 'branch-1',
     branchName: 'Main Campus',
     shiftTiming: 'Morning',
+    workDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
     joiningDate: '2025-01-15',
     status: 'ACTIVE',
     notes: 'Head of Pediatric ICU',
@@ -64,6 +65,7 @@ const mockStaffMembers: StaffMember[] = [
     branchName: 'North Wing',
     shiftTiming: 'Night',
     customShiftDetails: '22:00 - 06:00',
+    workDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     joiningDate: '2025-03-01',
     status: 'INACTIVE',
     documents: [],
@@ -427,9 +429,16 @@ describe('Staff Management Feature', () => {
     const customShiftCard = screen.getByRole('button', { name: /Custom Shift/i });
     fireEvent.click(customShiftCard);
 
-    // Input should appear
+    // Input should appear and be readOnly (not typeable)
     const shiftDetailsInput = screen.getByPlaceholderText(/e\.g\. 06:00 AM - 02:00 PM/i) as HTMLInputElement;
     expect(shiftDetailsInput).toBeInTheDocument();
+    expect(shiftDetailsInput.readOnly).toBe(true);
+
+    // Verify Ant Design Time Modal trigger is available and opens the modal
+    const openTimeModalBtn = screen.getByRole('button', { name: /Choose in Time Modal/i });
+    expect(openTimeModalBtn).toBeInTheDocument();
+    fireEvent.click(openTimeModalBtn);
+    expect(screen.getByText(/Choose Custom Shift Timing/i)).toBeInTheDocument();
 
     // Verify sanitization of invalid characters in Custom Shift Details
     fireEvent.change(shiftDetailsInput, { target: { value: '06:00 AM - 02:00 PM !@#$%' } });
@@ -451,5 +460,78 @@ describe('Staff Management Feature', () => {
     fireEvent.change(docTitleInput, { target: { value: '12345' } });
     fireEvent.blur(docTitleInput);
     expect(screen.getByText(/Document title must contain at least one letter/i)).toBeInTheDocument();
+  });
+
+  it('allows selecting work days and presets in StaffModal and submits workDays in payload', async () => {
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url.includes('hospitals')) return Promise.resolve({ data: mockHospitals });
+      if (url.includes('branches')) return Promise.resolve({ data: mockBranches });
+      return Promise.resolve({ data: [] });
+    });
+    vi.mocked(api.post).mockResolvedValue({ data: { data: { id: 'new-staff-3' } } });
+
+    const handleClose = vi.fn();
+    const handleSave = vi.fn();
+
+    renderWithProviders(
+      <StaffModal
+        isOpen={true}
+        staff={null}
+        onClose={handleClose}
+        onSave={handleSave}
+      />
+    );
+
+    // Verify Work Days header and default presets exist
+    expect(screen.getByText('Work Days')).toBeInTheDocument();
+    expect(screen.getByText('Mon - Fri')).toBeInTheDocument();
+    expect(screen.getByText('Mon - Sat')).toBeInTheDocument();
+    expect(screen.getByText('All 7 Days')).toBeInTheDocument();
+    expect(screen.getByText('Weekend')).toBeInTheDocument();
+
+    // Fill minimum required fields
+    fireEvent.change(screen.getByPlaceholderText(/e\.g\. Sister Mary Joseph/i), {
+      target: { value: 'Karthik Raja' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/e\.g\. \+91 98765 43210/i), {
+      target: { value: '+91 9876543211' },
+    });
+
+    // Click "Mon - Sat" preset
+    fireEvent.click(screen.getByText('Mon - Sat'));
+
+    // Submit form
+    const submitBtn = screen.getByText('Register Staff');
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('staff', expect.objectContaining({
+        name: 'Karthik Raja',
+        phone: '+91 9876543211',
+        workDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      }));
+      expect(handleSave).toHaveBeenCalled();
+      expect(handleClose).toHaveBeenCalled();
+    });
+  });
+
+  it('renders work days in StaffDrawer details view', async () => {
+    const handleClose = vi.fn();
+    const handleEdit = vi.fn();
+    const handleStatusChange = vi.fn();
+    const handleRefresh = vi.fn();
+
+    renderWithProviders(
+      <StaffDrawer
+        staff={mockStaffMembers[0]!}
+        onClose={handleClose}
+        onEdit={handleEdit}
+        onStatusChange={handleStatusChange}
+        onRefresh={handleRefresh}
+      />
+    );
+
+    expect(screen.getByText('Work Days')).toBeInTheDocument();
+    expect(screen.getByText('Mon - Fri (Weekdays)')).toBeInTheDocument();
   });
 });

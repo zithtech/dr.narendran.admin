@@ -11,6 +11,7 @@ interface ModalProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   /** 'drawer' slides in from the right at full height instead of centering. */
   variant?: 'dialog' | 'drawer';
+  className?: string;
   children: ReactNode;
 }
 
@@ -26,6 +27,7 @@ export function Modal({
   description,
   size = 'md',
   variant = 'dialog',
+  className,
   children,
 }: ModalProps) {
   const titleId = useId();
@@ -51,7 +53,7 @@ export function Modal({
       }}
     >
       <div
-        className={cx('ui-modal', `is-${size}`, variant === 'drawer' && 'is-drawer')}
+        className={cx('ui-modal', `is-${size}`, variant === 'drawer' && 'is-drawer', className)}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

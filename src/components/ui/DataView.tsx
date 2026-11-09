@@ -25,6 +25,7 @@ import { timeAgo } from '../../lib/format';
 import { getErrorMessage } from '../../utils/errors';
 import { ConfirmDialog } from './Modal';
 import { Alert, Avatar, cx } from './primitives';
+import { SearchableSelect } from './SearchableSelect';
 
 /** A dimension the list can be sliced by: shown in the left panel and the filter bar. */
 export interface Facet<T> {
@@ -67,7 +68,7 @@ interface DataViewProps<T extends { id: string }> {
   columns: Column<T>[];
   createLabel: string;
   onCreate: () => void;
-  onEdit: (item: T) => void;
+  onEdit?: (item: T) => void;
   onDelete?: (item: T) => Promise<unknown>;
   nameOf: (item: T) => string;
   deleteWarning?: string;
@@ -442,41 +443,48 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
           {filterbarOpen && (
             <div className="ui-card ui-filterbar">
               {facetOptions.map(({ facet, options }) => (
-                <select
+                <SearchableSelect
                   key={facet.id}
-                  className={cx('ui-select', filters[facet.id] && 'is-set')}
+                  variant="pill"
+                  size="sm"
+                  width="auto"
+                  aria-label={facet.label}
                   value={filters[facet.id] ?? ''}
-                  onChange={(e) => {
-                    setFilters((prev) => ({ ...prev, [facet.id]: e.target.value }));
+                  onChange={(val) => {
+                    setFilters((prev) => ({ ...prev, [facet.id]: val }));
                     setPage(1);
                   }}
-                  aria-label={facet.label}
-                >
-                  <option value="">{facet.allLabel}</option>
-                  {options.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                  placeholder={facet.allLabel}
+                  searchPlaceholder={`Filter ${facet.label.toLowerCase()}...`}
+                  options={[
+                    { value: '', label: facet.allLabel },
+                    ...options.map((o) => ({
+                      value: o.value,
+                      label: o.label,
+                    })),
+                  ]}
+                />
               ))}
               {dateOf && (
                 <>
-                  <select
-                    className={cx('ui-select', preset !== 'any' && 'is-set')}
+                  <SearchableSelect
+                    variant="pill"
+                    size="sm"
+                    width="auto"
+                    aria-label="Time range"
                     value={preset}
-                    onChange={(e) => {
-                      setPreset(e.target.value as TimePreset);
+                    onChange={(val) => {
+                      setPreset(val as TimePreset);
                       setPage(1);
                     }}
-                    aria-label="Time range"
-                  >
-                    {TIME_PRESETS.map((p) => (
-                      <option key={p.value} value={p.value}>
-                        {p.value === 'any' ? p.label : `${dateLabel} · ${p.label.toLowerCase()}`}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Time range"
+                    searchPlaceholder="Filter time presets..."
+                    searchable={false}
+                    options={TIME_PRESETS.map((p) => ({
+                      value: p.value,
+                      label: p.value === 'any' ? p.label : `${dateLabel} · ${p.label.toLowerCase()}`,
+                    }))}
+                  />
                   <div className="ui-daterange">
                     <span>{dateLabel}</span>
                     <input
@@ -657,16 +665,18 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                           <td className="ui-col-actions">
                             <div className="ui-row-actions">
                               {rowActions?.(item)}
-                              <button
-                                type="button"
-                                className="ui-icon-btn"
-                                onClick={() => onEdit(item)}
-                                aria-label={`Edit ${nameOf(item)}`}
-                                title="Edit"
-                              >
-                                <Pencil size={15} />
-                              </button>
-                              {onDelete && (
+                              {!rowActions && onEdit && (
+                                <button
+                                  type="button"
+                                  className="ui-icon-btn"
+                                  onClick={() => onEdit(item)}
+                                  aria-label={`Edit ${nameOf(item)}`}
+                                  title="Edit"
+                                >
+                                  <Pencil size={15} />
+                                </button>
+                              )}
+                              {!rowActions && onDelete && (
                                 <button
                                   type="button"
                                   className="ui-icon-btn is-danger"
@@ -687,25 +697,44 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
               </table>
             </div>
 
-            {onDelete && selectedItems.length > 0 && (
+            {selectedItems.length > 0 && (
               <div className="ui-bulkbar" role="toolbar" aria-label="Bulk actions">
-                <span>
-                  <strong>{selectedItems.length}</strong> selected
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <span
+                    style={{
+                      background: 'var(--ui-primary, #7c3aed)',
+                      color: '#ffffff',
+                      borderRadius: '50%',
+                      width: 20,
+                      height: 20,
+                      display: 'inline-grid',
+                      placeItems: 'center',
+                      fontSize: 11,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {selectedItems.length}
+                  </span>
+                  <span>
+                    <strong>{selectedItems.length}</strong> {selectedItems.length === 1 ? noun : nounPlural} selected
+                  </span>
                 </span>
                 <button
                   type="button"
                   className="ui-btn ui-btn-sm"
                   onClick={() => setSelected(new Set())}
                 >
-                  Clear
+                  Clear selection
                 </button>
-                <button
-                  type="button"
-                  className="ui-btn ui-btn-sm is-danger"
-                  onClick={() => setPendingDelete(selectedItems)}
-                >
-                  <Trash2 size={13} /> Delete
-                </button>
+                {onDelete && (
+                  <button
+                    type="button"
+                    className="ui-btn ui-btn-sm is-danger"
+                    onClick={() => setPendingDelete(selectedItems)}
+                  >
+                    <Trash2 size={13} /> Delete
+                  </button>
+                )}
               </div>
             )}
           </div>

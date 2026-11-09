@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AppointmentDrawer from '../components/AppointmentDrawer';
 import CancelAppointmentModal from '../components/CancelAppointmentModal';
+import EditAppointmentModal from '../components/EditAppointmentModal';
 import RescheduleAppointmentModal from '../components/RescheduleAppointmentModal';
 import ScheduleAppointmentModal from '../components/ScheduleAppointmentModal';
 import Appointments from '../pages/Appointments';
@@ -196,6 +197,29 @@ describe('Appointments Feature', () => {
       expect(screen.getAllByText('Dr. Narendran').length).toBeGreaterThan(0);
       expect(screen.getByText('Schedule Appointment')).toBeInTheDocument();
     });
+
+    // Check that 3-dot action buttons are rendered for rows
+    const actionButtons = screen.getAllByRole('button', { name: /Actions for/i });
+    expect(actionButtons.length).toBe(2);
+
+    // Clicking the 3-dot button opens the actions menu with Edit, View Details, Reschedule, Cancel
+    fireEvent.click(actionButtons[0]!);
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeInTheDocument();
+      expect(screen.getByText('View Details')).toBeInTheDocument();
+      expect(screen.getByText('Reschedule')).toBeInTheDocument();
+      expect(screen.getByText('Cancel Appointment')).toBeInTheDocument();
+    });
+
+    // Check that clicking a row checkbox displays the floating bulk action bar
+    const rowCheckbox = screen.getByLabelText(/Select Jane Smith/i);
+    fireEvent.click(rowCheckbox);
+    expect(screen.getByText('Clear selection')).toBeInTheDocument();
+    expect(screen.getByText(/appointment selected/i)).toBeInTheDocument();
+
+    // Clicking clear deselects
+    fireEvent.click(screen.getByText('Clear selection'));
+    expect(screen.queryByText('Clear selection')).not.toBeInTheDocument();
   });
 
   it('opens appointment details drawer when appointment is viewed', async () => {
@@ -258,6 +282,16 @@ describe('Appointments Feature', () => {
     expect(screen.getByText('Schedule New Appointment')).toBeInTheDocument();
     expect(screen.getByText('Existing Patient')).toBeInTheDocument();
     expect(screen.getByText('New Patient')).toBeInTheDocument();
+
+    // Wait for patients to load into SearchableSelect
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: /Jane Smith/i })).toBeInTheDocument();
+    });
+    const patientSelect = screen.getByLabelText(/Select Patient/i);
+    fireEvent.change(patientSelect, { target: { value: 'patient-1' } });
+    await waitFor(() => {
+      expect(screen.getAllByText('Jane Smith').length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
 
     // Click New Patient
     fireEvent.click(screen.getByText('New Patient'));
@@ -359,9 +393,9 @@ describe('Appointments Feature', () => {
     renderWithProviders(<DoctorTodayAppointments />);
 
     await waitFor(() => {
-      // Check Registered doctors are displayed
+      // Check Doctors Today Appointments view and doctor with appointment are displayed
+      expect(screen.getByText('Doctors Today Appointments')).toBeInTheDocument();
       expect(screen.getByText('Dr. Narendran')).toBeInTheDocument();
-      expect(screen.getByText('Dr. Sarah Johnson')).toBeInTheDocument();
     });
 
     // Check doctor-wise stats
@@ -375,7 +409,12 @@ describe('Appointments Feature', () => {
     expect(screen.getByText('#01')).toBeInTheDocument();
     expect(screen.getByText('Cardiology Checkup')).toBeInTheDocument();
 
-    // Check doctor with no appointments on that date displays message
+    // Doctor with appointments is listed. By default, doctor without appointments is filtered out.
+    // Unchecking "Only show doctors with appointments" displays doctors without appointments
+    const onlyWithApptsCheckbox = screen.getByLabelText(/Only show doctors with appointments/i);
+    fireEvent.click(onlyWithApptsCheckbox);
+
+    expect(screen.getByText('Dr. Sarah Johnson')).toBeInTheDocument();
     expect(screen.getByText(/No appointments scheduled for Dr. Sarah Johnson/i)).toBeInTheDocument();
   });
 
@@ -445,9 +484,143 @@ describe('Appointments Feature', () => {
 
     // Should now display Doctor Today Appointments view
     await waitFor(() => {
-      expect(screen.getByText('Registered Doctors')).toBeInTheDocument();
-      expect(screen.getByText('Dr. Sarah Johnson')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Doctors Today Appointments/i })).toBeInTheDocument();
+      expect(screen.getByText('Dr. Narendran')).toBeInTheDocument();
     });
+  });
+
+  it('opens edit drawer instead of view drawer when Edit action is clicked from row menu', async () => {
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url.includes('appointments')) {
+        return Promise.resolve({ data: mockAppointments });
+      }
+      if (url === 'doctors') return Promise.resolve({ data: mockDoctors });
+      return Promise.resolve({ data: [] });
+    });
+
+    renderWithProviders(<Appointments />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Jane Smith')).toBeInTheDocument();
+    });
+
+    const actionButtons = screen.getAllByRole('button', { name: /Actions for/i });
+    fireEvent.click(actionButtons[0]!);
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeInTheDocument();
+    });
+
+    // Click "Edit"
+    fireEvent.click(screen.getByText('Edit'));
+
+    // Should open the Edit Appointment drawer, NOT Appointment Details (view)
+    await waitFor(() => {
+      expect(screen.getByText('Edit Appointment')).toBeInTheDocument();
+      expect(screen.getAllByText(/Token #01/i).length).toBeGreaterThan(0);
+      expect(screen.queryByText('Appointment Details')).not.toBeInTheDocument();
+    });
+  });
+
+  it('edit drawer pre-fills existing appointment data and submits updates via api.put', async () => {
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === 'doctors') return Promise.resolve({ data: mockDoctors });
+      if (url === 'appointments/slots') {
+        return Promise.resolve({
+          data: {
+            data: {
+              summaries: [
+                {
+                  date: '2026-11-06',
+                  dayName: 'Fri',
+                  dayNumber: 6,
+                  availableCount: 1,
+                  slots: mockSlots,
+                },
+              ],
+            },
+          },
+        });
+      }
+      return Promise.resolve({ data: [] });
+    });
+
+    vi.mocked(api.put).mockResolvedValue({ data: { status: 'success' } });
+
+    const handleClose = vi.fn();
+    const handleSuccess = vi.fn();
+
+    renderWithProviders(
+      <EditAppointmentModal
+        isOpen={true}
+        appointment={mockAppointments[0]!}
+        onClose={handleClose}
+        onSuccess={handleSuccess}
+      />
+    );
+
+    expect(screen.getByText('Edit Appointment')).toBeInTheDocument();
+    expect(screen.getByText(/Doctor & Status/i)).toBeInTheDocument();
+    expect(screen.getByText(/Consultation Reason & Clinical Notes/i)).toBeInTheDocument();
+    expect(screen.getByText(/Appointment Schedule & Time Slot/i)).toBeInTheDocument();
+
+    // Verify scrollable drawer body layout
+    const modalBody = document.querySelector('.appointment-edit-drawer-modal .ui-modal-body');
+    expect(modalBody).toBeInTheDocument();
+    expect(modalBody).toHaveStyle({ overflowY: 'auto' });
+
+    // Check pre-filled patient info
+    expect(screen.getAllByText('Jane Smith').length).toBeGreaterThan(0);
+    expect(screen.getByDisplayValue('Jane Smith')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('9876543210')).toBeInTheDocument();
+
+    // Change patient note
+    const noteTextarea = screen.getByPlaceholderText(/Clinical notes, symptom duration, or patient requests/i);
+    fireEvent.change(noteTextarea, { target: { value: 'Patient reported mild headache and fatigue.' } });
+
+    // Submit changes
+    const saveButton = screen.getByRole('button', { name: /Save Changes/i });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(api.put).toHaveBeenCalledWith(
+        'appointments/appt-1',
+        expect.objectContaining({
+          doctorId: 'doctor-1',
+          purpose: 'Routine Follow-up',
+          patientNote: 'Patient reported mild headache and fatigue.',
+          status: 'scheduled',
+          patientName: 'Jane Smith',
+          patientPhone: '9876543210',
+        }),
+      );
+      expect(handleSuccess).toHaveBeenCalled();
+      expect(handleClose).toHaveBeenCalled();
+    });
+  });
+
+  it('appointment details drawer includes Edit button that allows switching to edit mode', async () => {
+    const handleClose = vi.fn();
+    const handleReschedule = vi.fn();
+    const handleCancel = vi.fn();
+    const handleEdit = vi.fn();
+
+    renderWithProviders(
+      <AppointmentDrawer
+        appointment={mockAppointments[0]!}
+        onClose={handleClose}
+        onReschedule={handleReschedule}
+        onCancel={handleCancel}
+        onEdit={handleEdit}
+      />
+    );
+
+    expect(screen.getByText('Appointment Details')).toBeInTheDocument();
+    const editBtn = screen.getByRole('button', { name: /Edit/i });
+    expect(editBtn).toBeInTheDocument();
+
+    fireEvent.click(editBtn);
+    expect(handleEdit).toHaveBeenCalledWith(mockAppointments[0]!);
   });
 });
 
