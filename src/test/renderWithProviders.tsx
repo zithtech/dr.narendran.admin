@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderOptions } from '@testing-library/react';
+import { App as AntdApp } from 'antd';
 import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 
@@ -21,7 +22,9 @@ export function renderWithProviders(ui: ReactElement, options?: Omit<RenderOptio
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter>{children}</MemoryRouter>
+        <AntdApp>
+          <MemoryRouter>{children}</MemoryRouter>
+        </AntdApp>
       </QueryClientProvider>
     );
   }

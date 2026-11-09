@@ -153,7 +153,7 @@ export default function Labs() {
         facets={FACETS}
         dateOf={(l) => l.created_at}
         columns={columns}
-        createLabel="New lab"
+        createLabel="Add Linked Lab"
         onCreate={() => openEditor(null)}
         onEdit={openEditor}
         onDelete={(l) => api.delete(`labs/${l.id}`)}

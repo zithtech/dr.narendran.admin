@@ -1,6 +1,7 @@
 import {
   Boxes,
   Building2,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   FileText,
@@ -14,6 +15,7 @@ import {
   ShoppingBag,
   Stethoscope,
   UserCog,
+  Users,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
@@ -26,6 +28,7 @@ const NAV_ITEMS = [
   { name: 'Branches', path: '/branches', icon: GitBranch, slug: 'BRANCHES' },
   { name: 'Doctors', path: '/doctors', icon: Stethoscope, slug: 'DOCTORS' },
   { name: 'Patients', path: '/patients', icon: HeartPulse, slug: 'PATIENTS' },
+  { name: 'Appointments', path: '/appointments', icon: CalendarDays, slug: 'DOCTORS' },
   { name: 'Pharmacy', path: '/pharmacy', icon: Pill, slug: 'PRESCRIPTIONS' },
   { name: 'Medicine Inventory', path: '/inventory', icon: Boxes, slug: 'PRESCRIPTIONS' },
   { name: 'Linked Labs', path: '/labs', icon: FlaskConical, slug: 'LABS' },
@@ -33,6 +36,7 @@ const NAV_ITEMS = [
   { name: 'Linked Medicals', path: '/linked-medicals', icon: Stethoscope, slug: 'LABS' },
   { name: 'Orders', path: '/orders', icon: ShoppingBag, slug: 'ORDERS' },
   { name: 'User Accounts', path: '/users', icon: UserCog, slug: 'USERS' },
+  { name: 'Staff Management', path: '/staff', icon: Users, slug: 'USERS' },
   { name: 'Roles & Permissions', path: '/roles', icon: Shield, slug: 'USERS' },
   { name: 'Prescription Templates', path: '/prescriptions', icon: FileText, slug: 'PRESCRIPTIONS' },
   { name: 'Patient Support', path: '/support', icon: LifeBuoy, slug: 'SUPPORT' },

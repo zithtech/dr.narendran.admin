@@ -95,7 +95,7 @@ export default function Roles() {
         facets={[]}
         dateOf={(r) => r.name}
         columns={columns}
-        createLabel="New role"
+        createLabel="Add Role"
         onCreate={() => openEditor(null)}
         onEdit={openEditor}
         onDelete={deleteRole}
