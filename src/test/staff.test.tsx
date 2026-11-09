@@ -534,4 +534,89 @@ describe('Staff Management Feature', () => {
     expect(screen.getByText('Work Days')).toBeInTheDocument();
     expect(screen.getByText('Mon - Fri (Weekdays)')).toBeInTheDocument();
   });
+
+  it('opens delete confirmation modal instead of alert when deleting staff and deletes on confirm', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm');
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url.includes('staff')) {
+        return Promise.resolve({ data: mockStaffMembers });
+      }
+      return Promise.resolve({ data: [] });
+    });
+    vi.mocked(api.delete).mockResolvedValue({ data: { success: true } });
+
+    renderWithProviders(<StaffManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Sister Mary Joseph')).toBeInTheDocument();
+    });
+
+    // Open row action menu for first staff member
+    const actionBtns = screen.getAllByRole('button', { name: /Actions for/i });
+    expect(actionBtns.length).toBeGreaterThan(0);
+    fireEvent.click(actionBtns[0]!);
+
+    // Click "Delete Staff Member"
+    const deleteMenuItem = await screen.findByText('Delete Staff Member');
+    fireEvent.click(deleteMenuItem);
+
+    // Verify window.confirm was NOT called (we use a modal instead of alert)
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    // Verify modal is displayed with confirmation details
+    expect(screen.getByText('Permanently remove staff record and permissions')).toBeInTheDocument();
+    expect(screen.getByText(/Are you sure you want to delete/i)).toBeInTheDocument();
+
+    // Confirm deletion inside the modal
+    const confirmDeleteBtn = screen.getByRole('button', { name: 'Delete Staff Member' });
+    fireEvent.click(confirmDeleteBtn);
+
+    await waitFor(() => {
+      expect(api.delete).toHaveBeenCalledWith('staff/staff-1');
+    });
+
+    confirmSpy.mockRestore();
+  });
+
+  it('opens delete document modal instead of alert in StaffDrawer and deletes on confirm', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm');
+    vi.mocked(api.delete).mockResolvedValue({ data: { success: true } });
+
+    const handleClose = vi.fn();
+    const handleEdit = vi.fn();
+    const handleStatusChange = vi.fn();
+    const handleRefresh = vi.fn();
+
+    renderWithProviders(
+      <StaffDrawer
+        staff={mockStaffMembers[0]!}
+        onClose={handleClose}
+        onEdit={handleEdit}
+        onStatusChange={handleStatusChange}
+        onRefresh={handleRefresh}
+      />
+    );
+
+    // Click delete document icon
+    const deleteDocBtn = screen.getByTitle('Delete Document');
+    fireEvent.click(deleteDocBtn);
+
+    // Verify window.confirm was NOT called
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    // Verify document delete modal is displayed
+    expect(screen.getAllByText('Delete Document').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Are you sure you want to permanently delete/i)).toBeInTheDocument();
+
+    // Click Delete Permanently in modal
+    const confirmDeleteBtn = screen.getByRole('button', { name: 'Delete Permanently' });
+    fireEvent.click(confirmDeleteBtn);
+
+    await waitFor(() => {
+      expect(api.delete).toHaveBeenCalledWith('staff/staff-1/documents/doc-1');
+      expect(handleRefresh).toHaveBeenCalled();
+    });
+
+    confirmSpy.mockRestore();
+  });
 });

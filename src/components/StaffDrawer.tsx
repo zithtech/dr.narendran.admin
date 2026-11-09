@@ -26,6 +26,7 @@ import {
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
 import { Drawer } from './ui/Drawer';
+import { Modal } from './ui/Modal';
 import { SearchableSelect, type SearchableSelectOption } from './ui/SearchableSelect';
 
 const DRAWER_DOC_TYPE_OPTIONS: SearchableSelectOption[] = [
@@ -42,6 +43,7 @@ interface StaffDrawerProps {
   onEdit: (staff: StaffMember) => void;
   onStatusChange: (staff: StaffMember, newStatus: StaffStatus) => void;
   onRefresh: () => void;
+  onDelete?: (staff: StaffMember) => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -77,6 +79,7 @@ export default function StaffDrawer({
   onEdit,
   onStatusChange,
   onRefresh,
+  onDelete,
 }: StaffDrawerProps) {
   const { message } = App.useApp();
 
@@ -87,6 +90,7 @@ export default function StaffDrawer({
   const [docNameError, setDocNameError] = useState<string | null>(null);
   const [docType, setDocType] = useState('ID_PROOF');
   const [isDeletingDocId, setIsDeletingDocId] = useState<string | null>(null);
+  const [docToDelete, setDocToDelete] = useState<{ id: string; name: string } | null>(null);
   const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
   const [viewingDocId, setViewingDocId] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -184,15 +188,18 @@ export default function StaffDrawer({
     }
   };
 
-  const handleDeleteDocument = async (docId: string, docTitle: string) => {
-    if (!window.confirm(`Are you sure you want to delete "${docTitle}"? This will permanently remove it from storage.`)) {
-      return;
-    }
+  const handleDeleteDocument = (docId: string, docTitle: string) => {
+    setDocToDelete({ id: docId, name: docTitle });
+  };
 
-    setIsDeletingDocId(docId);
+  const handleConfirmDeleteDocument = async () => {
+    if (!docToDelete || !staff) return;
+
+    setIsDeletingDocId(docToDelete.id);
     try {
-      await api.delete(`staff/${staff.id}/documents/${docId}`);
+      await api.delete(`staff/${staff.id}/documents/${docToDelete.id}`);
       message?.success?.('Document deleted successfully.');
+      setDocToDelete(null);
       onRefresh();
     } catch (err: unknown) {
       message?.error?.(getErrorMessage(err, 'Failed to delete document.'));
@@ -356,6 +363,29 @@ export default function StaffDrawer({
           )}
           <span>{isActive ? 'Deactivate' : 'Activate'}</span>
         </button>
+
+        {onDelete && (
+          <button
+            type="button"
+            className="ui-btn ui-btn-neutral"
+            onClick={() => onDelete(staff)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 12.5,
+              height: 32,
+              padding: '0 11px',
+              color: '#dc2626',
+              border: '1px solid #fee2e2',
+              background: '#fef2f2',
+            }}
+            title="Delete Staff Profile"
+          >
+            <Trash2 size={13.5} />
+            <span>Delete</span>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -417,8 +447,9 @@ export default function StaffDrawer({
   );
 
   return (
-    <Drawer
-      open={Boolean(staff)}
+    <>
+      <Drawer
+        open={Boolean(staff)}
       onClose={onClose}
       label="Staff Member Profile"
       hero={hero}
@@ -1018,7 +1049,144 @@ export default function StaffDrawer({
           color: #0f172a;
           font-size: 12.5px;
         }
+        .delete-doc-modal {
+          max-width: 480px !important;
+          border-radius: 14px !important;
+          overflow: hidden !important;
+        }
+        .delete-doc-modal .ui-modal-head {
+          padding: 18px 24px 16px !important;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        .delete-doc-modal .ui-modal-body {
+          padding: 22px 24px !important;
+          background: #ffffff;
+        }
+        .delete-doc-modal .ui-modal-foot {
+          padding: 14px 24px !important;
+          background: #f8fafc;
+          border-top: 1px solid #f1f5f9;
+        }
       `}</style>
     </Drawer>
+
+    {/* Delete Document Confirmation Modal */}
+    <Modal
+      open={docToDelete !== null}
+      onClose={isDeletingDocId !== null ? () => undefined : () => setDocToDelete(null)}
+      size="sm"
+      className="delete-doc-modal"
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 9,
+              background: '#fef2f2',
+              color: '#dc2626',
+              border: '1px solid #fee2e2',
+              display: 'grid',
+              placeItems: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Trash2 size={16} />
+          </div>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
+              Delete Document
+            </div>
+            <div style={{ fontSize: 11.5, color: '#64748b' }}>
+              Permanently remove staff credential document
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <div
+        className="ui-modal-body"
+        style={{
+          padding: '22px 24px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+          background: '#ffffff',
+        }}
+      >
+        <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.55 }}>
+          Are you sure you want to permanently delete{' '}
+          <strong style={{ color: '#0f172a' }}>"{docToDelete?.name}"</strong>? This will remove the file from storage and cannot be undone.
+        </div>
+
+        <div
+          style={{
+            padding: '10px 14px',
+            borderRadius: 8,
+            background: '#fef2f2',
+            border: '1px solid #fee2e2',
+            fontSize: 12,
+            color: '#b91c1c',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <AlertCircle size={15} style={{ flexShrink: 0 }} />
+          <span>This action cannot be undone.</span>
+        </div>
+      </div>
+
+      <div
+        className="ui-modal-foot"
+        style={{
+          padding: '14px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: 10,
+          background: '#f8fafc',
+          borderTop: '1px solid #f1f5f9',
+        }}
+      >
+        <button
+          type="button"
+          className="ui-btn ui-btn-neutral"
+          onClick={() => setDocToDelete(null)}
+          disabled={isDeletingDocId !== null}
+          style={{ height: 36, padding: '0 16px', fontSize: 12.5 }}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="ui-btn ui-btn-danger"
+          disabled={isDeletingDocId !== null}
+          onClick={handleConfirmDeleteDocument}
+          style={{
+            height: 36,
+            padding: '0 16px',
+            fontSize: 12.5,
+            fontWeight: 600,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 7,
+          }}
+        >
+          {isDeletingDocId !== null ? (
+            <>
+              <Loader2 size={13} className="is-spinning" />
+              <span>Deleting...</span>
+            </>
+          ) : (
+            <>
+              <Trash2 size={13} />
+              <span>Delete Permanently</span>
+            </>
+          )}
+        </button>
+      </div>
+    </Modal>
+  </>
   );
 }

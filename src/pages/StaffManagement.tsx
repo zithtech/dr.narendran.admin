@@ -1,6 +1,7 @@
 import { App, Dropdown, type MenuProps } from 'antd';
 import {
   Activity,
+  AlertCircle,
   Building2,
   Calendar,
   Clock,
@@ -8,6 +9,7 @@ import {
   FileCheck,
   FileText,
   HeartPulse,
+  Loader2,
   Mail,
   MapPin,
   Moon,
@@ -29,6 +31,8 @@ import StaffDrawer from '../components/StaffDrawer';
 import StaffModal from '../components/StaffModal';
 import { type Column, DataView, type Facet } from '../components/ui/DataView';
 import { addedFacet, statusFacet } from '../components/ui/facets';
+import { Modal } from '../components/ui/Modal';
+import { Alert } from '../components/ui/primitives';
 import { useResource } from '../hooks/useResource';
 import { formatWorkDays, type StaffMember, type StaffStatus } from '../types/staff';
 import api from '../utils/api';
@@ -165,6 +169,9 @@ export default function StaffManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [viewingStaffId, setViewingStaffId] = useState<string | null>(null);
+  const [staffToDelete, setStaffToDelete] = useState<StaffMember | null>(null);
+  const [isDeletingStaff, setIsDeletingStaff] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   // Derive currently viewed staff from live items
   const viewingStaff = viewingStaffId
@@ -180,6 +187,11 @@ export default function StaffManagement() {
     setIsModalOpen(true);
   };
 
+  const handleOpenDeleteModal = (staff: StaffMember) => {
+    setDeleteError('');
+    setStaffToDelete(staff);
+  };
+
   const handleToggleStatus = async (staff: StaffMember) => {
     const nextStatus: StaffStatus = staff.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
     try {
@@ -191,14 +203,24 @@ export default function StaffManagement() {
     }
   };
 
-  const handleDeleteStaff = async (staff: StaffMember) => {
-    if (!window.confirm(`Are you sure you want to delete ${staff.name}?`)) return;
+  const handleConfirmDeleteStaff = async () => {
+    if (!staffToDelete) return;
+    setIsDeletingStaff(true);
+    setDeleteError('');
     try {
-      await api.delete(`staff/${staff.id}`);
-      message?.success?.(`${staff.name} deleted successfully.`);
+      await api.delete(`staff/${staffToDelete.id}`);
+      message?.success?.(`${staffToDelete.name} deleted successfully.`);
+      if (viewingStaffId === staffToDelete.id) {
+        setViewingStaffId(null);
+      }
+      setStaffToDelete(null);
       void resource.refresh();
     } catch (err: unknown) {
-      message?.error?.(getErrorMessage(err, 'Failed to delete staff member.'));
+      const msg = getErrorMessage(err, 'Failed to delete staff member.');
+      setDeleteError(msg);
+      message?.error?.(msg);
+    } finally {
+      setIsDeletingStaff(false);
     }
   };
 
@@ -248,7 +270,7 @@ export default function StaffManagement() {
           </span>
         ),
         danger: true,
-        onClick: () => void handleDeleteStaff(s),
+        onClick: () => handleOpenDeleteModal(s),
       },
     ];
   };
@@ -636,9 +658,231 @@ export default function StaffManagement() {
         onEdit={(s) => openEdit(s)}
         onStatusChange={() => void resource.refresh()}
         onRefresh={() => void resource.refresh()}
+        onDelete={(s) => handleOpenDeleteModal(s)}
       />
 
+      {/* Delete Staff Member Confirmation Modal */}
+      <Modal
+        open={staffToDelete !== null}
+        onClose={
+          isDeletingStaff
+            ? () => undefined
+            : () => {
+                setStaffToDelete(null);
+                setDeleteError('');
+              }
+        }
+        size="sm"
+        className="delete-staff-modal"
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 9,
+                background: '#fef2f2',
+                color: '#dc2626',
+                border: '1px solid #fee2e2',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Trash2 size={17} />
+            </div>
+            <div>
+              <div style={{ fontSize: 15.5, fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em' }}>
+                Delete Staff Member
+              </div>
+              <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>
+                Permanently remove staff record and permissions
+              </div>
+            </div>
+          </div>
+        }
+      >
+        <div
+          className="ui-modal-body"
+          style={{
+            padding: '22px 24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16,
+            background: '#ffffff',
+          }}
+        >
+          {deleteError && <Alert>{deleteError}</Alert>}
+
+          {staffToDelete && (
+            <div
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: 10,
+                padding: '12px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 8,
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  border: '1px solid #e2e8f0',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                }}
+              >
+                {getStaffInitials(staffToDelete.name)}
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div
+                  style={{
+                    fontSize: 13.5,
+                    fontWeight: 700,
+                    color: '#0f172a',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {staffToDelete.name}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11.5,
+                    color: '#64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginTop: 2,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <span style={{ fontWeight: 600, color: '#475569' }}>{staffToDelete.role}</span>
+                  <span>•</span>
+                  <span>{staffToDelete.branchName || 'Central Branch'}</span>
+                  <span>•</span>
+                  <span
+                    style={{
+                      fontSize: 10.5,
+                      fontWeight: 600,
+                      padding: '1px 6px',
+                      borderRadius: 4,
+                      background: staffToDelete.status === 'ACTIVE' ? '#ecfdf5' : '#f1f5f9',
+                      color: staffToDelete.status === 'ACTIVE' ? '#047857' : '#64748b',
+                    }}
+                  >
+                    {staffToDelete.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.55 }}>
+            Are you sure you want to delete <strong style={{ color: '#0f172a' }}>{staffToDelete?.name}</strong>? All profile details, shift timings, work days, and uploaded documents will be permanently removed.
+          </div>
+
+          <div
+            style={{
+              padding: '10px 14px',
+              borderRadius: 8,
+              background: '#fef2f2',
+              border: '1px solid #fee2e2',
+              fontSize: 12,
+              color: '#b91c1c',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <AlertCircle size={15} style={{ flexShrink: 0 }} />
+            <span>This action is destructive and cannot be undone.</span>
+          </div>
+        </div>
+
+        <div
+          className="ui-modal-foot"
+          style={{
+            padding: '14px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: 10,
+            background: '#f8fafc',
+            borderTop: '1px solid #f1f5f9',
+          }}
+        >
+          <button
+            type="button"
+            className="ui-btn ui-btn-neutral"
+            onClick={() => {
+              setStaffToDelete(null);
+              setDeleteError('');
+            }}
+            disabled={isDeletingStaff}
+            style={{ height: 36, padding: '0 16px', fontSize: 12.5 }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="ui-btn ui-btn-danger"
+            onClick={handleConfirmDeleteStaff}
+            disabled={isDeletingStaff}
+            style={{
+              height: 36,
+              padding: '0 16px',
+              fontSize: 12.5,
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 7,
+            }}
+          >
+            {isDeletingStaff ? (
+              <>
+                <Loader2 size={14} className="is-spinning" />
+                <span>Deleting...</span>
+              </>
+            ) : (
+              <>
+                <Trash2 size={14} />
+                <span>Delete Staff Member</span>
+              </>
+            )}
+          </button>
+        </div>
+      </Modal>
+
       <style>{`
+        .delete-staff-modal {
+          max-width: 490px !important;
+          border-radius: 14px !important;
+          overflow: hidden !important;
+        }
+        .delete-staff-modal .ui-modal-head {
+          padding: 18px 24px 16px !important;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        .delete-staff-modal .ui-modal-body {
+          padding: 22px 24px !important;
+          background: #ffffff;
+        }
+        .delete-staff-modal .ui-modal-foot {
+          padding: 14px 24px !important;
+          background: #f8fafc;
+          border-top: 1px solid #f1f5f9;
+        }
         .staff-management-view {
           flex: 1;
           min-height: 0;
