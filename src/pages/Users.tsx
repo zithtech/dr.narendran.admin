@@ -99,7 +99,7 @@ export default function Users() {
         dateOf={(u) => u.created_at}
         dateLabel="Created"
         columns={columns}
-        createLabel="New account"
+        createLabel="Add User Account"
         onCreate={() => openEditor(null)}
         onEdit={openEditor}
         onDelete={(u) => api.delete(`user-accounts/${u.id}`)}

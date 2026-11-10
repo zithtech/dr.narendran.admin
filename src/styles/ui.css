@@ -984,11 +984,61 @@ body {
 }
 
 .ui-checkbox {
-  width: 15px;
-  height: 15px;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 17px;
+  height: 17px;
   margin: 0;
-  accent-color: var(--ui-primary);
   cursor: pointer;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 5px;
+  -webkit-border-radius: 5px;
+  background-color: #ffffff;
+  display: inline-grid;
+  place-content: center;
+  vertical-align: middle;
+  transition: all 0.15s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.ui-checkbox:hover {
+  border-color: #7c3aed;
+  background-color: #faf5ff;
+  transform: scale(1.06);
+}
+
+.ui-checkbox:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+
+.ui-checkbox:checked {
+  background-color: #7c3aed;
+  border-color: #7c3aed;
+}
+
+.ui-checkbox:checked::after {
+  content: '';
+  width: 4px;
+  height: 8px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin-bottom: 2px;
+}
+
+.ui-checkbox:indeterminate {
+  background-color: #7c3aed;
+  border-color: #7c3aed;
+}
+
+.ui-checkbox:indeterminate::after {
+  content: '';
+  width: 8px;
+  height: 2px;
+  background: #ffffff;
+  border-radius: 1px;
 }
 
 .ui-link {
@@ -2079,6 +2129,14 @@ body {
   border-left: 1px solid var(--ui-border);
   box-shadow: var(--ui-shadow-lg);
   animation: ui-slide-in 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ui-drawer.is-lg {
+  width: min(740px, 100vw);
+}
+
+.ui-drawer.is-xl {
+  width: min(860px, 100vw);
 }
 
 @keyframes ui-slide-in {

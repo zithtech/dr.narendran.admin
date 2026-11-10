@@ -9,6 +9,8 @@ import Branches from './pages/Branches';
 import Doctors from './pages/Doctors';
 import Users from './pages/Users';
 import Patients from './pages/Patients';
+import Appointments from './pages/Appointments';
+import DoctorTodayAppointments from './pages/DoctorTodayAppointments';
 import Pharmacy from './pages/Pharmacy';
 import MedicineInventory from './pages/MedicineInventory';
 import OrdersPage from './features/orders/pages/OrdersPage';
@@ -18,6 +20,7 @@ import LabServices from './pages/LabServices';
 import LinkedMedicals from './pages/LinkedMedicals';
 import ClientPortals from './pages/ClientPortals';
 import Roles from './pages/Roles';
+import StaffManagement from './pages/StaffManagement';
 import SidebarLayout from './components/SidebarLayout';
 import ClientPortalLayout, { ClientPermissionGate } from './components/ClientPortalLayout';
 import LabClientLayout from './components/LabClientLayout';
@@ -113,6 +116,8 @@ function App() {
           <Route path="/branches" element={<Branches />} />
           <Route path="/doctors" element={<Doctors />} />
           <Route path="/patients" element={<Patients />} />
+          <Route path="/appointments" element={<Appointments />} />
+          <Route path="/appointments/today" element={<DoctorTodayAppointments />} />
           <Route path="/pharmacy" element={<Pharmacy />} />
           <Route path="/inventory" element={<MedicineInventory />} />
           <Route path="/orders" element={<OrdersPage />} />
@@ -121,6 +126,7 @@ function App() {
           <Route path="/linked-medicals" element={<LinkedMedicals />} />
           <Route path="/client-portals" element={<ClientPortals />} />
           <Route path="/users" element={<Users />} />
+          <Route path="/staff" element={<StaffManagement />} />
           <Route path="/roles" element={<Roles />} />
           <Route path="/prescriptions" element={<PrescriptionTemplatesPage />} />
           <Route path="/reviews" element={<ReviewsManagementPage />} />

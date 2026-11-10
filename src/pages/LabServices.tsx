@@ -78,7 +78,7 @@ export default function LabServices() {
         facets={FACETS}
         dateOf={(s) => s.created_at}
         columns={columns}
-        createLabel="New service"
+        createLabel="Add Diagnostic Service"
         onCreate={() => openEditor(null)}
         onEdit={openEditor}
         onDelete={(s) => api.delete(`lab-services/${s.id}`)}
