@@ -5,6 +5,7 @@ import {
   CalendarX2,
   Clock,
   Eye,
+  FileText,
   MoreVertical,
   Pencil,
   Phone,
@@ -24,6 +25,7 @@ import { useResource } from '../hooks/useResource';
 import { initials, titleCase } from '../lib/format';
 import type { Appointment } from '../types/appointment';
 import DoctorTodayAppointments from './DoctorTodayAppointments';
+import CreatePrescriptionModal from '../features/prescriptions/components/CreatePrescriptionModal';
 
 const FACETS: Facet<Appointment>[] = [
   {
@@ -62,6 +64,7 @@ export default function Appointments() {
   const [viewingAppointment, setViewingAppointment] = useState<Appointment | null>(null);
   const [reschedulingAppointment, setReschedulingAppointment] = useState<Appointment | null>(null);
   const [cancellingAppointment, setCancellingAppointment] = useState<Appointment | null>(null);
+  const [prescriptionAppt, setPrescriptionAppt] = useState<Appointment | null>(null);
 
   const handleTabChange = (tab: 'all' | 'today') => {
     setSearchParams((prev) => {
@@ -139,6 +142,16 @@ export default function Appointments() {
       a.status === 'scheduled' || a.status === 'confirmed' || a.status === 'rescheduled';
 
     const items: NonNullable<MenuProps['items']> = [
+      {
+        key: 'prescription',
+        label: (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#7c3aed' }}>
+            <FileText size={14} style={{ color: '#7c3aed' }} />
+            <span>Create Prescription</span>
+          </span>
+        ),
+        onClick: () => setPrescriptionAppt(a),
+      },
       {
         key: 'edit',
         label: (
@@ -638,7 +651,30 @@ export default function Appointments() {
             onCancel={(appt) => {
               openCancel(appt);
             }}
+            onCreatePrescription={(appt) => {
+              setPrescriptionAppt(appt);
+            }}
           />
+
+          {/* Create Prescription Modal */}
+          {prescriptionAppt && (
+            <CreatePrescriptionModal
+              open={Boolean(prescriptionAppt)}
+              appointmentId={prescriptionAppt.id}
+              appointmentToken={prescriptionAppt.tokenNumber}
+              appointmentDoctorId={prescriptionAppt.doctorId}
+              preselectedPatient={{
+                id: prescriptionAppt.patientId,
+                name: prescriptionAppt.patientName,
+                phone: prescriptionAppt.patientPhone ?? undefined,
+              }}
+              onClose={() => setPrescriptionAppt(null)}
+              onSuccess={() => {
+                setPrescriptionAppt(null);
+                void resource.refresh();
+              }}
+            />
+          )}
 
           <style>{`
             .appointments-all-view {

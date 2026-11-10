@@ -1,6 +1,7 @@
 import {
   Boxes,
   Building2,
+  CalendarClock,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { name: 'Doctors', path: '/doctors', icon: Stethoscope, slug: 'DOCTORS' },
   { name: 'Patients', path: '/patients', icon: HeartPulse, slug: 'PATIENTS' },
   { name: 'Appointments', path: '/appointments', icon: CalendarDays, slug: 'DOCTORS' },
+  { name: "Today's Schedule", path: '/appointments/today', icon: CalendarClock, slug: 'DOCTORS' },
   { name: 'Pharmacy', path: '/pharmacy', icon: Pill, slug: 'PRESCRIPTIONS' },
   { name: 'Medicine Inventory', path: '/inventory', icon: Boxes, slug: 'PRESCRIPTIONS' },
   { name: 'Linked Labs', path: '/labs', icon: FlaskConical, slug: 'LABS' },
@@ -38,7 +40,7 @@ const NAV_ITEMS = [
   { name: 'User Accounts', path: '/users', icon: UserCog, slug: 'USERS' },
   { name: 'Staff Management', path: '/staff', icon: Users, slug: 'USERS' },
   { name: 'Roles & Permissions', path: '/roles', icon: Shield, slug: 'USERS' },
-  { name: 'Prescription Templates', path: '/prescriptions', icon: FileText, slug: 'PRESCRIPTIONS' },
+  { name: 'Prescriptions', path: '/prescriptions', icon: FileText, slug: 'PRESCRIPTIONS' },
   { name: 'Patient Support', path: '/support', icon: LifeBuoy, slug: 'SUPPORT' },
   { name: 'Doctor Support', path: '/doctor-support', icon: Stethoscope, slug: 'SUPPORT' },
 ] as const;
@@ -82,9 +84,16 @@ export default function SidebarLayout() {
   const allowedSlugs = roleData?.permissions?.filter((p: any) => p.can_read).map((p: any) => p.module_slug) || [];
 
   // Filter nav items: System Admin sees everything, others only see what they have permissions for
-  const visibleNavItems = roleData?.is_system_role
+  const isSystemAdmin =
+    !currentRole ||
+    ['ADMIN', 'SUPER_ADMIN', 'SUPER ADMIN', 'ADMINISTRATOR', 'SYSTEM ADMINISTRATOR'].includes(
+      currentRole.toUpperCase(),
+    ) ||
+    Boolean(roleData?.is_system_role);
+
+  const visibleNavItems = isSystemAdmin
     ? NAV_ITEMS
-    : NAV_ITEMS.filter(item => allowedSlugs.includes(item.slug));
+    : NAV_ITEMS.filter((item) => allowedSlugs.includes(item.slug));
 
   const toggle = () => {
     setIsExpanded((prev) => {
