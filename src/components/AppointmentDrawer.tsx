@@ -4,14 +4,19 @@ import {
   CalendarX2,
   CheckCircle,
   Clock,
+  Download,
   FileText,
   Mail,
   Pencil,
   Phone,
+  Pill,
+  Plus,
   Stethoscope,
   User,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
+import { type Prescription, prescriptionsApi } from '../features/prescriptions/api/prescriptionsApi';
 import { titleCase } from '../lib/format';
 import type { Appointment } from '../types/appointment';
 import { Drawer } from './ui/Drawer';
@@ -23,6 +28,7 @@ interface AppointmentDrawerProps {
   onCancel: (appointment: Appointment) => void;
   onEdit?: (appointment: Appointment) => void;
   onComplete?: (appointment: Appointment) => void;
+  onCreatePrescription?: (appointment: Appointment) => void;
 }
 
 export default function AppointmentDrawer({
@@ -32,7 +38,22 @@ export default function AppointmentDrawer({
   onCancel,
   onEdit,
   onComplete,
+  onCreatePrescription,
 }: AppointmentDrawerProps) {
+  const [appRx, setAppRx] = useState<Prescription[]>([]);
+  const [loadingRx, setLoadingRx] = useState(false);
+
+  useEffect(() => {
+    if (appointment?.id) {
+      setLoadingRx(true);
+      prescriptionsApi
+        .getByAppointment(appointment.id)
+        .then((res) => setAppRx(res))
+        .catch(() => setAppRx([]))
+        .finally(() => setLoadingRx(false));
+    }
+  }, [appointment?.id]);
+
   if (!appointment) return null;
 
   const isCancellable =
@@ -181,6 +202,31 @@ export default function AppointmentDrawer({
 
   const footer = (
     <div style={{ display: 'flex', gap: 10, width: '100%', justifyContent: 'flex-end', flexWrap: 'wrap', alignItems: 'center' }}>
+      {onCreatePrescription && (
+        <button
+          type="button"
+          className="ui-btn"
+          style={{
+            fontSize: 12.5,
+            background: '#7c3aed',
+            color: '#ffffff',
+            border: '1px solid #7c3aed',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            borderRadius: 8,
+            padding: '0 13px',
+            height: 35,
+            cursor: 'pointer',
+            fontWeight: 600,
+          }}
+          onClick={() => onCreatePrescription(appointment)}
+        >
+          <FileText size={14} />
+          <span>Create Prescription</span>
+        </button>
+      )}
+
       {isCancellable && onComplete && (
         <button
           type="button"
@@ -451,6 +497,97 @@ export default function AppointmentDrawer({
                 >
                   {appointment.patientNote}
                 </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Prescription Card */}
+        <div className="appt-view-card">
+          <div className="appt-view-header">
+            <div className="appt-view-badge" style={{ background: '#f5f3ff' }}>
+              <Pill size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <div>
+                <div className="appt-view-title">Prescription & Medication</div>
+                <div className="appt-view-subtitle">Official digital prescription for this consultation</div>
+              </div>
+              {onCreatePrescription && (
+                <button
+                  type="button"
+                  onClick={() => onCreatePrescription(appointment)}
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    color: '#7c3aed',
+                    background: '#f5f3ff',
+                    border: '1px solid #ede9fe',
+                    borderRadius: 6,
+                    padding: '3px 8px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3,
+                  }}
+                >
+                  <Plus size={12} /> {appRx.length > 0 ? 'Add Another' : 'Create Prescription'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div style={{ fontSize: 12.5 }}>
+            {loadingRx ? (
+              <div style={{ color: '#64748b' }}>Checking prescription records...</div>
+            ) : appRx.length === 0 ? (
+              <div style={{ color: '#64748b', fontStyle: 'italic' }}>
+                No prescription created for this consultation yet. Click "Create Prescription" to prescribe medicines.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {appRx.map((rx) => (
+                  <div
+                    key={rx.id}
+                    style={{
+                      padding: 10,
+                      borderRadius: 6,
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 650, color: '#0f172a' }}>
+                        {rx.diagnosis || rx.additional_notes || 'General Consultation'}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>
+                        {rx.medicines?.length || rx.medicines_count || 0} medicine(s) · {rx.prescription_date}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => window.open(prescriptionsApi.getPdfDownloadUrl(rx.id), '_blank')}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 6,
+                        border: '1px solid #ede9fe',
+                        background: '#f5f3ff',
+                        color: '#7c3aed',
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      <Download size={12} /> PDF
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>

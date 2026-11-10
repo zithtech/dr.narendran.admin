@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Clock,
   Eye,
+  FileText,
   Filter,
   Loader2,
   Mail,
@@ -30,6 +31,7 @@ import RescheduleAppointmentModal from '../components/RescheduleAppointmentModal
 import ScheduleAppointmentModal from '../components/ScheduleAppointmentModal';
 import { Badge, type BadgeTone } from '../components/ui/primitives';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import CreatePrescriptionModal from '../features/prescriptions/components/CreatePrescriptionModal';
 import type {
   Appointment,
   AppointmentStatus,
@@ -147,6 +149,7 @@ export default function DoctorTodayAppointments() {
   const [viewingAppointment, setViewingAppointment] = useState<Appointment | null>(null);
   const [reschedulingAppointment, setReschedulingAppointment] = useState<Appointment | null>(null);
   const [cancellingAppointment, setCancellingAppointment] = useState<Appointment | null>(null);
+  const [prescriptionAppt, setPrescriptionAppt] = useState<Appointment | null>(null);
 
   const fetchDoctorSchedules = useCallback(async (date: string, docId?: string) => {
     setLoading(true);
@@ -324,6 +327,10 @@ export default function DoctorTodayAppointments() {
     setCancellingAppointment(toFullAppointment(appt, doc));
   };
 
+  const handleOpenCreatePrescription = (appt: DoctorScheduleAppointmentItem, doc: DoctorScheduleSummary) => {
+    setPrescriptionAppt(toFullAppointment(appt, doc));
+  };
+
   const getTodayActionMenuItems = (
     appt: DoctorScheduleAppointmentItem,
     doc: DoctorScheduleSummary,
@@ -333,14 +340,14 @@ export default function DoctorTodayAppointments() {
 
     const items: NonNullable<MenuProps['items']> = [
       {
-        key: 'edit',
+        key: 'prescription',
         label: (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#1e293b' }}>
-            <Pencil size={14} style={{ color: '#7c3aed' }} />
-            <span>Edit</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#7c3aed' }}>
+            <FileText size={14} style={{ color: '#7c3aed' }} />
+            <span>Create Prescription</span>
           </span>
         ),
-        onClick: () => handleOpenDetails(appt, doc),
+        onClick: () => handleOpenCreatePrescription(appt, doc),
       },
       {
         key: 'view',
@@ -348,6 +355,16 @@ export default function DoctorTodayAppointments() {
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#475569' }}>
             <Eye size={14} style={{ color: '#64748b' }} />
             <span>View Details</span>
+          </span>
+        ),
+        onClick: () => handleOpenDetails(appt, doc),
+      },
+      {
+        key: 'edit',
+        label: (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#1e293b' }}>
+            <Pencil size={14} style={{ color: '#7c3aed' }} />
+            <span>Edit</span>
           </span>
         ),
         onClick: () => handleOpenDetails(appt, doc),
@@ -1492,7 +1509,31 @@ export default function DoctorTodayAppointments() {
 
                                   {/* Actions */}
                                   <td style={{ padding: '9px 14px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle', textAlign: 'right' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenCreatePrescription(appt, doc);
+                                        }}
+                                        title="Create Prescription"
+                                        style={{
+                                          padding: '3px 8px',
+                                          fontSize: 11.5,
+                                          fontWeight: 600,
+                                          borderRadius: 6,
+                                          border: '1px solid #ede9fe',
+                                          background: '#f5f3ff',
+                                          color: '#7c3aed',
+                                          cursor: 'pointer',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: 4,
+                                        }}
+                                      >
+                                        <FileText size={12} />
+                                        <span>Prescription</span>
+                                      </button>
                                       <Dropdown
                                         menu={{ items: getTodayActionMenuItems(appt, doc) }}
                                         trigger={['click']}
@@ -1607,7 +1648,30 @@ export default function DoctorTodayAppointments() {
         onCancel={(appt) => {
           setCancellingAppointment(appt);
         }}
+        onCreatePrescription={(appt) => {
+          setPrescriptionAppt(appt);
+        }}
       />
+
+      {/* Create Prescription Modal */}
+      {prescriptionAppt && (
+        <CreatePrescriptionModal
+          open={Boolean(prescriptionAppt)}
+          appointmentId={prescriptionAppt.id}
+          appointmentToken={prescriptionAppt.tokenNumber}
+          appointmentDoctorId={prescriptionAppt.doctorId}
+          preselectedPatient={{
+            id: prescriptionAppt.patientId,
+            name: prescriptionAppt.patientName,
+            phone: prescriptionAppt.patientPhone,
+          }}
+          onClose={() => setPrescriptionAppt(null)}
+          onSuccess={() => {
+            setPrescriptionAppt(null);
+            void fetchDoctorSchedules(selectedDate, selectedDoctorId);
+          }}
+        />
+      )}
     </div>
   );
 }

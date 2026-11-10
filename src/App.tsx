@@ -14,7 +14,7 @@ import DoctorTodayAppointments from './pages/DoctorTodayAppointments';
 import Pharmacy from './pages/Pharmacy';
 import MedicineInventory from './pages/MedicineInventory';
 import OrdersPage from './features/orders/pages/OrdersPage';
-import { PrescriptionTemplatesPage } from './features/prescriptions/pages/PrescriptionTemplatesPage';
+import PrescriptionsPage from './features/prescriptions/pages/PrescriptionsPage';
 import Labs from './pages/Labs';
 import LabServices from './pages/LabServices';
 import LinkedMedicals from './pages/LinkedMedicals';
@@ -128,7 +128,7 @@ function App() {
           <Route path="/users" element={<Users />} />
           <Route path="/staff" element={<StaffManagement />} />
           <Route path="/roles" element={<Roles />} />
-          <Route path="/prescriptions" element={<PrescriptionTemplatesPage />} />
+          <Route path="/prescriptions" element={<PrescriptionsPage />} />
           <Route path="/reviews" element={<ReviewsManagementPage />} />
           <Route path="/support" element={<SupportCenterPage defaultUserType="PATIENT" />} />
           <Route path="/doctor-support" element={<SupportCenterPage defaultUserType="DOCTOR" />} />

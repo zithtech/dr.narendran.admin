@@ -32,9 +32,18 @@ export default function Login() {
 
       // Axios handles non-2xx errors in the catch block
       localStorage.setItem('adminToken', data.token);
-      localStorage.setItem('adminUsername', username);
+      localStorage.setItem('adminUsername', data.username || username);
       localStorage.setItem('adminRole', data.role || 'Administrator');
-      void navigate('/');
+      if (data.id) {
+        localStorage.setItem('adminUserId', data.id);
+      }
+
+      const roleUpper = (data.role || '').toUpperCase();
+      if (roleUpper === 'DOCTOR') {
+        void navigate('/appointments/today');
+      } else {
+        void navigate('/');
+      }
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Login failed. Please try again.'));
     } finally {
