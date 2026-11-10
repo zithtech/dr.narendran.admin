@@ -14,6 +14,7 @@ import {
   Pill,
   Shield,
   ShoppingBag,
+  Star,
   Stethoscope,
   UserCog,
   Users,
@@ -41,6 +42,7 @@ const NAV_ITEMS = [
   { name: 'Staff Management', path: '/staff', icon: Users, slug: 'USERS' },
   { name: 'Roles & Permissions', path: '/roles', icon: Shield, slug: 'USERS' },
   { name: 'Prescriptions', path: '/prescriptions', icon: FileText, slug: 'PRESCRIPTIONS' },
+  { name: 'Ratings & Reviews', path: '/reviews', icon: Star, slug: 'REVIEWS' },
   { name: 'Patient Support', path: '/support', icon: LifeBuoy, slug: 'SUPPORT' },
   { name: 'Doctor Support', path: '/doctor-support', icon: Stethoscope, slug: 'SUPPORT' },
 ] as const;
@@ -93,7 +95,7 @@ export default function SidebarLayout() {
 
   const visibleNavItems = isSystemAdmin
     ? NAV_ITEMS
-    : NAV_ITEMS.filter((item) => allowedSlugs.includes(item.slug));
+    : NAV_ITEMS.filter((item) => allowedSlugs.includes(item.slug) || (item.slug === 'REVIEWS' && allowedSlugs.includes('DOCTORS')));
 
   const toggle = () => {
     setIsExpanded((prev) => {
