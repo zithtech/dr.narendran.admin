@@ -18,8 +18,10 @@ interface UpdateOrderStatusModalProps {
 const STATUS_LABELS: Record<string, string> = {
   processing: 'Processing (Confirm & Prepare)',
   packed: 'Packed (Ready for Dispatch)',
-  out_for_delivery: 'Dispatched / Out for Delivery',
+  shipped: 'Shipped (Handed over to Courier)',
+  out_for_delivery: 'Out for Delivery (Rider Dispatched)',
   delivered: 'Delivered (Mark as Completed)',
+  delivery_failed: 'Delivery Failed (Customer Unreachable / Rejected)',
   cancelled: 'Cancel Order',
 };
 
@@ -44,6 +46,7 @@ export const UpdateOrderStatusModal: React.FC<UpdateOrderStatusModalProps> = ({
   if (!isOpen) return null;
 
   const isCancelling = selectedStatus === 'cancelled';
+  const isDeliveryFailed = selectedStatus === 'delivery_failed';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +59,11 @@ export const UpdateOrderStatusModal: React.FC<UpdateOrderStatusModalProps> = ({
 
     if (isCancelling && cancellationReason.trim().length < 3) {
       setError('Cancellation reason is required (at least 3 characters).');
+      return;
+    }
+
+    if (isDeliveryFailed && !notes.trim()) {
+      setError('Please provide a reason or remarks for delivery failure in the notes field.');
       return;
     }
 
@@ -129,7 +137,7 @@ export const UpdateOrderStatusModal: React.FC<UpdateOrderStatusModalProps> = ({
                   <label
                     key={statusKey}
                     className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition-all ${selectedStatus === statusKey
-                        ? statusKey === 'cancelled'
+                        ? statusKey === 'cancelled' || statusKey === 'delivery_failed'
                           ? 'border-rose-500 bg-rose-50/50 dark:bg-rose-950/20 text-rose-900 dark:text-rose-200 ring-2 ring-rose-500/20'
                           : 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 text-indigo-950 dark:text-indigo-200 ring-2 ring-indigo-500/20'
                         : 'border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50'
