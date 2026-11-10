@@ -9,6 +9,8 @@ import Branches from './pages/Branches';
 import Doctors from './pages/Doctors';
 import Users from './pages/Users';
 import Patients from './pages/Patients';
+import PatientTimelinesPage from './pages/PatientTimelinesPage';
+import PatientTimelineDetailPage from './pages/PatientTimelineDetailPage';
 import Appointments from './pages/Appointments';
 import DoctorTodayAppointments from './pages/DoctorTodayAppointments';
 import Pharmacy from './pages/Pharmacy';
@@ -116,6 +118,8 @@ function App() {
           <Route path="/branches" element={<Branches />} />
           <Route path="/doctors" element={<Doctors />} />
           <Route path="/patients" element={<Patients />} />
+          <Route path="/patient-timelines" element={<PatientTimelinesPage />} />
+          <Route path="/patient-timelines/:patientId" element={<PatientTimelineDetailPage />} />
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/appointments/today" element={<DoctorTodayAppointments />} />
           <Route path="/pharmacy" element={<Pharmacy />} />
