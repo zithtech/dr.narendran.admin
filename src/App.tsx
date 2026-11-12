@@ -10,6 +10,9 @@ import Branches from './pages/Branches';
 import Doctors from './pages/Doctors';
 import Users from './pages/Users';
 import Patients from './pages/Patients';
+import PatientTimelinesPage from './pages/PatientTimelinesPage';
+import PatientTimelineDetailPage from './pages/PatientTimelineDetailPage';
+import MedicalRecordsPage from './features/medical_records/pages/MedicalRecordsPage';
 import Appointments from './pages/Appointments';
 import DoctorTodayAppointments from './pages/DoctorTodayAppointments';
 import Pharmacy from './pages/Pharmacy';
@@ -35,6 +38,7 @@ import LabReportsPage from './pages/client/LabReportsPage';
 
 import SupportCenterPage from './features/support/pages/SupportCenterPage';
 import { ReviewsManagementPage } from './features/reviews/pages/ReviewsManagementPage';
+import { LocationManagementPage } from './features/locations/pages/LocationManagementPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('adminToken');
@@ -125,7 +129,13 @@ function App() {
 
           {/* Clinical Modules */}
           <Route path="/doctors" element={<Doctors />} />
+          <Route path="/locations" element={<LocationManagementPage />} />
+          <Route path="/locations/:doctorId" element={<LocationManagementPage />} />
           <Route path="/patients" element={<Patients />} />
+          <Route path="/patient-timelines" element={<PatientTimelinesPage />} />
+          <Route path="/patient-timelines/:patientId" element={<PatientTimelineDetailPage />} />
+          <Route path="/medical-records" element={<MedicalRecordsPage />} />
+          <Route path="/medical-records/:patientId" element={<MedicalRecordsPage />} />
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/appointments/today" element={<DoctorTodayAppointments />} />
           <Route path="/reviews" element={<ReviewsManagementPage />} />
