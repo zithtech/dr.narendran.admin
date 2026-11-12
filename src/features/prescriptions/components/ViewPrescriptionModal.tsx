@@ -102,9 +102,9 @@ export default function ViewPrescriptionModal({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
-                  color: '#7c3aed',
-                  borderColor: '#ddd6fe',
-                  background: '#f5f3ff',
+                  color: '#2563eb',
+                  borderColor: '#bfdbfe',
+                  background: '#eff6ff',
                 }}
               >
                 <Pencil size={13} /> Edit Prescription
@@ -127,8 +127,8 @@ export default function ViewPrescriptionModal({
               style={{
                 fontSize: 12.5,
                 fontWeight: 600,
-                background: '#7c3aed',
-                borderColor: '#7c3aed',
+                background: '#2563eb',
+                borderColor: '#2563eb',
                 color: '#ffffff',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -153,7 +153,7 @@ export default function ViewPrescriptionModal({
               background: '#f8fafc',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#7c3aed', marginBottom: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#2563eb', marginBottom: 4 }}>
               <Stethoscope size={15} />
               <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 Prescribed By
@@ -218,7 +218,7 @@ export default function ViewPrescriptionModal({
               gap: 8,
             }}
           >
-            <Pill size={15} style={{ color: '#7c3aed' }} />
+            <Pill size={15} style={{ color: '#2563eb' }} />
             <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
               Prescribed Medicines ({prescription.medicines?.length || 0})
             </span>
@@ -244,7 +244,7 @@ export default function ViewPrescriptionModal({
                     <div style={{ fontWeight: 650, color: '#0f172a' }}>{m.medicine_name}</div>
                     {m.strength && <div style={{ fontSize: 11, color: '#64748b' }}>Strength: {m.strength}</div>}
                     {m.instructions && (
-                      <div style={{ fontSize: 11, color: '#7c3aed', fontStyle: 'italic', marginTop: 2 }}>
+                      <div style={{ fontSize: 11, color: '#2563eb', fontStyle: 'italic', marginTop: 2 }}>
                         Note: {m.instructions}
                       </div>
                     )}
@@ -255,8 +255,8 @@ export default function ViewPrescriptionModal({
                       style={{
                         padding: '2px 7px',
                         borderRadius: 4,
-                        background: '#f5f3ff',
-                        color: '#6d28d9',
+                        background: '#eff6ff',
+                        color: '#1d4ed8',
                         fontWeight: 600,
                         fontSize: 11.5,
                       }}

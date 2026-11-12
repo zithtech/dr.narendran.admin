@@ -132,9 +132,9 @@ export default function CancelAppointmentModal({
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
-                  color: '#6d28d9',
-                  background: '#f5f3ff',
-                  border: '1px solid #ede9fe',
+                  color: '#1d4ed8',
+                  background: '#eff6ff',
+                  border: '1px solid #dbeafe',
                   padding: '1.5px 6.5px',
                   borderRadius: 4,
                 }}

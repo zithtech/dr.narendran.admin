@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import Login from './pages/Login';
 import ClientLogin from './pages/ClientLogin';
 import Dashboard from './pages/Dashboard';
+import DashboardOverviewPage from './pages/DashboardOverviewPage';
 import ClientDashboard from './pages/ClientDashboard';
 import Branches from './pages/Branches';
 import Doctors from './pages/Doctors';
@@ -104,7 +105,7 @@ function App() {
           <Route path="change-password" element={<LabChangePasswordPage />} />
         </Route>
 
-        {/* Protected Admin Portal routes wrapped in SidebarLayout */}
+        {/* Protected Admin Portal routes wrapped in Top Navigation Layout */}
         <Route
           element={
             <ProtectedRoute>
@@ -112,24 +113,39 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route path="/" element={<Dashboard />} />
+          {/* Dashboard Module */}
+          <Route path="/" element={<DashboardOverviewPage />} />
+          <Route path="/dashboard" element={<DashboardOverviewPage />} />
+
+          {/* Network Modules */}
+          <Route path="/hospitals" element={<Dashboard />} />
           <Route path="/branches" element={<Branches />} />
+          <Route path="/labs" element={<Labs />} />
+          <Route path="/linked-medicals" element={<LinkedMedicals />} />
+
+          {/* Clinical Modules */}
           <Route path="/doctors" element={<Doctors />} />
           <Route path="/patients" element={<Patients />} />
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/appointments/today" element={<DoctorTodayAppointments />} />
+          <Route path="/reviews" element={<ReviewsManagementPage />} />
+
+          {/* Operations Modules */}
           <Route path="/pharmacy" element={<Pharmacy />} />
           <Route path="/inventory" element={<MedicineInventory />} />
+          <Route path="/prescriptions" element={<PrescriptionsPage />} />
+          <Route path="/medicine-package" element={<PrescriptionsPage />} />
+          <Route path="/medicine-packages" element={<PrescriptionsPage />} />
           <Route path="/orders" element={<OrdersPage />} />
-          <Route path="/labs" element={<Labs />} />
           <Route path="/lab-services" element={<LabServices />} />
-          <Route path="/linked-medicals" element={<LinkedMedicals />} />
-          <Route path="/client-portals" element={<ClientPortals />} />
+
+          {/* Administration Modules */}
           <Route path="/users" element={<Users />} />
           <Route path="/staff" element={<StaffManagement />} />
           <Route path="/roles" element={<Roles />} />
-          <Route path="/prescriptions" element={<PrescriptionsPage />} />
-          <Route path="/reviews" element={<ReviewsManagementPage />} />
+          <Route path="/client-portals" element={<ClientPortals />} />
+
+          {/* Support Modules */}
           <Route path="/support" element={<SupportCenterPage defaultUserType="PATIENT" />} />
           <Route path="/doctor-support" element={<SupportCenterPage defaultUserType="DOCTOR" />} />
         </Route>
