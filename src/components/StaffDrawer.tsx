@@ -239,13 +239,13 @@ export default function StaffDrawer({
             width: 48,
             height: 48,
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+            background: '#0f172a',
             color: '#ffffff',
             display: 'grid',
             placeItems: 'center',
             fontWeight: 700,
             fontSize: 17,
-            boxShadow: '0 4px 10px rgba(124, 58, 237, 0.22)',
+            boxShadow: '0 2px 4px rgba(15, 23, 42, 0.1)',
             flexShrink: 0,
           }}
         >
@@ -267,10 +267,10 @@ export default function StaffDrawer({
             <span
               style={{
                 fontSize: 11,
-                fontWeight: 700,
-                color: '#6d28d9',
-                background: '#f5f3ff',
-                border: '1px solid #ede9fe',
+                fontWeight: 600,
+                color: '#475569',
+                background: '#f1f5f9',
+                border: '1px solid #e2e8f0',
                 padding: '2px 7px',
                 borderRadius: 5,
               }}
@@ -283,10 +283,10 @@ export default function StaffDrawer({
             <span
               style={{
                 fontSize: 11.5,
-                fontWeight: 650,
-                color: '#6d28d9',
-                background: '#f5f3ff',
-                border: '1px solid #ede9fe',
+                fontWeight: 600,
+                color: '#334155',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
                 padding: '2px 8px',
                 borderRadius: 5,
               }}
@@ -398,7 +398,7 @@ export default function StaffDrawer({
     {
       label: 'Shift Timing',
       value: (
-        <span style={{ fontWeight: 650, color: '#6d28d9', fontSize: 13 }}>
+        <span style={{ fontWeight: 600, color: '#0f172a', fontSize: 13 }}>
           {staff.shiftTiming}
           {staff.customShiftDetails ? ` (${staff.customShiftDetails})` : ''}
         </span>
@@ -406,7 +406,7 @@ export default function StaffDrawer({
     },
     {
       label: 'Joining Date',
-      value: <span style={{ fontWeight: 650, color: '#0f172a', fontSize: 13 }}>{staff.joiningDate}</span>,
+      value: <span style={{ fontWeight: 600, color: '#0f172a', fontSize: 13 }}>{staff.joiningDate}</span>,
     },
   ];
 
@@ -426,7 +426,7 @@ export default function StaffDrawer({
         onClick={() => onEdit(staff)}
         style={{
           fontSize: 12.5,
-          background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+          background: '#2563eb',
           color: '#ffffff',
           border: 'none',
           display: 'inline-flex',
@@ -437,7 +437,7 @@ export default function StaffDrawer({
           height: 35,
           cursor: 'pointer',
           fontWeight: 600,
-          boxShadow: '0 2px 6px rgba(124, 58, 237, 0.28)',
+          boxShadow: '0 1px 3px rgba(37, 99, 235, 0.24)',
         }}
       >
         <Pencil size={14} />
@@ -464,7 +464,7 @@ export default function StaffDrawer({
         <div className="staff-view-card">
           <div className="staff-view-header">
             <div className="staff-view-badge">
-              <Building2 size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+              <Building2 size={13.5} style={{ color: '#475569', display: 'block', margin: 'auto' }} />
             </div>
             <div>
               <div className="staff-view-title">Hospital & Branch Assignment</div>
@@ -501,10 +501,10 @@ export default function StaffDrawer({
 
             <div className="staff-view-item">
               <span className="staff-view-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <Calendar size={11.5} style={{ color: '#7c3aed' }} />
+                <Calendar size={11.5} style={{ color: '#475569' }} />
                 <span>Work Days</span>
               </span>
-              <span className="staff-view-val" style={{ fontWeight: 600, color: '#6d28d9' }}>
+              <span className="staff-view-val" style={{ fontWeight: 600, color: '#0f172a' }}>
                 {formatWorkDays(staff.workDays || staff.work_days)}
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 3.5, flexWrap: 'wrap', marginTop: 4 }}>
@@ -524,9 +524,9 @@ export default function StaffDrawer({
                         fontWeight: isWorking ? 700 : 500,
                         padding: '1px 5px',
                         borderRadius: 4,
-                        background: isWorking ? '#f5f3ff' : '#f8fafc',
-                        border: isWorking ? '1px solid #ede9fe' : '1px solid #e2e8f0',
-                        color: isWorking ? '#6d28d9' : '#94a3b8',
+                        background: isWorking ? '#f1f5f9' : '#f8fafc',
+                        border: isWorking ? '1px solid #cbd5e1' : '1px solid #e2e8f0',
+                        color: isWorking ? '#0f172a' : '#94a3b8',
                       }}
                     >
                       {day.label}
@@ -549,7 +549,7 @@ export default function StaffDrawer({
         <div className="staff-view-card">
           <div className="staff-view-header">
             <div className="staff-view-badge">
-              <User size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+              <User size={13.5} style={{ color: '#475569', display: 'block', margin: 'auto' }} />
             </div>
             <div>
               <div className="staff-view-title">Contact Information</div>
@@ -563,7 +563,7 @@ export default function StaffDrawer({
               <a
                 href={`tel:${staff.phone}`}
                 className="staff-view-val"
-                style={{ fontWeight: 600, color: '#7c3aed', textDecoration: 'none' }}
+                style={{ fontWeight: 600, color: '#2563eb', textDecoration: 'none' }}
               >
                 {staff.phone}
               </a>
@@ -575,7 +575,7 @@ export default function StaffDrawer({
                 <a
                   href={`mailto:${staff.email}`}
                   className="staff-view-val"
-                  style={{ color: '#7c3aed', textDecoration: 'none' }}
+                  style={{ color: '#2563eb', textDecoration: 'none' }}
                 >
                   {staff.email}
                 </a>
@@ -610,7 +610,7 @@ export default function StaffDrawer({
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div className="staff-view-badge">
-                <FileText size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+                <FileText size={13.5} style={{ color: '#475569', display: 'block', margin: 'auto' }} />
               </div>
               <div>
                 <div className="staff-view-title">Staff Documents & Certifications</div>
@@ -620,10 +620,10 @@ export default function StaffDrawer({
             <span
               style={{
                 fontSize: 11,
-                fontWeight: 650,
-                color: '#6d28d9',
-                background: '#f5f3ff',
-                border: '1px solid #ede9fe',
+                fontWeight: 600,
+                color: '#334155',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
                 padding: '2px 8px',
                 borderRadius: 9999,
               }}
@@ -660,8 +660,8 @@ export default function StaffDrawer({
                             height: 32,
                             borderRadius: 6,
                             background: '#ffffff',
-                            color: '#7c3aed',
-                            border: '1px solid #ede9fe',
+                            color: '#475569',
+                            border: '1px solid #e2e8f0',
                             display: 'grid',
                             placeItems: 'center',
                             flexShrink: 0,
@@ -946,7 +946,7 @@ export default function StaffDrawer({
           <div className="staff-view-card">
             <div className="staff-view-header">
               <div className="staff-view-badge">
-                <FileText size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+                <FileText size={13.5} style={{ color: '#475569', display: 'block', margin: 'auto' }} />
               </div>
               <div>
                 <div className="staff-view-title">Internal Administrative Remarks</div>
@@ -1013,8 +1013,8 @@ export default function StaffDrawer({
           width: 26px;
           height: 26px;
           border-radius: 6px;
-          background: #f5f3ff;
-          border: 1px solid #ede9fe;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
           display: flex;
           align-items: center;
           justify-content: center;

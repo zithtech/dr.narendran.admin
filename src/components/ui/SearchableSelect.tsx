@@ -38,6 +38,7 @@ export interface SearchableSelectProps {
   style?: CSSProperties | undefined;
   size?: 'sm' | 'md' | 'lg' | undefined;
   variant?: 'default' | 'pill' | undefined;
+  accentTone?: 'blue' | 'violet' | undefined;
   searchable?: boolean | undefined;
   clearable?: boolean | undefined;
   onClear?: (() => void) | undefined;
@@ -65,6 +66,7 @@ export function SearchableSelect({
   style,
   size = 'md',
   variant = 'default',
+  accentTone = 'blue',
   searchable,
   clearable = false,
   onClear,
@@ -83,6 +85,7 @@ export function SearchableSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+  const [resolvedAlign, setResolvedAlign] = useState<'left' | 'right'>(menuAlign);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -142,12 +145,40 @@ export function SearchableSelect({
     }
   }, [isOpen, showSearch]);
 
-  // Scroll highlighted item into view
-  const scrollItemIntoView = (index: number) => {
-    if (listRef.current && listRef.current.children[index]) {
-      const child = listRef.current.children[index] as HTMLElement;
-      child.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  // Ensure options list never scrolls horizontally and handle alignment
+  useEffect(() => {
+    if (isOpen) {
+      if (listRef.current) {
+        listRef.current.scrollLeft = 0;
+      }
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        // If aligning left would cause menu to overflow screen right edge, align right
+        if (rect.left + 230 > window.innerWidth) {
+          setResolvedAlign('right');
+        } else {
+          setResolvedAlign('left');
+        }
+      }
     }
+  }, [isOpen]);
+
+  // Scroll highlighted item into view - strictly vertical to prevent horizontal offset
+  const scrollItemIntoView = (index: number) => {
+    const list = listRef.current;
+    if (!list || !list.children[index]) return;
+    const child = list.children[index] as HTMLElement;
+    const itemTop = child.offsetTop;
+    const itemHeight = child.offsetHeight;
+    const listScrollTop = list.scrollTop;
+    const listHeight = list.clientHeight;
+
+    if (itemTop < listScrollTop) {
+      list.scrollTop = itemTop;
+    } else if (itemTop + itemHeight > listScrollTop + listHeight) {
+      list.scrollTop = itemTop + itemHeight - listHeight;
+    }
+    list.scrollLeft = 0;
   };
 
   // Handle keyboard navigation
@@ -232,16 +263,29 @@ export function SearchableSelect({
   const isPill = variant === 'pill';
   const pillIsActive = isSet !== undefined ? isSet : Boolean(value && value !== '' && value !== 'all');
 
+  const isViolet = accentTone === 'violet';
+  const brandPrimary = isViolet ? '#7c3aed' : '#2563eb';
+  const brandLight = isViolet ? '#f5f3ff' : '#eff6ff';
+  const brandBorder = isViolet ? '#ddd6fe' : '#bfdbfe';
+  const brandDark = isViolet ? '#6d28d9' : '#1d4ed8';
+  const brandShadow = isViolet ? 'rgba(124, 58, 237, 0.12)' : 'rgba(37, 99, 235, 0.12)';
+
   // Compute menu style
   const computedMenuWidth = (() => {
     if (menuWidth === 'trigger') return '100%';
-    if (typeof menuWidth === 'number' || typeof menuWidth === 'string') return menuWidth;
-    if (isPill) return 'max-content';
-    return '100%';
+    if (typeof menuWidth === 'number') return `${menuWidth}px`;
+    if (typeof menuWidth === 'string') return menuWidth;
+    return 'max-content';
   })();
 
-  const computedMinWidth = isPill ? 180 : '100%';
-  const computedMaxWidth = 'min(380px, 95vw)';
+  const computedMinWidth = (() => {
+    if (menuWidth === 'trigger') return '100%';
+    if (typeof menuWidth === 'number') return `${menuWidth}px`;
+    if (typeof menuWidth === 'string') return menuWidth;
+    return 'max(100%, 220px)';
+  })();
+
+  const computedMaxWidth = 'min(380px, calc(100vw - 24px))';
 
   return (
     <div
@@ -274,20 +318,21 @@ export function SearchableSelect({
         .ui-searchable-trigger.variant-default {
           background: #ffffff;
           border: 1px solid #e2e8f0;
-          color: #1e293b;
+          color: #334155;
+          font-weight: 500;
         }
         .ui-searchable-trigger.variant-default:hover:not(:disabled) {
           border-color: #cbd5e1;
-          background: #fafafa;
+          background: #f8fafc;
         }
         .ui-searchable-trigger.variant-default.is-open {
-          border-color: #7c3aed !important;
-          box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12) !important;
+          border-color: ${brandPrimary} !important;
+          box-shadow: 0 0 0 3px ${brandShadow} !important;
           background: #ffffff;
         }
         .ui-searchable-trigger.variant-default:focus-visible {
-          border-color: #7c3aed;
-          box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+          border-color: ${brandPrimary};
+          box-shadow: 0 0 0 3px ${brandShadow};
         }
         .ui-searchable-trigger.variant-pill {
           border-radius: 9999px;
@@ -300,18 +345,18 @@ export function SearchableSelect({
           border-color: #cbd5e1;
         }
         .ui-searchable-trigger.variant-pill.is-active {
-          background: #f5f3ff;
-          border-color: #ddd6fe;
-          color: #6d28d9;
+          background: ${brandLight};
+          border-color: ${brandBorder};
+          color: ${brandDark};
           font-weight: 600;
         }
         .ui-searchable-trigger.variant-pill.is-active:hover:not(:disabled) {
-          background: #ede9fe;
-          border-color: #c4b5fd;
+          background: ${brandLight};
+          border-color: ${brandBorder};
         }
         .ui-searchable-trigger.variant-pill.is-open {
-          border-color: #7c3aed !important;
-          box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12) !important;
+          border-color: ${brandPrimary} !important;
+          box-shadow: 0 0 0 3px ${brandShadow} !important;
         }
         .ui-searchable-trigger:disabled {
           opacity: 0.6;
@@ -323,10 +368,11 @@ export function SearchableSelect({
           top: calc(100% + 4px);
           background: #ffffff;
           border: 1px solid #e2e8f0;
-          border-radius: 10px;
-          box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+          border-radius: 8px;
+          box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 4px 6px -2px rgba(15, 23, 42, 0.05);
           z-index: 99999;
           overflow: hidden;
+          box-sizing: border-box;
           animation: uiSearchableMenuFade 0.14s ease-out;
         }
         @keyframes uiSearchableMenuFade {
@@ -343,7 +389,7 @@ export function SearchableSelect({
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 7px 10px;
+          padding: 8px 10px;
           border-bottom: 1px solid #f1f5f9;
           background: #f8fafc;
         }
@@ -360,9 +406,12 @@ export function SearchableSelect({
           color: #94a3b8;
         }
         .ui-searchable-options-list {
-          max-height: 220px;
+          max-height: 240px;
           overflow-y: auto;
+          overflow-x: hidden;
           padding: 4px;
+          overscroll-behavior: contain;
+          scroll-behavior: auto !important;
         }
         .ui-searchable-option {
           display: flex;
@@ -373,21 +422,24 @@ export function SearchableSelect({
           font-size: 12.5px;
           color: #334155;
           cursor: pointer;
-          transition: all 0.12s ease;
+          transition: background-color 0.12s ease, color 0.12s ease;
           gap: 8px;
+          width: 100%;
+          box-sizing: border-box;
+          user-select: none;
         }
         .ui-searchable-option:hover:not(.is-disabled) {
-          background: #f5f3ff;
-          color: #7c3aed;
+          background: #f1f5f9;
+          color: #0f172a;
         }
         .ui-searchable-option.is-selected {
-          background: #f5f3ff;
-          color: #6d28d9;
+          background: ${brandLight};
+          color: ${brandDark};
           font-weight: 600;
         }
-        .ui-searchable-option.is-highlighted {
-          background: #f5f3ff;
-          color: #7c3aed;
+        .ui-searchable-option.is-highlighted:not(.is-selected) {
+          background: #f1f5f9;
+          color: #0f172a;
         }
         .ui-searchable-option.is-disabled {
           opacity: 0.5;
@@ -452,7 +504,7 @@ export function SearchableSelect({
           ) : selectedOption ? (
             <>
               {selectedOption.icon && (
-                <span style={{ display: 'inline-flex', flexShrink: 0, color: pillIsActive ? '#7c3aed' : '#64748b' }}>
+                <span style={{ display: 'inline-flex', flexShrink: 0, color: pillIsActive ? brandPrimary : '#64748b' }}>
                   {selectedOption.icon}
                 </span>
               )}
@@ -462,7 +514,7 @@ export function SearchableSelect({
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  color: isPill ? (pillIsActive ? '#6d28d9' : '#475569') : '#0f172a',
+                  color: isPill ? (pillIsActive ? brandDark : '#475569') : '#0f172a',
                 }}
               >
                 {selectedOption.label}
@@ -479,9 +531,9 @@ export function SearchableSelect({
                     fontWeight: 600,
                     padding: '1px 6px',
                     borderRadius: 9999,
-                    background: '#f5f3ff',
-                    color: '#6d28d9',
-                    border: '1px solid #ddd6fe',
+                    background: brandLight,
+                    color: brandDark,
+                    border: `1px solid ${brandBorder}`,
                     flexShrink: 0,
                   }}
                 >
@@ -526,7 +578,7 @@ export function SearchableSelect({
           <ChevronDown
             size={13}
             style={{
-              color: isOpen ? '#7c3aed' : pillIsActive ? '#7c3aed' : '#94a3b8',
+              color: isOpen ? brandPrimary : pillIsActive ? brandPrimary : '#94a3b8',
               transition: 'transform 0.18s ease',
               transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
             }}
@@ -540,8 +592,8 @@ export function SearchableSelect({
           className="ui-searchable-menu"
           role="listbox"
           style={{
-            left: menuAlign === 'left' ? 0 : 'auto',
-            right: menuAlign === 'right' ? 0 : 'auto',
+            left: resolvedAlign === 'left' ? 0 : 'auto',
+            right: resolvedAlign === 'right' ? 0 : 'auto',
             width: computedMenuWidth,
             minWidth: computedMinWidth,
             maxWidth: computedMaxWidth,
@@ -550,7 +602,7 @@ export function SearchableSelect({
           {/* Search Box Header */}
           {showSearch && (
             <div className="ui-searchable-search-box">
-              <Search size={13} style={{ color: '#7c3aed', flexShrink: 0 }} />
+              <Search size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
               <input
                 ref={searchInputRef}
                 type="text"
@@ -585,7 +637,15 @@ export function SearchableSelect({
           )}
 
           {/* Options Scroll List */}
-          <div ref={listRef} className="ui-searchable-options-list">
+          <div
+            ref={listRef}
+            className="ui-searchable-options-list"
+            onScroll={(e) => {
+              if (e.currentTarget.scrollLeft !== 0) {
+                e.currentTarget.scrollLeft = 0;
+              }
+            }}
+          >
             {filteredOptions.length === 0 ? (
               <div
                 style={{
@@ -624,33 +684,35 @@ export function SearchableSelect({
                     aria-selected={isSelected}
                     className={`ui-searchable-option ${isSelected ? 'is-selected' : ''} ${isHighlighted ? 'is-highlighted' : ''} ${opt.disabled ? 'is-disabled' : ''}`}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: 1, overflow: 'hidden' }}>
                       {opt.icon && (
-                        <span style={{ display: 'inline-flex', flexShrink: 0, color: isSelected ? '#7c3aed' : '#64748b' }}>
+                        <span style={{ display: 'inline-flex', flexShrink: 0, color: isSelected ? brandPrimary : '#64748b' }}>
                           {opt.icon}
                         </span>
                       )}
-                      <div style={{ minWidth: 0 }}>
+                      <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                         <div
                           style={{
                             fontWeight: isSelected ? 600 : 500,
-                            color: isSelected ? '#6d28d9' : '#1e293b',
+                            color: isSelected ? brandDark : '#1e293b',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
+                            paddingLeft: 1,
                           }}
+                          title={opt.label}
                         >
                           {opt.label}
                         </div>
                         {opt.sublabel && (
-                          <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>
+                          <div style={{ fontSize: 11, color: '#64748b', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingLeft: 1 }}>
                             {opt.sublabel}
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
                       {opt.badge && (
                         <span
                           style={{
@@ -658,15 +720,15 @@ export function SearchableSelect({
                             fontWeight: 600,
                             padding: '1px 6px',
                             borderRadius: 9999,
-                            background: opt.badgeTone === 'green' ? '#f0fdf4' : opt.badgeTone === 'amber' ? '#fffbeb' : '#f5f3ff',
-                            color: opt.badgeTone === 'green' ? '#16a34a' : opt.badgeTone === 'amber' ? '#d97706' : '#6d28d9',
-                            border: `1px solid ${opt.badgeTone === 'green' ? '#bbf7d0' : opt.badgeTone === 'amber' ? '#fde68a' : '#ddd6fe'}`,
+                            background: opt.badgeTone === 'green' ? '#f0fdf4' : opt.badgeTone === 'amber' ? '#fffbeb' : brandLight,
+                            color: opt.badgeTone === 'green' ? '#16a34a' : opt.badgeTone === 'amber' ? '#d97706' : brandDark,
+                            border: `1px solid ${opt.badgeTone === 'green' ? '#bbf7d0' : opt.badgeTone === 'amber' ? '#fde68a' : brandBorder}`,
                           }}
                         >
                           {opt.badge}
                         </span>
                       )}
-                      {isSelected && <Check size={14} style={{ color: '#7c3aed' }} />}
+                      {isSelected && <Check size={14} style={{ color: brandPrimary, strokeWidth: 2.5 }} />}
                     </div>
                   </div>
                 );

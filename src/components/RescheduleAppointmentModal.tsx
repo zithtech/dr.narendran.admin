@@ -168,17 +168,17 @@ export default function RescheduleAppointmentModal({
           fontSize: 12.5,
           fontWeight: 600,
           border: isSelected
-            ? '2px solid #7c3aed'
+            ? '2px solid #2563eb'
             : isBooked
               ? '1px dashed #cbd5e1'
               : '1px solid #e2e8f0',
           background: isSelected
-            ? '#f5f3ff'
+            ? '#eff6ff'
             : isBooked
               ? '#f8fafc'
               : '#ffffff',
           color: isSelected
-            ? '#6d28d9'
+            ? '#1d4ed8'
             : isBooked
               ? '#94a3b8'
               : '#1e293b',
@@ -212,6 +212,7 @@ export default function RescheduleAppointmentModal({
     <Modal
       open={isOpen}
       onClose={submitting ? () => undefined : onClose}
+      variant="drawer"
       size="md"
       className="reschedule-appointment-modal"
       title={
@@ -221,14 +222,14 @@ export default function RescheduleAppointmentModal({
               width: 38,
               height: 38,
               borderRadius: 10,
-              background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
-              color: '#7c3aed',
-              border: '1px solid #c4b5fd',
+              background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+              color: '#2563eb',
+              border: '1px solid #bfdbfe',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
-              boxShadow: '0 2px 6px rgba(124, 58, 237, 0.16)',
+              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.16)',
             }}
           >
             <CalendarClock size={18} style={{ display: 'block', margin: 'auto' }} />
@@ -282,9 +283,9 @@ export default function RescheduleAppointmentModal({
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
-                  color: '#6d28d9',
-                  background: '#f5f3ff',
-                  border: '1px solid #ede9fe',
+                  color: '#1d4ed8',
+                  background: '#eff6ff',
+                  border: '1px solid #dbeafe',
                   padding: '1.5px 6.5px',
                   borderRadius: 4,
                 }}
@@ -312,7 +313,7 @@ export default function RescheduleAppointmentModal({
           <div className="resched-section-card">
             <div className="resched-section-header">
               <div className="resched-section-badge">
-                <CalendarDays size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+                <CalendarDays size={13.5} style={{ color: '#2563eb', display: 'block', margin: 'auto' }} />
               </div>
               <div>
                 <div className="resched-section-title">Select New Date</div>
@@ -338,7 +339,7 @@ export default function RescheduleAppointmentModal({
           <div className="resched-section-card">
             <div className="resched-section-header">
               <div className="resched-section-badge">
-                <Clock size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+                <Clock size={13.5} style={{ color: '#2563eb', display: 'block', margin: 'auto' }} />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: 6 }}>
                 <div>
@@ -349,9 +350,9 @@ export default function RescheduleAppointmentModal({
                   style={{
                     fontSize: 11,
                     fontWeight: 650,
-                    color: '#6d28d9',
-                    background: '#f5f3ff',
-                    border: '1px solid #ede9fe',
+                    color: '#1d4ed8',
+                    background: '#eff6ff',
+                    border: '1px solid #dbeafe',
                     padding: '2px 7px',
                     borderRadius: 4,
                   }}
@@ -374,7 +375,7 @@ export default function RescheduleAppointmentModal({
                   fontSize: 13,
                 }}
               >
-                <Loader2 size={16} className="animate-spin" style={{ color: '#7c3aed' }} />
+                <Loader2 size={16} className="animate-spin" style={{ color: '#2563eb' }} />
                 <span>Checking doctor availability slots...</span>
               </div>
             ) : slots.length === 0 ? (
@@ -466,7 +467,7 @@ export default function RescheduleAppointmentModal({
           <div className="resched-section-card">
             <div className="resched-section-header">
               <div className="resched-section-badge">
-                <FileText size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+                <FileText size={13.5} style={{ color: '#2563eb', display: 'block', margin: 'auto' }} />
               </div>
               <div>
                 <div className="resched-section-title">Reason for Reschedule</div>
@@ -521,10 +522,10 @@ export default function RescheduleAppointmentModal({
               padding: '0 18px',
               height: 36,
               fontWeight: 600,
-              background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
               color: '#ffffff',
               border: 'none',
-              boxShadow: '0 2px 6px rgba(124, 58, 237, 0.25)',
+              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
               cursor: submitting || !selectedSlotId ? 'not-allowed' : 'pointer',
             }}
           >
@@ -564,8 +565,8 @@ export default function RescheduleAppointmentModal({
           width: 26px;
           height: 26px;
           border-radius: 6px;
-          background: #f5f3ff;
-          border: 1px solid #ede9fe;
+          background: #eff6ff;
+          border: 1px solid #dbeafe;
           display: flex;
           align-items: center;
           justifyContent: center;

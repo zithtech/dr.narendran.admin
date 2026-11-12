@@ -167,14 +167,14 @@ export default function LabModal({ isOpen, onClose, lab, onSave }: LabModalProps
               width: 38,
               height: 38,
               borderRadius: 10,
-              background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
-              color: '#7c3aed',
-              border: '1px solid #c4b5fd',
+              background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+              color: '#2563eb',
+              border: '1px solid #bfdbfe',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
-              boxShadow: '0 2px 6px rgba(124, 58, 237, 0.16)',
+              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.16)',
             }}
           >
             <FlaskConical size={19} style={{ display: 'block', margin: 'auto' }} />
@@ -251,9 +251,9 @@ export default function LabModal({ isOpen, onClose, lab, onSave }: LabModalProps
             width: 26px;
             height: 26px;
             border-radius: 7px;
-            background: #f5f3ff;
-            color: #7c3aed;
-            border: 1px solid #ede9fe;
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #dbeafe;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -284,8 +284,8 @@ export default function LabModal({ isOpen, onClose, lab, onSave }: LabModalProps
             transition: all 0.15s ease;
           }
           .lab-drawer-modal .ui-input:focus {
-            border-color: #7c3aed !important;
-            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12) !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
             outline: none;
           }
           .lab-drawer-modal .ant-select-selector {
@@ -296,13 +296,13 @@ export default function LabModal({ isOpen, onClose, lab, onSave }: LabModalProps
             transition: all 0.15s ease !important;
           }
           .lab-drawer-modal .ant-select-focused .ant-select-selector {
-            border-color: #7c3aed !important;
-            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12) !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
           }
           .lab-drawer-modal .ant-select-selection-item {
-            background: #f5f3ff !important;
-            border-color: #ddd6fe !important;
-            color: #6d28d9 !important;
+            background: #eff6ff !important;
+            border-color: #dbeafe !important;
+            color: #1d4ed8 !important;
             border-radius: 6px !important;
             font-weight: 500 !important;
             font-size: 12px !important;
@@ -320,9 +320,9 @@ export default function LabModal({ isOpen, onClose, lab, onSave }: LabModalProps
             position: relative;
           }
           .lab-status-btn.is-active {
-            border: 1.5px solid #7c3aed !important;
-            background: #f5f3ff !important;
-            box-shadow: 0 2px 6px rgba(124, 58, 237, 0.12);
+            border: 1.5px solid #2563eb !important;
+            background: #eff6ff !important;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
           }
           .lab-status-btn:not(.is-active) {
             border: 1px solid #e2e8f0;
@@ -345,8 +345,8 @@ export default function LabModal({ isOpen, onClose, lab, onSave }: LabModalProps
             transition: all 0.15s ease;
           }
           .lab-status-btn.is-active .lab-radio-circle {
-            border-color: #7c3aed;
-            background: #7c3aed;
+            border-color: #2563eb;
+            background: #2563eb;
           }
           .lab-radio-inner {
             width: 6px;

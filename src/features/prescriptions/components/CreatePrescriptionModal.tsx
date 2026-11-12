@@ -496,12 +496,12 @@ export default function CreatePrescriptionModal({
               width: 34,
               height: 34,
               borderRadius: 8,
-              background: '#f5f3ff',
-              border: '1px solid #ede9fe',
+              background: '#eff6ff',
+              border: '1px solid #dbeafe',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#7c3aed',
+              color: '#2563eb',
             }}
           >
             <Stethoscope size={18} />
@@ -541,8 +541,8 @@ export default function CreatePrescriptionModal({
                 padding: '6px 18px',
                 fontSize: 13,
                 fontWeight: 600,
-                background: '#7c3aed',
-                borderColor: '#7c3aed',
+                background: '#2563eb',
+                borderColor: '#2563eb',
                 color: '#ffffff',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -593,7 +593,7 @@ export default function CreatePrescriptionModal({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <User size={16} style={{ color: '#7c3aed' }} />
+                  <User size={16} style={{ color: '#2563eb' }} />
                   <div>
                     <span style={{ fontWeight: 650, color: '#0f172a', fontSize: 13 }}>
                       {selectedPatient.name}
@@ -613,7 +613,7 @@ export default function CreatePrescriptionModal({
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#7c3aed',
+                      color: '#2563eb',
                       fontSize: 11.5,
                       cursor: 'pointer',
                       fontWeight: 600,
@@ -669,9 +669,9 @@ export default function CreatePrescriptionModal({
                   fontSize: 11.5,
                   padding: '3px 8px',
                   borderRadius: 6,
-                  background: '#f5f3ff',
-                  border: '1px solid #ede9fe',
-                  color: '#6d28d9',
+                  background: '#eff6ff',
+                  border: '1px solid #dbeafe',
+                  color: '#1d4ed8',
                   fontWeight: 600,
                 }}
               >
@@ -714,8 +714,8 @@ export default function CreatePrescriptionModal({
                   padding: '2px 8px',
                   borderRadius: 4,
                   border: '1px solid #e2e8f0',
-                  background: diagnosis === cd ? '#f5f3ff' : '#ffffff',
-                  color: diagnosis === cd ? '#7c3aed' : '#475569',
+                  background: diagnosis === cd ? '#eff6ff' : '#ffffff',
+                  color: diagnosis === cd ? '#2563eb' : '#475569',
                   cursor: 'pointer',
                   fontWeight: diagnosis === cd ? 600 : 400,
                 }}
@@ -730,7 +730,7 @@ export default function CreatePrescriptionModal({
         <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 14, background: '#ffffff' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Pill size={16} style={{ color: '#7c3aed' }} />
+              <Pill size={16} style={{ color: '#2563eb' }} />
               <span style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
                 Medicines & Dosages ({medicines.length})
               </span>
@@ -741,9 +741,9 @@ export default function CreatePrescriptionModal({
               style={{
                 fontSize: 12,
                 fontWeight: 600,
-                color: '#7c3aed',
-                background: '#f5f3ff',
-                border: '1px solid #ede9fe',
+                color: '#2563eb',
+                background: '#eff6ff',
+                border: '1px solid #dbeafe',
                 borderRadius: 6,
                 padding: '4px 10px',
                 cursor: 'pointer',
@@ -776,8 +776,8 @@ export default function CreatePrescriptionModal({
                       width: 24,
                       height: 24,
                       borderRadius: '50%',
-                      background: '#ede9fe',
-                      color: '#6d28d9',
+                      background: '#eff6ff',
+                      color: '#1d4ed8',
                       fontSize: 11,
                       fontWeight: 700,
                       display: 'flex',
@@ -1071,8 +1071,8 @@ export default function CreatePrescriptionModal({
                       padding: '3px 8px',
                       borderRadius: 4,
                       border: '1px solid #e2e8f0',
-                      background: followUpDays === d ? '#f5f3ff' : '#ffffff',
-                      color: followUpDays === d ? '#7c3aed' : '#475569',
+                      background: followUpDays === d ? '#eff6ff' : '#ffffff',
+                      color: followUpDays === d ? '#2563eb' : '#475569',
                       fontWeight: followUpDays === d ? 600 : 400,
                       cursor: 'pointer',
                     }}
