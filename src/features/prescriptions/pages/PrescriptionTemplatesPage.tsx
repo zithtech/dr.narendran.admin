@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
+import { usePermission } from "../../../context/PermissionContext";
 import api from "../../../utils/api";
 import { PrescriptionPreviewModal } from "../components/PrescriptionPreviewModal";
 import {
@@ -21,6 +22,8 @@ import {
 import type { PrescriptionTemplate } from "../types/template";
 
 export const PrescriptionTemplatesPage: React.FC = () => {
+  const { canUpdate } = usePermission();
+  const isTemplateUpdatable = canUpdate("PRESCRIPTIONS");
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [showVariablesGuide, setShowVariablesGuide] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -64,7 +67,7 @@ export const PrescriptionTemplatesPage: React.FC = () => {
   }, []);
 
   const handleSaveTemplate = async () => {
-    if (!editHtml.trim()) return;
+    if (!isTemplateUpdatable || !editHtml.trim()) return;
     try {
       setSaving(true);
       setError(null);
@@ -143,21 +146,23 @@ export const PrescriptionTemplatesPage: React.FC = () => {
             {showVariablesGuide ? "Hide Placeholders" : "View Contract Placeholders"}
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (isEditing) {
-                setIsEditing(false);
-              } else {
-                setEditHtml(template.html_content);
-                setIsEditing(true);
-              }
-            }}
-            className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 rounded-xl border border-slate-200 shadow-sm transition-all flex items-center gap-1.5"
-          >
-            {isEditing ? <X size={14} /> : <Edit3 size={14} />}
-            {isEditing ? "Cancel Edit" : "Edit HTML Template"}
-          </button>
+          {isTemplateUpdatable && (
+            <button
+              type="button"
+              onClick={() => {
+                if (isEditing) {
+                  setIsEditing(false);
+                } else {
+                  setEditHtml(template.html_content);
+                  setIsEditing(true);
+                }
+              }}
+              className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 rounded-xl border border-slate-200 shadow-sm transition-all flex items-center gap-1.5"
+            >
+              {isEditing ? <X size={14} /> : <Edit3 size={14} />}
+              {isEditing ? "Cancel Edit" : "Edit HTML Template"}
+            </button>
+          )}
 
           <button
             type="button"
@@ -281,17 +286,19 @@ export const PrescriptionTemplatesPage: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setEditHtml(template.html_content);
-                  setIsEditing(true);
-                }}
-                className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 rounded-xl border border-slate-200 shadow-sm transition-all flex items-center gap-1.5"
-              >
-                <Edit3 size={14} />
-                Edit Template
-              </button>
+              {isTemplateUpdatable && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditHtml(template.html_content);
+                    setIsEditing(true);
+                  }}
+                  className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 rounded-xl border border-slate-200 shadow-sm transition-all flex items-center gap-1.5"
+                >
+                  <Edit3 size={14} />
+                  Edit Template
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setIsPreviewOpen(true)}

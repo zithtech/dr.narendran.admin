@@ -7,12 +7,14 @@ import Dashboard from './pages/Dashboard';
 import ClientDashboard from './pages/ClientDashboard';
 import Branches from './pages/Branches';
 import Doctors from './pages/Doctors';
+import DoctorAvailabilityPage from './pages/DoctorAvailabilityPage';
 import Users from './pages/Users';
 import Patients from './pages/Patients';
 import Appointments from './pages/Appointments';
 import DoctorTodayAppointments from './pages/DoctorTodayAppointments';
 import Pharmacy from './pages/Pharmacy';
 import MedicineInventory from './pages/MedicineInventory';
+import MedicinePackages from './pages/MedicinePackages';
 import OrdersPage from './features/orders/pages/OrdersPage';
 import PrescriptionsPage from './features/prescriptions/pages/PrescriptionsPage';
 import Labs from './pages/Labs';
@@ -34,6 +36,7 @@ import LabReportsPage from './pages/client/LabReportsPage';
 
 import SupportCenterPage from './features/support/pages/SupportCenterPage';
 import { ReviewsManagementPage } from './features/reviews/pages/ReviewsManagementPage';
+import { ModuleRouteGuard } from './context/PermissionContext';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('adminToken');
@@ -112,26 +115,192 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/branches" element={<Branches />} />
-          <Route path="/doctors" element={<Doctors />} />
-          <Route path="/patients" element={<Patients />} />
-          <Route path="/appointments" element={<Appointments />} />
-          <Route path="/appointments/today" element={<DoctorTodayAppointments />} />
-          <Route path="/pharmacy" element={<Pharmacy />} />
-          <Route path="/inventory" element={<MedicineInventory />} />
-          <Route path="/orders" element={<OrdersPage />} />
-          <Route path="/labs" element={<Labs />} />
-          <Route path="/lab-services" element={<LabServices />} />
-          <Route path="/linked-medicals" element={<LinkedMedicals />} />
-          <Route path="/client-portals" element={<ClientPortals />} />
-          <Route path="/users" element={<Users />} />
-          <Route path="/staff" element={<StaffManagement />} />
-          <Route path="/roles" element={<Roles />} />
-          <Route path="/prescriptions" element={<PrescriptionsPage />} />
-          <Route path="/reviews" element={<ReviewsManagementPage />} />
-          <Route path="/support" element={<SupportCenterPage defaultUserType="PATIENT" />} />
-          <Route path="/doctor-support" element={<SupportCenterPage defaultUserType="DOCTOR" />} />
+          <Route
+            path="/"
+            element={
+              <ModuleRouteGuard module="HOSPITALS" title="Hospitals">
+                <Dashboard />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/branches"
+            element={
+              <ModuleRouteGuard module="BRANCHES" title="Hospital Branches">
+                <Branches />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/doctors"
+            element={
+              <ModuleRouteGuard module="DOCTORS" title="Doctors">
+                <Doctors />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/availability"
+            element={
+              <ModuleRouteGuard module="AVAILABILITY" title="Availability & Slots">
+                <DoctorAvailabilityPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route path="/doctor-availability" element={<Navigate to="/availability" replace />} />
+          <Route
+            path="/patients"
+            element={
+              <ModuleRouteGuard module="PATIENTS" title="Patients">
+                <Patients />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/appointments"
+            element={
+              <ModuleRouteGuard module="APPOINTMENTS" title="Appointments">
+                <Appointments />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/appointments/today"
+            element={
+              <ModuleRouteGuard module="TODAYS_SCHEDULE" title="Today's Schedule">
+                <DoctorTodayAppointments />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/pharmacy"
+            element={
+              <ModuleRouteGuard module="PHARMACY" title="Pharmacy">
+                <Pharmacy />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/inventory"
+            element={
+              <ModuleRouteGuard module="INVENTORY" title="Medicine Inventory">
+                <MedicineInventory />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/medicine-packages"
+            element={
+              <ModuleRouteGuard module="MEDICINE_PACKAGES" title="Medicine Packages">
+                <MedicinePackages />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/packages"
+            element={
+              <ModuleRouteGuard module="MEDICINE_PACKAGES" title="Medicine Packages">
+                <MedicinePackages />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route path="/medicine-package" element={<Navigate to="/medicine-packages" replace />} />
+          <Route
+            path="/orders"
+            element={
+              <ModuleRouteGuard module="ORDERS" title="Pharmacy Orders">
+                <OrdersPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/labs"
+            element={
+              <ModuleRouteGuard module="LABS" title="Linked Labs">
+                <Labs />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/lab-services"
+            element={
+              <ModuleRouteGuard module="LAB_SERVICES" title="Lab Services">
+                <LabServices />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/linked-medicals"
+            element={
+              <ModuleRouteGuard module="LINKED_MEDICALS" title="Linked Medicals">
+                <LinkedMedicals />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/client-portals"
+            element={
+              <ModuleRouteGuard module="CLIENT_PORTALS" title="Client Portals">
+                <ClientPortals />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <ModuleRouteGuard module="USERS" title="User Accounts">
+                <Users />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/staff"
+            element={
+              <ModuleRouteGuard module="STAFF" title="Staff Management">
+                <StaffManagement />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/roles"
+            element={
+              <ModuleRouteGuard module="ROLES" title="Roles & Permissions">
+                <Roles />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/prescriptions"
+            element={
+              <ModuleRouteGuard module="PRESCRIPTIONS" title="Prescriptions">
+                <PrescriptionsPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/reviews"
+            element={
+              <ModuleRouteGuard module="REVIEWS" title="Ratings & Reviews">
+                <ReviewsManagementPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/support"
+            element={
+              <ModuleRouteGuard module="PATIENT_SUPPORT" title="Patient Support" fallbackSlugs={['SUPPORT']}>
+                <SupportCenterPage defaultUserType="PATIENT" />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/doctor-support"
+            element={
+              <ModuleRouteGuard module="DOCTOR_SUPPORT" title="Doctor Support" fallbackSlugs={['SUPPORT']}>
+                <SupportCenterPage defaultUserType="DOCTOR" />
+              </ModuleRouteGuard>
+            }
+          />
         </Route>
 
         {/* Legacy /portal fallback */}

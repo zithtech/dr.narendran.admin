@@ -8,9 +8,11 @@ import {
   FileText,
   FlaskConical,
   GitBranch,
+  Globe,
   HeartPulse,
   LifeBuoy,
   LogOut,
+  Package,
   Pill,
   Shield,
   ShoppingBag,
@@ -19,33 +21,43 @@ import {
   UserCog,
   Users,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 
-import api from '../utils/api';
+import { usePermission } from '../context/PermissionContext';
 import { cx } from './ui/primitives';
 
-const NAV_ITEMS = [
+export interface NavItem {
+  name: string;
+  path: string;
+  icon: any;
+  slug: string;
+  fallbackSlugs?: string[];
+}
+
+export const NAV_ITEMS: readonly NavItem[] = [
   { name: 'Hospitals', path: '/', icon: Building2, slug: 'HOSPITALS' },
   { name: 'Branches', path: '/branches', icon: GitBranch, slug: 'BRANCHES' },
   { name: 'Doctors', path: '/doctors', icon: Stethoscope, slug: 'DOCTORS' },
+  { name: 'Availability & Slots', path: '/availability', icon: CalendarClock, slug: 'AVAILABILITY' },
   { name: 'Patients', path: '/patients', icon: HeartPulse, slug: 'PATIENTS' },
-  { name: 'Appointments', path: '/appointments', icon: CalendarDays, slug: 'DOCTORS' },
-  { name: "Today's Schedule", path: '/appointments/today', icon: CalendarClock, slug: 'DOCTORS' },
-  { name: 'Pharmacy', path: '/pharmacy', icon: Pill, slug: 'PRESCRIPTIONS' },
-  { name: 'Medicine Inventory', path: '/inventory', icon: Boxes, slug: 'PRESCRIPTIONS' },
+  { name: 'Appointments', path: '/appointments', icon: CalendarDays, slug: 'APPOINTMENTS' },
+  { name: 'Pharmacy', path: '/pharmacy', icon: Pill, slug: 'PHARMACY' },
+  { name: 'Medicine Inventory', path: '/inventory', icon: Boxes, slug: 'INVENTORY' },
+  { name: 'Medicine Package', path: '/medicine-packages', icon: Package, slug: 'MEDICINE_PACKAGES' },
   { name: 'Linked Labs', path: '/labs', icon: FlaskConical, slug: 'LABS' },
   { name: 'Lab Services', path: '/lab-services', icon: FlaskConical, slug: 'LAB_SERVICES' },
-  { name: 'Linked Medicals', path: '/linked-medicals', icon: Stethoscope, slug: 'LABS' },
+  { name: 'Linked Medicals', path: '/linked-medicals', icon: Stethoscope, slug: 'LINKED_MEDICALS' },
   { name: 'Orders', path: '/orders', icon: ShoppingBag, slug: 'ORDERS' },
+  { name: 'Client Portals', path: '/client-portals', icon: Globe, slug: 'CLIENT_PORTALS' },
   { name: 'User Accounts', path: '/users', icon: UserCog, slug: 'USERS' },
-  { name: 'Staff Management', path: '/staff', icon: Users, slug: 'USERS' },
-  { name: 'Roles & Permissions', path: '/roles', icon: Shield, slug: 'USERS' },
+  { name: 'Staff Management', path: '/staff', icon: Users, slug: 'STAFF' },
+  { name: 'Roles & Permissions', path: '/roles', icon: Shield, slug: 'ROLES' },
   { name: 'Prescriptions', path: '/prescriptions', icon: FileText, slug: 'PRESCRIPTIONS' },
   { name: 'Ratings & Reviews', path: '/reviews', icon: Star, slug: 'REVIEWS' },
-  { name: 'Patient Support', path: '/support', icon: LifeBuoy, slug: 'SUPPORT' },
-  { name: 'Doctor Support', path: '/doctor-support', icon: Stethoscope, slug: 'SUPPORT' },
-] as const;
+  { name: 'Patient Support', path: '/support', icon: LifeBuoy, slug: 'PATIENT_SUPPORT', fallbackSlugs: ['SUPPORT'] },
+  { name: 'Doctor Support', path: '/doctor-support', icon: Stethoscope, slug: 'DOCTOR_SUPPORT', fallbackSlugs: ['SUPPORT'] },
+];
 
 const EXPANDED_KEY = 'adminRailExpanded';
 
@@ -63,7 +75,8 @@ export default function SidebarLayout() {
   const location = useLocation();
 
   const currentUsername = localStorage.getItem('adminUsername') ?? 'Super Admin';
-  const currentRole = localStorage.getItem('adminRole') ?? 'System Administrator';
+  const { canView, roleName } = usePermission();
+  const currentRole = roleName || localStorage.getItem('adminRole') || 'System Administrator';
 
   const userInitials = (currentUsername || 'SA')
     .trim()
@@ -73,29 +86,7 @@ export default function SidebarLayout() {
     .slice(0, 2)
     .toUpperCase() || 'SA';
 
-  const [roleData, setRoleData] = useState<any>(null);
-
-  useEffect(() => {
-    if (currentRole) {
-      api.get(`rbac/roles/${encodeURIComponent(currentRole)}`)
-        .then(res => setRoleData(res.data))
-        .catch(console.error);
-    }
-  }, [currentRole]);
-
-  const allowedSlugs = roleData?.permissions?.filter((p: any) => p.can_read).map((p: any) => p.module_slug) || [];
-
-  // Filter nav items: System Admin sees everything, others only see what they have permissions for
-  const isSystemAdmin =
-    !currentRole ||
-    ['ADMIN', 'SUPER_ADMIN', 'SUPER ADMIN', 'ADMINISTRATOR', 'SYSTEM ADMINISTRATOR'].includes(
-      currentRole.toUpperCase(),
-    ) ||
-    Boolean(roleData?.is_system_role);
-
-  const visibleNavItems = isSystemAdmin
-    ? NAV_ITEMS
-    : NAV_ITEMS.filter((item) => allowedSlugs.includes(item.slug) || (item.slug === 'REVIEWS' && allowedSlugs.includes('DOCTORS')));
+  const visibleNavItems = NAV_ITEMS.filter((item) => canView(item.slug, item.fallbackSlugs));
 
   const toggle = () => {
     setIsExpanded((prev) => {
@@ -113,6 +104,9 @@ export default function SidebarLayout() {
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUsername');
     localStorage.removeItem('adminRole');
+    localStorage.removeItem('adminUserId');
+    localStorage.removeItem('adminCachedPermissions');
+    window.dispatchEvent(new Event('admin-auth-changed'));
     void navigate('/login');
   };
 

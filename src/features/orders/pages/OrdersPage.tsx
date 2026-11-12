@@ -20,6 +20,7 @@ import { OrderDetailsDrawer } from '../components/OrderDetailsDrawer';
 import { OrderStatusBadge } from '../components/OrderStatusBadge';
 import { PaymentStatusBadge } from '../components/PaymentStatusBadge';
 import { UpdateOrderStatusModal } from '../components/UpdateOrderStatusModal';
+import { usePermission } from '../../../context/PermissionContext';
 import { ordersApi } from '../services/ordersApi';
 import type {
   DashboardSummaryMetrics,
@@ -34,6 +35,8 @@ function formatCurrency(val: number | string | null | undefined): string {
 
 export const OrdersPage: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const { canUpdate } = usePermission();
+  const isOrderUpdatable = canUpdate('ORDERS');
 
   // URL state
   const initialSearch = searchParams.get('search') || '';
@@ -689,7 +692,7 @@ export const OrdersPage: React.FC = () => {
                             <Eye size={13} />
                             <span>Details</span>
                           </button>
-                          {o.status !== 'delivered' && o.status !== 'cancelled' && (
+                          {o.status !== 'delivered' && o.status !== 'cancelled' && isOrderUpdatable && (
                             <button
                               type="button"
                               className="ui-btn ui-btn-primary ui-btn-xs"

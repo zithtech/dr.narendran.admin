@@ -32,7 +32,9 @@ interface MedicineModalProps {
   isOpen: boolean;
   onClose: () => void;
   medicine: Medicine | null;
-  onSave: () => void;
+  onSave: (savedMedicine?: Medicine) => void;
+  initialMedicineName?: string | undefined;
+  zIndex?: number | undefined;
 }
 
 const COMMON_DOSAGE_FORMS = [
@@ -85,7 +87,14 @@ function normalizeMasterDiscountType(raw?: string | null): DiscountType | '' {
   return '';
 }
 
-export default function MedicineModal({ isOpen, onClose, medicine, onSave }: MedicineModalProps) {
+export default function MedicineModal({
+  isOpen,
+  onClose,
+  medicine,
+  onSave,
+  initialMedicineName,
+  zIndex,
+}: MedicineModalProps) {
   const [medicineName, setMedicineName] = useState('');
   const [genericName, setGenericName] = useState('');
   const [dosageForm, setDosageForm] = useState('Tablet');
@@ -149,7 +158,7 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
       setDuration(medicine.duration ?? '');
       setDescription(medicine.description ?? '');
     } else {
-      setMedicineName('');
+      setMedicineName(initialMedicineName?.trim() ?? '');
       setGenericName('');
       setDosageForm('Tablet');
       setStrength('');
@@ -176,7 +185,7 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
     setAiError('');
     setAiEmptyNotice(false);
     setIsAiAssisted(false);
-  }, [medicine, isOpen]);
+  }, [medicine, isOpen, initialMedicineName]);
 
   // Handle clicking outside the AI suggestions dropdown to close it
   useEffect(() => {
@@ -350,12 +359,15 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
     };
 
     try {
+      let savedMedicine: Medicine | undefined;
       if (medicine) {
-        await api.put(`medicines/${medicine.id}`, payload);
+        const res = await api.put<Medicine>(`medicines/${medicine.id}`, payload);
+        savedMedicine = res?.data;
       } else {
-        await api.post('medicines', payload);
+        const res = await api.post<Medicine>('medicines', payload);
+        savedMedicine = res?.data;
       }
-      onSave();
+      onSave(savedMedicine);
       onClose();
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Failed to save medicine.'));
@@ -371,6 +383,7 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
       variant="drawer"
       size="lg"
       className="medicine-drawer-modal"
+      zIndex={zIndex}
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div

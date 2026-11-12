@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Star, Calendar, User, Stethoscope, Clock, ShieldAlert } from 'lucide-react';
+import { usePermission } from '../../../context/PermissionContext';
 import type { DoctorReview, ReviewModerationLog } from '../types/reviews';
 
 interface Props {
@@ -7,7 +8,7 @@ interface Props {
   moderationLogs: ReviewModerationLog[];
   isOpen: boolean;
   onClose: () => void;
-  onOpenModerate: (review: DoctorReview) => void;
+  onOpenModerate?: (review: DoctorReview) => void;
 }
 
 export const ReviewDetailsModal: React.FC<Props> = ({
@@ -17,6 +18,9 @@ export const ReviewDetailsModal: React.FC<Props> = ({
   onClose,
   onOpenModerate,
 }) => {
+  const { canUpdate } = usePermission();
+  const canModerate = canUpdate('REVIEWS');
+
   if (!isOpen || !review) return null;
 
   const formattedDate = review.created_at
@@ -192,16 +196,18 @@ export const ReviewDetailsModal: React.FC<Props> = ({
           >
             Close
           </button>
-          <button
-            onClick={() => {
-              onClose();
-              onOpenModerate(review);
-            }}
-            className="flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-teal-700 transition"
-          >
-            <ShieldAlert size={16} />
-            Moderate Review
-          </button>
+          {onOpenModerate && canModerate && (
+            <button
+              onClick={() => {
+                onClose();
+                onOpenModerate(review);
+              }}
+              className="flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-teal-700 transition"
+            >
+              <ShieldAlert size={16} />
+              Moderate Review
+            </button>
+          )}
         </div>
       </div>
     </div>

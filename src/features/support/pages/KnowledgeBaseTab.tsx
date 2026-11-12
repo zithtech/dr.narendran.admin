@@ -26,6 +26,7 @@ import {
 import React, { useCallback, useEffect, useState } from "react";
 
 import { getErrorMessage } from "../../../utils/errors";
+import { usePermission } from "../../../context/PermissionContext";
 import { adminSupportApi } from "../api/adminSupportApi";
 import type { SupportKnowledgeArticle, TicketCategory } from "../types/support";
 
@@ -53,6 +54,11 @@ const CATEGORIES: { value: TicketCategory; label: string }[] = [
 ];
 
 export const KnowledgeBaseTab: React.FC = () => {
+  const { canCreate, canUpdate, canDelete } = usePermission();
+  const isCreatable = canCreate('PATIENT_SUPPORT', ['DOCTOR_SUPPORT']);
+  const isUpdatable = canUpdate('PATIENT_SUPPORT', ['DOCTOR_SUPPORT']);
+  const isDeletable = canDelete('PATIENT_SUPPORT', ['DOCTOR_SUPPORT']);
+
   const [loading, setLoading] = useState(false);
   const [articles, setArticles] = useState<SupportKnowledgeArticle[]>([]);
   const [search, setSearch] = useState("");
@@ -201,23 +207,27 @@ export const KnowledgeBaseTab: React.FC = () => {
       key: "actions",
       render: (_, record) => (
         <Space>
-          <Button
-            size="small"
-            type="text"
-            icon={<Edit size={14} />}
-            onClick={() => handleOpenEditModal(record)}
-          >
-            Edit
-          </Button>
-          <Popconfirm
-            title="Delete this article?"
-            description="AI Assistant will no longer be able to reference this article."
-            onConfirm={() => { void handleDeleteArticle(record.id); }}
-            okText="Delete"
-            okButtonProps={{ danger: true }}
-          >
-            <Button size="small" type="text" danger icon={<Trash2 size={14} />} />
-          </Popconfirm>
+          {isUpdatable && (
+            <Button
+              size="small"
+              type="text"
+              icon={<Edit size={14} />}
+              onClick={() => handleOpenEditModal(record)}
+            >
+              Edit
+            </Button>
+          )}
+          {isDeletable && (
+            <Popconfirm
+              title="Delete this article?"
+              description="AI Assistant will no longer be able to reference this article."
+              onConfirm={() => { void handleDeleteArticle(record.id); }}
+              okText="Delete"
+              okButtonProps={{ danger: true }}
+            >
+              <Button size="small" type="text" danger icon={<Trash2 size={14} />} />
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -247,13 +257,15 @@ export const KnowledgeBaseTab: React.FC = () => {
           />
           <Button onClick={() => { void fetchArticles(); }}>Apply Filter</Button>
         </Space>
-        <Button
-          type="primary"
-          icon={<Plus size={15} />}
-          onClick={handleOpenCreateModal}
-        >
-          New Knowledge Article
-        </Button>
+        {isCreatable && (
+          <Button
+            type="primary"
+            icon={<Plus size={15} />}
+            onClick={handleOpenCreateModal}
+          >
+            New Knowledge Article
+          </Button>
+        )}
       </div>
 
       {/* Articles Table */}

@@ -6,6 +6,7 @@ import LinkedMedicalModal, { type LinkedMedical } from '../components/LinkedMedi
 import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
 import { addedFacet, statusFacet } from '../components/ui/facets';
 import { StatusDot } from '../components/ui/primitives';
+import { usePermission } from '../context/PermissionContext';
 import { useResource } from '../hooks/useResource';
 import { formatDate } from '../lib/format';
 import api from '../utils/api';
@@ -18,11 +19,15 @@ const FACETS: Facet<LinkedMedical>[] = [
 export default function LinkedMedicals() {
   const resource = useResource<LinkedMedical>('linked-medicals', 'linked medicals');
   const { message, modal } = App.useApp();
+  const { canCreate, canUpdate } = usePermission();
+  const isCreatable = canCreate('LINKED_MEDICALS');
+  const isUpdatable = canUpdate('LINKED_MEDICALS');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMedical, setEditingMedical] = useState<LinkedMedical | null>(null);
 
   const openEditor = (m: LinkedMedical | null) => {
+    if (m ? !isUpdatable : !isCreatable) return;
     setEditingMedical(m);
     setIsModalOpen(true);
   };
@@ -58,7 +63,7 @@ export default function LinkedMedicals() {
       cell: (m) => (
         <PrimaryCell
           name={m.name}
-          onOpen={() => openEditor(m)}
+          {...(isUpdatable ? { onOpen: () => openEditor(m) } : {})}
         />
       ),
     },
@@ -99,6 +104,7 @@ export default function LinkedMedicals() {
   return (
     <>
       <DataView
+        moduleSlug="LINKED_MEDICALS"
         title="Linked Medicals"
         subtitle="Manage pharmacies and medical shops connected to the platform."
         icon={Stethoscope}

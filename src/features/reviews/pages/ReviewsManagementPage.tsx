@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 
+import { usePermission } from '../../../context/PermissionContext';
 import { getErrorMessage } from '../../../utils/errors';
 import { ReviewDetailsDrawer } from '../components/ReviewDetailsDrawer';
 import { reviewsApi } from '../services/reviewsApi';
@@ -25,6 +26,8 @@ import type {
 
 export const ReviewsManagementPage: React.FC = () => {
   const { message } = App.useApp();
+  const { canUpdate } = usePermission();
+  const canModerate = canUpdate('REVIEWS');
 
   // Active Tab: 'reviews' | 'doctors'
   const [activeTab, setActiveTab] = useState<'reviews' | 'doctors'>('reviews');
@@ -428,7 +431,7 @@ export const ReviewsManagementPage: React.FC = () => {
                               className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:hover:bg-indigo-900/60 transition-colors"
                             >
                               <Eye size={12} />
-                              View & Moderate
+                              {canModerate ? 'View & Moderate' : 'View Details'}
                             </button>
                           </td>
                         </tr>

@@ -1,4 +1,4 @@
-import { Dropdown, type MenuProps } from 'antd';
+import { App, Dropdown, type MenuProps } from 'antd';
 import {
   Calendar,
   CalendarClock,
@@ -32,6 +32,9 @@ import ScheduleAppointmentModal from '../components/ScheduleAppointmentModal';
 import { Badge, type BadgeTone } from '../components/ui/primitives';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import CreatePrescriptionModal from '../features/prescriptions/components/CreatePrescriptionModal';
+import ViewPrescriptionModal from '../features/prescriptions/components/ViewPrescriptionModal';
+import { type Prescription, prescriptionsApi } from '../features/prescriptions/api/prescriptionsApi';
+import { usePermission } from '../context/PermissionContext';
 import type {
   Appointment,
   AppointmentStatus,
@@ -150,6 +153,41 @@ export default function DoctorTodayAppointments() {
   const [reschedulingAppointment, setReschedulingAppointment] = useState<Appointment | null>(null);
   const [cancellingAppointment, setCancellingAppointment] = useState<Appointment | null>(null);
   const [prescriptionAppt, setPrescriptionAppt] = useState<Appointment | null>(null);
+  const [viewingPrescription, setViewingPrescription] = useState<Prescription | null>(null);
+  const [isViewRxOpen, setIsViewRxOpen] = useState(false);
+
+  const { message } = App.useApp();
+  const { canCreate, canView, canUpdate, canDelete } = usePermission();
+
+  const isApptCreatable = canCreate('APPOINTMENTS', ['TODAYS_SCHEDULE']);
+  const isApptUpdatable = canUpdate('APPOINTMENTS', ['TODAYS_SCHEDULE']);
+  const isApptDeletable = canDelete('APPOINTMENTS', ['TODAYS_SCHEDULE']);
+  const isRxViewable = canView('PRESCRIPTIONS');
+  const isRxCreatable = canCreate('PRESCRIPTIONS');
+
+  const handleViewPrescription = async (appt: Appointment) => {
+    const hideLoading = message.loading(`Fetching prescription for ${appt.patientName}...`, 0);
+    try {
+      let rxList = await prescriptionsApi.getByAppointment(appt.id);
+      if ((!rxList || rxList.length === 0) && appt.patientId) {
+        const patientRx = await prescriptionsApi.getByPatient(appt.patientId);
+        if (patientRx && patientRx.length > 0) {
+          rxList = patientRx;
+        }
+      }
+      hideLoading();
+
+      if (rxList && rxList.length > 0 && rxList[0]) {
+        setViewingPrescription(rxList[0]);
+        setIsViewRxOpen(true);
+      } else {
+        message.info(`No prescription created yet for ${appt.patientName || 'this consultation'}.`);
+      }
+    } catch {
+      hideLoading();
+      message.error('Failed to load prescription.');
+    }
+  };
 
   const fetchDoctorSchedules = useCallback(async (date: string, docId?: string) => {
     setLoading(true);
@@ -311,6 +349,7 @@ export default function DoctorTodayAppointments() {
   };
 
   const handleOpenBooking = (docId?: string) => {
+    if (!isApptCreatable) return;
     setPreselectedDoctorId(docId);
     setIsScheduleModalOpen(true);
   };
@@ -320,14 +359,17 @@ export default function DoctorTodayAppointments() {
   };
 
   const handleOpenReschedule = (appt: DoctorScheduleAppointmentItem, doc: DoctorScheduleSummary) => {
+    if (!isApptUpdatable) return;
     setReschedulingAppointment(toFullAppointment(appt, doc));
   };
 
   const handleOpenCancel = (appt: DoctorScheduleAppointmentItem, doc: DoctorScheduleSummary) => {
+    if (!isApptDeletable) return;
     setCancellingAppointment(toFullAppointment(appt, doc));
   };
 
   const handleOpenCreatePrescription = (appt: DoctorScheduleAppointmentItem, doc: DoctorScheduleSummary) => {
+    if (!isRxCreatable) return;
     setPrescriptionAppt(toFullAppointment(appt, doc));
   };
 
@@ -338,28 +380,47 @@ export default function DoctorTodayAppointments() {
     const isActive =
       appt.status === 'scheduled' || appt.status === 'confirmed' || appt.status === 'rescheduled';
 
-    const items: NonNullable<MenuProps['items']> = [
-      {
+    const items: NonNullable<MenuProps['items']> = [];
+
+    if (isRxViewable) {
+      items.push({
+        key: 'view-prescription',
+        label: (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#16a34a' }}>
+            <FileText size={14} style={{ color: '#16a34a' }} />
+            <span>View Prescription</span>
+          </span>
+        ),
+        onClick: () => void handleViewPrescription(toFullAppointment(appt, doc)),
+      });
+    }
+
+    if (isRxCreatable) {
+      items.push({
         key: 'prescription',
         label: (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#7c3aed' }}>
-            <FileText size={14} style={{ color: '#7c3aed' }} />
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#7c3aed' }}>
+            <Plus size={14} style={{ color: '#7c3aed' }} />
             <span>Create Prescription</span>
           </span>
         ),
         onClick: () => handleOpenCreatePrescription(appt, doc),
-      },
-      {
-        key: 'view',
-        label: (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#475569' }}>
-            <Eye size={14} style={{ color: '#64748b' }} />
-            <span>View Details</span>
-          </span>
-        ),
-        onClick: () => handleOpenDetails(appt, doc),
-      },
-      {
+      });
+    }
+
+    items.push({
+      key: 'view',
+      label: (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#475569' }}>
+          <Eye size={14} style={{ color: '#64748b' }} />
+          <span>View Details</span>
+        </span>
+      ),
+      onClick: () => handleOpenDetails(appt, doc),
+    });
+
+    if (isApptUpdatable) {
+      items.push({
         key: 'edit',
         label: (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#1e293b' }}>
@@ -368,15 +429,13 @@ export default function DoctorTodayAppointments() {
           </span>
         ),
         onClick: () => handleOpenDetails(appt, doc),
-      },
-    ];
+      });
+    }
 
-    if (isActive) {
-      items.push(
-        {
-          type: 'divider',
-        },
-        {
+    if (isActive && (isApptUpdatable || isApptDeletable)) {
+      items.push({ type: 'divider' });
+      if (isApptUpdatable) {
+        items.push({
           key: 'reschedule',
           label: (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#1e293b' }}>
@@ -385,8 +444,10 @@ export default function DoctorTodayAppointments() {
             </span>
           ),
           onClick: () => handleOpenReschedule(appt, doc),
-        },
-        {
+        });
+      }
+      if (isApptDeletable) {
+        items.push({
           key: 'cancel',
           label: (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#dc2626' }}>
@@ -396,8 +457,8 @@ export default function DoctorTodayAppointments() {
           ),
           danger: true,
           onClick: () => handleOpenCancel(appt, doc),
-        },
-      );
+        });
+      }
     }
 
     return items;
@@ -646,14 +707,16 @@ export default function DoctorTodayAppointments() {
             <span>Refresh</span>
           </button>
 
-          <button
-            type="button"
-            className="dta-btn-violet"
-            onClick={() => handleOpenBooking()}
-          >
-            <Plus size={14} />
-            <span>Schedule Appointment</span>
-          </button>
+          {isApptCreatable && (
+            <button
+              type="button"
+              className="dta-btn-violet"
+              onClick={() => handleOpenBooking()}
+            >
+              <Plus size={14} />
+              <span>Schedule Appointment</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1329,34 +1392,36 @@ export default function DoctorTodayAppointments() {
                           )}
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleOpenBooking(doc.id)}
-                          style={{
-                            height: 28,
-                            padding: '0 10px',
-                            borderRadius: 6,
-                            fontSize: 11.5,
-                            fontWeight: 600,
-                            border: '1px solid #7c3aed',
-                            background: '#ffffff',
-                            color: '#7c3aed',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#f5f3ff';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#ffffff';
-                          }}
-                        >
-                          <Plus size={12} />
-                          <span>Book For Doctor</span>
-                        </button>
+                        {isApptCreatable && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenBooking(doc.id)}
+                            style={{
+                              height: 28,
+                              padding: '0 10px',
+                              borderRadius: 6,
+                              fontSize: 11.5,
+                              fontWeight: 600,
+                              border: '1px solid #7c3aed',
+                              background: '#ffffff',
+                              color: '#7c3aed',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#f5f3ff';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = '#ffffff';
+                            }}
+                          >
+                            <Plus size={12} />
+                            <span>Book For Doctor</span>
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -1510,30 +1575,32 @@ export default function DoctorTodayAppointments() {
                                   {/* Actions */}
                                   <td style={{ padding: '9px 14px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle', textAlign: 'right' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleOpenCreatePrescription(appt, doc);
-                                        }}
-                                        title="Create Prescription"
-                                        style={{
-                                          padding: '3px 8px',
-                                          fontSize: 11.5,
-                                          fontWeight: 600,
-                                          borderRadius: 6,
-                                          border: '1px solid #ede9fe',
-                                          background: '#f5f3ff',
-                                          color: '#7c3aed',
-                                          cursor: 'pointer',
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: 4,
-                                        }}
-                                      >
-                                        <FileText size={12} />
-                                        <span>Prescription</span>
-                                      </button>
+                                      {isRxCreatable && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleOpenCreatePrescription(appt, doc);
+                                          }}
+                                          title="Create Prescription"
+                                          style={{
+                                            padding: '3px 8px',
+                                            fontSize: 11.5,
+                                            fontWeight: 600,
+                                            borderRadius: 6,
+                                            border: '1px solid #ede9fe',
+                                            background: '#f5f3ff',
+                                            color: '#7c3aed',
+                                            cursor: 'pointer',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: 4,
+                                          }}
+                                        >
+                                          <FileText size={12} />
+                                          <span>Prescription</span>
+                                        </button>
+                                      )}
                                       <Dropdown
                                         menu={{ items: getTodayActionMenuItems(appt, doc) }}
                                         trigger={['click']}
@@ -1572,23 +1639,25 @@ export default function DoctorTodayAppointments() {
                         <div style={{ fontSize: 12, color: '#64748b' }}>
                           No appointments scheduled for {doc.name} on {formatDisplayDate(selectedDate)}.
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenBooking(doc.id)}
-                          style={{
-                            height: 26,
-                            padding: '0 10px',
-                            fontSize: 11.5,
-                            fontWeight: 600,
-                            borderRadius: 6,
-                            border: '1px solid #7c3aed',
-                            background: '#ffffff',
-                            color: '#7c3aed',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          + Schedule an Appointment
-                        </button>
+                        {isApptCreatable && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenBooking(doc.id)}
+                            style={{
+                              height: 26,
+                              padding: '0 10px',
+                              fontSize: 11.5,
+                              fontWeight: 600,
+                              borderRadius: 6,
+                              border: '1px solid #7c3aed',
+                              background: '#ffffff',
+                              color: '#7c3aed',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            + Schedule an Appointment
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1648,9 +1717,13 @@ export default function DoctorTodayAppointments() {
         onCancel={(appt) => {
           setCancellingAppointment(appt);
         }}
-        onCreatePrescription={(appt) => {
-          setPrescriptionAppt(appt);
-        }}
+        {...(isRxCreatable
+          ? {
+              onCreatePrescription: (appt: Appointment) => {
+                setPrescriptionAppt(appt);
+              },
+            }
+          : {})}
       />
 
       {/* Create Prescription Modal */}
@@ -1666,12 +1739,26 @@ export default function DoctorTodayAppointments() {
             phone: prescriptionAppt.patientPhone,
           }}
           onClose={() => setPrescriptionAppt(null)}
-          onSuccess={() => {
+          onSuccess={(createdRx) => {
             setPrescriptionAppt(null);
             void fetchDoctorSchedules(selectedDate, selectedDoctorId);
+            if (createdRx) {
+              setViewingPrescription(createdRx);
+              setIsViewRxOpen(true);
+            }
           }}
         />
       )}
+
+      {/* View Prescription Modal */}
+      <ViewPrescriptionModal
+        prescription={viewingPrescription}
+        open={isViewRxOpen}
+        onClose={() => {
+          setIsViewRxOpen(false);
+          setViewingPrescription(null);
+        }}
+      />
     </div>
   );
 }

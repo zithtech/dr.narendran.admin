@@ -27,6 +27,7 @@ import StockInModal from '../components/StockInModal';
 import StockOutModal from '../components/StockOutModal';
 import PharmacyImportModal from '../components/PharmacyImportModal';
 import { downloadSampleTemplate } from '../utils/excelTemplate';
+import { usePermission } from '../context/PermissionContext';
 import { Badge } from '../components/ui/primitives';
 import type { InventorySummary, MedicineStrength } from '../types/inventory';
 import type { Medicine } from '../types/pharmacy';
@@ -57,6 +58,10 @@ const DOSAGE_FORMS = [
 export default function MedicineInventory() {
   const { message } = App.useApp();
   const [searchParams] = useSearchParams();
+  const { canCreate, canUpdate } = usePermission();
+
+  const isInvCreatable = canCreate('INVENTORY');
+  const isInvUpdatable = canUpdate('INVENTORY');
   const urlSearch = searchParams.get('search') ?? '';
 
   // Data state
@@ -249,27 +254,31 @@ export default function MedicineInventory() {
             Template
           </button>
 
-          <button
-            type="button"
-            className="ui-btn"
-            onClick={() => setIsImportModalOpen(true)}
-            title="Bulk import medicines and strength variants from Excel"
-          >
-            <FileSpreadsheet size={14} />
-            Import Excel
-          </button>
+          {isInvCreatable && (
+            <button
+              type="button"
+              className="ui-btn"
+              onClick={() => setIsImportModalOpen(true)}
+              title="Bulk import medicines and strength variants from Excel"
+            >
+              <FileSpreadsheet size={14} />
+              Import Excel
+            </button>
+          )}
 
-          <button
-            type="button"
-            className="ui-btn ui-btn-primary"
-            onClick={() => {
-              setSelectedVariant(null);
-              setIsVariantModalOpen(true);
-            }}
-          >
-            <Plus size={15} strokeWidth={2.4} />
-            Add Strength Variant
-          </button>
+          {isInvCreatable && (
+            <button
+              type="button"
+              className="ui-btn ui-btn-primary"
+              onClick={() => {
+                setSelectedVariant(null);
+                setIsVariantModalOpen(true);
+              }}
+            >
+              <Plus size={15} strokeWidth={2.4} />
+              Add Strength Variant
+            </button>
+          )}
         </div>
       </header>
 
@@ -625,47 +634,51 @@ export default function MedicineInventory() {
                         {/* Inventory Actions */}
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {/* Stock In */}
-                            <button
-                              type="button"
-                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-emerald-700 shadow-2xs hover:bg-emerald-50 dark:border-slate-800 dark:bg-slate-900 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
-                              onClick={() => {
-                                setSelectedVariant(v);
-                                setIsStockInModalOpen(true);
-                              }}
-                              title="Receive Stock"
-                            >
-                              <PackagePlus size={13} />
-                              <span>Stock In</span>
-                            </button>
+                            {isInvUpdatable && (
+                              <>
+                                {/* Stock In */}
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-emerald-700 shadow-2xs hover:bg-emerald-50 dark:border-slate-800 dark:bg-slate-900 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
+                                  onClick={() => {
+                                    setSelectedVariant(v);
+                                    setIsStockInModalOpen(true);
+                                  }}
+                                  title="Receive Stock"
+                                >
+                                  <PackagePlus size={13} />
+                                  <span>Stock In</span>
+                                </button>
 
-                            {/* Stock Out */}
-                            <button
-                              type="button"
-                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-                              onClick={() => {
-                                setSelectedVariant(v);
-                                setIsStockOutModalOpen(true);
-                              }}
-                              title="Issue / Dispense Stock"
-                            >
-                              <PackageMinus size={13} />
-                              <span>Stock Out</span>
-                            </button>
+                                {/* Stock Out */}
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                                  onClick={() => {
+                                    setSelectedVariant(v);
+                                    setIsStockOutModalOpen(true);
+                                  }}
+                                  title="Issue / Dispense Stock"
+                                >
+                                  <PackageMinus size={13} />
+                                  <span>Stock Out</span>
+                                </button>
 
-                            {/* Adjust Count */}
-                            <button
-                              type="button"
-                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-                              onClick={() => {
-                                setSelectedVariant(v);
-                                setIsAdjustModalOpen(true);
-                              }}
-                              title="Reconcile Physical Count"
-                            >
-                              <Scale size={13} />
-                              <span>Adjust</span>
-                            </button>
+                                {/* Adjust Count */}
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                                  onClick={() => {
+                                    setSelectedVariant(v);
+                                    setIsAdjustModalOpen(true);
+                                  }}
+                                  title="Reconcile Physical Count"
+                                >
+                                  <Scale size={13} />
+                                  <span>Adjust</span>
+                                </button>
+                              </>
+                            )}
 
                             {/* History */}
                             <button
@@ -681,17 +694,19 @@ export default function MedicineInventory() {
                             </button>
 
                             {/* Edit Variant */}
-                            <button
-                              type="button"
-                              className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                              onClick={() => {
-                                setSelectedVariant(v);
-                                setIsVariantModalOpen(true);
-                              }}
-                              title="Edit Strength Configuration"
-                            >
-                              <SlidersHorizontal size={16} />
-                            </button>
+                            {isInvUpdatable && (
+                              <button
+                                type="button"
+                                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                                onClick={() => {
+                                  setSelectedVariant(v);
+                                  setIsVariantModalOpen(true);
+                                }}
+                                title="Edit Strength Configuration"
+                              >
+                                <SlidersHorizontal size={16} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

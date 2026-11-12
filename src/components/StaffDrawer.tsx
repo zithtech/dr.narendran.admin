@@ -25,6 +25,7 @@ import {
 } from '../types/staff';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
+import { usePermission } from '../context/PermissionContext';
 import { Drawer } from './ui/Drawer';
 import { Modal } from './ui/Modal';
 import { SearchableSelect, type SearchableSelectOption } from './ui/SearchableSelect';
@@ -82,6 +83,7 @@ export default function StaffDrawer({
   onDelete,
 }: StaffDrawerProps) {
   const { message } = App.useApp();
+  const { canUpdate, canDelete } = usePermission();
 
   // Document upload state inside drawer
   const [isUploading, setIsUploading] = useState(false);
@@ -94,6 +96,9 @@ export default function StaffDrawer({
   const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
   const [viewingDocId, setViewingDocId] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  const isUpdatable = canUpdate('STAFF');
+  const isDeletable = canDelete('STAFF');
 
   if (!staff) return null;
 
@@ -322,49 +327,53 @@ export default function StaffDrawer({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button
-          type="button"
-          className="ui-btn ui-btn-neutral"
-          onClick={() => onEdit(staff)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 12.5,
-            height: 32,
-            padding: '0 11px',
-          }}
-        >
-          <Pencil size={13.5} />
-          <span>Edit</span>
-        </button>
+        {isUpdatable && (
+          <button
+            type="button"
+            className="ui-btn ui-btn-neutral"
+            onClick={() => onEdit(staff)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 12.5,
+              height: 32,
+              padding: '0 11px',
+            }}
+          >
+            <Pencil size={13.5} />
+            <span>Edit</span>
+          </button>
+        )}
 
-        <button
-          type="button"
-          className="ui-btn ui-btn-neutral"
-          onClick={handleToggleStatus}
-          disabled={isUpdatingStatus}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 12.5,
-            height: 32,
-            padding: '0 11px',
-            color: isActive ? '#991b1b' : '#166534',
-            border: '1px solid #e2e8f0',
-            background: '#ffffff',
-          }}
-        >
-          {isUpdatingStatus ? (
-            <Loader2 size={13.5} className="is-spinning" />
-          ) : (
-            <Power size={13.5} />
-          )}
-          <span>{isActive ? 'Deactivate' : 'Activate'}</span>
-        </button>
+        {isUpdatable && (
+          <button
+            type="button"
+            className="ui-btn ui-btn-neutral"
+            onClick={handleToggleStatus}
+            disabled={isUpdatingStatus}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 12.5,
+              height: 32,
+              padding: '0 11px',
+              color: isActive ? '#991b1b' : '#166534',
+              border: '1px solid #e2e8f0',
+              background: '#ffffff',
+            }}
+          >
+            {isUpdatingStatus ? (
+              <Loader2 size={13.5} className="is-spinning" />
+            ) : (
+              <Power size={13.5} />
+            )}
+            <span>{isActive ? 'Deactivate' : 'Activate'}</span>
+          </button>
+        )}
 
-        {onDelete && (
+        {onDelete && isDeletable && (
           <button
             type="button"
             className="ui-btn ui-btn-neutral"
@@ -420,29 +429,31 @@ export default function StaffDrawer({
       >
         Close
       </button>
-      <button
-        type="button"
-        className="ui-btn"
-        onClick={() => onEdit(staff)}
-        style={{
-          fontSize: 12.5,
-          background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-          color: '#ffffff',
-          border: 'none',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 6,
-          borderRadius: 8,
-          padding: '0 16px',
-          height: 35,
-          cursor: 'pointer',
-          fontWeight: 600,
-          boxShadow: '0 2px 6px rgba(124, 58, 237, 0.28)',
-        }}
-      >
-        <Pencil size={14} />
-        <span>Edit Staff Details</span>
-      </button>
+      {isUpdatable && (
+        <button
+          type="button"
+          className="ui-btn"
+          onClick={() => onEdit(staff)}
+          style={{
+            fontSize: 12.5,
+            background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+            color: '#ffffff',
+            border: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            borderRadius: 8,
+            padding: '0 16px',
+            height: 35,
+            cursor: 'pointer',
+            fontWeight: 600,
+            boxShadow: '0 2px 6px rgba(124, 58, 237, 0.28)',
+          }}
+        >
+          <Pencil size={14} />
+          <span>Edit Staff Details</span>
+        </button>
+      )}
     </div>
   );
 
@@ -746,16 +757,18 @@ export default function StaffDrawer({
                           )}
                         </a>
 
-                        <button
-                          type="button"
-                          className="ui-icon-btn ui-icon-btn-danger"
-                          title="Delete Document"
-                          disabled={isDeleting}
-                          onClick={() => handleDeleteDocument(doc.id, doc.name)}
-                          style={{ width: 28, height: 28 }}
-                        >
-                          {isDeleting ? <Loader2 size={13} className="is-spinning" /> : <Trash2 size={13} />}
-                        </button>
+                        {isDeletable && (
+                          <button
+                            type="button"
+                            className="ui-icon-btn ui-icon-btn-danger"
+                            title="Delete Document"
+                            disabled={isDeleting}
+                            onClick={() => handleDeleteDocument(doc.id, doc.name)}
+                            style={{ width: 28, height: 28 }}
+                          >
+                            {isDeleting ? <Loader2 size={13} className="is-spinning" /> : <Trash2 size={13} />}
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -778,8 +791,9 @@ export default function StaffDrawer({
             )}
 
             {/* Upload New Document Form */}
-            <form
-              onSubmit={handleUploadDocument}
+            {isUpdatable && (
+              <form
+                onSubmit={handleUploadDocument}
               style={{
                 marginTop: 4,
                 padding: '14px',
@@ -938,6 +952,7 @@ export default function StaffDrawer({
                 </button>
               </div>
             </form>
+            )}
           </div>
         </div>
 

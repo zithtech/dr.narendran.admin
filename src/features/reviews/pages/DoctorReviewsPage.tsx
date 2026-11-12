@@ -18,11 +18,14 @@ import type {
   DoctorReview,
   ReviewModerationLog,
 } from '../types/reviews';
+import { usePermission } from '../../../context/PermissionContext';
 import { reviewsApi } from '../services/reviewsApi';
 import { ReviewDetailsModal } from '../components/ReviewDetailsModal';
 import { ReviewModerationModal } from '../components/ReviewModerationModal';
 
 export default function DoctorReviewsPage() {
+  const { canUpdate } = usePermission();
+  const canModerate = canUpdate('REVIEWS');
   const [activeTab, setActiveTab] = useState<'reviews' | 'summary'>('reviews');
 
   // Reviews listing state
@@ -117,6 +120,7 @@ export default function DoctorReviewsPage() {
   };
 
   const handleOpenModerate = (review: DoctorReview) => {
+    if (!canModerate) return;
     setSelectedReview(review);
     setIsModerateOpen(true);
   };
@@ -376,13 +380,15 @@ export default function DoctorReviewsPage() {
                               >
                                 <Eye size={15} />
                               </button>
-                              <button
-                                onClick={() => handleOpenModerate(r)}
-                                className="rounded-lg p-1.5 text-teal-600 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-950/40"
-                                title="Moderate Review"
-                              >
-                                <ShieldAlert size={15} />
-                              </button>
+                              {canModerate && (
+                                <button
+                                  onClick={() => handleOpenModerate(r)}
+                                  className="rounded-lg p-1.5 text-teal-600 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-950/40"
+                                  title="Moderate Review"
+                                >
+                                  <ShieldAlert size={15} />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -507,7 +513,7 @@ export default function DoctorReviewsPage() {
         moderationLogs={moderationLogs}
         isOpen={isDetailsOpen}
         onClose={() => setIsDetailsOpen(false)}
-        onOpenModerate={(r) => handleOpenModerate(r)}
+        {...(canModerate ? { onOpenModerate: (r: DoctorReview) => handleOpenModerate(r) } : {})}
       />
 
       {/* Moderation Modal */}

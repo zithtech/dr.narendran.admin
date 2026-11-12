@@ -1,16 +1,21 @@
-import { Modal, Tag } from 'antd';
+import { App, Modal, Tag } from 'antd';
 import {
+  Building2,
   Calendar,
   Download,
   FileText,
   FlaskConical,
+  MapPin,
   Pencil,
+  Phone,
   Pill,
   Printer,
   Stethoscope,
   User,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
+import { getErrorMessage } from '../../../utils/errors';
 import { type Prescription, prescriptionsApi } from '../api/prescriptionsApi';
 
 interface ViewPrescriptionModalProps {
@@ -26,15 +31,47 @@ export default function ViewPrescriptionModal({
   onClose,
   onEdit,
 }: ViewPrescriptionModalProps) {
-  if (!prescription) return null;
+  const { message } = App.useApp();
+  const [rxData, setRxData] = useState<Prescription | null>(prescription);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
-  const handleDownloadPdf = () => {
-    const url = prescriptionsApi.getPdfDownloadUrl(prescription.id);
-    window.open(url, '_blank');
+  useEffect(() => {
+    setRxData(prescription);
+    if (open && prescription?.id) {
+      let active = true;
+      prescriptionsApi.getById(prescription.id)
+        .then((fullRx) => {
+          if (active && fullRx) {
+            setRxData(fullRx);
+          }
+        })
+        .catch(() => {
+          // Keep current fallback data
+        });
+      return () => {
+        active = false;
+      };
+    }
+  }, [open, prescription]);
+
+  const activeRx = rxData || prescription;
+  if (!activeRx) return null;
+
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    const hideLoading = message.loading('Downloading prescription PDF...', 0);
+    try {
+      await prescriptionsApi.downloadPdf(activeRx.id);
+    } catch (err: unknown) {
+      message.error(getErrorMessage(err, 'Failed to download prescription PDF.'));
+    } finally {
+      hideLoading();
+      setDownloadingPdf(false);
+    }
   };
 
   const handlePrint = () => {
-    const url = prescriptionsApi.getHtmlPreviewUrl(prescription.id);
+    const url = prescriptionsApi.getHtmlPreviewUrl(activeRx.id);
     const win = window.open(url, '_blank');
     if (win) {
       win.focus();
@@ -77,25 +114,30 @@ export default function ViewPrescriptionModal({
                 Prescription Details
               </div>
               <div style={{ fontSize: 12, color: '#64748b' }}>
-                ID: #{prescription.id.slice(0, 8).toUpperCase()} · Date: {prescription.prescription_date}
+                ID: #{activeRx.id.slice(0, 8).toUpperCase()} · Date: {activeRx.prescription_date}
+                {activeRx.appointment_id && (
+                  <span style={{ marginLeft: 6 }}>
+                    · Appt: #{activeRx.appointment_id.slice(0, 8).toUpperCase()}
+                  </span>
+                )}
               </div>
             </div>
           </div>
-          <Tag color={prescription.status === 'active' ? 'green' : 'default'} style={{ textTransform: 'capitalize' }}>
-            {prescription.status}
+          <Tag color={activeRx.status === 'active' ? 'green' : 'default'} style={{ textTransform: 'capitalize' }}>
+            {activeRx.status}
           </Tag>
         </div>
       }
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            {prescription.status === 'active' && onEdit && (
+            {activeRx.status === 'active' && onEdit && (
               <button
                 type="button"
                 className="ui-btn"
                 onClick={() => {
                   onClose();
-                  onEdit(prescription);
+                  onEdit(activeRx);
                 }}
                 style={{
                   fontSize: 12.5,
@@ -123,7 +165,10 @@ export default function ViewPrescriptionModal({
             <button
               type="button"
               className="ui-btn ui-btn-primary"
-              onClick={handleDownloadPdf}
+              onClick={() => {
+                void handleDownloadPdf();
+              }}
+              disabled={downloadingPdf}
               style={{
                 fontSize: 12.5,
                 fontWeight: 600,
@@ -133,9 +178,11 @@ export default function ViewPrescriptionModal({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
+                opacity: downloadingPdf ? 0.7 : 1,
+                cursor: downloadingPdf ? 'not-allowed' : 'pointer',
               }}
             >
-              <Download size={13} /> Download PDF
+              <Download size={13} /> {downloadingPdf ? 'Downloading...' : 'Download PDF'}
             </button>
           </div>
         </div>
@@ -160,10 +207,10 @@ export default function ViewPrescriptionModal({
               </span>
             </div>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
-              {prescription.doctor?.name || 'Dr. Narendran'}
+              {activeRx.doctor?.name || 'Dr. Narendran'}
             </div>
             <div style={{ fontSize: 12, color: '#64748b' }}>
-              {prescription.doctor?.specialization || prescription.doctor?.specialty || 'General Medicine'}
+              {activeRx.doctor?.specialization || activeRx.doctor?.specialty || 'General Medicine'}
             </div>
           </div>
 
@@ -176,17 +223,43 @@ export default function ViewPrescriptionModal({
               background: '#f8fafc',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#0284c7', marginBottom: 4 }}>
-              <User size={15} />
-              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                Patient
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#0284c7' }}>
+                <User size={15} />
+                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Patient
+                </span>
+              </div>
+              {activeRx.patient_id && (
+                <Tag color="blue" style={{ margin: 0, fontSize: 10, lineHeight: '18px' }}>
+                  ID: #{String(activeRx.patient_id).slice(0, 8).toUpperCase()}
+                </Tag>
+              )}
             </div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
-              {prescription.patient_name || 'Patient'}
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
+              {activeRx.patient_name || 'Patient'}
             </div>
-            <div style={{ fontSize: 12, color: '#64748b' }}>
-              {[prescription.patient_gender, prescription.patient_phone].filter(Boolean).join(' · ')}
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              {activeRx.patient_gender && (
+                <span style={{ textTransform: 'capitalize', background: '#e0f2fe', color: '#0369a1', padding: '1px 6px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>
+                  {activeRx.patient_gender}
+                </span>
+              )}
+              {activeRx.patient_phone && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Phone size={11} style={{ color: '#0284c7' }} />
+                  {activeRx.patient_phone}
+                </span>
+              )}
+              {activeRx.patient_dob && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Calendar size={11} style={{ color: '#64748b' }} />
+                  DOB: {activeRx.patient_dob}
+                </span>
+              )}
+              {!activeRx.patient_phone && !activeRx.patient_gender && !activeRx.patient_dob && (
+                <span>No contact details recorded</span>
+              )}
             </div>
           </div>
         </div>
@@ -197,11 +270,11 @@ export default function ViewPrescriptionModal({
             Diagnosis & Clinical Impression
           </div>
           <div style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>
-            {prescription.diagnosis || prescription.additional_notes || 'General Consultation'}
+            {activeRx.diagnosis || activeRx.additional_notes || 'General Consultation'}
           </div>
-          {prescription.additional_notes && prescription.additional_notes !== prescription.diagnosis && (
+          {activeRx.additional_notes && activeRx.additional_notes !== activeRx.diagnosis && (
             <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>
-              {prescription.additional_notes}
+              {activeRx.additional_notes}
             </div>
           )}
         </div>
@@ -220,7 +293,7 @@ export default function ViewPrescriptionModal({
           >
             <Pill size={15} style={{ color: '#7c3aed' }} />
             <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
-              Prescribed Medicines ({prescription.medicines?.length || 0})
+              Prescribed Medicines ({activeRx.medicines?.length || 0})
             </span>
           </div>
 
@@ -237,12 +310,21 @@ export default function ViewPrescriptionModal({
               </tr>
             </thead>
             <tbody>
-              {prescription.medicines?.map((m, idx) => (
+              {activeRx.medicines?.map((m, idx) => (
                 <tr key={idx} style={{ borderBottom: '1px solid #f8fafc' }}>
                   <td style={{ padding: '10px 12px', color: '#94a3b8', verticalAlign: 'top' }}>{idx + 1}</td>
                   <td style={{ padding: '10px 12px', verticalAlign: 'top' }}>
                     <div style={{ fontWeight: 650, color: '#0f172a' }}>{m.medicine_name}</div>
-                    {m.strength && <div style={{ fontSize: 11, color: '#64748b' }}>Strength: {m.strength}</div>}
+                    {m.generic_name && (
+                      <div style={{ fontSize: 11, color: '#475569' }}>
+                        Generic: {m.generic_name}
+                      </div>
+                    )}
+                    {(m.strength || m.dosage_form) && (
+                      <div style={{ fontSize: 11, color: '#64748b' }}>
+                        {[m.dosage_form, m.strength].filter(Boolean).join(' · ')}
+                      </div>
+                    )}
                     {m.instructions && (
                       <div style={{ fontSize: 11, color: '#7c3aed', fontStyle: 'italic', marginTop: 2 }}>
                         Note: {m.instructions}
@@ -278,7 +360,7 @@ export default function ViewPrescriptionModal({
         </div>
 
         {/* Recommended Lab Tests (if any) */}
-        {prescription.lab_tests && prescription.lab_tests.length > 0 && (
+        {activeRx.lab_tests && activeRx.lab_tests.length > 0 && (
           <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
             <div
               style={{
@@ -292,35 +374,68 @@ export default function ViewPrescriptionModal({
             >
               <FlaskConical size={15} style={{ color: '#0284c7' }} />
               <span style={{ fontSize: 13, fontWeight: 700, color: '#0369a1' }}>
-                Recommended Diagnostic Investigations ({prescription.lab_tests.length})
+                Recommended Diagnostic Investigations ({activeRx.lab_tests.length})
               </span>
             </div>
-            <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {prescription.lab_tests.map((lt, idx) => (
+            <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {activeRx.lab_tests.map((lt, idx) => (
                 <div
                   key={idx}
                   style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '6px 10px',
+                    flexDirection: 'column',
+                    gap: 4,
+                    padding: '8px 12px',
                     borderRadius: 6,
                     background: '#f8fafc',
+                    border: '1px solid #f1f5f9',
                     fontSize: 12.5,
                   }}
                 >
-                  <div>
-                    <span style={{ fontWeight: 600, color: '#0f172a' }}>{lt.test_name}</span>
-                    {lt.instructions && (
-                      <span style={{ fontSize: 11, color: '#64748b', marginLeft: 8 }}>
-                        ({lt.instructions})
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                    <div>
+                      <span style={{ fontWeight: 650, color: '#0f172a' }}>{lt.test_name}</span>
+                      {lt.instructions && (
+                        <span style={{ fontSize: 11.5, color: '#64748b', marginLeft: 8 }}>
+                          · Prep: <em>{lt.instructions}</em>
+                        </span>
+                      )}
+                    </div>
+                    {lt.lab_name && (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          fontSize: 11,
+                          color: '#0284c7',
+                          background: '#e0f2fe',
+                          padding: '2px 8px',
+                          borderRadius: 4,
+                          fontWeight: 600,
+                        }}
+                      >
+                        <Building2 size={12} />
+                        Linked Lab: {lt.lab_name}
                       </span>
                     )}
                   </div>
-                  {lt.lab_name && (
-                    <span style={{ fontSize: 11, color: '#0284c7', background: '#e0f2fe', padding: '2px 6px', borderRadius: 4 }}>
-                      Lab: {lt.lab_name}
-                    </span>
+
+                  {(lt.lab_phone || lt.lab_address || lt.lab_city) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 11, color: '#64748b' }}>
+                      {(lt.lab_address || lt.lab_city) && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                          <MapPin size={11} style={{ color: '#94a3b8' }} />
+                          {[lt.lab_address, lt.lab_city].filter(Boolean).join(', ')}
+                        </span>
+                      )}
+                      {lt.lab_phone && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                          <Phone size={11} style={{ color: '#94a3b8' }} />
+                          {lt.lab_phone}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}
@@ -329,7 +444,7 @@ export default function ViewPrescriptionModal({
         )}
 
         {/* Follow-up info */}
-        {prescription.follow_up_date && (
+        {activeRx.follow_up_date && (
           <div
             style={{
               padding: '10px 14px',
@@ -346,8 +461,8 @@ export default function ViewPrescriptionModal({
             <Calendar size={15} />
             <span>
               Follow-up Scheduled On:{' '}
-              <strong>{prescription.follow_up_date}</strong>
-              {prescription.follow_up_days ? ` (${prescription.follow_up_days} days)` : ''}
+              <strong>{activeRx.follow_up_date}</strong>
+              {activeRx.follow_up_days ? ` (${activeRx.follow_up_days} days)` : ''}
             </span>
           </div>
         )}

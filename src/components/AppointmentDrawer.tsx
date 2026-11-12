@@ -5,6 +5,7 @@ import {
   CheckCircle,
   Clock,
   Download,
+  Eye,
   FileText,
   Mail,
   Pencil,
@@ -17,6 +18,8 @@ import {
 import { useEffect, useState } from 'react';
 
 import { type Prescription, prescriptionsApi } from '../features/prescriptions/api/prescriptionsApi';
+import ViewPrescriptionModal from '../features/prescriptions/components/ViewPrescriptionModal';
+import { usePermission } from '../context/PermissionContext';
 import { titleCase } from '../lib/format';
 import type { Appointment } from '../types/appointment';
 import { Drawer } from './ui/Drawer';
@@ -40,19 +43,33 @@ export default function AppointmentDrawer({
   onComplete,
   onCreatePrescription,
 }: AppointmentDrawerProps) {
+  const { canCreate, canUpdate, canDelete } = usePermission();
+  const isApptUpdatable = canUpdate('APPOINTMENTS', ['TODAYS_SCHEDULE']);
+  const isApptDeletable = canDelete('APPOINTMENTS', ['TODAYS_SCHEDULE']);
+  const isRxCreatable = canCreate('PRESCRIPTIONS');
+
   const [appRx, setAppRx] = useState<Prescription[]>([]);
   const [loadingRx, setLoadingRx] = useState(false);
+  const [viewingRx, setViewingRx] = useState<Prescription | null>(null);
 
   useEffect(() => {
     if (appointment?.id) {
       setLoadingRx(true);
       prescriptionsApi
         .getByAppointment(appointment.id)
-        .then((res) => setAppRx(res))
+        .then((res) => {
+          if (res && res.length > 0) {
+            setAppRx(res);
+          } else if (appointment.patientId) {
+            return prescriptionsApi.getByPatient(appointment.patientId).then((pRes) => setAppRx(pRes));
+          } else {
+            setAppRx([]);
+          }
+        })
         .catch(() => setAppRx([]))
         .finally(() => setLoadingRx(false));
     }
-  }, [appointment?.id]);
+  }, [appointment?.id, appointment?.patientId]);
 
   if (!appointment) return null;
 
@@ -202,7 +219,7 @@ export default function AppointmentDrawer({
 
   const footer = (
     <div style={{ display: 'flex', gap: 10, width: '100%', justifyContent: 'flex-end', flexWrap: 'wrap', alignItems: 'center' }}>
-      {onCreatePrescription && (
+      {onCreatePrescription && isRxCreatable && (
         <button
           type="button"
           className="ui-btn"
@@ -227,7 +244,7 @@ export default function AppointmentDrawer({
         </button>
       )}
 
-      {isCancellable && onComplete && (
+      {isCancellable && onComplete && isApptUpdatable && (
         <button
           type="button"
           className="ui-btn"
@@ -252,7 +269,7 @@ export default function AppointmentDrawer({
         </button>
       )}
 
-      {isCancellable && (
+      {isCancellable && isApptDeletable && (
         <button
           type="button"
           className="ui-btn"
@@ -277,7 +294,7 @@ export default function AppointmentDrawer({
         </button>
       )}
 
-      {isCancellable && (
+      {isCancellable && isApptUpdatable && (
         <button
           type="button"
           className="ui-btn ui-btn-neutral"
@@ -297,7 +314,7 @@ export default function AppointmentDrawer({
         </button>
       )}
 
-      {onEdit && (
+      {onEdit && isApptUpdatable && (
         <button
           type="button"
           className="ui-btn"
@@ -513,7 +530,7 @@ export default function AppointmentDrawer({
                 <div className="appt-view-title">Prescription & Medication</div>
                 <div className="appt-view-subtitle">Official digital prescription for this consultation</div>
               </div>
-              {onCreatePrescription && (
+              {onCreatePrescription && isRxCreatable && (
                 <button
                   type="button"
                   onClick={() => onCreatePrescription(appointment)}
@@ -542,7 +559,9 @@ export default function AppointmentDrawer({
               <div style={{ color: '#64748b' }}>Checking prescription records...</div>
             ) : appRx.length === 0 ? (
               <div style={{ color: '#64748b', fontStyle: 'italic' }}>
-                No prescription created for this consultation yet. Click "Create Prescription" to prescribe medicines.
+                {onCreatePrescription && isRxCreatable
+                  ? 'No prescription created for this consultation yet. Click "Create Prescription" to prescribe medicines.'
+                  : 'No prescription created for this consultation yet.'}
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -567,25 +586,48 @@ export default function AppointmentDrawer({
                         {rx.medicines?.length || rx.medicines_count || 0} medicine(s) · {rx.prescription_date}
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => window.open(prescriptionsApi.getPdfDownloadUrl(rx.id), '_blank')}
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: 6,
-                        border: '1px solid #ede9fe',
-                        background: '#f5f3ff',
-                        color: '#7c3aed',
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                      }}
-                    >
-                      <Download size={12} /> PDF
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button
+                        type="button"
+                        onClick={() => setViewingRx(rx)}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          border: '1px solid #dcfce7',
+                          background: '#f0fdf4',
+                          color: '#16a34a',
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                        }}
+                      >
+                        <Eye size={12} /> View
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void prescriptionsApi.downloadPdf(rx.id);
+                        }}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          border: '1px solid #ede9fe',
+                          background: '#f5f3ff',
+                          color: '#7c3aed',
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                        }}
+                      >
+                        <Download size={12} /> PDF
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -716,6 +758,13 @@ export default function AppointmentDrawer({
           font-size: 12.5px;
         }
       `}</style>
+
+      {/* View Prescription Modal */}
+      <ViewPrescriptionModal
+        prescription={viewingRx}
+        open={Boolean(viewingRx)}
+        onClose={() => setViewingRx(null)}
+      />
     </Drawer>
   );
 }

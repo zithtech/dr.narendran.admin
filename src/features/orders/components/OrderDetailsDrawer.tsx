@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
+import { usePermission } from '../../../context/PermissionContext';
 import { getErrorMessage } from '../../../utils/errors';
 import { ordersApi } from '../services/ordersApi';
 import type { OrderDetails } from '../types/orders';
@@ -41,6 +42,8 @@ export const OrderDetailsDrawer: React.FC<OrderDetailsDrawerProps> = ({
   onOrderUpdated,
 }) => {
   const { message } = App.useApp();
+  const { canUpdate } = usePermission();
+  const isOrderUpdatable = canUpdate('ORDERS');
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -116,7 +119,7 @@ export const OrderDetailsDrawer: React.FC<OrderDetailsDrawerProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {order && !isTerminalStatus && (
+            {order && !isTerminalStatus && isOrderUpdatable && (
               <button
                 type="button"
                 onClick={() => setIsUpdateModalOpen(true)}

@@ -13,18 +13,25 @@ import {
   Search,
   Settings,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 
 import { getErrorMessage } from '../../../utils/errors';
 import { type Prescription, prescriptionsApi } from '../api/prescriptionsApi';
+import { usePermission } from '../../../context/PermissionContext';
 import CreatePrescriptionModal from '../components/CreatePrescriptionModal';
 import ViewPrescriptionModal from '../components/ViewPrescriptionModal';
 import { PrescriptionTemplatesPage } from './PrescriptionTemplatesPage';
 
+const PAGE_SIZES = [10, 25, 50, 100];
+
 export default function PrescriptionsPage() {
   const { message } = App.useApp();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { canCreate, canUpdate } = usePermission();
+
+  const isRxCreatable = canCreate('PRESCRIPTIONS');
+  const isRxUpdatable = canUpdate('PRESCRIPTIONS');
 
   const activeTab = searchParams.get('tab') === 'templates' ? 'templates' : 'list';
 
@@ -33,10 +40,52 @@ export default function PrescriptionsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
+  // Pagination state matching Doctor page
+  const [perPage, setPerPage] = useState<number>(10);
+  const [page, setPage] = useState<number>(1);
+
   // Modals state
   const [isCreateOpen, setIsCreateOpen] = useState(searchParams.get('create') === 'true');
   const [viewingPrescription, setViewingPrescription] = useState<Prescription | null>(null);
   const [editingPrescription, setEditingPrescription] = useState<Prescription | null>(null);
+
+  // Client-side filtering across loaded prescriptions
+  const filteredPrescriptions = useMemo(() => {
+    let list = prescriptions;
+    const term = searchTerm.trim().toLowerCase();
+    if (term) {
+      list = list.filter((p) => {
+        const idMatch = p.id.toLowerCase().includes(term);
+        const patientMatch =
+          (p.patient_name || '').toLowerCase().includes(term) ||
+          (p.patient_phone || '').includes(term);
+        const doctorMatch =
+          (p.doctor?.name || '').toLowerCase().includes(term) ||
+          (p.doctor?.specialization || p.doctor?.specialty || '').toLowerCase().includes(term);
+        const diagMatch = (p.diagnosis || p.additional_notes || '').toLowerCase().includes(term);
+        const medMatch = (p.medicines || []).some(
+          (m) =>
+            (m.medicine_name || '').toLowerCase().includes(term) ||
+            (m.generic_name || '').toLowerCase().includes(term)
+        );
+        return idMatch || patientMatch || doctorMatch || diagMatch || medMatch;
+      });
+    }
+    if (statusFilter !== 'all') {
+      list = list.filter((p) => (p.status || '').toLowerCase() === statusFilter.toLowerCase());
+    }
+    return list;
+  }, [prescriptions, searchTerm, statusFilter]);
+
+  // Reset page when filter or search changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, statusFilter]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredPrescriptions.length / perPage));
+  const current = Math.min(page, pageCount);
+  const startIdx = (current - 1) * perPage;
+  const pageRows = filteredPrescriptions.slice(startIdx, startIdx + perPage);
 
   const fetchPrescriptions = useCallback(async () => {
     setLoading(true);
@@ -71,9 +120,15 @@ export default function PrescriptionsPage() {
     });
   };
 
-  const handleDownload = (id: string) => {
-    const url = prescriptionsApi.getPdfDownloadUrl(id);
-    window.open(url, '_blank');
+  const handleDownload = async (id: string) => {
+    const hideLoading = message.loading('Downloading prescription PDF...', 0);
+    try {
+      await prescriptionsApi.downloadPdf(id);
+    } catch (err: unknown) {
+      message.error(getErrorMessage(err, 'Failed to download prescription PDF.'));
+    } finally {
+      hideLoading();
+    }
   };
 
   const columns: ColumnsType<Prescription> = [
@@ -110,7 +165,11 @@ export default function PrescriptionsPage() {
       key: 'patient',
       width: 220,
       render: (_, record) => (
-        <div>
+        <div
+          onClick={() => setViewingPrescription(record)}
+          style={{ cursor: 'pointer' }}
+          title="Click to view prescription details"
+        >
           <div style={{ fontWeight: 650, color: '#0f172a', fontSize: 13 }}>
             {record.patient_name || 'Patient'}
           </div>
@@ -193,7 +252,7 @@ export default function PrescriptionsPage() {
           },
         ];
 
-        if (record.status === 'active') {
+        if (record.status === 'active' && isRxUpdatable) {
           items.push({
             key: 'edit',
             label: (
@@ -207,6 +266,24 @@ export default function PrescriptionsPage() {
 
         return (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+            <button
+              type="button"
+              className="ui-btn ui-btn-sm"
+              onClick={() => setViewingPrescription(record)}
+              title="View Details"
+              style={{
+                padding: '3px 8px',
+                fontSize: 11.5,
+                color: '#0284c7',
+                borderColor: '#e0f2fe',
+                background: '#f0f9ff',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              <Eye size={12} /> View
+            </button>
             <button
               type="button"
               className="ui-btn ui-btn-sm"
@@ -250,9 +327,52 @@ export default function PrescriptionsPage() {
   ];
 
   return (
-    <div style={{ padding: '16px 24px', width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div
+      className="ui-page prescriptions-page"
+      style={{
+        height: '100%',
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        boxSizing: 'border-box',
+        padding: '16px 24px',
+        gap: 12,
+        overflow: activeTab === 'templates' ? 'auto' : 'hidden',
+      }}
+    >
+      <style>{`
+        .prescriptions-table-scroll::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        .prescriptions-table-scroll::-webkit-scrollbar-track {
+          background: #f1f5f9;
+        }
+        .prescriptions-table-scroll::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 4px;
+        }
+        .prescriptions-table-scroll::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+        .prescriptions-table-scroll .ant-table-thead > tr > th {
+          position: sticky !important;
+          top: 0 !important;
+          z-index: 2 !important;
+          background: #f8fafc !important;
+        }
+        @media (max-height: 650px) {
+          .prescriptions-page {
+            overflow-y: auto !important;
+          }
+          .prescriptions-table-card {
+            min-height: 380px !important;
+          }
+        }
+      `}</style>
+
       {/* Top Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, flexShrink: 0 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div
@@ -280,7 +400,7 @@ export default function PrescriptionsPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {activeTab === 'list' && (
+          {activeTab === 'list' && isRxCreatable && (
             <button
               type="button"
               className="ui-btn ui-btn-primary"
@@ -304,7 +424,7 @@ export default function PrescriptionsPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: 10, flexShrink: 0 }}>
         <Segmented
           value={activeTab}
           onChange={handleTabChange}
@@ -331,7 +451,7 @@ export default function PrescriptionsPage() {
 
       {/* Tab Content */}
       {activeTab === 'list' ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
           {/* Filter Bar */}
           <div
             style={{
@@ -344,6 +464,7 @@ export default function PrescriptionsPage() {
               padding: '10px 14px',
               borderRadius: 8,
               border: '1px solid #e2e8f0',
+              flexShrink: 0,
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 260 }}>
@@ -391,32 +512,132 @@ export default function PrescriptionsPage() {
             </button>
           </div>
 
-          {/* Table */}
-          <div style={{ background: '#ffffff', borderRadius: 8, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-            <Table
-              columns={columns}
-              dataSource={prescriptions}
-              rowKey="id"
-              loading={loading}
-              pagination={{ pageSize: 15, showSizeChanger: true }}
-              locale={{
-                emptyText: (
-                  <div style={{ padding: '30px 0', textAlign: 'center' }}>
-                    <FileText size={32} style={{ color: '#cbd5e1', margin: '0 auto 8px' }} />
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>
-                      No prescriptions found
-                    </div>
-                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
-                      Create a prescription directly using the "+ Create Prescription" button.
-                    </div>
-                  </div>
-                ),
+          {/* Table Card with Scroll Container and Doctor Page Footer */}
+          <div
+            className="ui-card ui-table-card prescriptions-table-card"
+            style={{
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: 16,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            }}
+          >
+            {/* Scrollable table container */}
+            <div
+              className="ui-table-scroll prescriptions-table-scroll"
+              style={{
+                flex: 1,
+                minHeight: 0,
+                overflowY: 'auto',
+                overflowX: 'auto',
               }}
-            />
+            >
+              <Table
+                columns={columns}
+                dataSource={pageRows}
+                rowKey="id"
+                loading={loading}
+                pagination={false}
+                scroll={{ x: 950 }}
+                locale={{
+                  emptyText: (
+                    <div style={{ padding: '40px 0', textAlign: 'center' }}>
+                      <FileText size={36} style={{ color: '#cbd5e1', margin: '0 auto 8px' }} />
+                      <div style={{ fontSize: 13, fontWeight: 650, color: '#475569' }}>
+                        No prescriptions found
+                      </div>
+                      <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
+                        Create a prescription directly using the "+ Create Prescription" button.
+                      </div>
+                    </div>
+                  ),
+                }}
+              />
+            </div>
+
+            {/* Pagination Footer behaving exactly like the Doctor page */}
+            <footer className="ui-footer">
+              <span>
+                {filteredPrescriptions.length === 0 ? (
+                  'No results'
+                ) : (
+                  <>
+                    Showing{' '}
+                    <strong>
+                      {startIdx + 1}–{startIdx + pageRows.length}
+                    </strong>{' '}
+                    of <strong>{filteredPrescriptions.length}</strong>
+                    {filteredPrescriptions.length !== prescriptions.length && (
+                      <> (filtered from {prescriptions.length})</>
+                    )}
+                  </>
+                )}
+              </span>
+              <div className="ui-pager">
+                <span>Per page</span>
+                <select
+                  className="ui-select"
+                  value={perPage}
+                  onChange={(e) => {
+                    setPerPage(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  aria-label="Rows per page"
+                >
+                  {PAGE_SIZES.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="ui-btn ui-btn-sm"
+                  onClick={() => setPage(1)}
+                  disabled={current === 1}
+                >
+                  « First
+                </button>
+                <button
+                  type="button"
+                  className="ui-btn ui-btn-sm"
+                  onClick={() => setPage(current - 1)}
+                  disabled={current === 1}
+                >
+                  ‹ Prev
+                </button>
+                <span className="ui-pager-page">
+                  Page {current} of {pageCount}
+                </span>
+                <button
+                  type="button"
+                  className="ui-btn ui-btn-sm"
+                  onClick={() => setPage(current + 1)}
+                  disabled={current === pageCount}
+                >
+                  Next ›
+                </button>
+                <button
+                  type="button"
+                  className="ui-btn ui-btn-sm"
+                  onClick={() => setPage(pageCount)}
+                  disabled={current === pageCount}
+                >
+                  Last »
+                </button>
+              </div>
+            </footer>
           </div>
         </div>
       ) : (
-        <PrescriptionTemplatesPage />
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <PrescriptionTemplatesPage />
+        </div>
       )}
 
       {/* Create Modal */}
@@ -446,10 +667,14 @@ export default function PrescriptionsPage() {
         prescription={viewingPrescription}
         open={Boolean(viewingPrescription)}
         onClose={() => setViewingPrescription(null)}
-        onEdit={(p) => {
-          setViewingPrescription(null);
-          setEditingPrescription(p);
-        }}
+        {...(isRxUpdatable
+          ? {
+              onEdit: (p: Prescription) => {
+                setViewingPrescription(null);
+                setEditingPrescription(p);
+              },
+            }
+          : {})}
       />
     </div>
   );

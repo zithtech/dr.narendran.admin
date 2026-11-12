@@ -31,12 +31,15 @@ export default function Login() {
       const data = response.data;
 
       // Axios handles non-2xx errors in the catch block
+      // Clear previous cached permissions so fresh role permissions are loaded
+      localStorage.removeItem('adminCachedPermissions');
       localStorage.setItem('adminToken', data.token);
       localStorage.setItem('adminUsername', data.username || username);
       localStorage.setItem('adminRole', data.role || 'Administrator');
       if (data.id) {
         localStorage.setItem('adminUserId', data.id);
       }
+      window.dispatchEvent(new Event('admin-auth-changed'));
 
       const roleUpper = (data.role || '').toUpperCase();
       if (roleUpper === 'DOCTOR') {

@@ -10,6 +10,7 @@ import { type Patient } from './PatientModal';
 import { DetailList, Drawer } from './ui/Drawer';
 import { Section } from './ui/Modal';
 import { Avatar, Badge, StatusDot } from './ui/primitives';
+import { usePermission } from '../context/PermissionContext';
 
 interface EmergencyContact {
   name?: string;
@@ -53,6 +54,9 @@ interface PatientDrawerProps {
 }
 
 export default function PatientDrawer({ patient, onClose, onEdit }: PatientDrawerProps) {
+  const { canCreate, canUpdate } = usePermission();
+  const isPatientEditable = canUpdate('PATIENTS');
+  const isRxCreatable = canCreate('PRESCRIPTIONS');
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loadingRx, setLoadingRx] = useState(false);
   const [isCreateRxOpen, setIsCreateRxOpen] = useState(false);
@@ -120,49 +124,60 @@ export default function PatientDrawer({ patient, onClose, onEdit }: PatientDrawe
             <button type="button" className="ui-btn" onClick={onClose}>
               Close
             </button>
-            <button
-              type="button"
-              className="ui-btn"
-              onClick={() => setIsCreateRxOpen(true)}
-              style={{
-                background: '#7c3aed',
-                borderColor: '#7c3aed',
-                color: '#ffffff',
-                fontWeight: 600,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-              }}
-            >
-              <FileText size={14} /> Create Prescription
-            </button>
-            <button type="button" className="ui-btn ui-btn-primary" onClick={() => onEdit(patient)}>
-              <Pencil size={14} /> Edit patient
-            </button>
+            {isRxCreatable && (
+              <button
+                type="button"
+                className="ui-btn"
+                onClick={() => setIsCreateRxOpen(true)}
+                style={{
+                  background: '#7c3aed',
+                  borderColor: '#7c3aed',
+                  color: '#ffffff',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
+                <FileText size={14} /> Create Prescription
+              </button>
+            )}
+            {isPatientEditable && (
+              <button
+                type="button"
+                className="ui-btn ui-btn-primary"
+                onClick={() => onEdit(patient)}
+                title="Edit patient"
+              >
+                <Pencil size={14} /> Edit patient
+              </button>
+            )}
           </div>
         }
       >
         {/* Prescriptions Section */}
         <Section title={`Prescriptions (${prescriptions.length})`}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-            <button
-              type="button"
-              onClick={() => setIsCreateRxOpen(true)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#7c3aed',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <Plus size={13} /> New Prescription
-            </button>
-          </div>
+          {isRxCreatable && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+              <button
+                type="button"
+                onClick={() => setIsCreateRxOpen(true)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#7c3aed',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <Plus size={13} /> New Prescription
+              </button>
+            </div>
+          )}
           {loadingRx ? (
             <div style={{ fontSize: 12, color: '#64748b', padding: '6px 0' }}>Loading prescriptions...</div>
           ) : prescriptions.length === 0 ? (
@@ -246,7 +261,9 @@ export default function PatientDrawer({ patient, onClose, onEdit }: PatientDrawe
                       </button>
                       <button
                         type="button"
-                        onClick={() => window.open(prescriptionsApi.getPdfDownloadUrl(rx.id), '_blank')}
+                        onClick={() => {
+                          void prescriptionsApi.downloadPdf(rx.id);
+                        }}
                         style={{
                           background: 'none',
                           border: 'none',

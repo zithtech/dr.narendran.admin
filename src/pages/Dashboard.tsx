@@ -6,6 +6,7 @@ import HospitalModal, { type Hospital } from '../components/HospitalModal';
 import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
 import { addedFacet, statusFacet } from '../components/ui/facets';
 import { ActivityCell, Badge, StatusDot } from '../components/ui/primitives';
+import { usePermission } from '../context/PermissionContext';
 import { useResource } from '../hooks/useResource';
 import { tenure, timeAgo } from '../lib/format';
 import api from '../utils/api';
@@ -28,10 +29,14 @@ const FACETS: Facet<Hospital>[] = [
 export default function Dashboard() {
   const resource = useResource<Hospital>('hospitals', 'hospitals');
   const { message } = App.useApp();
+  const { canCreate, canUpdate } = usePermission();
+  const isCreatable = canCreate('HOSPITALS');
+  const isUpdatable = canUpdate('HOSPITALS');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingHospital, setEditingHospital] = useState<Hospital | null>(null);
 
   const openEditor = (hospital: Hospital | null) => {
+    if (hospital ? !isUpdatable : !isCreatable) return;
     setEditingHospital(hospital);
     setIsModalOpen(true);
   };
@@ -45,7 +50,7 @@ export default function Dashboard() {
         <PrimaryCell
           name={h.name}
           sub={h.email || h.phone || <span className="ui-muted">No contact info</span>}
-          onOpen={() => openEditor(h)}
+          {...(isUpdatable ? { onOpen: () => openEditor(h) } : {})}
         />
       ),
     },
@@ -108,6 +113,7 @@ export default function Dashboard() {
   return (
     <>
       <DataView
+        moduleSlug="HOSPITALS"
         title="Hospitals"
         subtitle="Every hospital registered on the platform."
         icon={Building2}

@@ -1,5 +1,6 @@
 import { CalendarClock, ExternalLink, Mail, Pencil, Phone, Video } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
 
 import { formatDate, timeAgo,titleCase } from '../lib/format';
 import api from '../utils/api';
@@ -8,6 +9,7 @@ import { type Doctor } from './DoctorModal';
 import { DetailList, Drawer } from './ui/Drawer';
 import { Section } from './ui/Modal';
 import { Avatar, Badge, cx, StatusDot } from './ui/primitives';
+import { usePermission } from '../context/PermissionContext';
 
 interface Slot {
   id: string;
@@ -43,6 +45,11 @@ export default function DoctorDrawer({
   onSchedule,
   scheduleVersion,
 }: DoctorDrawerProps) {
+  const navigate = useNavigate();
+  const { canView, canUpdate } = usePermission();
+  const isDoctorEditable = canUpdate('DOCTORS');
+  const isScheduleViewable = canView('AVAILABILITY');
+  const isScheduleEditable = canUpdate('AVAILABILITY');
   // Keyed by doctor + version so a stale response never shows under another doctor.
   const [schedule, setSchedule] = useState<{ key: string; slots: Slot[]; error: string } | null>(
     null,
@@ -112,12 +119,26 @@ export default function DoctorDrawer({
           <button type="button" className="ui-btn" onClick={onClose}>
             Close
           </button>
-          <button type="button" className="ui-btn ui-btn-soft" onClick={() => onSchedule(doctor)}>
-            <CalendarClock size={15} /> Manage schedule
-          </button>
-          <button type="button" className="ui-btn ui-btn-primary" onClick={() => onEdit(doctor)}>
-            <Pencil size={14} /> Edit doctor
-          </button>
+          {isScheduleEditable && (
+            <button
+              type="button"
+              className="ui-btn ui-btn-soft"
+              onClick={() => onSchedule(doctor)}
+              title="Manage schedule"
+            >
+              <CalendarClock size={15} /> Manage schedule
+            </button>
+          )}
+          {isDoctorEditable && (
+            <button
+              type="button"
+              className="ui-btn ui-btn-primary"
+              onClick={() => onEdit(doctor)}
+              title="Edit doctor profile"
+            >
+              <Pencil size={14} /> Edit doctor
+            </button>
+          )}
         </>
       }
     >
@@ -196,6 +217,21 @@ export default function DoctorDrawer({
                 </div>
               );
             })}
+          </div>
+        )}
+        {isScheduleViewable && (
+          <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              className="ui-link"
+              style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4, color: '#7c3aed' }}
+              onClick={() => {
+                onClose();
+                void navigate(`/availability?doctorId=${doctor.id}`);
+              }}
+            >
+              <CalendarClock size={13} /> Manage Availability &amp; Slots →
+            </button>
           </div>
         )}
       </Section>

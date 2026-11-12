@@ -33,6 +33,7 @@ import { type Column, DataView, type Facet } from '../components/ui/DataView';
 import { addedFacet, statusFacet } from '../components/ui/facets';
 import { Modal } from '../components/ui/Modal';
 import { Alert } from '../components/ui/primitives';
+import { usePermission } from '../context/PermissionContext';
 import { useResource } from '../hooks/useResource';
 import { formatWorkDays, type StaffMember, type StaffStatus } from '../types/staff';
 import api from '../utils/api';
@@ -164,6 +165,7 @@ const FACETS: Facet<StaffMember>[] = [
 
 export default function StaffManagement() {
   const { message } = App.useApp();
+  const { canUpdate, canDelete } = usePermission();
   const resource = useResource<StaffMember>('staff', 'staff');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -226,9 +228,13 @@ export default function StaffManagement() {
 
   const getStaffActionMenuItems = (s: StaffMember): NonNullable<MenuProps['items']> => {
     const isActive = s.status === 'ACTIVE';
+    const canEditStaff = canUpdate('STAFF');
+    const canDeleteStaff = canDelete('STAFF');
 
-    return [
-      {
+    const items: NonNullable<MenuProps['items']> = [];
+
+    if (canEditStaff) {
+      items.push({
         key: 'edit',
         label: (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#1e293b' }}>
@@ -237,42 +243,54 @@ export default function StaffManagement() {
           </span>
         ),
         onClick: () => openEdit(s),
-      },
-      {
-        key: 'view',
-        label: (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#475569' }}>
-            <Eye size={14} style={{ color: '#64748b' }} />
-            <span>View Details & Documents</span>
-          </span>
-        ),
-        onClick: () => openDetails(s),
-      },
-      {
-        type: 'divider',
-      },
-      {
-        key: 'status',
-        label: (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: isActive ? '#dc2626' : '#16a34a' }}>
-            <Power size={14} style={{ color: isActive ? '#dc2626' : '#16a34a' }} />
-            <span>{isActive ? 'Deactivate Profile' : 'Activate Profile'}</span>
-          </span>
-        ),
-        onClick: () => void handleToggleStatus(s),
-      },
-      {
-        key: 'delete',
-        label: (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#dc2626' }}>
-            <Trash2 size={14} style={{ color: '#dc2626' }} />
-            <span>Delete Staff Member</span>
-          </span>
-        ),
-        danger: true,
-        onClick: () => handleOpenDeleteModal(s),
-      },
-    ];
+      });
+    }
+
+    items.push({
+      key: 'view',
+      label: (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#475569' }}>
+          <Eye size={14} style={{ color: '#64748b' }} />
+          <span>View Details & Documents</span>
+        </span>
+      ),
+      onClick: () => openDetails(s),
+    });
+
+    if (canEditStaff) {
+      items.push(
+        { type: 'divider' },
+        {
+          key: 'status',
+          label: (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: isActive ? '#dc2626' : '#16a34a' }}>
+              <Power size={14} style={{ color: isActive ? '#dc2626' : '#16a34a' }} />
+              <span>{isActive ? 'Deactivate Profile' : 'Activate Profile'}</span>
+            </span>
+          ),
+          onClick: () => void handleToggleStatus(s),
+        }
+      );
+    }
+
+    if (canDeleteStaff) {
+      items.push(
+        { type: 'divider' },
+        {
+          key: 'delete',
+          label: (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#dc2626' }}>
+              <Trash2 size={14} style={{ color: '#dc2626' }} />
+              <span>Delete Staff Member</span>
+            </span>
+          ),
+          danger: true,
+          onClick: () => handleOpenDeleteModal(s),
+        }
+      );
+    }
+
+    return items;
   };
 
   const columns: Column<StaffMember>[] = [
@@ -586,6 +604,7 @@ export default function StaffManagement() {
   return (
     <div className="staff-management-view">
       <DataView
+        moduleSlug="STAFF"
         title="Staff Management"
         subtitle="Manage hospital staff, shift schedules, branch assignments, and verification documents."
         icon={Users}
@@ -668,9 +687,9 @@ export default function StaffManagement() {
           isDeletingStaff
             ? () => undefined
             : () => {
-                setStaffToDelete(null);
-                setDeleteError('');
-              }
+              setStaffToDelete(null);
+              setDeleteError('');
+            }
         }
         size="sm"
         className="delete-staff-modal"

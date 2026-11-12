@@ -23,6 +23,7 @@ import { useNavigate } from 'react-router';
 import type { Resource } from '../../hooks/useResource';
 import { timeAgo } from '../../lib/format';
 import { getErrorMessage } from '../../utils/errors';
+import { usePermission } from '../../context/PermissionContext';
 import { ConfirmDialog } from './Modal';
 import { Alert, Avatar, cx } from './primitives';
 import { SearchableSelect } from './SearchableSelect';
@@ -79,6 +80,13 @@ interface DataViewProps<T extends { id: string }> {
   activeId?: string | null;
   /** Optional extra action buttons (e.g. Import Excel, Export Template) */
   extraActions?: ReactNode;
+  /** RBAC module slug */
+  moduleSlug?: string;
+  fallbackSlugs?: string[];
+  /** Explicit RBAC permission overrides */
+  canCreate?: boolean;
+  canUpdate?: boolean;
+  canDelete?: boolean;
 }
 
 type TimePreset = 'any' | 'today' | '7' | '30' | '90' | 'year';
@@ -132,9 +140,37 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
     onRowClick,
     activeId,
     extraActions,
+    moduleSlug,
+    fallbackSlugs,
+    canCreate: propCanCreate,
+    canUpdate: propCanUpdate,
+    canDelete: propCanDelete,
   } = props;
   const { items, loading, error, syncedAt, refresh } = resource;
   const { message } = App.useApp();
+
+  const { canCreate: permCanCreate, canUpdate: permCanUpdate, canDelete: permCanDelete } = usePermission();
+
+  const isCreateAllowed =
+    propCanCreate !== undefined
+      ? propCanCreate
+      : moduleSlug
+        ? permCanCreate(moduleSlug, fallbackSlugs)
+        : true;
+
+  const isUpdateAllowed =
+    propCanUpdate !== undefined
+      ? propCanUpdate
+      : moduleSlug
+        ? permCanUpdate(moduleSlug, fallbackSlugs)
+        : true;
+
+  const isDeleteAllowed =
+    propCanDelete !== undefined
+      ? propCanDelete
+      : moduleSlug
+        ? permCanDelete(moduleSlug, fallbackSlugs)
+        : true;
 
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<Record<string, string>>({});
@@ -315,7 +351,12 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
     ? `Last synced ${timeAgo(new Date(syncedAt).toISOString(), now)}`
     : 'Syncing…';
   const hasData = items.length > 0;
-  const colSpan = columns.length + 2;
+  const showCheckCol = isDeleteAllowed && Boolean(onDelete);
+  const showActionsCol =
+    Boolean(rowActions) ||
+    (Boolean(onEdit) && isUpdateAllowed) ||
+    (Boolean(onDelete) && isDeleteAllowed);
+  const colSpan = columns.length + (showCheckCol ? 1 : 0) + (showActionsCol ? 1 : 0);
 
   return (
     <div className="ui-page">
@@ -428,10 +469,12 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
             {activeRules > 0 && <span className="ui-btn-count">{activeRules}</span>}
           </button>
           {extraActions}
-          <button type="button" className="ui-btn ui-btn-primary ui-btn-pill" onClick={onCreate}>
-            <Plus size={16} strokeWidth={2.4} />
-            {createLabel}
-          </button>
+          {isCreateAllowed && (
+            <button type="button" className="ui-btn ui-btn-primary ui-btn-pill" onClick={onCreate}>
+              <Plus size={16} strokeWidth={2.4} />
+              {createLabel}
+            </button>
+          )}
         </div>
       </header>
 
@@ -519,19 +562,21 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
               <table className="ui-table">
                 <thead>
                   <tr>
-                    <th className="ui-col-check">
-                      <input
-                        type="checkbox"
-                        className="ui-checkbox"
-                        checked={pageAllSelected}
-                        ref={(el) => {
-                          if (el) el.indeterminate = !pageAllSelected && pageSomeSelected;
-                        }}
-                        onChange={togglePage}
-                        aria-label="Select all on this page"
-                        disabled={pageRows.length === 0}
-                      />
-                    </th>
+                    {showCheckCol && (
+                      <th className="ui-col-check">
+                        <input
+                          type="checkbox"
+                          className="ui-checkbox"
+                          checked={pageAllSelected}
+                          ref={(el) => {
+                            if (el) el.indeterminate = !pageAllSelected && pageSomeSelected;
+                          }}
+                          onChange={togglePage}
+                          aria-label="Select all on this page"
+                          disabled={pageRows.length === 0}
+                        />
+                      </th>
+                    )}
                     {columns.map((c) => {
                       const sorted = sort?.id === c.id ? sort.dir : null;
                       return (
@@ -555,16 +600,18 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                         </th>
                       );
                     })}
-                    <th className="ui-col-actions">Actions</th>
+                    {showActionsCol && <th className="ui-col-actions">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {loading && !hasData ? (
                     SKELETON_ROWS.map((i) => (
                       <tr key={i}>
-                        <td className="ui-col-check">
-                          <span className="ui-skeleton" style={{ width: 14, height: 14 }} />
-                        </td>
+                        {showCheckCol && (
+                          <td className="ui-col-check">
+                            <span className="ui-skeleton" style={{ width: 14, height: 14 }} />
+                          </td>
+                        )}
                         {columns.map((c, ci) => (
                           <td key={c.id}>
                             {ci === 0 ? (
@@ -592,7 +639,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                             )}
                           </td>
                         ))}
-                        <td />
+                        {showActionsCol && <td />}
                       </tr>
                     ))
                   ) : pageRows.length === 0 ? (
@@ -608,14 +655,16 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                           <span>
                             {hasData
                               ? 'Try a different search or remove a filter.'
-                              : `Create your first ${noun} to get started.`}
+                              : isCreateAllowed
+                                ? `Create your first ${noun} to get started.`
+                                : `No ${nounPlural} available.`}
                           </span>
                           <div style={{ marginTop: 8 }}>
                             {hasData ? (
                               <button type="button" className="ui-btn" onClick={clearAll}>
                                 Clear filters
                               </button>
-                            ) : (
+                            ) : isCreateAllowed ? (
                               <button
                                 type="button"
                                 className="ui-btn ui-btn-primary"
@@ -623,7 +672,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                               >
                                 <Plus size={16} /> {createLabel}
                               </button>
-                            )}
+                            ) : null}
                           </div>
                         </div>
                       </td>
@@ -650,45 +699,49 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                               : undefined
                           }
                         >
-                          <td className="ui-col-check">
-                            <input
-                              type="checkbox"
-                              className="ui-checkbox"
-                              checked={isSel}
-                              onChange={() => toggleRow(item.id)}
-                              aria-label={`Select ${nameOf(item)}`}
-                            />
-                          </td>
+                          {showCheckCol && (
+                            <td className="ui-col-check">
+                              <input
+                                type="checkbox"
+                                className="ui-checkbox"
+                                checked={isSel}
+                                onChange={() => toggleRow(item.id)}
+                                aria-label={`Select ${nameOf(item)}`}
+                              />
+                            </td>
+                          )}
                           {columns.map((c) => (
                             <td key={c.id}>{c.cell(item)}</td>
                           ))}
-                          <td className="ui-col-actions">
-                            <div className="ui-row-actions">
-                              {rowActions?.(item)}
-                              {!rowActions && onEdit && (
-                                <button
-                                  type="button"
-                                  className="ui-icon-btn"
-                                  onClick={() => onEdit(item)}
-                                  aria-label={`Edit ${nameOf(item)}`}
-                                  title="Edit"
-                                >
-                                  <Pencil size={15} />
-                                </button>
-                              )}
-                              {!rowActions && onDelete && (
-                                <button
-                                  type="button"
-                                  className="ui-icon-btn is-danger"
-                                  onClick={() => setPendingDelete([item])}
-                                  aria-label={`Delete ${nameOf(item)}`}
-                                  title="Delete"
-                                >
-                                  <Trash2 size={15} />
-                                </button>
-                              )}
-                            </div>
-                          </td>
+                          {showActionsCol && (
+                            <td className="ui-col-actions">
+                              <div className="ui-row-actions">
+                                {rowActions?.(item)}
+                                {!rowActions && onEdit && isUpdateAllowed && (
+                                  <button
+                                    type="button"
+                                    className="ui-icon-btn"
+                                    onClick={() => onEdit(item)}
+                                    aria-label={`Edit ${nameOf(item)}`}
+                                    title="Edit"
+                                  >
+                                    <Pencil size={15} />
+                                  </button>
+                                )}
+                                {!rowActions && onDelete && isDeleteAllowed && (
+                                  <button
+                                    type="button"
+                                    className="ui-icon-btn is-danger"
+                                    onClick={() => setPendingDelete([item])}
+                                    aria-label={`Delete ${nameOf(item)}`}
+                                    title="Delete"
+                                  >
+                                    <Trash2 size={15} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       );
                     })
@@ -697,7 +750,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
               </table>
             </div>
 
-            {selectedItems.length > 0 && (
+            {selectedItems.length > 0 && showCheckCol && (
               <div className="ui-bulkbar" role="toolbar" aria-label="Bulk actions">
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <span
@@ -726,11 +779,12 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                 >
                   Clear selection
                 </button>
-                {onDelete && (
+                {onDelete && isDeleteAllowed && (
                   <button
                     type="button"
                     className="ui-btn ui-btn-sm is-danger"
                     onClick={() => setPendingDelete(selectedItems)}
+                    title="Delete selected"
                   >
                     <Trash2 size={13} /> Delete
                   </button>
@@ -849,15 +903,21 @@ export function PrimaryCell({
   name: string;
   sub?: ReactNode;
   avatarSrc?: string | null | undefined;
-  onOpen: () => void;
+  onOpen?: (() => void) | undefined;
 }) {
   return (
     <div className="ui-primary-cell">
       <Avatar name={name} src={avatarSrc} />
       <div style={{ minWidth: 0 }}>
-        <button type="button" className="ui-link ui-cell-title" onClick={onOpen}>
-          {name}
-        </button>
+        {onOpen ? (
+          <button type="button" className="ui-link ui-cell-title" onClick={onOpen}>
+            {name}
+          </button>
+        ) : (
+          <span className="ui-cell-title" style={{ fontWeight: 600, color: '#0f172a' }}>
+            {name}
+          </span>
+        )}
         {sub && <div className="ui-cell-sub">{sub}</div>}
       </div>
     </div>

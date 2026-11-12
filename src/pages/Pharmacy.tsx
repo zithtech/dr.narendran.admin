@@ -10,6 +10,7 @@ import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui
 import { addedFacet, statusFacet } from '../components/ui/facets';
 import { ActivityCell, Badge, StatusDot } from '../components/ui/primitives';
 import { useResource } from '../hooks/useResource';
+import { usePermission } from '../context/PermissionContext';
 import { timeAgo } from '../lib/format';
 import { formatDosageStrengthSummary, type Medicine } from '../types/pharmacy';
 import api from '../utils/api';
@@ -48,6 +49,10 @@ const FACETS: Facet<Medicine>[] = [
 export default function Pharmacy() {
   const resource = useResource<Medicine>('medicines', 'medicines');
   const { message } = App.useApp();
+  const { canCreate, canUpdate } = usePermission();
+
+  const isPharmCreatable = canCreate('PHARMACY');
+  const isPharmUpdatable = canUpdate('PHARMACY');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMedicine, setEditingMedicine] = useState<Medicine | null>(null);
@@ -64,11 +69,13 @@ export default function Pharmacy() {
   const openDetails = (medicine: Medicine) => setViewingId(medicine.id);
 
   const openEditor = (medicine: Medicine | null) => {
+    if (medicine ? !isPharmUpdatable : !isPharmCreatable) return;
     setEditingMedicine(medicine);
     setIsModalOpen(true);
   };
 
   const handleToggleStatus = async (medicine: Medicine) => {
+    if (!isPharmUpdatable) return;
     const nextStatus = medicine.status === 'Active' ? 'Inactive' : 'Active';
     try {
       await api.put(`medicines/${medicine.id}`, { status: nextStatus });
@@ -187,6 +194,7 @@ export default function Pharmacy() {
   return (
     <>
       <DataView<Medicine>
+        moduleSlug="PHARMACY"
         title="Pharmacy Management"
         subtitle="Master medicine repository for clinical prescriptions, inventory catalogs, and patient orders."
         icon={Pill}
@@ -228,56 +236,64 @@ export default function Pharmacy() {
             >
               <Download size={14} /> Download Template
             </button>
-            <button
-              type="button"
-              className="ui-btn ui-btn-primary"
-              onClick={() => setIsImportModalOpen(true)}
-            >
-              <FileSpreadsheet size={15} /> Upload Excel
-            </button>
+            {isPharmCreatable && (
+              <button
+                type="button"
+                className="ui-btn ui-btn-primary"
+                onClick={() => setIsImportModalOpen(true)}
+              >
+                <FileSpreadsheet size={15} /> Upload Excel
+              </button>
+            )}
           </div>
         }
         rowActions={(m) => (
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              className="ui-btn ui-btn-xs flex cursor-pointer items-center gap-1 rounded-md border border-purple-200 bg-purple-50 px-2 py-1 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-100 dark:border-purple-800 dark:bg-purple-950/50 dark:text-purple-300 dark:hover:bg-purple-900"
-              onClick={(e) => {
-                e.stopPropagation();
-                setVariantMedicine(m);
-              }}
-              title={`Add strength variant for ${m.medicine_name}`}
-              aria-label={`Add strength variant for ${m.medicine_name}`}
-            >
-              <Plus size={12} /> Variant
-            </button>
-            <button
-              type="button"
-              className="ui-icon-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                openEditor(m);
-              }}
-              title={`Edit ${m.medicine_name}`}
-              aria-label={`Edit ${m.medicine_name}`}
-            >
-              <Pencil size={14} />
-            </button>
-            <button
-              type="button"
-              className="ui-icon-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                void handleToggleStatus(m);
-              }}
-              title={m.status === 'Active' ? 'Deactivate Medicine' : 'Activate Medicine'}
-              aria-label={m.status === 'Active' ? 'Deactivate Medicine' : 'Activate Medicine'}
-            >
-              <Power
-                size={14}
-                className={m.status === 'Active' ? 'text-emerald-600' : 'text-slate-400'}
-              />
-            </button>
+            {isPharmCreatable && (
+              <button
+                type="button"
+                className="ui-btn ui-btn-xs flex cursor-pointer items-center gap-1 rounded-md border border-purple-200 bg-purple-50 px-2 py-1 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-100 dark:border-purple-800 dark:bg-purple-950/50 dark:text-purple-300 dark:hover:bg-purple-900"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setVariantMedicine(m);
+                }}
+                title={`Add strength variant for ${m.medicine_name}`}
+                aria-label={`Add strength variant for ${m.medicine_name}`}
+              >
+                <Plus size={12} /> Variant
+              </button>
+            )}
+            {isPharmUpdatable && (
+              <>
+                <button
+                  type="button"
+                  className="ui-icon-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEditor(m);
+                  }}
+                  title={`Edit ${m.medicine_name}`}
+                  aria-label={`Edit ${m.medicine_name}`}
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  type="button"
+                  className="ui-icon-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleToggleStatus(m);
+                  }}
+                  title={m.status === 'Active' ? 'Deactivate Medicine' : 'Activate Medicine'}
+                  aria-label={m.status === 'Active' ? 'Deactivate Medicine' : 'Activate Medicine'}
+                >
+                  <Power
+                    size={14}
+                    className={m.status === 'Active' ? 'text-emerald-600' : 'text-slate-400'}
+                  />
+                </button>
+              </>
+            )}
           </div>
         )}
       />
