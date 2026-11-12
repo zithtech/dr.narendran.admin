@@ -314,21 +314,21 @@ export default function ScheduleAppointmentModal({
           fontSize: 12.5,
           fontWeight: isSelected ? 700 : 500,
           border: isSelected
-            ? '1.5px solid #7c3aed'
+            ? '1.5px solid #2563eb'
             : isBooked
               ? '1px dashed #cbd5e1'
               : '1px solid #e2e8f0',
           background: isSelected
-            ? '#f5f3ff'
+            ? '#eff6ff'
             : isBooked
               ? '#f8fafc'
               : '#ffffff',
           color: isSelected
-            ? '#6d28d9'
+            ? '#1d4ed8'
             : isBooked
               ? '#94a3b8'
               : '#1e293b',
-          boxShadow: isSelected ? '0 2px 6px rgba(124, 58, 237, 0.18)' : 'none',
+          boxShadow: isSelected ? '0 2px 6px rgba(37, 99, 235, 0.18)' : 'none',
           cursor: isBooked ? 'not-allowed' : 'pointer',
           opacity: isBooked ? 0.6 : 1,
           display: 'flex',
@@ -366,13 +366,13 @@ export default function ScheduleAppointmentModal({
               width: 38,
               height: 38,
               borderRadius: 10,
-              background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
-              color: '#7c3aed',
-              border: '1px solid #c4b5fd',
+              background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+              color: '#2563eb',
+              border: '1px solid #bfdbfe',
               display: 'grid',
               placeItems: 'center',
               flexShrink: 0,
-              boxShadow: '0 2px 6px rgba(124, 58, 237, 0.16)',
+              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.16)',
             }}
           >
             <CalendarPlus size={18} />
@@ -441,9 +441,9 @@ export default function ScheduleAppointmentModal({
             width: 26px;
             height: 26px;
             border-radius: 7px;
-            background: #f5f3ff;
-            color: #7c3aed;
-            border: 1px solid #ede9fe;
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #dbeafe;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -468,19 +468,19 @@ export default function ScheduleAppointmentModal({
             transition: all 0.15s ease;
           }
           .schedule-appointment-drawer-modal .ui-input:focus {
-            border-color: #7c3aed !important;
-            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12) !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
             outline: none;
           }
           .sched-submit-btn {
-            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
-            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.28) !important;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28) !important;
             border: none !important;
             color: #ffffff !important;
           }
           .sched-submit-btn:hover:not(:disabled) {
-            background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%) !important;
-            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.36) !important;
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.36) !important;
           }
         `}</style>
         <div className="ui-modal-body">
@@ -520,8 +520,8 @@ export default function ScheduleAppointmentModal({
                   height: 34,
                   fontSize: 12.5,
                   fontWeight: 600,
-                  boxShadow: patientMode === 'existing' ? '0 1px 3px rgba(124, 58, 237, 0.2)' : 'none',
-                  background: patientMode === 'existing' ? '#7c3aed' : 'transparent',
+                  boxShadow: patientMode === 'existing' ? '0 1px 3px rgba(37, 99, 235, 0.2)' : 'none',
+                  background: patientMode === 'existing' ? '#2563eb' : 'transparent',
                   color: patientMode === 'existing' ? '#ffffff' : '#475569',
                   border: 'none',
                   cursor: 'pointer',
@@ -549,8 +549,8 @@ export default function ScheduleAppointmentModal({
                   height: 34,
                   fontSize: 12.5,
                   fontWeight: 600,
-                  boxShadow: patientMode === 'new' ? '0 1px 3px rgba(124, 58, 237, 0.2)' : 'none',
-                  background: patientMode === 'new' ? '#7c3aed' : 'transparent',
+                  boxShadow: patientMode === 'new' ? '0 1px 3px rgba(37, 99, 235, 0.2)' : 'none',
+                  background: patientMode === 'new' ? '#2563eb' : 'transparent',
                   color: patientMode === 'new' ? '#ffffff' : '#475569',
                   border: 'none',
                   cursor: 'pointer',
@@ -608,13 +608,13 @@ export default function ScheduleAppointmentModal({
                           width: 34,
                           height: 34,
                           borderRadius: '50%',
-                          background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                          background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
                           color: '#ffffff',
                           display: 'grid',
                           placeItems: 'center',
                           fontWeight: 700,
                           fontSize: 13,
-                          boxShadow: '0 2px 4px rgba(124, 58, 237, 0.2)',
+                          boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)',
                           flexShrink: 0,
                         }}
                       >
@@ -783,14 +783,14 @@ export default function ScheduleAppointmentModal({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <Stethoscope size={15} style={{ color: '#7c3aed' }} />
+                  <Stethoscope size={15} style={{ color: '#2563eb' }} />
                   <span style={{ fontWeight: 600, color: '#0f172a' }}>
                     {selectedDoctor.name.startsWith('Dr.') ? selectedDoctor.name : `Dr. ${selectedDoctor.name}`}
                   </span>
                   <span style={{ color: '#64748b' }}>· {selectedDoctor.specialization || 'General'}</span>
                 </div>
                 <div>
-                  <Badge tone="violet">
+                  <Badge tone="blue">
                     {selectedDoctor.branch_name || selectedDoctor.hospital_name || 'Main Clinic'}
                   </Badge>
                 </div>
@@ -826,7 +826,7 @@ export default function ScheduleAppointmentModal({
                   gap: 8,
                 }}
               >
-                <Loader2 size={16} className="is-spinning" style={{ color: '#7c3aed' }} />
+                <Loader2 size={16} className="is-spinning" style={{ color: '#2563eb' }} />
                 <span>Checking doctor availability...</span>
               </div>
             ) : slots.length === 0 ? (
@@ -890,7 +890,7 @@ export default function ScheduleAppointmentModal({
                         letterSpacing: '0.04em',
                       }}
                     >
-                      <Clock size={13} style={{ color: '#7c3aed' }} />
+                      <Clock size={13} style={{ color: '#2563eb' }} />
                       <span>Afternoon Slots</span>
                     </div>
                     <div
@@ -920,7 +920,7 @@ export default function ScheduleAppointmentModal({
                         letterSpacing: '0.04em',
                       }}
                     >
-                      <Sunset size={13} style={{ color: '#6d28d9' }} />
+                      <Sunset size={13} style={{ color: '#1d4ed8' }} />
                       <span>Evening Slots</span>
                     </div>
                     <div
@@ -963,9 +963,9 @@ export default function ScheduleAppointmentModal({
                         padding: '0 10px',
                         borderRadius: 6,
                         fontWeight: purpose === p ? 600 : 500,
-                        background: purpose === p ? '#f5f3ff' : '#f8fafc',
-                        border: purpose === p ? '1.5px solid #7c3aed' : '1px solid #e2e8f0',
-                        color: purpose === p ? '#6d28d9' : '#475569',
+                        background: purpose === p ? '#eff6ff' : '#f8fafc',
+                        border: purpose === p ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
+                        color: purpose === p ? '#1d4ed8' : '#475569',
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
                       }}

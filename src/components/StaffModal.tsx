@@ -963,13 +963,13 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
-                color: '#7c3aed',
-                border: '1px solid #c4b5fd',
+                background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                color: '#2563eb',
+                border: '1px solid #bfdbfe',
                 display: 'grid',
                 placeItems: 'center',
                 flexShrink: 0,
-                boxShadow: '0 2px 6px rgba(124, 58, 237, 0.16)',
+                boxShadow: '0 2px 6px rgba(37, 99, 235, 0.16)',
               }}
             >
               {staff ? <Pencil size={18} /> : <UserPlus size={18} />}
@@ -1003,7 +1003,7 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
           }
           .staff-create-drawer-modal .ui-modal-head {
             padding: 18px 26px;
-            background: linear-gradient(180deg, #faf5ff 0%, #ffffff 100%);
+            background: #ffffff;
             border-bottom: 1px solid #f1f5f9;
           }
           .staff-create-drawer-modal .ui-modal-head h2 {
@@ -1042,9 +1042,9 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
             width: 26px;
             height: 26px;
             border-radius: 7px;
-            background: #f5f3ff;
-            color: #7c3aed;
-            border: 1px solid #ede9fe;
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #dbeafe;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1069,8 +1069,8 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
             transition: all 0.15s ease;
           }
           .staff-create-drawer-modal .ui-input:focus {
-            border-color: #7c3aed !important;
-            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12) !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
             outline: none;
           }
           .shift-grid {
@@ -1096,15 +1096,40 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
             position: relative;
           }
           .shift-card-btn.is-active {
-            border: 1.5px solid #7c3aed !important;
-            background: #f5f3ff !important;
-            box-shadow: 0 2px 6px rgba(124, 58, 237, 0.12);
+            border: 1.5px solid #2563eb !important;
+            background: #eff6ff !important;
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.12);
           }
           .shift-card-btn:not(.is-active) {
             border: 1px solid #e2e8f0;
             background: #ffffff;
           }
           .shift-card-btn:not(.is-active):hover {
+            background: #fafafa;
+            border-color: #cbd5e1;
+          }
+          .staff-status-btn {
+            flex: 1;
+            padding: 12px 14px;
+            border-radius: 9px;
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            transition: all 0.15s ease;
+            position: relative;
+          }
+          .staff-status-btn.is-active {
+            border: 1.5px solid #2563eb !important;
+            background: #eff6ff !important;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+          }
+          .staff-status-btn:not(.is-active) {
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+          }
+          .staff-status-btn:not(.is-active):hover {
             background: #fafafa;
             border-color: #cbd5e1;
           }
@@ -1124,18 +1149,18 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
           }
           .staff-dropzone:hover,
           .staff-dropzone.has-file {
-            border-color: #7c3aed;
-            background: #faf5ff;
+            border-color: #2563eb;
+            background: #eff6ff;
           }
           .staff-submit-btn {
-            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
-            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.28) !important;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28) !important;
             border: none !important;
             color: #ffffff !important;
           }
           .staff-submit-btn:hover:not(:disabled) {
-            background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%) !important;
-            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.36) !important;
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.36) !important;
           }
         `}</style>
           <div className="ui-modal-body">
@@ -1512,14 +1537,14 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                         className={`shift-card-btn ${isSelected ? 'is-active' : ''}`}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                          <ShiftIcon size={15} style={{ color: isSelected ? '#7c3aed' : '#64748b' }} />
+                          <ShiftIcon size={15} style={{ color: isSelected ? '#2563eb' : '#64748b' }} />
                           {isSelected && (
                             <span
                               style={{
                                 width: 15,
                                 height: 15,
                                 borderRadius: '50%',
-                                background: '#7c3aed',
+                                background: '#2563eb',
                                 color: '#ffffff',
                                 display: 'grid',
                                 placeItems: 'center',
@@ -1530,10 +1555,10 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                           )}
                         </div>
                         <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: isSelected ? '#5b21b6' : '#1e293b' }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: isSelected ? '#1d4ed8' : '#1e293b' }}>
                             {shift.id}
                           </div>
-                          <div style={{ fontSize: 10, color: isSelected ? '#7c3aed' : '#64748b', marginTop: 1 }}>
+                          <div style={{ fontSize: 10, color: isSelected ? '#2563eb' : '#64748b', marginTop: 1 }}>
                             {shift.period}
                           </div>
                         </div>
@@ -1574,7 +1599,7 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                           margin: 0,
                         }}
                       >
-                        <Clock size={13} style={{ color: '#7c3aed' }} />
+                        <Clock size={13} style={{ color: '#64748b' }} />
                         <span>Custom Shift Timing Details</span>
                         <span style={{ color: '#ef4444' }}>*</span>
                       </label>
@@ -1583,9 +1608,9 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                         type="button"
                         onClick={handleOpenTimeModal}
                         style={{
-                          border: '1px solid #c4b5fd',
-                          background: '#f5f3ff',
-                          color: '#6d28d9',
+                          border: '1px solid #cbd5e1',
+                          background: '#f1f5f9',
+                          color: '#0f172a',
                           fontSize: 11,
                           fontWeight: 600,
                           borderRadius: 6,
@@ -1638,9 +1663,9 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: 6,
-                          background: '#ede9fe',
-                          color: '#5b21b6',
-                          border: '1px solid #c4b5fd',
+                          background: '#f1f5f9',
+                          color: '#0f172a',
+                          border: '1px solid #cbd5e1',
                           whiteSpace: 'nowrap',
                         }}
                       >
@@ -1716,8 +1741,8 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                             style={{
                               fontSize: 11,
                               fontWeight: 600,
-                              color: '#6d28d9',
-                              background: '#ede9fe',
+                              color: '#0f172a',
+                              background: '#f1f5f9',
                               padding: '1px 8px',
                               borderRadius: 10,
                             }}
@@ -1742,8 +1767,8 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                                 fontSize: 11,
                                 padding: '3px 8px',
                                 borderRadius: 6,
-                                border: isActive ? '1px solid #7c3aed' : '1px solid #cbd5e1',
-                                background: isActive ? '#7c3aed' : '#ffffff',
+                                border: isActive ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                                background: isActive ? '#2563eb' : '#ffffff',
                                 color: isActive ? '#ffffff' : '#334155',
                                 cursor: 'pointer',
                                 fontWeight: isActive ? 600 : 500,
@@ -1825,16 +1850,16 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                             borderRadius: 8,
                             fontSize: 12,
                             fontWeight: isSelected ? 650 : 500,
-                            border: isSelected ? '1.5px solid #7c3aed' : '1px solid #e2e8f0',
-                            background: isSelected ? '#f5f3ff' : '#ffffff',
-                            color: isSelected ? '#6d28d9' : '#475569',
+                            border: isSelected ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
+                            background: isSelected ? '#eff6ff' : '#ffffff',
+                            color: isSelected ? '#1d4ed8' : '#475569',
                             cursor: 'pointer',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
                             gap: 1,
-                            boxShadow: isSelected ? '0 1px 3px rgba(124, 58, 237, 0.12)' : 'none',
+                            boxShadow: isSelected ? '0 1px 3px rgba(37, 99, 235, 0.12)' : 'none',
                           }}
                         >
                           <span>{day.label}</span>
@@ -1843,7 +1868,7 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                               width: 4,
                               height: 4,
                               borderRadius: '50%',
-                              background: isSelected ? '#7c3aed' : 'transparent',
+                              background: isSelected ? '#2563eb' : 'transparent',
                             }}
                           />
                         </button>
@@ -1868,86 +1893,87 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                 </div>
                 <div>
                   <div className="staff-section-tag">
-                    Profile Status
+                    Profile Status & Availability
                   </div>
                 </div>
               </div>
 
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
-                  Staff Profile Status
-                </div>
-
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    background: '#f1f5f9',
-                    padding: '3px',
-                    borderRadius: 8,
-                    border: '1px solid #e2e8f0',
-                    gap: 3,
-                  }}
+              <div style={{ display: 'flex', gap: 10 }}>
+                {/* Active Option */}
+                <button
+                  type="button"
+                  className={`staff-status-btn ${status === 'ACTIVE' ? 'is-active' : ''}`}
+                  onClick={() => setStatus('ACTIVE')}
                 >
-                  <button
-                    type="button"
-                    onClick={() => setStatus('ACTIVE')}
+                  <div
                     style={{
-                      padding: '5px 16px',
-                      borderRadius: 6,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      border: status === 'ACTIVE' ? '1px solid #a7f3d0' : '1px solid transparent',
-                      cursor: 'pointer',
-                      background: status === 'ACTIVE' ? '#ffffff' : 'transparent',
-                      color: status === 'ACTIVE' ? '#047857' : '#64748b',
-                      boxShadow: status === 'ACTIVE' ? '0 1px 2px rgba(0, 0, 0, 0.05)' : 'none',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      transition: 'all 0.15s ease',
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: '#10b981',
+                      marginTop: 5,
+                      flexShrink: 0,
                     }}
-                  >
-                    <span
+                  />
+                  <div>
+                    <div
                       style={{
-                        width: 7,
-                        height: 7,
-                        borderRadius: '50%',
-                        background: status === 'ACTIVE' ? '#10b981' : '#cbd5e1',
+                        fontSize: 12.5,
+                        fontWeight: 600,
+                        color: status === 'ACTIVE' ? '#1d4ed8' : '#1e293b',
                       }}
+                    >
+                      Active Profile
+                    </div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, lineHeight: 1.35 }}>
+                      Active for shift duties, hospital operations, and assignment workflows.
+                    </div>
+                  </div>
+                  {status === 'ACTIVE' && (
+                    <CheckCircle2
+                      size={16}
+                      style={{ color: '#2563eb', marginLeft: 'auto', flexShrink: 0, marginTop: 2 }}
                     />
-                    <span>Active Profile</span>
-                  </button>
+                  )}
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setStatus('INACTIVE')}
+                {/* Inactive Option */}
+                <button
+                  type="button"
+                  className={`staff-status-btn ${status === 'INACTIVE' ? 'is-active' : ''}`}
+                  onClick={() => setStatus('INACTIVE')}
+                >
+                  <div
                     style={{
-                      padding: '5px 16px',
-                      borderRadius: 6,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      border: status === 'INACTIVE' ? '1px solid #cbd5e1' : '1px solid transparent',
-                      cursor: 'pointer',
-                      background: status === 'INACTIVE' ? '#ffffff' : 'transparent',
-                      color: status === 'INACTIVE' ? '#334155' : '#64748b',
-                      boxShadow: status === 'INACTIVE' ? '0 1px 2px rgba(0, 0, 0, 0.05)' : 'none',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      transition: 'all 0.15s ease',
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: '#94a3b8',
+                      marginTop: 5,
+                      flexShrink: 0,
                     }}
-                  >
-                    <span
+                  />
+                  <div>
+                    <div
                       style={{
-                        width: 7,
-                        height: 7,
-                        borderRadius: '50%',
-                        background: status === 'INACTIVE' ? '#94a3b8' : '#cbd5e1',
+                        fontSize: 12.5,
+                        fontWeight: 600,
+                        color: status === 'INACTIVE' ? '#1d4ed8' : '#1e293b',
                       }}
+                    >
+                      Inactive Profile
+                    </div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, lineHeight: 1.35 }}>
+                      Temporarily suspended or excluded from active shift schedules.
+                    </div>
+                  </div>
+                  {status === 'INACTIVE' && (
+                    <CheckCircle2
+                      size={16}
+                      style={{ color: '#2563eb', marginLeft: 'auto', flexShrink: 0, marginTop: 2 }}
                     />
-                    <span>Inactive</span>
-                  </button>
-                </div>
+                  )}
+                </button>
               </div>
             </div>
 
@@ -2066,14 +2092,14 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                       height: 40,
                       borderRadius: '50%',
                       background: '#ffffff',
-                      color: selectedFile ? '#7c3aed' : '#7c3aed',
+                      color: selectedFile ? '#2563eb' : '#64748b',
                       display: 'grid',
                       placeItems: 'center',
-                      border: '1px solid #ede9fe',
-                      boxShadow: '0 1px 3px rgba(124, 58, 237, 0.12)',
+                      border: '1px solid #e2e8f0',
+                      boxShadow: '0 1px 3px rgba(15, 23, 42, 0.08)',
                     }}
                   >
-                    {selectedFile ? <CheckCircle2 size={22} style={{ color: '#7c3aed' }} /> : <UploadCloud size={22} />}
+                    {selectedFile ? <CheckCircle2 size={22} style={{ color: '#2563eb' }} /> : <UploadCloud size={22} />}
                   </div>
 
                   {selectedFile ? (
@@ -2173,7 +2199,7 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 5,
-                      background: selectedFile ? '#7c3aed' : '#e2e8f0',
+                      background: selectedFile ? '#2563eb' : '#e2e8f0',
                       color: selectedFile ? '#ffffff' : '#94a3b8',
                       border: 'none',
                       cursor: selectedFile ? 'pointer' : 'not-allowed',
@@ -2206,7 +2232,7 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                       <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0f172a' }}>
                         Documents to Upload ({stagedDocuments.length})
                       </div>
-                      <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600 }}>
+                      <div style={{ fontSize: 11, color: '#475569', fontWeight: 600 }}>
                         Stored in Cloudflare R2 on registration
                       </div>
                     </div>
@@ -2233,12 +2259,12 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                                 width: 30,
                                 height: 30,
                                 borderRadius: 7,
-                                background: '#f5f3ff',
-                                color: '#7c3aed',
+                                background: '#eff6ff',
+                                color: '#2563eb',
                                 display: 'grid',
                                 placeItems: 'center',
                                 flexShrink: 0,
-                                border: '1px solid #ede9fe',
+                                border: '1px solid #dbeafe',
                               }}
                             >
                               <FileText size={15} />
@@ -2263,9 +2289,9 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                                     fontWeight: 600,
                                     padding: '1px 6px',
                                     borderRadius: 9999,
-                                    background: '#f5f3ff',
-                                    color: '#6d28d9',
-                                    border: '1px solid #ddd6fe',
+                                    background: '#f8fafc',
+                                    color: '#334155',
+                                    border: '1px solid #e2e8f0',
                                   }}
                                 >
                                   {getDocumentTypeLabel(doc.documentType)}
@@ -2354,13 +2380,13 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
               Fields marked with <span style={{ color: '#ef4444' }}>*</span> are required
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <button
                 type="button"
                 onClick={onClose}
-                className="ui-btn ui-btn-subtle"
+                className="ui-btn ui-btn-neutral"
                 disabled={loading}
-                style={{ height: 36, padding: '0 14px', borderRadius: 8, fontSize: 12.5 }}
+                style={{ height: 38, padding: '0 16px', borderRadius: 8, fontSize: 13 }}
               >
                 Cancel
               </button>
@@ -2369,13 +2395,13 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                 disabled={loading}
                 className="ui-btn ui-btn-primary staff-submit-btn"
                 style={{
-                  height: 36,
+                  height: 38,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 7,
-                  padding: '0 18px',
+                  padding: '0 20px',
                   fontWeight: 600,
-                  fontSize: 12.5,
+                  fontSize: 13,
                   borderRadius: 8,
                 }}
               >
@@ -2413,10 +2439,10 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                 width: 32,
                 height: 32,
                 borderRadius: 8,
-                background: '#f5f3ff',
+                background: '#f1f5f9',
                 display: 'grid',
                 placeItems: 'center',
-                color: '#7c3aed',
+                color: '#0f172a',
               }}
             >
               <Clock size={18} />
@@ -2435,8 +2461,8 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
         cancelText="Cancel"
         okButtonProps={{
           style: {
-            background: '#7c3aed',
-            borderColor: '#7c3aed',
+            background: '#2563eb',
+            borderColor: '#2563eb',
             borderRadius: 6,
             fontWeight: 600,
           },
@@ -2516,8 +2542,8 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
           {modalStartTime && modalEndTime && (
             <div
               style={{
-                background: '#f5f3ff',
-                border: '1px solid #ddd6fe',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
                 borderRadius: 8,
                 padding: '10px 14px',
                 display: 'flex',
@@ -2527,18 +2553,18 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Clock size={16} style={{ color: '#7c3aed' }} />
+                <Clock size={16} style={{ color: '#475569' }} />
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#5b21b6' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
                     {modalStartTime.format('hh:mm A')} - {modalEndTime.format('hh:mm A')}
                   </div>
-                  <div style={{ fontSize: 11, color: '#7c3aed' }}>Selected Custom Shift</div>
+                  <div style={{ fontSize: 11, color: '#64748b' }}>Selected Custom Shift</div>
                 </div>
               </div>
               {modalDuration && (
                 <span
                   style={{
-                    background: '#7c3aed',
+                    background: '#2563eb',
                     color: '#ffffff',
                     padding: '3px 10px',
                     borderRadius: 12,
@@ -2574,9 +2600,9 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                     style={{
                       padding: '6px 10px',
                       borderRadius: 6,
-                      border: isMatch ? '1.5px solid #7c3aed' : '1px solid #e2e8f0',
-                      background: isMatch ? '#f5f3ff' : '#ffffff',
-                      color: isMatch ? '#6d28d9' : '#334155',
+                      border: isMatch ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
+                      background: isMatch ? '#eff6ff' : '#ffffff',
+                      color: isMatch ? '#1d4ed8' : '#334155',
                       fontSize: 11.5,
                       fontWeight: isMatch ? 700 : 500,
                       textAlign: 'left',
@@ -2587,7 +2613,7 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                     }}
                   >
                     <span>{preset.label}</span>
-                    <span style={{ fontSize: 10, color: isMatch ? '#7c3aed' : '#94a3b8' }}>
+                    <span style={{ fontSize: 10, color: isMatch ? '#2563eb' : '#94a3b8' }}>
                       {preset.desc}
                     </span>
                   </button>

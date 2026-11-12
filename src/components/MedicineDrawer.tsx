@@ -78,7 +78,7 @@ export default function MedicineDrawer({
     {
       label: 'Strength Variants',
       value: (
-        <span className="font-bold text-teal-600 dark:text-teal-400">
+        <span className="font-bold text-blue-600 dark:text-blue-400">
           {medicine.variants?.length ? `${medicine.variants.length} variant(s)` : '1 variant'}
         </span>
       ),
@@ -99,7 +99,7 @@ export default function MedicineDrawer({
 
   const hero = (
     <div className="flex items-start gap-3.5">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-400">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 dark:bg-blue-950/40 dark:text-blue-400 shadow-xs">
         <Pill size={24} />
       </div>
       <div className="min-w-0 flex-1">
@@ -172,7 +172,7 @@ export default function MedicineDrawer({
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900/60">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Layers size={16} className="text-teal-600" />
+              <Layers size={16} className="text-blue-600" />
               <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase dark:text-slate-300">
                 Linked Strength Variants ({medicine.variants?.length ?? 0})
               </h3>
@@ -182,7 +182,7 @@ export default function MedicineDrawer({
                 <button
                   type="button"
                   onClick={() => onAddVariant(medicine)}
-                  className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-700 transition-colors hover:bg-teal-100 dark:border-teal-800 dark:bg-teal-950/60 dark:text-teal-300"
+                  className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
                 >
                   <Plus size={13} /> Add Variant
                 </button>

@@ -50,33 +50,33 @@ function getRoleBadgeConfig(role: string) {
   if (lower.includes('nurse')) {
     return {
       icon: HeartPulse,
-      background: '#f5f3ff',
-      color: '#6d28d9',
-      border: '1px solid #ddd6fe',
+      background: '#f8fafc',
+      color: '#334155',
+      border: '1px solid #e2e8f0',
     };
   }
   if (lower.includes('doctor') || lower.includes('surgeon') || lower.includes('physician')) {
     return {
       icon: Stethoscope,
-      background: '#eff6ff',
-      color: '#1d4ed8',
-      border: '1px solid #bfdbfe',
+      background: '#f8fafc',
+      color: '#334155',
+      border: '1px solid #e2e8f0',
     };
   }
   if (lower.includes('technician') || lower.includes('patholog') || lower.includes('lab')) {
     return {
       icon: Activity,
-      background: '#ecfdf5',
-      color: '#047857',
-      border: '1px solid #a7f3d0',
+      background: '#f8fafc',
+      color: '#334155',
+      border: '1px solid #e2e8f0',
     };
   }
   if (lower.includes('pharmac')) {
     return {
       icon: ShieldCheck,
-      background: '#fffbeb',
-      color: '#b45309',
-      border: '1px solid #fde68a',
+      background: '#f8fafc',
+      color: '#334155',
+      border: '1px solid #e2e8f0',
     };
   }
   if (lower.includes('reception') || lower.includes('admin')) {
@@ -89,9 +89,9 @@ function getRoleBadgeConfig(role: string) {
   }
   return {
     icon: Users,
-    background: '#faf5ff',
-    color: '#7e22ce',
-    border: '1px solid #e9d5ff',
+    background: '#f8fafc',
+    color: '#334155',
+    border: '1px solid #e2e8f0',
   };
 }
 
@@ -101,33 +101,33 @@ function getShiftDetails(shift: string) {
       return {
         icon: Sun,
         period: '08:00 AM - 04:00 PM',
-        background: '#fffbeb',
-        color: '#b45309',
-        border: '1px solid #fde68a',
+        background: '#f8fafc',
+        color: '#334155',
+        border: '1px solid #e2e8f0',
       };
     case 'evening':
       return {
         icon: Sunset,
         period: '04:00 PM - 12:00 AM',
-        background: '#fff7ed',
-        color: '#c2410c',
-        border: '1px solid #fed7aa',
+        background: '#f8fafc',
+        color: '#334155',
+        border: '1px solid #e2e8f0',
       };
     case 'night':
       return {
         icon: Moon,
         period: '12:00 AM - 08:00 AM',
-        background: '#e0e7ff',
-        color: '#4338ca',
-        border: '1px solid #c7d2fe',
+        background: '#f8fafc',
+        color: '#334155',
+        border: '1px solid #e2e8f0',
       };
     default:
       return {
         icon: Clock,
         period: 'Custom Roster',
-        background: '#f5f3ff',
-        color: '#7c3aed',
-        border: '1px solid #ddd6fe',
+        background: '#f8fafc',
+        color: '#334155',
+        border: '1px solid #e2e8f0',
       };
   }
 }
@@ -232,7 +232,7 @@ export default function StaffManagement() {
         key: 'edit',
         label: (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#1e293b' }}>
-            <Pencil size={14} style={{ color: '#7c3aed' }} />
+            <Pencil size={14} style={{ color: '#64748b' }} />
             <span>Edit Staff Profile</span>
           </span>
         ),
@@ -290,9 +290,9 @@ export default function StaffManagement() {
                 width: 32,
                 height: 32,
                 borderRadius: '50%',
-                background: '#f5f3ff',
-                color: '#6d28d9',
-                border: '1px solid #ede9fe',
+                background: '#f1f5f9',
+                color: '#0f172a',
+                border: '1px solid #e2e8f0',
                 fontWeight: 650,
                 fontSize: 11.5,
                 display: 'inline-flex',
@@ -330,10 +330,10 @@ export default function StaffManagement() {
                 <span
                   style={{
                     fontSize: 10.5,
-                    fontWeight: 700,
-                    color: '#7c3aed',
-                    background: '#f5f3ff',
-                    border: '1px solid #ddd6fe',
+                    fontWeight: 600,
+                    color: '#475569',
+                    background: '#f1f5f9',
+                    border: '1px solid #e2e8f0',
                     padding: '1px 6px',
                     borderRadius: 4,
                     whiteSpace: 'nowrap',
@@ -386,7 +386,7 @@ export default function StaffManagement() {
               whiteSpace: 'nowrap',
             }}
           >
-            <RoleIcon size={12} style={{ flexShrink: 0 }} />
+            <RoleIcon size={12} style={{ flexShrink: 0, color: '#64748b' }} />
             <span>{s.role}</span>
           </div>
         );
@@ -400,7 +400,7 @@ export default function StaffManagement() {
       cell: (s) => (
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 600, color: '#0f172a', fontSize: 12.5 }}>
-            <Building2 size={13} style={{ color: '#7c3aed', flexShrink: 0 }} />
+            <Building2 size={13} style={{ color: '#64748b', flexShrink: 0 }} />
             <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.hospitalName || 'Main Hospital System'}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: '#64748b', marginTop: 2 }}>
@@ -417,48 +417,12 @@ export default function StaffManagement() {
       sort: (s) => s.shiftTiming,
       cell: (s) => {
         const shiftCfg = getShiftDetails(s.shiftTiming);
-        const ShiftIcon = shiftCfg.icon;
+        const timeText = s.customShiftDetails || shiftCfg.period;
         return (
-          <div>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                padding: '2px 7px',
-                borderRadius: 5,
-                fontSize: 11,
-                fontWeight: 600,
-                background: shiftCfg.background,
-                color: shiftCfg.color,
-                border: shiftCfg.border,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <ShiftIcon size={11} style={{ flexShrink: 0 }} />
-              <span>{s.shiftTiming}</span>
-            </div>
-            <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
-              {s.customShiftDetails || shiftCfg.period}
-            </div>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                fontSize: 10.5,
-                color: '#6d28d9',
-                marginTop: 3,
-                background: '#f5f3ff',
-                border: '1px solid #ede9fe',
-                padding: '1px 6px',
-                borderRadius: 4,
-                fontWeight: 500,
-              }}
-            >
-              <Calendar size={10} style={{ color: '#7c3aed', flexShrink: 0 }} />
-              <span>{formatWorkDays(s.workDays || s.work_days)}</span>
-            </div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5.5, fontSize: 12.5, fontWeight: 500, color: '#334155' }}>
+            <Clock size={12.5} style={{ color: '#64748b', flexShrink: 0 }} />
+            <span>{timeText}</span>
+            <span className="sr-only">{s.shiftTiming}</span>
           </div>
         );
       },
@@ -499,7 +463,7 @@ export default function StaffManagement() {
               e.stopPropagation();
               openDetails(s);
             }}
-            title="View stored documents "
+            title="View stored documents"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -508,26 +472,15 @@ export default function StaffManagement() {
               fontWeight: 600,
               padding: '2.5px 7px',
               borderRadius: 5,
-              background: '#f5f3ff',
-              color: '#6d28d9',
-              border: '1px solid #ddd6fe',
+              background: '#f8fafc',
+              color: '#334155',
+              border: '1px solid #e2e8f0',
               cursor: 'pointer',
               whiteSpace: 'nowrap',
             }}
           >
-            <FileCheck size={12} style={{ color: '#7c3aed' }} />
+            <FileCheck size={12} style={{ color: '#64748b' }} />
             <span>{count === 1 ? '1 doc' : `${count} docs`}</span>
-            <span
-              style={{
-                fontSize: 9,
-                fontWeight: 700,
-                padding: '0.5px 3.5px',
-                borderRadius: 3,
-                background: '#ede9fe',
-                color: '#7c3aed',
-              }}
-            >
-            </span>
           </div>
         );
       },
@@ -924,10 +877,10 @@ export default function StaffManagement() {
           background: #fafafa;
         }
         .staff-management-view .ui-table tbody tr.is-selected td {
-          background: #f5f3ff;
+          background: #f1f5f9;
         }
         .staff-management-view .ui-table tbody tr.is-open td {
-          background: #f5f3ff;
+          background: #f1f5f9;
         }
         .staff-management-view .ui-table td.ui-col-actions {
           background: #ffffff;
@@ -938,10 +891,10 @@ export default function StaffManagement() {
         }
         .staff-management-view .ui-table tbody tr.is-selected td.ui-col-actions,
         .staff-management-view .ui-table tbody tr.is-open td.ui-col-actions {
-          background: #f5f3ff;
+          background: #f1f5f9;
         }
         .staff-management-view .staff-name-btn:hover {
-          color: #7c3aed !important;
+          color: #2563eb !important;
         }
         .staff-management-view .appt-action-btn {
           width: 28px;
@@ -958,15 +911,15 @@ export default function StaffManagement() {
         }
         .staff-management-view .appt-action-menu:hover,
         .staff-management-view .appt-action-menu:focus-visible {
-          background: #f5f3ff !important;
+          background: #f1f5f9 !important;
           border: none !important;
-          color: #7c3aed;
+          color: #0f172a;
         }
         .staff-management-view .ui-checkbox {
           width: 17px;
           height: 17px;
           cursor: pointer;
-          accent-color: #7c3aed;
+          accent-color: #2563eb;
           border-radius: 5px;
           -webkit-border-radius: 5px;
           transition: transform 0.12s ease, filter 0.12s ease;
@@ -977,7 +930,7 @@ export default function StaffManagement() {
           filter: brightness(0.95);
         }
         .staff-management-view .ui-checkbox:focus-visible {
-          outline: 2px solid #7c3aed;
+          outline: 2px solid #2563eb;
           outline-offset: 2px;
         }
         .staff-management-view .ui-bulkbar {
@@ -991,18 +944,18 @@ export default function StaffManagement() {
           border-radius: 9999px;
         }
         .staff-management-view .ui-btn-primary.ui-btn-pill {
-          background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%) !important;
-          box-shadow: 0 2px 6px rgba(124, 58, 237, 0.28) !important;
+          background: #2563eb !important;
+          box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2) !important;
         }
         .staff-management-view .ui-btn-primary.ui-btn-pill:hover {
-          background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%) !important;
-          box-shadow: 0 4px 10px rgba(124, 58, 237, 0.35) !important;
+          background: #1d4ed8 !important;
+          box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3) !important;
         }
         .staff-management-view .ui-hub-btn {
-          color: #6d28d9;
+          color: #0f172a;
         }
         .staff-management-view .ui-hub-icon {
-          color: #7c3aed;
+          color: #475569;
         }
       `}</style>
     </div>

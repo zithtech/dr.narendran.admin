@@ -298,21 +298,21 @@ export default function EditAppointmentModal({
           fontSize: 12.5,
           fontWeight: 600,
           border: isSelected
-            ? '2px solid #7c3aed'
+            ? '2px solid #2563eb'
             : isCurrentActive && keepCurrentSlot
               ? '2px solid #2563eb'
               : isBooked
                 ? '1px dashed #cbd5e1'
                 : '1px solid #e2e8f0',
           background: isSelected
-            ? '#f5f3ff'
+            ? '#eff6ff'
             : isCurrentActive && keepCurrentSlot
               ? '#eff6ff'
               : isBooked
                 ? '#f8fafc'
                 : '#ffffff',
           color: isSelected
-            ? '#6d28d9'
+            ? '#1d4ed8'
             : isCurrentActive && keepCurrentSlot
               ? '#1d4ed8'
               : isBooked
@@ -355,14 +355,14 @@ export default function EditAppointmentModal({
               width: 38,
               height: 38,
               borderRadius: 10,
-              background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
-              color: '#7c3aed',
-              border: '1px solid #c4b5fd',
+              background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+              color: '#2563eb',
+              border: '1px solid #bfdbfe',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
-              boxShadow: '0 2px 6px rgba(124, 58, 237, 0.16)',
+              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.16)',
             }}
           >
             <Pencil size={18} style={{ display: 'block', margin: 'auto' }} />
@@ -416,9 +416,9 @@ export default function EditAppointmentModal({
                   width: 40,
                   height: 40,
                   borderRadius: '50%',
-                  background: '#ede9fe',
-                  color: '#6d28d9',
-                  border: '1px solid #ddd6fe',
+                  background: '#eff6ff',
+                  color: '#1d4ed8',
+                  border: '1px solid #dbeafe',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -437,8 +437,8 @@ export default function EditAppointmentModal({
                     style={{
                       fontSize: 11,
                       fontWeight: 700,
-                      color: '#7c3aed',
-                      background: '#ede9fe',
+                      color: '#1d4ed8',
+                      background: '#eff6ff',
                       padding: '1.5px 7px',
                       borderRadius: 4,
                     }}
@@ -472,7 +472,7 @@ export default function EditAppointmentModal({
           <div className="appointment-section-card">
             <div className="appointment-section-header">
               <div className="appointment-section-badge">
-                <Stethoscope size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+                <Stethoscope size={13.5} style={{ color: '#2563eb', display: 'block', margin: 'auto' }} />
               </div>
               <div>
                 <div className="appointment-section-title">Doctor & Status</div>
@@ -516,7 +516,7 @@ export default function EditAppointmentModal({
           <div className="appointment-section-card">
             <div className="appointment-section-header">
               <div className="appointment-section-badge">
-                <FileText size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+                <FileText size={13.5} style={{ color: '#2563eb', display: 'block', margin: 'auto' }} />
               </div>
               <div>
                 <div className="appointment-section-title">Consultation Reason & Clinical Notes</div>
@@ -613,7 +613,7 @@ export default function EditAppointmentModal({
           <div className="appointment-section-card">
             <div className="appointment-section-header">
               <div className="appointment-section-badge">
-                <CalendarClock size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+                <CalendarClock size={13.5} style={{ color: '#2563eb', display: 'block', margin: 'auto' }} />
               </div>
               <div>
                 <div className="appointment-section-title">Appointment Schedule & Time Slot</div>
@@ -661,7 +661,7 @@ export default function EditAppointmentModal({
                     style={{
                       width: 16,
                       height: 16,
-                      accentColor: '#7c3aed',
+                      accentColor: '#2563eb',
                       cursor: 'pointer',
                     }}
                   />
@@ -684,7 +684,7 @@ export default function EditAppointmentModal({
                   Available Doctor Slots for {appointmentDate || 'Selected Date'}
                 </span>
                 {slotsLoading && (
-                  <span style={{ fontSize: 11.5, color: '#7c3aed', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontSize: 11.5, color: '#2563eb', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <Loader2 size={12} className="animate-spin" /> Loading slots...
                   </span>
                 )}
@@ -777,7 +777,7 @@ export default function EditAppointmentModal({
           <div className="appointment-section-card">
             <div className="appointment-section-header">
               <div className="appointment-section-badge">
-                <User size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+                <User size={13.5} style={{ color: '#2563eb', display: 'block', margin: 'auto' }} />
               </div>
               <div>
                 <div className="appointment-section-title">Patient Contact Information</div>
@@ -838,14 +838,14 @@ export default function EditAppointmentModal({
             className="ui-btn ui-btn-primary"
             disabled={submitting}
             style={{
-              background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
               color: '#ffffff',
               border: 'none',
               padding: '0 18px',
               height: 38,
               borderRadius: 8,
               fontWeight: 600,
-              boxShadow: '0 2px 6px rgba(124, 58, 237, 0.28)',
+              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.28)',
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
@@ -940,8 +940,8 @@ export default function EditAppointmentModal({
           width: 26px;
           height: 26px;
           border-radius: 6px;
-          background: #f5f3ff;
-          border: 1px solid #ede9fe;
+          background: #eff6ff;
+          border: 1px solid #dbeafe;
           display: flex;
           align-items: center;
           justifyContent: center;

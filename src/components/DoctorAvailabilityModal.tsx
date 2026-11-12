@@ -171,6 +171,7 @@ export default function DoctorAvailabilityModal({
         open={isOpen}
         onClose={onClose}
         size="xl"
+        variant="drawer"
         title="Weekly schedule"
         description={`${doctor.name}${doctor.hospital_name ? ` · ${doctor.hospital_name}` : ''}`}
       >
