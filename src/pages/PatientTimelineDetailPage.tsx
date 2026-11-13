@@ -109,133 +109,151 @@ export default function PatientTimelineDetailPage() {
   };
 
   return (
-    <div className="flex-1 min-h-0 h-full w-full overflow-y-auto p-4 sm:p-6 pb-12 max-w-5xl mx-auto space-y-6">
+    <div className="patient-timeline-detail-page w-full min-h-full block relative">
       {/* Loading Skeleton */}
       {loading && !patientHeader ? (
-        <div className="p-12 text-center bg-white rounded-xl border border-gray-200 space-y-4">
-          <Spin size="large" />
-          <div className="text-sm text-gray-500 font-medium">
-            Loading patient medical history and clinical events...
+        <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 pt-6 pb-10">
+          <div className="p-12 text-center bg-white rounded-xl border border-gray-200 space-y-4 shadow-2xs">
+            <Spin size="large" />
+            <div className="text-sm text-gray-500 font-medium">
+              Loading patient medical history and clinical events...
+            </div>
           </div>
         </div>
       ) : error && !patientHeader ? (
         /* Error State */
-        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center space-y-4">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
-          <Title level={4} className="!mb-1 text-gray-900">
-            Unable to Load Patient Timeline
-          </Title>
-          <Text type="secondary" className="text-sm block">
-            {error}
-          </Text>
-          <div className="pt-2 flex items-center justify-center gap-3">
-            <Button onClick={() => navigate('/patient-timelines')}>
-              Back to Patient List
-            </Button>
-            <Button
-              type="primary"
-              className="bg-teal-700 hover:bg-teal-800"
-              icon={<RefreshCw className="w-4 h-4" />}
-              onClick={() => void fetchTimeline(false, 1)}
-            >
-              Retry
-            </Button>
+        <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 pt-6 pb-10">
+          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center space-y-4 shadow-2xs">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
+            <Title level={4} className="!mb-1 text-gray-900">
+              Unable to Load Patient Timeline
+            </Title>
+            <Text type="secondary" className="text-sm block">
+              {error}
+            </Text>
+            <div className="pt-2 flex items-center justify-center gap-3">
+              <Button
+                onClick={() => {
+                  void navigate('/patient-timelines');
+                }}
+              >
+                Back to Patient List
+              </Button>
+              <Button
+                type="primary"
+                className="bg-teal-700 hover:bg-teal-800"
+                icon={<RefreshCw className="w-4 h-4" />}
+                onClick={() => {
+                  void fetchTimeline(false, 1);
+                }}
+              >
+                Retry
+              </Button>
+            </div>
           </div>
         </div>
       ) : (
         <>
-          {/* 1. Patient Profile Header Card */}
+          {/* 1. Patient Profile Header Card (Sticky directly beneath TopNavbar, spanning full width with zero gaps) */}
           {patientHeader && (
-            <TimelineHeaderCard patient={patientHeader} />
-          )}
-
-          {/* 2. Health Summary Card */}
-          {healthSummary && (
-            <TimelineHealthSummary summary={healthSummary} />
-          )}
-
-          {/* 3. Event Category & Period Filter Bar */}
-          <TimelineFilterBar
-            selectedType={selectedType}
-            onSelectType={(type) => {
-              setSelectedType(type);
-              setPage(1);
-            }}
-            selectedYear={selectedYear}
-            onSelectYear={(yr) => {
-              setSelectedYear(yr);
-              setPage(1);
-            }}
-            dateRange={dateRange}
-            onDateRangeChange={(dates) => {
-              setDateRange(dates);
-              setPage(1);
-            }}
-            totalEvents={totalEvents}
-          />
-
-          {/* 4. Chronological Timeline Feed */}
-          <div className="pt-2">
-            <div className="mb-4 flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                <History className="w-4 h-4 text-teal-700" />
-                Chronological Medical Events (Newest First)
-              </span>
-              <span className="text-xs text-gray-400">
-                Displaying {timelineEvents.length} of {totalEvents} records
-              </span>
+            <div
+              className="sticky top-0 z-30 w-full bg-white shadow-2xs"
+              style={{ position: 'sticky', top: 0, zIndex: 30 }}
+            >
+              <TimelineHeaderCard patient={patientHeader} />
             </div>
+          )}
 
-            {timelineEvents.length > 0 ? (
-              <div className="space-y-0">
-                {timelineEvents.map((evt, idx) => (
-                  <TimelineEventItem
-                    key={evt.id || idx}
-                    event={evt}
-                    isLast={idx === timelineEvents.length - 1}
-                  />
-                ))}
-
-                {/* Load More Button */}
-                {hasNextPage && (
-                  <div className="pt-4 text-center">
-                    <Button
-                      size="middle"
-                      loading={loadingMore}
-                      onClick={handleLoadMore}
-                      className="border-teal-700 text-teal-800 hover:bg-teal-50 font-semibold"
-                    >
-                      Load Older Medical Events
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              /* Empty Timeline State */
-              <div className="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center space-y-3">
-                <FileClock className="w-12 h-12 text-gray-400 mx-auto" />
-                <div className="text-base font-bold text-gray-800">
-                  No Clinical Events Found
-                </div>
-                <div className="text-xs text-gray-500 max-w-md mx-auto">
-                  {selectedType !== 'All' || selectedYear !== 'All' || dateRange
-                    ? `No medical events match the selected category ("${selectedType}") or date filter. Try selecting "All Events" or resetting filters.`
-                    : 'This patient has no recorded consultations, prescriptions, lab reports, or medical history yet.'}
-                </div>
-                {(selectedType !== 'All' || selectedYear !== 'All' || dateRange) && (
-                  <Button
-                    size="small"
-                    onClick={() => {
-                      setSelectedType('All');
-                      setSelectedYear('All');
-                      setDateRange(null);
-                    }}
-                  >
-                    Clear Filter Selection
-                  </Button>
-                )}
-              </div>
+          {/* 2. Main Page Body: Content aligned directly with sticky header inner elements */}
+          <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 space-y-3.5 sm:space-y-4 pt-4 pb-10">
+            {/* Health Summary Card */}
+            {healthSummary && (
+              <TimelineHealthSummary summary={healthSummary} />
             )}
+
+            {/* Event Category & Period Filter Bar */}
+            <TimelineFilterBar
+              selectedType={selectedType}
+              onSelectType={(type) => {
+                setSelectedType(type);
+                setPage(1);
+              }}
+              selectedYear={selectedYear}
+              onSelectYear={(yr) => {
+                setSelectedYear(yr);
+                setPage(1);
+              }}
+              dateRange={dateRange}
+              onDateRangeChange={(dates) => {
+                setDateRange(dates);
+                setPage(1);
+              }}
+              totalEvents={totalEvents}
+            />
+
+            {/* Chronological Timeline Feed */}
+            <div className="pt-1">
+              <div className="mb-2.5 flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <History className="w-4 h-4 text-teal-700" />
+                  Chronological Medical Events (Newest First)
+                </span>
+                <span className="text-xs text-gray-400">
+                  Displaying {timelineEvents.length} of {totalEvents} records
+                </span>
+              </div>
+
+              {timelineEvents.length > 0 ? (
+                <div className="space-y-0">
+                  {timelineEvents.map((evt, idx) => (
+                    <TimelineEventItem
+                      key={evt.id || idx}
+                      event={evt}
+                      isLast={idx === timelineEvents.length - 1}
+                    />
+                  ))}
+
+                  {/* Load More Button */}
+                  {hasNextPage && (
+                    <div className="pt-4 text-center">
+                      <Button
+                        size="middle"
+                        loading={loadingMore}
+                        onClick={handleLoadMore}
+                        className="border-teal-700 text-teal-800 hover:bg-teal-50 font-semibold"
+                      >
+                        Load Older Medical Events
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Empty Timeline State */
+                <div className="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center space-y-3">
+                  <FileClock className="w-12 h-12 text-gray-400 mx-auto" />
+                  <div className="text-base font-bold text-gray-800">
+                    No Clinical Events Found
+                  </div>
+                  <div className="text-xs text-gray-500 max-w-md mx-auto">
+                    {selectedType !== 'All' || selectedYear !== 'All' || dateRange
+                      ? `No medical events match the selected category ("${selectedType}") or date filter. Try selecting "All Events" or resetting filters.`
+                      : 'This patient has no recorded consultations, prescriptions, lab reports, or medical history yet.'}
+                  </div>
+                  {(selectedType !== 'All' || selectedYear !== 'All' || dateRange) && (
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        setSelectedType('All');
+                        setSelectedYear('All');
+                        setDateRange(null);
+                      }}
+                    >
+                      Clear Filter Selection
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}

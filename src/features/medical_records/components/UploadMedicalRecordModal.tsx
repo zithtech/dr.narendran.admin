@@ -4,20 +4,21 @@ import {
   DatePicker,
   Form,
   Input,
-  Modal,
+  message,
   Radio,
   Select,
   Upload,
-  message,
 } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import dayjs from 'dayjs';
-import { Inbox, UploadCloud } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { Inbox, Loader2, UploadCloud } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+
+import { Drawer } from '../../../components/ui/Drawer';
 import { medicalRecordsApi } from '../services/medicalRecordsApi';
 import type { MedicalRecord, PrescribedPendingTest } from '../types/medicalRecords';
 
-interface UploadMedicalRecordModalProps {
+export interface UploadMedicalRecordModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: (newRecord: MedicalRecord) => void;
@@ -35,52 +36,22 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
   const [form] = Form.useForm();
   const [uploading, setUploading] = useState(false);
   const [recordType, setRecordType] = useState<'PRESCRIBED' | 'EXTERNAL'>('EXTERNAL');
-  const [patientOptions, setPatientOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [patientOptions, setPatientOptions] = useState<{ value: string; label: string }[]>([]);
   const [searchingPatients, setSearchingPatients] = useState(false);
   const [prescribedTests, setPrescribedTests] = useState<PrescribedPendingTest[]>([]);
   const [loadingTests, setLoadingTests] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [allowDuplicate, setAllowDuplicate] = useState(false);
 
-  // Initialize or reset form on open
-  useEffect(() => {
-    if (open) {
-      form.resetFields();
-      setFileList([]);
-      setDuplicateWarning(null);
-      setAllowDuplicate(false);
-
-      if (defaultPatient) {
-        setPatientOptions([{ value: defaultPatient.id, label: defaultPatient.name }]);
-        form.setFieldValue('patientId', defaultPatient.id);
-        void loadPatientPrescribedTests(defaultPatient.id);
-      } else {
-        void loadInitialPatients();
-      }
-
-      if (defaultPrescribedTest) {
-        setRecordType('PRESCRIBED');
-        form.setFieldsValue({
-          recordType: 'PRESCRIBED',
-          prescriptionLabTestId: defaultPrescribedTest.id,
-          testName: defaultPrescribedTest.testName,
-        });
-      } else {
-        setRecordType('EXTERNAL');
-        form.setFieldsValue({
-          recordType: 'EXTERNAL',
-          reportDate: dayjs(),
-        });
-      }
-    }
-  }, [open, defaultPatient, defaultPrescribedTest, form]);
+  const prevOpenRef = useRef(false);
 
   const loadPatientPrescribedTests = async (patientId: string) => {
     try {
       setLoadingTests(true);
       const dossier = await medicalRecordsApi.getPatientDossier(patientId);
-      setPrescribedTests(dossier.pendingPrescribedTests || []);
+      setPrescribedTests(dossier.pendingPrescribedTests ?? []);
     } catch {
       setPrescribedTests([]);
     } finally {
@@ -105,18 +76,69 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
     }
   };
 
+  // Initialize or reset form only once when drawer opens
+  useEffect(() => {
+    if (!open) {
+      prevOpenRef.current = false;
+      return;
+    }
+    if (prevOpenRef.current) return;
+    prevOpenRef.current = true;
+
+    const init = async () => {
+      form.resetFields();
+      setFileList([]);
+      setSelectedFile(null);
+      setDuplicateWarning(null);
+      setAllowDuplicate(false);
+
+      if (defaultPatient) {
+        setPatientOptions([{ value: defaultPatient.id, label: defaultPatient.name }]);
+        form.setFieldValue('patientId', defaultPatient.id);
+        await loadPatientPrescribedTests(defaultPatient.id);
+      } else {
+        await loadInitialPatients();
+      }
+
+      if (defaultPrescribedTest) {
+        setRecordType('PRESCRIBED');
+        form.setFieldsValue({
+          recordType: 'PRESCRIBED',
+          prescriptionLabTestId: defaultPrescribedTest.id,
+          testName: defaultPrescribedTest.testName,
+        });
+      } else {
+        setRecordType('EXTERNAL');
+        form.setFieldsValue({
+          recordType: 'EXTERNAL',
+          reportDate: dayjs(),
+        });
+      }
+    };
+
+    void init();
+  }, [open, defaultPatient, defaultPrescribedTest, form]);
+
   const handlePatientSearch = async (val: string) => {
+    if (!val?.trim()) {
+      return;
+    }
     setSearchingPatients(true);
     try {
-      const results = val.trim()
-        ? await medicalRecordsApi.searchPatients(val)
-        : await medicalRecordsApi.getAllPatients();
-      setPatientOptions(
-        results.map((p) => ({
-          value: p.id,
-          label: `${p.name} ${p.phone ? `(${p.phone})` : ''}`,
-        }))
-      );
+      const results = await medicalRecordsApi.searchPatients(val);
+      if (results && results.length > 0) {
+        setPatientOptions((prev) => {
+          const map = new Map<string, { value: string; label: string }>();
+          for (const opt of prev) map.set(opt.value, opt);
+          for (const p of results) {
+            map.set(p.id, {
+              value: p.id,
+              label: `${p.name} ${p.phone ? `(${p.phone})` : ''}`,
+            });
+          }
+          return Array.from(map.values());
+        });
+      }
     } catch {
       // ignore
     } finally {
@@ -138,120 +160,189 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
 
   const handleSubmit = async () => {
     try {
-      const values = await form.validateFields();
-      const targetFile = (fileList[0]?.originFileObj || fileList[0]) as File | undefined;
-      if (!targetFile || fileList.length === 0) {
-        message.error('Please select a file to upload');
+      const values = (await form.validateFields()) as {
+        patientId: string;
+        testName: string;
+        reportDate?: dayjs.Dayjs;
+        notes?: string;
+        prescriptionLabTestId?: string;
+      };
+      const rawTarget =
+        selectedFile ??
+        (fileList[0]?.originFileObj as File | undefined) ??
+        (fileList[0] as unknown as File | undefined);
+
+      if (!rawTarget) {
+        void message.error('Please select a file to upload');
         return;
       }
 
-      const file = targetFile;
+      const file = rawTarget;
       setUploading(true);
 
       const isExternal = recordType === 'EXTERNAL';
-      const created = await medicalRecordsApi.uploadMedicalRecord({
+      const payload: {
+        file: File;
+        patientId: string;
+        testName: string;
+        reportDate?: string;
+        notes?: string;
+        prescriptionLabTestId?: string;
+        isExternal: boolean;
+        allowDuplicate: boolean;
+      } = {
         file,
         patientId: values.patientId,
         testName: values.testName.trim(),
-        reportDate: values.reportDate ? values.reportDate.format('YYYY-MM-DD') : undefined,
-        notes: values.notes ? values.notes.trim() : undefined,
-        prescriptionLabTestId: isExternal ? undefined : values.prescriptionLabTestId,
         isExternal,
         allowDuplicate,
-      });
+      };
 
-      message.success(`Medical record for "${created.testName}" uploaded successfully`);
+      if (values.reportDate) {
+        payload.reportDate = values.reportDate.format('YYYY-MM-DD');
+      }
+      if (values.notes?.trim()) {
+        payload.notes = values.notes.trim();
+      }
+      if (!isExternal && values.prescriptionLabTestId) {
+        payload.prescriptionLabTestId = values.prescriptionLabTestId;
+      }
+
+      const created = await medicalRecordsApi.uploadMedicalRecord(payload);
+
+      void message.success(`Medical record for "${created.testName}" uploaded successfully`);
       onSuccess(created);
       onClose();
-    } catch (err: any) {
-      if (err?.errorFields) return;
+    } catch (err: unknown) {
+      const errObj = err as {
+        errorFields?: unknown;
+        response?: { status?: number; data?: { code?: string; message?: string } };
+      };
+      if (errObj?.errorFields) return;
+      const response = errObj?.response;
       const isConflict =
-        err?.response?.status === 409 ||
-        err?.response?.data?.code === 'CONFLICT' ||
-        String(err?.response?.data?.message || '').toLowerCase().includes('duplicate');
+        response?.status === 409 ||
+        response?.data?.code === 'CONFLICT' ||
+        String(response?.data?.message ?? '').toLowerCase().includes('duplicate');
 
       if (isConflict) {
         setDuplicateWarning(
-          err?.response?.data?.message ||
+          response?.data?.message ??
             'Duplicate record detected: A document with the same file or test name already exists for this patient.'
         );
         return;
       }
-      message.error(err?.response?.data?.message || 'Failed to upload medical record');
+      void message.error(response?.data?.message ?? 'Failed to upload medical record');
     } finally {
       setUploading(false);
     }
   };
 
+  const footerActions = (
+    <div className="flex items-center justify-end gap-2.5 w-full">
+      <button
+        type="button"
+        className="ui-btn ui-btn-neutral"
+        onClick={onClose}
+        disabled={uploading}
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        className="ui-btn ui-btn-primary"
+        onClick={() => {
+          void handleSubmit();
+        }}
+        disabled={uploading}
+      >
+        {uploading && <Loader2 size={14} className="animate-spin" />}
+        <span>
+          {duplicateWarning && allowDuplicate
+            ? 'Upload Anyway (Override Duplicate)'
+            : 'Upload Record'}
+        </span>
+      </button>
+    </div>
+  );
+
   return (
-    <Modal
+    <Drawer
       open={open}
-      onCancel={onClose}
-      onOk={handleSubmit}
-      confirmLoading={uploading}
-      okText={duplicateWarning && allowDuplicate ? 'Upload Anyway (Override Duplicate)' : 'Upload Record'}
-      title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <UploadCloud size={20} className="text-primary-600" />
-          <span>Upload Patient Medical Record</span>
-        </div>
-      }
-      width={650}
-      destroyOnClose
+      onClose={onClose}
+      label="Medical Records"
+      icon={<UploadCloud size={22} className="text-blue-600" />}
+      title="Upload Patient Medical Record"
+      subtitle="Upload clinical records, test reports, or prescribed laboratory documents."
+      footer={footerActions}
     >
-      <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+      <Form form={form} layout="vertical" className="space-y-4">
         {/* Duplicate Warning Alert */}
         {duplicateWarning && (
           <Alert
             type="warning"
             showIcon
-            style={{ marginBottom: 16 }}
+            className="mb-4"
             message="Duplicate Record Detected"
             description={
               <div>
-                <p style={{ margin: 0 }}>{duplicateWarning}</p>
-                <div style={{ marginTop: 8 }}>
+                <p className="m-0 text-xs">{duplicateWarning}</p>
+                <div className="mt-2">
                   <Checkbox
                     checked={allowDuplicate}
                     onChange={(e) => setAllowDuplicate(e.target.checked)}
                   >
-                    I understand and want to upload this duplicate/revised record anyway
+                    <span className="text-xs">
+                      I understand and want to upload this duplicate/revised record anyway
+                    </span>
                   </Checkbox>
                 </div>
               </div>
             }
           />
         )}
+
         {/* Patient Selection */}
         <Form.Item
           name="patientId"
-          label="Select Patient"
+          label={<span className="font-medium text-slate-700 text-xs">Select Patient</span>}
           rules={[{ required: true, message: 'Please select a patient' }]}
         >
           <Select
             showSearch
             placeholder="Search patient by name or phone..."
             options={patientOptions}
-            onSearch={handlePatientSearch}
+            onSearch={(val) => {
+              void handlePatientSearch(val);
+            }}
             onChange={handlePatientChange}
             filterOption={(input, option) =>
-              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              String(option?.label ?? '')
+                .toLowerCase()
+                .includes(input.toLowerCase().trim())
             }
             loading={searchingPatients}
             disabled={Boolean(defaultPatient)}
+            notFoundContent={searchingPatients ? 'Loading patients...' : 'No patients found'}
+            className="w-full"
           />
         </Form.Item>
 
         {/* Record Type Selector */}
-        <Form.Item label="Record Category" name="recordType">
+        <Form.Item
+          label={<span className="font-medium text-slate-700 text-xs">Record Category</span>}
+          name="recordType"
+        >
           <Radio.Group
             value={recordType}
             onChange={(e) => {
-              setRecordType(e.target.value);
-              if (e.target.value === 'EXTERNAL') {
+              const val = e.target.value as 'PRESCRIBED' | 'EXTERNAL';
+              setRecordType(val);
+              if (val === 'EXTERNAL') {
                 form.setFieldValue('prescriptionLabTestId', undefined);
               }
             }}
+            className="w-full"
           >
             <Radio.Button value="EXTERNAL">External / Medical Document</Radio.Button>
             <Radio.Button value="PRESCRIBED">Doctor Prescribed Lab Test</Radio.Button>
@@ -262,7 +353,7 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
         {recordType === 'PRESCRIBED' && (
           <Form.Item
             name="prescriptionLabTestId"
-            label="Prescribed Lab Test"
+            label={<span className="font-medium text-slate-700 text-xs">Prescribed Lab Test</span>}
             rules={[{ required: true, message: 'Please select a prescribed test' }]}
           >
             <Select
@@ -271,8 +362,9 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
               onChange={handlePrescribedTestChange}
               options={prescribedTests.map((t) => ({
                 value: t.id,
-                label: `${t.testName} (${t.status === 'Uploaded' ? 'Already uploaded' : 'Pending upload'}) - Dr. ${t.doctorName || 'Narendran'}`,
+                label: `${t.testName} (${t.status === 'Uploaded' ? 'Already uploaded' : 'Pending upload'}) - Dr. ${t.doctorName ?? 'Narendran'}`,
               }))}
+              className="w-full"
             />
           </Form.Item>
         )}
@@ -280,7 +372,7 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
         {/* Test / Document Name */}
         <Form.Item
           name="testName"
-          label="Record / Test Name"
+          label={<span className="font-medium text-slate-700 text-xs">Record / Test Name</span>}
           rules={[{ required: true, message: 'Please enter a test or document name' }]}
         >
           <Input placeholder="e.g. Complete Blood Count (CBC), Chest X-Ray, Discharge Summary" />
@@ -289,23 +381,29 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
         {/* Report Date */}
         <Form.Item
           name="reportDate"
-          label="Clinical / Report Date"
+          label={<span className="font-medium text-slate-700 text-xs">Clinical / Report Date</span>}
           initialValue={dayjs()}
           rules={[{ required: true, message: 'Please select report date' }]}
         >
-          <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+          <DatePicker className="w-full" format="YYYY-MM-DD" />
         </Form.Item>
 
         {/* Clinical Notes */}
-        <Form.Item name="notes" label="Clinical Notes / Remarks">
+        <Form.Item
+          name="notes"
+          label={<span className="font-medium text-slate-700 text-xs">Clinical Notes / Remarks</span>}
+        >
           <Input.TextArea
-            rows={2}
+            rows={3}
             placeholder="Optional clinical observations, impressions, or notes..."
           />
         </Form.Item>
 
         {/* File Upload Dropzone */}
-        <Form.Item label="Upload Document File" required>
+        <Form.Item
+          label={<span className="font-medium text-slate-700 text-xs">Upload Document File</span>}
+          required
+        >
           <Upload.Dragger
             maxCount={1}
             fileList={fileList}
@@ -316,23 +414,35 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
                 file.type === 'image/jpg' ||
                 file.type === 'image/png';
               if (!isValidType) {
-                message.error('You can only upload PDF, PNG, or JPG files!');
+                void message.error('You can only upload PDF, PNG, or JPG files!');
                 return Upload.LIST_IGNORE;
               }
               const isLt15M = file.size / 1024 / 1024 < 15;
               if (!isLt15M) {
-                message.error('File must be smaller than 15MB!');
+                void message.error('File must be smaller than 15MB!');
                 return Upload.LIST_IGNORE;
               }
+              setSelectedFile(file);
               setFileList([file]);
               return false; // Prevent automatic upload
             }}
             onChange={(info) => {
               if (info.fileList && info.fileList.length > 0) {
-                setFileList(info.fileList.slice(-1));
+                const item = info.fileList[info.fileList.length - 1]!;
+                setFileList([item]);
+                const raw = (item.originFileObj ?? item) as unknown;
+                if (raw instanceof File) {
+                  setSelectedFile(raw);
+                }
+              } else {
+                setFileList([]);
+                setSelectedFile(null);
               }
             }}
-            onRemove={() => setFileList([])}
+            onRemove={() => {
+              setFileList([]);
+              setSelectedFile(null);
+            }}
           >
             <p className="ant-upload-drag-icon">
               <Inbox size={36} style={{ color: '#0284c7', margin: '0 auto' }} />
@@ -344,6 +454,8 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
           </Upload.Dragger>
         </Form.Item>
       </Form>
-    </Modal>
+    </Drawer>
   );
 };
+
+export const UploadMedicalRecordDrawer = UploadMedicalRecordModal;

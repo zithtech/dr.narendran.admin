@@ -1,6 +1,9 @@
-import { Form, Input, Modal, Switch, message } from 'antd';
-import { MapPin } from 'lucide-react';
+import { App } from 'antd';
+import { Loader2, MapPin } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+
+import { Field, Modal, Section, SwitchRow } from '../../../components/ui/Modal';
+import { Alert } from '../../../components/ui/primitives';
 import { locationsApi } from '../services/locationsApi';
 import type { DoctorLocation } from '../types/locations';
 
@@ -21,56 +24,69 @@ export const LocationModal: React.FC<LocationModalProps> = ({
   doctorId,
   doctorName,
 }) => {
-  const [form] = Form.useForm();
+  const { message } = App.useApp();
+  const [locationName, setLocationName] = useState('');
+  const [address, setAddress] = useState('');
+  const [mapLink, setMapLink] = useState('');
+  const [isPrimary, setIsPrimary] = useState(false);
+  const [isActive, setIsActive] = useState(true);
+
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       if (editingLocation) {
-        form.setFieldsValue({
-          location_name: editingLocation.location_name,
-          address: editingLocation.address || '',
-          map_link: editingLocation.map_link || '',
-          is_primary: Boolean(editingLocation.is_primary),
-          status: editingLocation.status === 'Active',
-        });
+        setLocationName(editingLocation.location_name || '');
+        setAddress(editingLocation.address || '');
+        setMapLink(editingLocation.map_link || '');
+        setIsPrimary(Boolean(editingLocation.is_primary));
+        setIsActive(editingLocation.status === 'Active');
       } else {
-        form.resetFields();
-        form.setFieldsValue({
-          is_primary: false,
-          status: true,
-        });
+        setLocationName('');
+        setAddress('');
+        setMapLink('');
+        setIsPrimary(false);
+        setIsActive(true);
       }
+      setError(null);
     }
-  }, [open, editingLocation, form]);
+  }, [open, editingLocation]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!locationName.trim()) {
+      setError('Location / Clinic name is required.');
+      return;
+    }
+
     try {
-      const values = await form.validateFields();
       setSaving(true);
+      setError(null);
 
       const payload = {
-        location_name: values.location_name.trim(),
-        address: values.address?.trim() || null,
-        map_link: values.map_link?.trim() || null,
-        is_primary: Boolean(values.is_primary),
-        status: values.status ? 'Active' : 'Inactive',
+        location_name: locationName.trim(),
+        address: address.trim() || null,
+        map_link: mapLink.trim() || null,
+        is_primary: Boolean(isPrimary),
+        status: isActive ? 'Active' : 'Inactive',
       };
 
       let result: DoctorLocation;
       if (editingLocation) {
         result = await locationsApi.updateLocation(editingLocation.id, payload, doctorId);
-        message.success(`Location "${result.location_name}" updated successfully`);
+        void message.success(`Location "${result.location_name}" updated successfully`);
       } else {
         result = await locationsApi.createLocation(payload, doctorId);
-        message.success(`Location "${result.location_name}" added successfully`);
+        void message.success(`Location "${result.location_name}" added successfully`);
       }
 
       onSuccess(result);
       onClose();
     } catch (err: any) {
-      if (err?.errorFields) return; // Antd validation error
-      message.error(err?.response?.data?.error || err?.message || 'Failed to save location');
+      const msg = err?.response?.data?.error || err?.message || 'Failed to save location';
+      setError(msg);
+      void message.error(msg);
     } finally {
       setSaving(false);
     }
@@ -79,70 +95,115 @@ export const LocationModal: React.FC<LocationModalProps> = ({
   return (
     <Modal
       open={open}
-      onCancel={onClose}
-      onOk={handleSubmit}
-      confirmLoading={saving}
-      okText={editingLocation ? 'Save Changes' : 'Add Location'}
+      onClose={saving ? () => undefined : onClose}
+      variant="drawer"
+      size="md"
       title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <MapPin size={20} className="text-primary-600" />
-          <span>
-            {editingLocation ? 'Edit Practice Location' : 'Add New Practice Location'}
-            {doctorName ? ` – ${doctorName}` : ''}
-          </span>
+        <div className="flex items-center gap-2">
+          <MapPin size={18} className="text-blue-600" />
+          <span>{editingLocation ? 'Edit Practice Location' : 'Add New Practice Location'}</span>
         </div>
       }
-      width={560}
-      destroyOnClose
+      description={
+        doctorName
+          ? `Practicing doctor: ${doctorName}`
+          : 'Configure consultation chamber and clinical address.'
+      }
     >
-      <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-        <Form.Item
-          name="location_name"
-          label="Location Name"
-          rules={[
-            { required: true, message: 'Location name is required' },
-            {
-              validator: (_, value) =>
-                value && !value.trim()
-                  ? Promise.reject(new Error('Location name cannot be blank'))
-                  : Promise.resolve(),
-            },
-          ]}
-        >
-          <Input placeholder="e.g. City Care Hospital or Main Clinic" maxLength={255} />
-        </Form.Item>
+      <form onSubmit={handleSubmit} className="ui-modal-form">
+        <div className="ui-modal-body space-y-4">
+          {error && <Alert>{error}</Alert>}
 
-        <Form.Item name="address" label="Address">
-          <Input.TextArea
-            rows={3}
-            placeholder="Enter complete street address, landmark, city, postal code"
-          />
-        </Form.Item>
+          <Section title="Location Identification">
+            <div className="space-y-3">
+              <Field
+                label="Location / Clinic Name"
+                required
+                hint="e.g. City Care Hospital, Apollo Consultation Chamber, Main Clinic"
+              >
+                <input
+                  type="text"
+                  className="ui-input"
+                  placeholder="Enter location or chamber name..."
+                  value={locationName}
+                  onChange={(e) => setLocationName(e.target.value)}
+                  maxLength={255}
+                  required
+                />
+              </Field>
 
-        <Form.Item name="map_link" label="Google Maps Link">
-          <Input placeholder="https://maps.google.com/..." />
-        </Form.Item>
+              <Field
+                label="Complete Practice Address"
+                hint="Street address, landmark, floor/chamber number, city, postal code"
+              >
+                <textarea
+                  rows={3}
+                  className="ui-textarea"
+                  placeholder="Enter full address details..."
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                />
+              </Field>
 
-        <div style={{ display: 'flex', gap: 32, marginTop: 8 }}>
-          <Form.Item
-            name="is_primary"
-            label="Primary Location"
-            valuePropName="checked"
-            extra="Set this as the main clinic location"
-          >
-            <Switch />
-          </Form.Item>
+              <Field
+                label="Google Maps URL"
+                hint="Direct map link for patient route navigation"
+              >
+                <input
+                  type="url"
+                  className="ui-input"
+                  placeholder="https://maps.google.com/..."
+                  value={mapLink}
+                  onChange={(e) => setMapLink(e.target.value)}
+                />
+              </Field>
+            </div>
+          </Section>
 
-          <Form.Item
-            name="status"
-            label="Active Status"
-            valuePropName="checked"
-            extra="Location is available for appointments"
-          >
-            <Switch />
-          </Form.Item>
+          <Section title="Settings & Availability">
+            <div className="space-y-3">
+              <SwitchRow
+                checked={isPrimary}
+                onChange={setIsPrimary}
+                title="Primary Practice Location"
+                description="Designate this clinic or chamber as the doctor's primary practice base."
+              />
+
+              <SwitchRow
+                checked={isActive}
+                onChange={setIsActive}
+                title="Active Status"
+                description="Make this location visible and available for patient consultations."
+              />
+            </div>
+          </Section>
         </div>
-      </Form>
+
+        <div className="ui-modal-foot">
+          <button
+            type="button"
+            className="ui-btn"
+            onClick={onClose}
+            disabled={saving}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="ui-btn ui-btn-primary"
+            disabled={saving}
+          >
+            {saving ? (
+              <>
+                <Loader2 size={13} className="animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <span>{editingLocation ? 'Save Changes' : 'Add Location'}</span>
+            )}
+          </button>
+        </div>
+      </form>
     </Modal>
   );
 };
