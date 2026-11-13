@@ -18,10 +18,12 @@ export const MedicalRecordPreviewModal: React.FC<MedicalRecordPreviewModalProps>
 }) => {
   if (!record) return null;
 
-  const isPdf = record.fileType.toLowerCase().includes('pdf') || record.fileName.toLowerCase().endsWith('.pdf');
+  const isPdf =
+    record.fileType.toLowerCase().includes('pdf') ||
+    record.fileName.toLowerCase().endsWith('.pdf');
   const isImage =
     record.fileType.toLowerCase().includes('image') ||
-    record.fileName.match(/\.(png|jpe?g|webp|gif)$/i);
+    Boolean(record.fileName.match(/\.(png|jpe?g|webp|gif)$/i));
 
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return 'Unknown size';
@@ -30,8 +32,31 @@ export const MedicalRecordPreviewModal: React.FC<MedicalRecordPreviewModalProps>
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
+  const token =
+    localStorage.getItem('adminToken') ||
+    localStorage.getItem('labClientToken') ||
+    localStorage.getItem('clientPortalToken') ||
+    '';
+
+  const viewUrl = (() => {
+    const rawUrl = record.documentUrl || `/api/medical-records/${record.id}/file`;
+    const cleanUrl = rawUrl.startsWith('http://') || rawUrl.startsWith('https://')
+      ? `/api/medical-records/${record.id}/file`
+      : rawUrl;
+    const sep = cleanUrl.includes('?') ? '&' : '?';
+    return `${cleanUrl}${token ? `${sep}token=${encodeURIComponent(token)}` : ''}`;
+  })();
+
+  const downloadUrl = `/api/medical-records/${record.id}/file?download=true${
+    token ? `&token=${encodeURIComponent(token)}` : ''
+  }`;
+
+  const handleOpenNewTab = () => {
+    window.open(viewUrl, '_blank', 'noopener,noreferrer');
+  };
+
   const handleDownload = () => {
-    window.open(record.documentUrl, '_blank', 'noopener,noreferrer');
+    window.open(downloadUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -61,7 +86,7 @@ export const MedicalRecordPreviewModal: React.FC<MedicalRecordPreviewModalProps>
             <Tag color="cyan">Uploaded by {record.uploadedBy}</Tag>
           </Space>
           <Space>
-            <Button icon={<ExternalLink size={16} />} onClick={handleDownload}>
+            <Button icon={<ExternalLink size={16} />} onClick={handleOpenNewTab}>
               Open in New Tab
             </Button>
             <Button
@@ -127,13 +152,13 @@ export const MedicalRecordPreviewModal: React.FC<MedicalRecordPreviewModalProps>
       >
         {isPdf ? (
           <iframe
-            src={`${record.documentUrl}#toolbar=1`}
+            src={`${viewUrl}#toolbar=1`}
             title={record.testName}
             style={{ width: '100%', height: '100%', border: 'none' }}
           />
         ) : isImage ? (
           <img
-            src={record.documentUrl}
+            src={viewUrl}
             alt={record.testName}
             style={{
               maxWidth: '100%',
@@ -154,4 +179,3 @@ export const MedicalRecordPreviewModal: React.FC<MedicalRecordPreviewModalProps>
     </Modal>
   );
 };
-

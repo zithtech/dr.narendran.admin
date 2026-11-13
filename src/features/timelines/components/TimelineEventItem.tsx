@@ -11,7 +11,20 @@ import {
   User,
 } from 'lucide-react';
 import React, { useState } from 'react';
+
 import type { TimelineEvent } from '../types/patientTimelines';
+
+interface TimelineMedicineItem {
+  name?: string;
+  medicineName?: string;
+  dosage?: string;
+  strength?: string;
+  frequency?: string;
+  duration?: string | number;
+  foodTiming?: string;
+  instructions?: string;
+  foodInstruction?: string;
+}
 
 interface TimelineEventItemProps {
   event: TimelineEvent;
@@ -24,6 +37,25 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [previewVisible, setPreviewVisible] = useState<boolean>(false);
+
+  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    // Do not toggle if clicking on interactive elements or inside the expanded details area
+    if (target.closest('button, a, [data-expanded-content]')) {
+      return;
+    }
+    setIsExpanded((prev) => !prev);
+  };
+
+  const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) {
+      return;
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setIsExpanded((prev) => !prev);
+    }
+  };
 
   // Parse formatted clinical date
   const formatEventDate = (dateStr?: string) => {
@@ -146,10 +178,10 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
   };
 
   const badge = getBadgeConfig();
-  const details = event.details || {};
-  const medicines = event.medicines || (details.medicines as any[]) || [];
-  const vitals = details.vitals as Record<string, any> | undefined;
-  const rawDoc = (details.documentUrl || details.document_url || details.prescriptionUrl || details.imageUrl) as string | undefined;
+  const details = event.details ?? {};
+  const medicines: TimelineMedicineItem[] = (event.medicines as TimelineMedicineItem[] | undefined) ?? (details.medicines as TimelineMedicineItem[] | undefined) ?? [];
+  const vitals = details.vitals as Record<string, string | number | undefined> | undefined;
+  const rawDoc = (details.documentUrl ?? details.document_url ?? details.prescriptionUrl ?? details.imageUrl) as string | undefined;
   const isAbsolute = typeof rawDoc === 'string' && (rawDoc.startsWith('http://') || rawDoc.startsWith('https://') || rawDoc.startsWith('data:') || rawDoc.startsWith('blob:'));
   const documentUrl = typeof rawDoc === 'string' && rawDoc.trim()
     ? isAbsolute
@@ -159,11 +191,11 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
 
   const isImage = typeof documentUrl === 'string' && (
     /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(documentUrl) ||
-    String(details.file_type || details.fileType || '').toLowerCase().startsWith('image/')
+    String(details.file_type ?? details.fileType ?? '').toLowerCase().startsWith('image/')
   );
 
   return (
-    <div className="relative pl-7 sm:pl-9 pb-8">
+    <div className="relative pl-7 sm:pl-9 pb-3 sm:pb-3.5">
       {/* Vertical Rail Connector Line */}
       {!isLast && (
         <div className="absolute left-[13px] sm:left-[17px] top-6 bottom-0 w-[2px] bg-gray-200" />
@@ -171,16 +203,24 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
 
       {/* Chronological Circle Node */}
       <div
-        className={`absolute left-[7px] sm:left-[11px] top-2 w-3.5 h-3.5 rounded-full ${badge.dotBg} ring-4 ring-white shadow-xs`}
+        className={`absolute left-[7px] sm:left-[11px] top-2.5 w-3.5 h-3.5 rounded-full ${badge.dotBg} ring-4 ring-white shadow-xs`}
       />
 
-      {/* Event Card Container */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-xs hover:border-gray-300 transition-all overflow-hidden">
+      {/* Event Card Container with Click-to-Expand */}
+      <div
+        className="bg-white rounded-xl border border-gray-200 shadow-xs hover:border-gray-300 transition-all overflow-hidden cursor-pointer"
+        onClick={handleCardClick}
+        onKeyDown={handleCardKeyDown}
+        tabIndex={0}
+        role="button"
+        aria-expanded={isExpanded}
+        aria-label={`${event.title} timeline event`}
+      >
         {/* Event Header Row */}
-        <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100">
+        <div className="px-2.5 sm:px-3 py-2 sm:py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${badge.bg} ${badge.text} ${badge.border}`}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.bg} ${badge.text} ${badge.border}`}
             >
               <span>{badge.icon}</span>
               <span>{badge.label}</span>
@@ -209,46 +249,43 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
           )}
         </div>
 
-        {/* Event Summary Body */}
-        <div className="p-4 sm:p-5 space-y-2">
-          <div className="text-base font-bold text-gray-900 tracking-tight">
-            {event.title}
+        {/* Event Summary Body - Compact 2-Column Layout */}
+        <div className="px-2.5 sm:px-3 py-2 sm:py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          {/* Left Section: Event Title, Summary & Diagnosis */}
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <div className="text-sm font-bold text-gray-900 tracking-tight leading-snug">
+              {event.title}
+            </div>
+
+            {event.summary && (
+              <div className="text-xs text-gray-600 leading-normal line-clamp-2">
+                {event.summary}
+              </div>
+            )}
+
+            {details.diagnosis && (
+              <div className="flex items-center gap-1.5 pt-0.5 text-xs">
+                <span className="font-semibold text-gray-700">Diagnosis:</span>
+                <Tag color="volcano" className="font-medium text-[11px] !m-0">
+                  {details.diagnosis}
+                </Tag>
+              </div>
+            )}
           </div>
 
-          {event.summary && (
-            <div className="text-sm text-gray-600 leading-relaxed">
-              {event.summary}
-            </div>
-          )}
+          {/* Right Section: Medicine Count / Document Action & View Details */}
+          <div className="shrink-0 flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1.5 text-right">
+            {/* Prescriptions: Medicine count indicator */}
+            {event.type === 'PRESCRIPTION' && medicines.length > 0 && (
+              <div className="text-xs text-blue-700 font-medium flex items-center gap-1.5">
+                <Pill className="w-3.5 h-3.5 text-blue-600" />
+                <span>
+                  {medicines.length} {medicines.length === 1 ? 'medicine prescribed' : 'medicines prescribed'}
+                </span>
+              </div>
+            )}
 
-          {/* Quick inline metadata for common event types */}
-          {details.diagnosis && (
-            <div className="flex items-start gap-1.5 pt-1 text-xs">
-              <span className="font-semibold text-gray-700">Diagnosis:</span>
-              <Tag color="volcano" className="font-medium text-xs">
-                {details.diagnosis}
-              </Tag>
-            </div>
-          )}
-
-          {event.type === 'PRESCRIPTION' && medicines.length > 0 && (
-            <div className="text-xs text-blue-700 font-medium pt-1 flex items-center gap-1.5">
-              <Pill className="w-3.5 h-3.5" />
-              {medicines.length} {medicines.length === 1 ? 'medicine prescribed' : 'medicines prescribed'}
-            </div>
-          )}
-
-          {/* Expand/Collapse Trigger */}
-          <div className="pt-2 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 hover:text-teal-800 transition-colors cursor-pointer"
-            >
-              <span>{isExpanded ? 'Hide Full Details' : 'View Full Details'}</span>
-              {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
-
+            {/* Document button if present */}
             {documentUrl && (
               <div className="flex items-center gap-2">
                 {isImage && (
@@ -264,7 +301,8 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
                 )}
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     if (isImage) {
                       setPreviewVisible(true);
                     } else {
@@ -278,21 +316,42 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
                 </button>
               </div>
             )}
+
+            {/* View / Hide Details Action */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded((prev) => !prev);
+              }}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 hover:text-teal-800 transition-colors cursor-pointer"
+              aria-label={isExpanded ? 'Hide details' : 'View details'}
+            >
+              <span>{isExpanded ? 'Hide Details' : 'View Details'}</span>
+              {isExpanded ? (
+                <ChevronUp className="w-3.5 h-3.5 text-teal-700" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-teal-700" />
+              )}
+            </button>
           </div>
         </div>
 
         {/* Collapsible Expanded Clinical Details */}
         {isExpanded && (
-          <div className="px-4 sm:px-5 pb-5 pt-3 border-t border-gray-100 bg-gray-50/50 space-y-4 text-xs">
+          <div
+            data-expanded-content="true"
+            className="px-2.5 sm:px-3 pb-3 pt-2.5 border-t border-gray-100 bg-gray-50/50 space-y-2 text-xs cursor-default"
+          >
             {/* Consultation Notes */}
-            {(details.consultation_notes || details.notes) && (
+            {Boolean(details.consultation_notes ?? details.notes) && (
               <div className="space-y-1">
                 <div className="font-semibold text-gray-700 uppercase tracking-wider text-[11px] flex items-center gap-1">
                   <FileText className="w-3 h-3 text-gray-400" />
                   Clinical & Consultation Notes
                 </div>
-                <div className="p-3 bg-white border border-gray-200 rounded-md text-gray-800 leading-relaxed font-normal">
-                  {details.consultation_notes || details.notes}
+                <div className="p-2 bg-white border border-gray-200 rounded-md text-gray-800 leading-relaxed font-normal">
+                  {details.consultation_notes ?? details.notes}
                 </div>
               </div>
             )}
@@ -304,27 +363,27 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
                   <Activity className="w-3 h-3 text-teal-600" />
                   Recorded Patient Vitals
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                   {vitals.bp && (
-                    <div className="p-2 bg-white border border-gray-200 rounded text-center">
+                    <div className="p-1.5 bg-white border border-gray-200 rounded text-center">
                       <div className="text-[10px] text-gray-400">Blood Pressure</div>
                       <div className="font-bold text-gray-800">{vitals.bp}</div>
                     </div>
                   )}
                   {vitals.pulse && (
-                    <div className="p-2 bg-white border border-gray-200 rounded text-center">
+                    <div className="p-1.5 bg-white border border-gray-200 rounded text-center">
                       <div className="text-[10px] text-gray-400">Pulse</div>
                       <div className="font-bold text-gray-800">{vitals.pulse} bpm</div>
                     </div>
                   )}
                   {vitals.weight_kg && (
-                    <div className="p-2 bg-white border border-gray-200 rounded text-center">
+                    <div className="p-1.5 bg-white border border-gray-200 rounded text-center">
                       <div className="text-[10px] text-gray-400">Weight</div>
                       <div className="font-bold text-gray-800">{vitals.weight_kg} kg</div>
                     </div>
                   )}
                   {vitals.temp && (
-                    <div className="p-2 bg-white border border-gray-200 rounded text-center">
+                    <div className="p-1.5 bg-white border border-gray-200 rounded text-center">
                       <div className="text-[10px] text-gray-400">Temperature</div>
                       <div className="font-bold text-gray-800">{vitals.temp} °F</div>
                     </div>
@@ -344,30 +403,30 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
                   <table className="w-full text-left text-xs">
                     <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-semibold">
                       <tr>
-                        <th className="py-2 px-3">Medicine</th>
-                        <th className="py-2 px-3">Dosage / Strength</th>
-                        <th className="py-2 px-3">Frequency</th>
-                        <th className="py-2 px-3">Duration</th>
-                        <th className="py-2 px-3">Instructions</th>
+                        <th className="py-1.5 px-2">Medicine</th>
+                        <th className="py-1.5 px-2">Dosage / Strength</th>
+                        <th className="py-1.5 px-2">Frequency</th>
+                        <th className="py-1.5 px-2">Duration</th>
+                        <th className="py-1.5 px-2">Instructions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {medicines.map((m, idx) => (
                         <tr key={idx} className="hover:bg-gray-50/50">
-                          <td className="py-2 px-3 font-semibold text-gray-900">
-                            {m.name || m.medicineName}
+                          <td className="py-1.5 px-2 font-semibold text-gray-900">
+                            {m.name ?? m.medicineName}
                           </td>
-                          <td className="py-2 px-3 text-gray-600">
-                            {m.dosage || m.strength || '1 Tab'}
+                          <td className="py-1.5 px-2 text-gray-600">
+                            {m.dosage ?? m.strength ?? '1 Tab'}
                           </td>
-                          <td className="py-2 px-3 text-gray-600">
-                            {m.frequency || 'Once Daily'}
+                          <td className="py-1.5 px-2 text-gray-600">
+                            {m.frequency ?? 'Once Daily'}
                           </td>
-                          <td className="py-2 px-3 text-gray-600">
+                          <td className="py-1.5 px-2 text-gray-600">
                             {m.duration ? `${m.duration} Days` : '—'}
                           </td>
-                          <td className="py-2 px-3 text-gray-500 italic">
-                            {m.foodTiming || m.instructions || m.foodInstruction || 'After food'}
+                          <td className="py-1.5 px-2 text-gray-500 italic">
+                            {m.foodTiming ?? m.instructions ?? m.foodInstruction ?? 'After food'}
                           </td>
                         </tr>
                       ))}
@@ -379,10 +438,10 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
 
             {/* Lab Test Reports or Investigation Details */}
             {(event.type === 'LAB_REPORT' || event.type === 'LAB_TEST_ORDERED' || event.type === 'IMAGING') && (
-              <div className="p-3 bg-white border border-gray-200 rounded-md space-y-2">
+              <div className="p-2 bg-white border border-gray-200 rounded-md space-y-1.5">
                 <div className="font-semibold text-gray-700 text-xs flex items-center justify-between">
                   <span>Investigation Details:</span>
-                  <span className="text-gray-400 font-normal">Reference ID: #{event.reference_id?.slice(0, 8) || 'N/A'}</span>
+                  <span className="text-gray-400 font-normal">Reference ID: #{event.reference_id?.slice(0, 8) ?? 'N/A'}</span>
                 </div>
                 <div className="flex flex-wrap gap-4 text-xs text-gray-600">
                   {details.testName && <div><strong>Test:</strong> {details.testName}</div>}
@@ -424,7 +483,7 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
 
             {/* Follow-up Details */}
             {details.follow_up_date && (
-              <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-md space-y-1">
+              <div className="p-2 bg-amber-50/60 border border-amber-200 rounded-md space-y-1">
                 <div className="font-semibold text-amber-900 text-xs flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-amber-700" />
                   Scheduled Follow-up Date: {details.follow_up_date}
