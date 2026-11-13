@@ -1,12 +1,14 @@
 import { Button, Spin, Typography } from 'antd';
+import type { Dayjs } from 'dayjs';
 import {
   AlertCircle,
   FileClock,
   History,
   RefreshCw,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+
 import { TimelineEventItem } from '../features/timelines/components/TimelineEventItem';
 import { TimelineFilterBar } from '../features/timelines/components/TimelineFilterBar';
 import { TimelineHeaderCard } from '../features/timelines/components/TimelineHeaderCard';
@@ -37,16 +39,42 @@ export default function PatientTimelineDetailPage() {
   // Filters & Pagination
   const [selectedType, setSelectedType] = useState<TimelineFilterType>('All');
   const [selectedYear, setSelectedYear] = useState<string>('All');
-  const [dateRange, setDateRange] = useState<[any, any] | null>(null);
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [page, setPage] = useState<number>(1);
   const [hasNextPage, setHasNextPage] = useState<boolean>(false);
   const [totalEvents, setTotalEvents] = useState<number>(0);
 
-  const fetchTimeline = useCallback(
-    async (isPageAppend = false, targetPage = 1) => {
+  // Dynamic height measurement of sticky Patient Header for pixel-perfect sticky Filter placement
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState<number>(0);
+
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+
+    const updateHeight = () => {
+      if (el) {
+        setHeaderHeight(el.offsetHeight);
+      }
+    };
+
+    updateHeight();
+
+    const ro = new ResizeObserver(updateHeight);
+    ro.observe(el);
+    window.addEventListener('resize', updateHeight);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', updateHeight);
+    };
+  }, [patientHeader]);
+
+  const loadTimeline = useCallback(
+    async (isAppend = false, targetPage = 1) => {
       if (!patientId) return;
 
-      if (isPageAppend) {
+      if (isAppend) {
         setLoadingMore(true);
       } else {
         setLoading(true);
@@ -54,13 +82,13 @@ export default function PatientTimelineDetailPage() {
       setError(null);
 
       try {
-        const params: Record<string, any> = {
+        const params: Record<string, string | number> = {
           page: targetPage,
           limit: 20,
           type: selectedType,
         };
 
-        if (dateRange && dateRange[0] && dateRange[1]) {
+        if (dateRange?.[0] && dateRange?.[1]) {
           params.from_date = dateRange[0].format('YYYY-MM-DD');
           params.to_date = dateRange[1].format('YYYY-MM-DD');
         } else if (selectedYear !== 'All') {
@@ -73,20 +101,21 @@ export default function PatientTimelineDetailPage() {
           setPatientHeader(data.patient);
           setHealthSummary(data.summary);
 
-          if (isPageAppend) {
+          if (isAppend) {
             setTimelineEvents((prev) => [...prev, ...data.timeline]);
           } else {
             setTimelineEvents(data.timeline);
           }
 
           setPage(targetPage);
-          setHasNextPage(data.pagination?.has_next || false);
-          setTotalEvents(data.pagination?.total || data.timeline.length);
+          setHasNextPage(Boolean(data.pagination?.has_next));
+          setTotalEvents(data.pagination?.total ?? data.timeline.length);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const errorObj = err as { response?: { data?: { message?: string } }; message?: string };
         const msg =
-          err?.response?.data?.message ||
-          err?.message ||
+          errorObj?.response?.data?.message ??
+          errorObj?.message ??
           'Failed to load patient medical timeline.';
         setError(msg);
       } finally {
@@ -98,13 +127,60 @@ export default function PatientTimelineDetailPage() {
   );
 
   useEffect(() => {
-    setPage(1);
-    void fetchTimeline(false, 1);
-  }, [fetchTimeline]);
+    let ignore = false;
+    if (!patientId) return;
+
+    const fetchInitial = async () => {
+      try {
+        const params: Record<string, string | number> = {
+          page: 1,
+          limit: 20,
+          type: selectedType,
+        };
+
+        if (dateRange?.[0] && dateRange?.[1]) {
+          params.from_date = dateRange[0].format('YYYY-MM-DD');
+          params.to_date = dateRange[1].format('YYYY-MM-DD');
+        } else if (selectedYear !== 'All') {
+          params.year = selectedYear;
+        }
+
+        const data = await patientTimelinesApi.getPatientTimeline(patientId, params);
+
+        if (!ignore && data) {
+          setPatientHeader(data.patient);
+          setHealthSummary(data.summary);
+          setTimelineEvents(data.timeline);
+          setPage(1);
+          setHasNextPage(Boolean(data.pagination?.has_next));
+          setTotalEvents(data.pagination?.total ?? data.timeline.length);
+        }
+      } catch (err: unknown) {
+        if (!ignore) {
+          const errorObj = err as { response?: { data?: { message?: string } }; message?: string };
+          const msg =
+            errorObj?.response?.data?.message ??
+            errorObj?.message ??
+            'Failed to load patient medical timeline.';
+          setError(msg);
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void fetchInitial();
+
+    return () => {
+      ignore = true;
+    };
+  }, [patientId, selectedType, selectedYear, dateRange]);
 
   const handleLoadMore = () => {
     if (hasNextPage && !loadingMore) {
-      void fetchTimeline(true, page + 1);
+      void loadTimeline(true, page + 1);
     }
   };
 
@@ -144,7 +220,7 @@ export default function PatientTimelineDetailPage() {
                 className="bg-teal-700 hover:bg-teal-800"
                 icon={<RefreshCw className="w-4 h-4" />}
                 onClick={() => {
-                  void fetchTimeline(false, 1);
+                  void loadTimeline(false, 1);
                 }}
               >
                 Retry
@@ -157,6 +233,7 @@ export default function PatientTimelineDetailPage() {
           {/* 1. Patient Profile Header Card (Sticky directly beneath TopNavbar, spanning full width with zero gaps) */}
           {patientHeader && (
             <div
+              ref={headerRef}
               className="sticky top-0 z-30 w-full bg-white shadow-2xs"
               style={{ position: 'sticky', top: 0, zIndex: 30 }}
             >
@@ -171,28 +248,33 @@ export default function PatientTimelineDetailPage() {
               <TimelineHealthSummary summary={healthSummary} />
             )}
 
-            {/* Event Category & Period Filter Bar */}
-            <TimelineFilterBar
-              selectedType={selectedType}
-              onSelectType={(type) => {
-                setSelectedType(type);
-                setPage(1);
-              }}
-              selectedYear={selectedYear}
-              onSelectYear={(yr) => {
-                setSelectedYear(yr);
-                setPage(1);
-              }}
-              dateRange={dateRange}
-              onDateRangeChange={(dates) => {
-                setDateRange(dates);
-                setPage(1);
-              }}
-              totalEvents={totalEvents}
-            />
+            {/* Event Category & Period Filter Bar (Sticky directly beneath Patient Profile Header) */}
+            <div
+              className="sticky z-20 bg-[#f8fafc] pt-2 pb-3.5 -mt-2"
+              style={{ position: 'sticky', top: headerHeight, zIndex: 20 }}
+            >
+              <TimelineFilterBar
+                selectedType={selectedType}
+                onSelectType={(type) => {
+                  setSelectedType(type);
+                  setPage(1);
+                }}
+                selectedYear={selectedYear}
+                onSelectYear={(yr) => {
+                  setSelectedYear(yr);
+                  setPage(1);
+                }}
+                dateRange={dateRange}
+                onDateRangeChange={(dates) => {
+                  setDateRange(dates);
+                  setPage(1);
+                }}
+                totalEvents={totalEvents}
+              />
+            </div>
 
             {/* Chronological Timeline Feed */}
-            <div className="pt-1">
+            <div className="pt-2 sm:pt-3">
               <div className="mb-2.5 flex items-center justify-between">
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
                   <History className="w-4 h-4 text-teal-700" />

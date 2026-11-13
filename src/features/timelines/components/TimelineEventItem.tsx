@@ -38,6 +38,25 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [previewVisible, setPreviewVisible] = useState<boolean>(false);
 
+  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    // Do not toggle if clicking on interactive elements or inside the expanded details area
+    if (target.closest('button, a, [data-expanded-content]')) {
+      return;
+    }
+    setIsExpanded((prev) => !prev);
+  };
+
+  const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) {
+      return;
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setIsExpanded((prev) => !prev);
+    }
+  };
+
   // Parse formatted clinical date
   const formatEventDate = (dateStr?: string) => {
     if (!dateStr) return { date: '—', time: '' };
@@ -187,8 +206,16 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
         className={`absolute left-[7px] sm:left-[11px] top-2.5 w-3.5 h-3.5 rounded-full ${badge.dotBg} ring-4 ring-white shadow-xs`}
       />
 
-      {/* Event Card Container */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-xs hover:border-gray-300 transition-all overflow-hidden">
+      {/* Event Card Container with Click-to-Expand */}
+      <div
+        className="bg-white rounded-xl border border-gray-200 shadow-xs hover:border-gray-300 transition-all overflow-hidden cursor-pointer"
+        onClick={handleCardClick}
+        onKeyDown={handleCardKeyDown}
+        tabIndex={0}
+        role="button"
+        aria-expanded={isExpanded}
+        aria-label={`${event.title} timeline event`}
+      >
         {/* Event Header Row */}
         <div className="px-2.5 sm:px-3 py-2 sm:py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100">
           <div className="flex flex-wrap items-center gap-2">
@@ -222,46 +249,43 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
           )}
         </div>
 
-        {/* Event Summary Body */}
-        <div className="px-2.5 sm:px-3 py-2 sm:py-2.5 space-y-1.5">
-          <div className="text-sm sm:text-base font-bold text-gray-900 tracking-tight leading-snug">
-            {event.title}
+        {/* Event Summary Body - Compact 2-Column Layout */}
+        <div className="px-2.5 sm:px-3 py-2 sm:py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          {/* Left Section: Event Title, Summary & Diagnosis */}
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <div className="text-sm font-bold text-gray-900 tracking-tight leading-snug">
+              {event.title}
+            </div>
+
+            {event.summary && (
+              <div className="text-xs text-gray-600 leading-normal line-clamp-2">
+                {event.summary}
+              </div>
+            )}
+
+            {details.diagnosis && (
+              <div className="flex items-center gap-1.5 pt-0.5 text-xs">
+                <span className="font-semibold text-gray-700">Diagnosis:</span>
+                <Tag color="volcano" className="font-medium text-[11px] !m-0">
+                  {details.diagnosis}
+                </Tag>
+              </div>
+            )}
           </div>
 
-          {event.summary && (
-            <div className="text-xs sm:text-sm text-gray-600 leading-normal">
-              {event.summary}
-            </div>
-          )}
+          {/* Right Section: Medicine Count / Document Action & View Details */}
+          <div className="shrink-0 flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1.5 text-right">
+            {/* Prescriptions: Medicine count indicator */}
+            {event.type === 'PRESCRIPTION' && medicines.length > 0 && (
+              <div className="text-xs text-blue-700 font-medium flex items-center gap-1.5">
+                <Pill className="w-3.5 h-3.5 text-blue-600" />
+                <span>
+                  {medicines.length} {medicines.length === 1 ? 'medicine prescribed' : 'medicines prescribed'}
+                </span>
+              </div>
+            )}
 
-          {/* Quick inline metadata for common event types */}
-          {details.diagnosis && (
-            <div className="flex items-start gap-1.5 pt-0.5 text-xs">
-              <span className="font-semibold text-gray-700">Diagnosis:</span>
-              <Tag color="volcano" className="font-medium text-xs">
-                {details.diagnosis}
-              </Tag>
-            </div>
-          )}
-
-          {event.type === 'PRESCRIPTION' && medicines.length > 0 && (
-            <div className="text-xs text-blue-700 font-medium pt-0.5 flex items-center gap-1.5">
-              <Pill className="w-3.5 h-3.5" />
-              {medicines.length} {medicines.length === 1 ? 'medicine prescribed' : 'medicines prescribed'}
-            </div>
-          )}
-
-          {/* Expand/Collapse Trigger */}
-          <div className="pt-1 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 hover:text-teal-800 transition-colors cursor-pointer"
-            >
-              <span>{isExpanded ? 'Hide Full Details' : 'View Full Details'}</span>
-              {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
-
+            {/* Document button if present */}
             {documentUrl && (
               <div className="flex items-center gap-2">
                 {isImage && (
@@ -277,7 +301,8 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
                 )}
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     if (isImage) {
                       setPreviewVisible(true);
                     } else {
@@ -291,12 +316,33 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
                 </button>
               </div>
             )}
+
+            {/* View / Hide Details Action */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded((prev) => !prev);
+              }}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 hover:text-teal-800 transition-colors cursor-pointer"
+              aria-label={isExpanded ? 'Hide details' : 'View details'}
+            >
+              <span>{isExpanded ? 'Hide Details' : 'View Details'}</span>
+              {isExpanded ? (
+                <ChevronUp className="w-3.5 h-3.5 text-teal-700" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-teal-700" />
+              )}
+            </button>
           </div>
         </div>
 
         {/* Collapsible Expanded Clinical Details */}
         {isExpanded && (
-          <div className="px-2.5 sm:px-3 pb-3 pt-2 border-t border-gray-100 bg-gray-50/50 space-y-2 text-xs">
+          <div
+            data-expanded-content="true"
+            className="px-2.5 sm:px-3 pb-3 pt-2.5 border-t border-gray-100 bg-gray-50/50 space-y-2 text-xs cursor-default"
+          >
             {/* Consultation Notes */}
             {Boolean(details.consultation_notes ?? details.notes) && (
               <div className="space-y-1">
