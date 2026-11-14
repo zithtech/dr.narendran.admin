@@ -107,6 +107,10 @@ export default function SidebarLayout() {
     void navigate('/login');
   };
 
+  const isSeamlessMain =
+    location.pathname.startsWith('/patient-timelines/') &&
+    location.pathname !== '/patient-timelines';
+
   return (
     <div className="ui-app-layout">
       {/* 1. Left Full-Height Sidebar with Brand Header at Top and User Profile + Sign Out at Bottom */}
@@ -136,7 +140,7 @@ export default function SidebarLayout() {
           onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)}
         />
 
-        <main className="ui-main">
+        <main className={`ui-main ${isSeamlessMain ? 'ui-main-seamless' : ''}`}>
           <Outlet />
         </main>
       </div>

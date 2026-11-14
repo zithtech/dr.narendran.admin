@@ -11,6 +11,9 @@ import Doctors from './pages/Doctors';
 import DoctorAvailabilityPage from './pages/DoctorAvailabilityPage';
 import Users from './pages/Users';
 import Patients from './pages/Patients';
+import PatientTimelinesPage from './pages/PatientTimelinesPage';
+import PatientTimelineDetailPage from './pages/PatientTimelineDetailPage';
+import MedicalRecordsPage from './features/medical_records/pages/MedicalRecordsPage';
 import Appointments from './pages/Appointments';
 import DoctorTodayAppointments from './pages/DoctorTodayAppointments';
 import Pharmacy from './pages/Pharmacy';
@@ -38,6 +41,7 @@ import LabReportsPage from './pages/client/LabReportsPage';
 import SupportCenterPage from './features/support/pages/SupportCenterPage';
 import { ReviewsManagementPage } from './features/reviews/pages/ReviewsManagementPage';
 import { ModuleRouteGuard } from './context/PermissionContext';
+import { LocationManagementPage } from './features/locations/pages/LocationManagementPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('adminToken');
@@ -175,10 +179,58 @@ function App() {
           />
           <Route path="/doctor-availability" element={<Navigate to="/availability" replace />} />
           <Route
+            path="/locations"
+            element={
+              <ModuleRouteGuard module="DOCTORS" title="Doctor Locations" fallbackSlugs={['LOCATIONS']}>
+                <LocationManagementPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/locations/:doctorId"
+            element={
+              <ModuleRouteGuard module="DOCTORS" title="Doctor Locations" fallbackSlugs={['LOCATIONS']}>
+                <LocationManagementPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
             path="/patients"
             element={
               <ModuleRouteGuard module="PATIENTS" title="Patients">
                 <Patients />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/patient-timelines"
+            element={
+              <ModuleRouteGuard module="PATIENTS" title="Patient Timelines">
+                <PatientTimelinesPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/patient-timelines/:patientId"
+            element={
+              <ModuleRouteGuard module="PATIENTS" title="Patient Timelines">
+                <PatientTimelineDetailPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/medical-records"
+            element={
+              <ModuleRouteGuard module="MEDICAL_RECORDS" title="Medical Records" fallbackSlugs={['PATIENTS']}>
+                <MedicalRecordsPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/medical-records/:patientId"
+            element={
+              <ModuleRouteGuard module="MEDICAL_RECORDS" title="Medical Records" fallbackSlugs={['PATIENTS']}>
+                <MedicalRecordsPage />
               </ModuleRouteGuard>
             }
           />

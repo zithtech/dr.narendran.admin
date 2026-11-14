@@ -2904,7 +2904,7 @@ body {
   flex: 1;
   min-width: 0;
   height: 100vh;
-  overflow: hidden;
+  overflow: clip;
   background: #f8fafc;
 }
 
@@ -3139,6 +3139,17 @@ body {
   box-sizing: border-box;
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+/* Seamless edge-to-edge layout for pages with sticky top headers (e.g. Patient Timeline Detail) */
+.ui-app-right-column .ui-main:has(.patient-timeline-detail-page),
+.ui-app-right-column .ui-main.ui-main-seamless {
+  padding: 0;
+  height: calc(100vh - 52px);
+  overflow-y: auto;
+  overflow-x: clip;
+  display: block;
+  position: relative;
 }
 
 .ui-app-right-column .ui-main::-webkit-scrollbar {

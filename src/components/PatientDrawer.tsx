@@ -19,7 +19,7 @@ import { useEffect, useState } from 'react';
 import { type Prescription, prescriptionsApi } from '../features/prescriptions/api/prescriptionsApi';
 import CreatePrescriptionModal from '../features/prescriptions/components/CreatePrescriptionModal';
 import ViewPrescriptionModal from '../features/prescriptions/components/ViewPrescriptionModal';
-import { ageFrom, formatDate, timeAgo, titleCase } from '../lib/format';
+import { formatDate, formatPatientAge, timeAgo, titleCase } from '../lib/format';
 import { type Patient } from './PatientModal';
 import { usePermission } from '../context/PermissionContext';
 import { Drawer } from './ui/Drawer';
@@ -95,7 +95,6 @@ export default function PatientDrawer({ patient, onClose, onEdit }: PatientDrawe
 
   if (!patient) return null;
 
-  const age = ageFrom(patient.date_of_birth);
   const bmi = bmiOf(patient.height_cm, patient.weight_kg);
   const contacts = readContacts(patient.emergency_contacts);
   const isActive = patient.status === 'ACTIVE';
@@ -191,7 +190,9 @@ export default function PatientDrawer({ patient, onClose, onEdit }: PatientDrawe
             }}
           >
             {[
-              age !== null ? `${age} yrs` : null,
+              formatPatientAge(patient.date_of_birth) !== 'DOB not set'
+                ? formatPatientAge(patient.date_of_birth)
+                : null,
               patient.gender ? titleCase(patient.gender) : null,
               patient.hospital_name,
               patient.branch_name,
@@ -819,7 +820,7 @@ export default function PatientDrawer({ patient, onClose, onEdit }: PatientDrawe
               <dt>Date of birth</dt>
               <dd>
                 {patient.date_of_birth
-                  ? `${formatDate(patient.date_of_birth)}${age !== null ? ` (${age} yrs)` : ''}`
+                  ? `${formatDate(patient.date_of_birth)}${formatPatientAge(patient.date_of_birth) !== 'DOB not set' ? ` (${formatPatientAge(patient.date_of_birth)})` : ''}`
                   : <span className="ui-muted">—</span>}
               </dd>
               <dt>Gender</dt>

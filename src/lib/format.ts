@@ -44,13 +44,106 @@ export function formatDate(value: string | null | undefined): string {
 
 export function ageFrom(value: string | null | undefined): number | null {
   if (!value) return null;
-  const dob = new Date(value);
-  if (Number.isNaN(dob.getTime())) return null;
+  const match = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(value.trim());
+  let birthYear: number;
+  let birthMonth: number;
+  let birthDay: number;
+  if (match) {
+    birthYear = parseInt(match[1]!, 10);
+    birthMonth = parseInt(match[2]!, 10) - 1;
+    birthDay = parseInt(match[3]!, 10);
+  } else {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return null;
+    birthYear = parsed.getFullYear();
+    birthMonth = parsed.getMonth();
+    birthDay = parsed.getDate();
+  }
   const now = new Date();
-  let age = now.getFullYear() - dob.getFullYear();
-  const m = now.getMonth() - dob.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
-  return age;
+  let age = now.getFullYear() - birthYear;
+  const m = now.getMonth() - birthMonth;
+  if (m < 0 || (m === 0 && now.getDate() < birthDay)) age--;
+  return Math.max(0, age);
+}
+
+/**
+ * Formats a patient's age dynamically based on their date of birth:
+ * - Under 1 month → Days (e.g. "15 days", "1 day", "0 days")
+ * - 1 month to under 1 year → Months (e.g. "1 month", "2 months", "11 months")
+ * - 1 year and above → Years (e.g. "1 yr", "2 yrs", "25 yrs")
+ * - Missing/null/invalid DOB → "DOB not set"
+ */
+export function formatPatientAge(
+  value: string | null | undefined,
+  referenceDate = new Date()
+): string {
+  if (!value) return 'DOB not set';
+
+  // Parse YYYY-MM-DD or ISO string safely in local calendar coordinates to avoid timezone shift
+  let birthYear: number;
+  let birthMonth: number; // 0-indexed
+  let birthDay: number;
+
+  const match = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(value.trim());
+  if (match) {
+    birthYear = parseInt(match[1]!, 10);
+    birthMonth = parseInt(match[2]!, 10) - 1;
+    birthDay = parseInt(match[3]!, 10);
+  } else {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return 'DOB not set';
+    birthYear = parsed.getFullYear();
+    birthMonth = parsed.getMonth();
+    birthDay = parsed.getDate();
+  }
+
+  const dob = new Date(birthYear, birthMonth, birthDay);
+  if (Number.isNaN(dob.getTime())) return 'DOB not set';
+
+  const today = new Date(
+    referenceDate.getFullYear(),
+    referenceDate.getMonth(),
+    referenceDate.getDate()
+  );
+
+  // If DOB is in the future, avoid negative ages
+  if (today.getTime() < dob.getTime()) {
+    return '0 days';
+  }
+
+  // 1. Calculate completed calendar years
+  let years = today.getFullYear() - birthYear;
+  const currentMonthDays = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const targetDayInCurrentMonth = Math.min(birthDay, currentMonthDays);
+
+  const hasBirthdayOccurredThisYear =
+    today.getMonth() > birthMonth ||
+    (today.getMonth() === birthMonth && today.getDate() >= targetDayInCurrentMonth);
+
+  if (!hasBirthdayOccurredThisYear) {
+    years--;
+  }
+
+  if (years >= 1) {
+    return years === 1 ? '1 yr' : `${years} yrs`;
+  }
+
+  // 2. Under 1 year: Calculate completed calendar months
+  let months = (today.getFullYear() - birthYear) * 12 + (today.getMonth() - birthMonth);
+  if (today.getDate() < targetDayInCurrentMonth) {
+    months--;
+  }
+
+  if (months >= 1) {
+    return months === 1 ? '1 month' : `${months} months`;
+  }
+
+  // 3. Under 1 month: Calculate elapsed calendar days
+  const diffMs = today.getTime() - dob.getTime();
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const safeDays = Math.max(0, days);
+
+  return safeDays === 1 ? '1 day' : `${safeDays} days`;
 }
 
 /** "ACTIVE" → "Active", "not_set" → "Not set". */
