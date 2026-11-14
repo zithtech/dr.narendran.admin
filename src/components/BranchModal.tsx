@@ -213,13 +213,13 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
               width: 38,
               height: 38,
               borderRadius: 10,
-              background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
-              color: '#7c3aed',
-              border: '1px solid #c4b5fd',
+              background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+              color: '#2563eb',
+              border: '1px solid #bfdbfe',
               display: 'grid',
               placeItems: 'center',
               flexShrink: 0,
-              boxShadow: '0 2px 6px rgba(124, 58, 237, 0.16)',
+              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.16)',
             }}
           >
             <GitBranch size={19} />
@@ -296,9 +296,9 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
             width: 26px;
             height: 26px;
             border-radius: 7px;
-            background: #f5f3ff;
-            color: #7c3aed;
-            border: 1px solid #ede9fe;
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #dbeafe;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -323,8 +323,8 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
             transition: all 0.15s ease;
           }
           .branch-drawer-modal .ui-input:focus {
-            border-color: #7c3aed !important;
-            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12) !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
             outline: none;
           }
           .branch-status-btn {
@@ -340,9 +340,9 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
             position: relative;
           }
           .branch-status-btn.is-active {
-            border: 1.5px solid #7c3aed !important;
-            background: #f5f3ff !important;
-            box-shadow: 0 2px 6px rgba(124, 58, 237, 0.12);
+            border: 1.5px solid #2563eb !important;
+            background: #eff6ff !important;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
           }
           .branch-status-btn:not(.is-active) {
             border: 1px solid #e2e8f0;
@@ -353,14 +353,14 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
             border-color: #cbd5e1;
           }
           .branch-submit-btn {
-            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
-            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.28) !important;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28) !important;
             border: none !important;
             color: #ffffff !important;
           }
           .branch-submit-btn:hover:not(:disabled) {
-            background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%) !important;
-            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.36) !important;
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.36) !important;
           }
         `}</style>
 
@@ -517,22 +517,22 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#475569' }}>
-                  <Info size={14} style={{ color: '#7c3aed', flexShrink: 0 }} />
+                  <Info size={14} style={{ color: '#2563eb', flexShrink: 0 }} />
                   <span>Branch Reference Code:</span>
                 </div>
                 <div>
                   {branch ? (
-                    <Badge tone="violet">{branch.branch_code}</Badge>
+                    <Badge tone="blue">{branch.branch_code}</Badge>
                   ) : (
                     <span
                       style={{
                         fontSize: 11,
                         fontWeight: 600,
-                        color: '#6d28d9',
-                        background: '#f5f3ff',
+                        color: '#1d4ed8',
+                        background: '#eff6ff',
                         padding: '2px 8px',
                         borderRadius: 6,
-                        border: '1px solid #ddd6fe',
+                        border: '1px solid #dbeafe',
                       }}
                     >
                       Auto-generated (e.g. BRN-001)
@@ -704,7 +704,7 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
                     style={{
                       fontSize: 12.5,
                       fontWeight: 600,
-                      color: status === 'ACTIVE' ? '#6d28d9' : '#1e293b',
+                      color: status === 'ACTIVE' ? '#1d4ed8' : '#1e293b',
                     }}
                   >
                     Active & Operational
@@ -716,7 +716,7 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
                 {status === 'ACTIVE' && (
                   <CheckCircle2
                     size={16}
-                    style={{ color: '#7c3aed', marginLeft: 'auto', flexShrink: 0, marginTop: 2 }}
+                    style={{ color: '#2563eb', marginLeft: 'auto', flexShrink: 0, marginTop: 2 }}
                   />
                 )}
               </button>
@@ -742,7 +742,7 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
                     style={{
                       fontSize: 12.5,
                       fontWeight: 600,
-                      color: status === 'INACTIVE' ? '#6d28d9' : '#1e293b',
+                      color: status === 'INACTIVE' ? '#1d4ed8' : '#1e293b',
                     }}
                   >
                     Inactive / Suspended
@@ -754,7 +754,7 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
                 {status === 'INACTIVE' && (
                   <CheckCircle2
                     size={16}
-                    style={{ color: '#7c3aed', marginLeft: 'auto', flexShrink: 0, marginTop: 2 }}
+                    style={{ color: '#2563eb', marginLeft: 'auto', flexShrink: 0, marginTop: 2 }}
                   />
                 )}
               </button>

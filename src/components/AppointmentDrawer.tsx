@@ -89,10 +89,10 @@ export default function AppointmentDrawer({
     let dot = '#94a3b8';
 
     if (s === 'scheduled' || s === 'confirmed') {
-      bg = '#f5f3ff';
-      fg = '#6d28d9';
-      border = '#ede9fe';
-      dot = '#7c3aed';
+      bg = '#eff6ff';
+      fg = '#1d4ed8';
+      border = '#dbeafe';
+      dot = '#2563eb';
     } else if (s === 'completed') {
       bg = '#f0fdf4';
       fg = '#166534';
@@ -148,13 +148,13 @@ export default function AppointmentDrawer({
             width: 46,
             height: 46,
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
             color: '#ffffff',
             display: 'grid',
             placeItems: 'center',
             fontWeight: 700,
             fontSize: 16,
-            boxShadow: '0 4px 10px rgba(124, 58, 237, 0.22)',
+            boxShadow: '0 4px 10px rgba(37, 99, 235, 0.22)',
             flexShrink: 0,
           }}
         >
@@ -169,9 +169,9 @@ export default function AppointmentDrawer({
               style={{
                 fontSize: 11,
                 fontWeight: 700,
-                color: '#6d28d9',
-                background: '#f5f3ff',
-                border: '1px solid #ede9fe',
+                color: '#1d4ed8',
+                background: '#eff6ff',
+                border: '1px solid #dbeafe',
                 padding: '2px 7px',
                 borderRadius: 5,
               }}
@@ -210,7 +210,7 @@ export default function AppointmentDrawer({
     {
       label: 'Token Number',
       value: (
-        <span style={{ fontWeight: 700, color: '#6d28d9', fontSize: 13 }}>
+        <span style={{ fontWeight: 700, color: '#2563eb', fontSize: 13 }}>
           {tokenDisplay}
         </span>
       ),
@@ -225,9 +225,9 @@ export default function AppointmentDrawer({
           className="ui-btn"
           style={{
             fontSize: 12.5,
-            background: '#7c3aed',
+            background: '#2563eb',
             color: '#ffffff',
-            border: '1px solid #7c3aed',
+            border: '1px solid #2563eb',
             display: 'inline-flex',
             alignItems: 'center',
             gap: 6,
@@ -320,7 +320,7 @@ export default function AppointmentDrawer({
           className="ui-btn"
           style={{
             fontSize: 12.5,
-            background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
             color: '#ffffff',
             border: 'none',
             display: 'inline-flex',
@@ -331,7 +331,7 @@ export default function AppointmentDrawer({
             height: 35,
             cursor: 'pointer',
             fontWeight: 600,
-            boxShadow: '0 2px 6px rgba(124, 58, 237, 0.28)',
+            boxShadow: '0 2px 6px rgba(37, 99, 235, 0.28)',
           }}
           onClick={() => onEdit(appointment)}
         >
@@ -368,7 +368,7 @@ export default function AppointmentDrawer({
         <div className="appt-view-card">
           <div className="appt-view-header">
             <div className="appt-view-badge">
-              <Stethoscope size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+              <Stethoscope size={13.5} style={{ color: '#2563eb', display: 'block', margin: 'auto' }} />
             </div>
             <div>
               <div className="appt-view-title">Attending Physician</div>
@@ -386,9 +386,9 @@ export default function AppointmentDrawer({
                   style={{
                     fontSize: 11,
                     fontWeight: 650,
-                    color: '#6d28d9',
-                    background: '#f5f3ff',
-                    border: '1px solid #ede9fe',
+                    color: '#1d4ed8',
+                    background: '#eff6ff',
+                    border: '1px solid #dbeafe',
                     padding: '2px 8px',
                     borderRadius: 5,
                   }}
@@ -427,7 +427,7 @@ export default function AppointmentDrawer({
         <div className="appt-view-card">
           <div className="appt-view-header">
             <div className="appt-view-badge">
-              <User size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+              <User size={13.5} style={{ color: '#2563eb', display: 'block', margin: 'auto' }} />
             </div>
             <div>
               <div className="appt-view-title">Patient Profile & Contact</div>
@@ -476,7 +476,7 @@ export default function AppointmentDrawer({
         <div className="appt-view-card">
           <div className="appt-view-header">
             <div className="appt-view-badge">
-              <FileText size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+              <FileText size={13.5} style={{ color: '#2563eb', display: 'block', margin: 'auto' }} />
             </div>
             <div>
               <div className="appt-view-title">Consultation Details</div>
@@ -522,8 +522,8 @@ export default function AppointmentDrawer({
         {/* Prescription Card */}
         <div className="appt-view-card">
           <div className="appt-view-header">
-            <div className="appt-view-badge" style={{ background: '#f5f3ff' }}>
-              <Pill size={13.5} style={{ color: '#7c3aed', display: 'block', margin: 'auto' }} />
+            <div className="appt-view-badge" style={{ background: '#eff6ff' }}>
+              <Pill size={13.5} style={{ color: '#2563eb', display: 'block', margin: 'auto' }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div>
@@ -537,9 +537,9 @@ export default function AppointmentDrawer({
                   style={{
                     fontSize: 11.5,
                     fontWeight: 600,
-                    color: '#7c3aed',
-                    background: '#f5f3ff',
-                    border: '1px solid #ede9fe',
+                    color: '#1d4ed8',
+                    background: '#eff6ff',
+                    border: '1px solid #dbeafe',
                     borderRadius: 6,
                     padding: '3px 8px',
                     cursor: 'pointer',
@@ -614,9 +614,9 @@ export default function AppointmentDrawer({
                         style={{
                           padding: '4px 10px',
                           borderRadius: 6,
-                          border: '1px solid #ede9fe',
-                          background: '#f5f3ff',
-                          color: '#7c3aed',
+                          border: '1px solid #dbeafe',
+                          background: '#eff6ff',
+                          color: '#1d4ed8',
                           fontSize: 11.5,
                           fontWeight: 600,
                           cursor: 'pointer',
@@ -721,8 +721,8 @@ export default function AppointmentDrawer({
           width: 26px;
           height: 26px;
           border-radius: 6px;
-          background: #f5f3ff;
-          border: 1px solid #ede9fe;
+          background: #eff6ff;
+          border: 1px solid #dbeafe;
           display: flex;
           align-items: center;
           justifyContent: center;

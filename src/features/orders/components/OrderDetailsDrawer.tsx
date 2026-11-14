@@ -1,21 +1,19 @@
 import { App } from 'antd';
 import {
-  AlertCircle,
   Clock,
   Copy,
   CreditCard,
   FileText,
   Pill,
-  RefreshCw,
   ShoppingBag,
   User,
-  X,
   XCircle,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 import { usePermission } from '../../../context/PermissionContext';
 import { getErrorMessage } from '../../../utils/errors';
+import { Drawer } from '../../../components/ui/Drawer';
 import { ordersApi } from '../services/ordersApi';
 import type { OrderDetails } from '../types/orders';
 import { OrderDeliveryManager } from './OrderDeliveryManager';
@@ -83,82 +81,90 @@ export const OrderDetailsDrawer: React.FC<OrderDetailsDrawerProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in" onClick={onClose} />
-      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-2xl flex-col bg-white shadow-2xl dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 animate-in slide-in-from-right duration-200">
-        {/* Drawer Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-slate-900/60">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
-              <ShoppingBag size={20} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  {order ? order.order_number : 'Order Details'}
-                </h2>
-                {order && <OrderStatusBadge status={order.status} />}
-                {order && <PaymentStatusBadge status={order.payment_status} />}
-              </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                {order?.id && (
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(order.id, 'Order ID')}
-                    className="inline-flex items-center gap-1 font-mono text-[11px] text-slate-400 hover:text-indigo-600 transition-colors"
-                    title="Copy internal order ID"
-                  >
-                    <span>ID: {order.id.slice(0, 13)}…</span>
-                    <Copy size={11} />
-                  </button>
-                )}
-                {order?.created_at && (
-                  <span>· {new Date(order.created_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {order && !isTerminalStatus && isOrderUpdatable && (
-              <button
-                type="button"
-                onClick={() => setIsUpdateModalOpen(true)}
-                className="ui-btn ui-btn-primary ui-btn-xs"
-              >
-                Update Status
-              </button>
-            )}
+      <Drawer
+        open={isOpen}
+        onClose={onClose}
+        label="Order Details"
+        size="lg"
+        headerActions={
+          order && !isTerminalStatus && isOrderUpdatable ? (
             <button
               type="button"
-              onClick={onClose}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+              onClick={() => setIsUpdateModalOpen(true)}
+              className="ui-btn ui-btn-primary ui-btn-xs"
             >
-              <X size={18} />
+              Update Status
             </button>
-          </div>
-        </div>
-
-        {/* Drawer Body - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {loading ? (
-            <div className="py-24 text-center text-slate-400">
-              <RefreshCw size={26} className="mx-auto mb-2 animate-spin text-indigo-600" />
-              <p className="text-sm font-semibold">Loading full order record...</p>
+          ) : null
+        }
+        hero={
+          order ? (
+            <div className="flex items-start gap-3.5 w-full">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 shadow-xs">
+                <ShoppingBag size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                    {order.order_number}
+                  </h2>
+                  <OrderStatusBadge status={order.status} />
+                  <PaymentStatusBadge status={order.payment_status} />
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-500 mt-1 flex-wrap">
+                  {order.id && (
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(order.id, 'Order ID')}
+                      className="inline-flex items-center gap-1 font-mono text-[11px] text-slate-400 hover:text-blue-600 transition-colors"
+                      title="Copy internal order ID"
+                    >
+                      <span>ID: {order.id.slice(0, 13)}…</span>
+                      <Copy size={11} />
+                    </button>
+                  )}
+                  {order.created_at && (
+                    <span>· {new Date(order.created_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                  )}
+                </div>
+              </div>
             </div>
-          ) : error ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300">
-              <AlertCircle size={18} className="mb-1 text-rose-600" />
-              <p>{error}</p>
-              <button
-                type="button"
-                className="ui-btn ui-btn-xs mt-3 bg-rose-600 text-white"
-                onClick={() => orderId && void fetchDetails(orderId)}
-              >
-                Retry
-              </button>
-            </div>
-          ) : order ? (
-            <>
+          ) : null
+        }
+        stats={
+          order
+            ? [
+                {
+                  label: 'Total Amount',
+                  value: (
+                    <span className="font-bold text-blue-600 dark:text-blue-400">
+                      {formatCurrency(order.pricing?.total_amount ?? 0)}
+                    </span>
+                  ),
+                },
+                {
+                  label: 'Items Ordered',
+                  value: `${order.medicines?.length || 0} product(s)`,
+                },
+                {
+                  label: 'Payment State',
+                  value: <span className="capitalize">{order.payment_status}</span>,
+                },
+              ]
+            : undefined
+        }
+        loading={loading}
+        loadingText="Loading full order record..."
+        error={error}
+        onRetry={() => orderId && void fetchDetails(orderId)}
+        footer={
+          <button type="button" className="ui-btn" onClick={onClose}>
+            Close
+          </button>
+        }
+      >
+        {order ? (
+          <div className="space-y-6">
               {/* Cancellation Banner if Cancelled */}
               {order.status === 'cancelled' && (
                 <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900/50 dark:bg-rose-950/30">
@@ -419,10 +425,9 @@ export const OrderDetailsDrawer: React.FC<OrderDetailsDrawerProps> = ({
                   )}
                 </div>
               </div>
-            </>
+            </div>
           ) : null}
-        </div>
-      </div>
+        </Drawer>
 
       {/* Status Update Modal */}
       {order && (

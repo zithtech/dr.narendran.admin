@@ -155,6 +155,39 @@ describe('User Accounts & Roles & Permissions Drawers', () => {
 
       expect(screen.getByText(/Username is required/i)).toBeInTheDocument();
     });
+
+    it('renders forgot password option and allows generating a secure password or resetting to default', async () => {
+      renderWithProviders(
+        <UserModal
+          isOpen={true}
+          onClose={vi.fn()}
+          userAccount={mockUser}
+          onSave={vi.fn()}
+        />,
+      );
+
+      // Verify "Forgot password?" is present in both header and helper positions
+      const forgotBtns = screen.getAllByRole('button', { name: /Forgot password\?/i });
+      expect(forgotBtns.length).toBeGreaterThanOrEqual(1);
+
+      // Click "Forgot password?" to expand helper panel
+      fireEvent.click(forgotBtns[0]!);
+
+      expect(screen.getByText(/Forgot Password & Reset Helper/i)).toBeInTheDocument();
+      expect(screen.getByText(/Manage credentials & recovery for @drsmith_cardio/i)).toBeInTheDocument();
+
+      // Click "Generate Random"
+      const generateBtn = screen.getByRole('button', { name: /Generate Random/i });
+      fireEvent.click(generateBtn);
+
+      expect(screen.getByText(/Secure password generated and applied/i)).toBeInTheDocument();
+
+      // Click "Set Welcome@123"
+      const defaultBtn = screen.getByRole('button', { name: /Set Welcome@123/i });
+      fireEvent.click(defaultBtn);
+
+      expect(screen.getByText(/Temporary default password applied \(Welcome@123\)/i)).toBeInTheDocument();
+    });
   });
 
   describe('RoleModal (Roles & Permissions Drawer)', () => {

@@ -1,10 +1,10 @@
-import { App, Drawer, Popconfirm, Select, Table, Tag } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { App, Popconfirm, Tag } from 'antd';
 import {
   Ban,
   CalendarClock,
   CalendarX,
   Check,
+  CheckCircle2,
   Clock,
   Copy,
   Grid,
@@ -13,8 +13,6 @@ import {
   MapPin,
   Pencil,
   Plus,
-  RefreshCw,
-  Search,
   Settings,
   Stethoscope,
   Trash2,
@@ -30,6 +28,16 @@ import {
   type DoctorBlockedDate,
   doctorAvailabilityApi,
 } from '../api/doctorAvailabilityApi';
+import {
+  CommonFilterBar,
+  CommonPageHeader,
+  CommonPagination,
+  CommonTable,
+  type CommonTableColumn,
+  StatusPill,
+} from '../components/ui/CommonTable';
+import { Modal } from '../components/ui/Modal';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { titleCase } from '../lib/format';
 import { usePermission } from '../context/PermissionContext';
 import api from '../utils/api';
@@ -71,7 +79,6 @@ const DAYS_OF_WEEK = [
 type DayOfWeek = typeof DAYS_OF_WEEK[number];
 
 const COMMON_SLOT_LENGTHS = [10, 15, 20, 30, 45, 60];
-const PAGE_SIZES = [10, 25, 50, 100];
 
 const REASON_PRESETS = [
   'Annual Leave',
@@ -135,9 +142,10 @@ export default function DoctorAvailabilityPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'schedule' | 'table'>('schedule');
 
-  // Pagination for weekly slots table view
+  // Pagination & sorting for weekly slots table view
   const [perPage, setPerPage] = useState<number>(10);
   const [page, setPage] = useState<number>(1);
+  const [slotSort, setSlotSort] = useState<{ id: string; dir: 'asc' | 'desc' } | null>(null);
 
   // Drawer state for Create / Edit weekly slot
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -159,6 +167,7 @@ export default function DoctorAvailabilityPage() {
   const [blockedViewMode, setBlockedViewMode] = useState<'table' | 'cards'>('table');
   const [blockedPerPage, setBlockedPerPage] = useState<number>(10);
   const [blockedPage, setBlockedPage] = useState<number>(1);
+  const [blockedSort, setBlockedSort] = useState<{ id: string; dir: 'asc' | 'desc' } | null>(null);
 
   // Drawer state for Block Date & Time
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
@@ -170,7 +179,10 @@ export default function DoctorAvailabilityPage() {
   const [blockFormReason, setBlockFormReason] = useState<string>('');
   const [savingBlock, setSavingBlock] = useState(false);
 
-  const todayStr = useMemo(() => new Date().toISOString().split('T')[0]!, []);
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
 
   // Load doctors and branches
   const fetchDoctorsAndBranches = useCallback(async () => {
@@ -258,11 +270,11 @@ export default function DoctorAvailabilityPage() {
       const data = await doctorAvailabilityApi.getBlockedDates(docId);
       setBlockedDates(data);
     } catch (err: unknown) {
-      console.error('Failed to load doctor blocked dates:', err);
+      message.error(getErrorMessage(err, 'Failed to load doctor blocked dates'));
     } finally {
       setLoadingBlocked(false);
     }
-  }, []);
+  }, [message]);
 
   useEffect(() => {
     void fetchDoctorsAndBranches();
@@ -538,12 +550,22 @@ export default function DoctorAvailabilityPage() {
         await doctorAvailabilityApi.updateBlockedDate(selectedDoctorId, editingBlock.id, payload);
         message.success('Blocked date updated successfully! Appointment slots updated.');
       } else {
-        await doctorAvailabilityApi.createBlockedDate(selectedDoctorId, payload);
+        const created = await doctorAvailabilityApi.createBlockedDate(selectedDoctorId, payload);
         message.success('Date and time blocked successfully! Appointment slots updated.');
+        setBlockedStatusFilter('ALL');
+        setBlockedSearchTerm('');
+        setBlockedPage(1);
+        setActiveMainSection('blocked');
+        if (created?.id) {
+          setBlockedDates((prev) => {
+            const exists = prev.some((item) => item.id === created.id);
+            return exists ? prev : [...prev, created];
+          });
+        }
       }
 
       setIsBlockModalOpen(false);
-      void fetchBlockedDates(selectedDoctorId);
+      await fetchBlockedDates(selectedDoctorId);
       void fetchDoctorAvailability(selectedDoctorId);
     } catch (err: unknown) {
       message.error(getErrorMessage(err, 'Failed to save blocked date'));
@@ -565,273 +587,209 @@ export default function DoctorAvailabilityPage() {
     }
   };
 
-  // Pagination for weekly slots table view
-  const pageCount = Math.max(1, Math.ceil(filteredSlots.length / perPage));
-  const current = Math.min(page, pageCount);
-  const startIdx = (current - 1) * perPage;
-  const pageRows = filteredSlots.slice(startIdx, startIdx + perPage);
-
-  // Pagination for blocked dates table view
-  const blockedPageCount = Math.max(1, Math.ceil(filteredBlockedDates.length / blockedPerPage));
-  const currentBlockedPage = Math.min(blockedPage, blockedPageCount);
-  const blockedStartIdx = (currentBlockedPage - 1) * blockedPerPage;
-  const blockedPageRows = filteredBlockedDates.slice(
-    blockedStartIdx,
-    blockedStartIdx + blockedPerPage
-  );
-
-  // Weekly Slots Table Columns
-  const columns: ColumnsType<DoctorAvailabilitySlot> = [
-    {
-      title: 'Day of Week',
-      dataIndex: 'day_of_week',
-      key: 'day_of_week',
-      width: 140,
-      render: (day: DayOfWeek) => (
-        <span style={{ fontWeight: 650, color: '#0f172a' }}>{titleCase(day)}</span>
-      ),
-    },
-    {
-      title: 'Time Window',
-      key: 'time_window',
-      render: (_, r) => (
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <Clock size={13} style={{ color: '#7c3aed' }} />
-          <span style={{ fontWeight: 600, color: '#334155' }}>
-            {formatTime12(r.start_time)} – {formatTime12(r.end_time)}
-          </span>
-        </div>
-      ),
-    },
-    {
-      title: 'Slot Duration',
-      key: 'slot_length',
-      width: 150,
-      render: (_, r) => (
-        <Tag color="purple" style={{ fontWeight: 650, borderRadius: 6 }}>
-          {r.slot_length || selectedSlotDuration || 30} mins
-        </Tag>
-      ),
-    },
-    {
-      title: 'Branch / Clinic',
-      dataIndex: 'branch_name',
-      key: 'branch_name',
-      render: (name: string) => (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#475569' }}>
-          <MapPin size={12} style={{ color: '#94a3b8' }} />
-          {name || 'Main Clinic'}
-        </span>
-      ),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 110,
-      render: (status: string) => (
-        <Tag color={status === 'ACTIVE' ? 'success' : 'default'} style={{ fontWeight: 600 }}>
-          {status}
-        </Tag>
-      ),
-    },
-    ...(isUpdatable || isDeletable
-      ? [
-          {
-            title: 'Actions',
-            key: 'actions',
-            width: 120,
-            align: 'right' as const,
-            render: (_: unknown, r: DoctorAvailabilitySlot) => (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-                {isUpdatable && (
-                  <button
-                    type="button"
-                    className="ui-btn ui-btn-sm"
-                    onClick={() => handleOpenEditor(r)}
-                    title="Edit schedule"
-                    style={{
-                      padding: '4px 8px',
-                      fontSize: 11.5,
-                      color: '#7c3aed',
-                      borderColor: '#ede9fe',
-                      background: '#f5f3ff',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Pencil size={12} />
-                  </button>
-                )}
-                {isDeletable && (
-                  <Popconfirm
-                    title="Remove time slot?"
-                    description={`Remove the ${titleCase(r.day_of_week)} consultation schedule from ${currentDoctor?.name || 'doctor'}'s profile?`}
-                    onConfirm={() => handleDeleteSlot(r.id, r.day_of_week)}
-                    okText="Yes, Remove"
-                    cancelText="Cancel"
-                    okButtonProps={{ danger: true }}
-                  >
-                    <button
-                      type="button"
-                      className="ui-btn ui-btn-sm is-danger"
-                      title="Delete slot"
-                      style={{
-                        padding: '4px 8px',
-                        fontSize: 11.5,
-                        color: '#ef4444',
-                        borderColor: '#fee2e2',
-                        background: '#fef2f2',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </Popconfirm>
-                )}
-              </div>
-            ),
-          },
-        ]
-      : []),
-  ];
-
-  // Blocked Dates Table Columns
-  const blockedColumns: ColumnsType<DoctorBlockedDate> = [
-    {
-      title: 'Blocked Date',
-      key: 'blocked_date',
-      render: (_, r) => {
-        const [y = 2026, m = 1, d = 1] = r.blocked_date.split('-').map(Number);
-        const dateObj = new Date(y, m - 1, d);
-        const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dateObj.getDay()] || '';
-        const formatted = dateObj.toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        });
-        return (
-          <div>
-            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 13 }}>{formatted}</div>
-            <div style={{ fontSize: 11.5, color: '#64748b' }}>{dayName}</div>
-          </div>
-        );
+  // Weekly Slots Table Columns (CommonTable matching Doctor page)
+  const columns: CommonTableColumn<DoctorAvailabilitySlot>[] = useMemo(
+    () => [
+      {
+        id: 'day_of_week',
+        header: 'Day of Week',
+        width: 140,
+        sort: (r) => DAYS_OF_WEEK.indexOf(r.day_of_week),
+        cell: (r) => (
+          <span className="font-semibold text-slate-900">{titleCase(r.day_of_week)}</span>
+        ),
       },
-    },
-    {
-      title: 'Blocked Scope / Hours',
-      key: 'scope',
-      render: (_, r) => {
-        if (r.is_all_day) {
-          return (
-            <Tag color="error" style={{ fontWeight: 650, borderRadius: 6, fontSize: 11.5, padding: '2px 8px' }}>
-              Full Day Blocked (All Slots Excluded)
-            </Tag>
-          );
-        }
-        return (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <Tag color="warning" style={{ fontWeight: 650, borderRadius: 6, fontSize: 11.5, padding: '2px 8px' }}>
-              Time Range
-            </Tag>
-            <span style={{ fontSize: 12.5, fontWeight: 600, color: '#1e293b' }}>
+      {
+        id: 'time_window',
+        header: 'Time Window',
+        sort: (r) => r.start_time,
+        cell: (r) => (
+          <div className="inline-flex items-center gap-1.5">
+            <Clock size={13} className="text-blue-600 shrink-0" />
+            <span className="font-semibold text-slate-700">
               {formatTime12(r.start_time)} – {formatTime12(r.end_time)}
             </span>
           </div>
-        );
+        ),
       },
-    },
-    {
-      title: 'Reason / Notes',
-      dataIndex: 'reason',
-      key: 'reason',
-      render: (val) => {
-        if (!val) {
-          return <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: 12 }}>No reason specified</span>;
-        }
-        return (
-          <span style={{ fontSize: 12.5, fontWeight: 550, color: '#334155' }}>
-            {val}
+      {
+        id: 'slot_length',
+        header: 'Slot Duration',
+        width: 150,
+        sort: (r) => r.slot_length || selectedSlotDuration || 30,
+        cell: (r) => (
+          <Tag color="blue" style={{ fontWeight: 650, borderRadius: 6, margin: 0 }}>
+            {r.slot_length || selectedSlotDuration || 30} mins
+          </Tag>
+        ),
+      },
+      {
+        id: 'branch_name',
+        header: 'Branch / Clinic',
+        sort: (r) => (r.branch_name || 'Main Clinic').toLowerCase(),
+        cell: (r) => (
+          <span className="inline-flex items-center gap-1.5 text-slate-600">
+            <MapPin size={12} className="text-slate-400 shrink-0" />
+            <span>{r.branch_name || 'Main Clinic'}</span>
           </span>
-        );
+        ),
       },
-    },
-    {
-      title: 'Status',
-      key: 'status',
-      width: 120,
-      render: (_, r) => {
-        if (r.status === 'TODAY') {
-          return <Tag color="processing" style={{ fontWeight: 650, borderRadius: 5 }}>Today</Tag>;
-        }
-        if (r.status === 'UPCOMING') {
-          return <Tag color="success" style={{ fontWeight: 650, borderRadius: 5 }}>Upcoming</Tag>;
-        }
-        return <Tag color="default" style={{ fontWeight: 600, borderRadius: 5 }}>Past</Tag>;
+      {
+        id: 'status',
+        header: 'Status',
+        width: 120,
+        sort: (r) => r.status ?? '',
+        cell: (r) => <StatusPill label={r.status} active={r.status === 'ACTIVE'} />,
       },
-    },
-    ...(isUpdatable || isDeletable
-      ? [
-          {
-            title: 'Actions',
-            key: 'actions',
-            width: 120,
-            align: 'right' as const,
-            render: (_: unknown, r: DoctorBlockedDate) => (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-                {isUpdatable && (
-                  <button
-                    type="button"
-                    className="ui-btn ui-btn-sm"
-                    onClick={() => handleOpenBlockModal(r)}
-                    title="Edit blocked date"
-                    style={{
-                      padding: '4px 8px',
-                      fontSize: 11.5,
-                      color: '#7c3aed',
-                      borderColor: '#ede9fe',
-                      background: '#f5f3ff',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Pencil size={12} />
-                  </button>
-                )}
-                {isDeletable && (
-                  <Popconfirm
-                    title="Unblock date?"
-                    description={`Unblock ${r.blocked_date}? Consultation slots during this time will immediately become available in the Appointment page.`}
-                    onConfirm={() => handleDeleteBlockedDate(r.id, r.blocked_date)}
-                    okText="Yes, Unblock"
-                    cancelText="Cancel"
-                    okButtonProps={{ danger: true }}
-                  >
-                    <button
-                      type="button"
-                      className="ui-btn ui-btn-sm is-danger"
-                      title="Unblock date"
-                      style={{
-                        padding: '4px 8px',
-                        fontSize: 11.5,
-                        color: '#ef4444',
-                        borderColor: '#fee2e2',
-                        background: '#fef2f2',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </Popconfirm>
-                )}
-              </div>
-            ),
-          },
-        ]
-      : []),
-  ];
+    ],
+    [selectedSlotDuration],
+  );
+
+  // Blocked Dates Table Columns (CommonTable matching Doctor page)
+  const blockedColumns: CommonTableColumn<DoctorBlockedDate>[] = useMemo(
+    () => [
+      {
+        id: 'blocked_date',
+        header: 'Blocked Date',
+        sort: (r) => r.blocked_date,
+        cell: (r) => {
+          const [y = 2026, m = 1, d = 1] = r.blocked_date.split('-').map(Number);
+          const dateObj = new Date(y, m - 1, d);
+          const dayName =
+            ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][
+              dateObj.getDay()
+            ] || '';
+          const formatted = dateObj.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          });
+          return (
+            <div>
+              <div className="font-bold text-slate-900 text-xs">{formatted}</div>
+              <div className="text-[11px] text-slate-500">{dayName}</div>
+            </div>
+          );
+        },
+      },
+      {
+        id: 'scope',
+        header: 'Blocked Scope / Hours',
+        sort: (r) => (r.is_all_day ? '0' : r.start_time),
+        cell: (r) => {
+          if (r.is_all_day) {
+            return (
+              <Tag
+                color="error"
+                style={{ fontWeight: 650, borderRadius: 6, fontSize: 11.5, padding: '2px 8px', margin: 0 }}
+              >
+                Full Day Blocked (All Slots Excluded)
+              </Tag>
+            );
+          }
+          return (
+            <div className="inline-flex items-center gap-1.5">
+              <Tag
+                color="warning"
+                style={{ fontWeight: 650, borderRadius: 6, fontSize: 11.5, padding: '2px 8px', margin: 0 }}
+              >
+                Time Range
+              </Tag>
+              <span className="text-xs font-semibold text-slate-800">
+                {formatTime12(r.start_time)} – {formatTime12(r.end_time)}
+              </span>
+            </div>
+          );
+        },
+      },
+      {
+        id: 'reason',
+        header: 'Reason / Notes',
+        sort: (r) => (r.reason || '').toLowerCase(),
+        cell: (r) =>
+          r.reason ? (
+            <span className="text-xs font-medium text-slate-700">{r.reason}</span>
+          ) : (
+            <span className="text-xs text-slate-400 italic">No reason specified</span>
+          ),
+      },
+      {
+        id: 'status',
+        header: 'Status',
+        width: 120,
+        sort: (r) => r.status ?? '',
+        cell: (r) => {
+          if (r.status === 'TODAY') return <StatusPill label="Today" tone="blue" />;
+          if (r.status === 'UPCOMING') return <StatusPill label="Upcoming" tone="green" />;
+          return <StatusPill label="Past" tone="gray" />;
+        },
+      },
+    ],
+    [],
+  );
+
+  // Sorted & paginated rows for Weekly Slots table
+  const sortedSlots = useMemo(() => {
+    const list = [...filteredSlots];
+    const col = slotSort && columns.find((c) => c.id === slotSort.id);
+    if (col?.sort && slotSort) {
+      const key = col.sort;
+      const dir = slotSort.dir === 'asc' ? 1 : -1;
+      list.sort((a, b) => {
+        const av = key(a);
+        const bv = key(b);
+        if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
+        return String(av).localeCompare(String(bv), undefined, { numeric: true }) * dir;
+      });
+    }
+    return list;
+  }, [filteredSlots, slotSort, columns]);
+
+  const pageCount = Math.max(1, Math.ceil(sortedSlots.length / perPage));
+  const current = Math.min(page, pageCount);
+  const startIdx = (current - 1) * perPage;
+  const pageRows = sortedSlots.slice(startIdx, startIdx + perPage);
+
+  // Sorted & paginated rows for Blocked Dates table
+  const sortedBlockedDates = useMemo(() => {
+    const list = [...filteredBlockedDates];
+    const col = blockedSort && blockedColumns.find((c) => c.id === blockedSort.id);
+    if (col?.sort && blockedSort) {
+      const key = col.sort;
+      const dir = blockedSort.dir === 'asc' ? 1 : -1;
+      list.sort((a, b) => {
+        const av = key(a);
+        const bv = key(b);
+        if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
+        return String(av).localeCompare(String(bv), undefined, { numeric: true }) * dir;
+      });
+    }
+    return list;
+  }, [filteredBlockedDates, blockedSort, blockedColumns]);
+
+  const blockedPageCount = Math.max(1, Math.ceil(sortedBlockedDates.length / blockedPerPage));
+  const currentBlockedPage = Math.min(blockedPage, blockedPageCount);
+  const blockedStartIdx = (currentBlockedPage - 1) * blockedPerPage;
+  const blockedPageRows = sortedBlockedDates.slice(
+    blockedStartIdx,
+    blockedStartIdx + blockedPerPage,
+  );
+
+  const toggleSlotSort = (id: string) => {
+    setSlotSort((prev) => {
+      if (prev?.id !== id) return { id, dir: 'asc' };
+      if (prev.dir === 'asc') return { id, dir: 'desc' };
+      return null;
+    });
+  };
+
+  const toggleBlockedSort = (id: string) => {
+    setBlockedSort((prev) => {
+      if (prev?.id !== id) return { id, dir: 'asc' };
+      if (prev.dir === 'asc') return { id, dir: 'desc' };
+      return null;
+    });
+  };
 
   return (
     <div
@@ -842,7 +800,6 @@ export default function DoctorAvailabilityPage() {
         display: 'flex',
         flexDirection: 'column',
         boxSizing: 'border-box',
-        padding: '16px 24px',
         gap: 12,
         overflow: 'hidden',
       }}
@@ -887,104 +844,40 @@ export default function DoctorAvailabilityPage() {
         }
       `}</style>
 
-      {/* Top Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          flexWrap: 'wrap',
-          gap: 12,
-          flexShrink: 0,
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 8,
-                background: '#f5f3ff',
-                border: '1px solid #ede9fe',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#7c3aed',
-              }}
-            >
-              <CalendarClock size={18} />
-            </div>
-            <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#0f172a' }}>
-              Doctor Availability &amp; Slots
-            </h1>
-          </div>
-          <p style={{ margin: '3px 0 0', fontSize: 12, color: '#64748b' }}>
-            Consultation hours, slot durations, and blocked dates configured directly on the Doctor Profile.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button
-            type="button"
-            className="ui-btn"
-            onClick={() => {
-              if (selectedDoctorId) {
-                void fetchDoctorAvailability(selectedDoctorId);
-                void fetchBlockedDates(selectedDoctorId);
+      {/* Top Header (matching DataView / CommonPageHeader across other pages) */}
+      <div className="shrink-0">
+        <CommonPageHeader
+          title="Doctor Availability & Slots"
+          subtitle="Consultation hours, slot durations, and blocked dates configured directly on the Doctor Profile."
+          loading={loadingSlots || loadingBlocked}
+          onRefresh={() => {
+            if (selectedDoctorId) {
+              void fetchDoctorAvailability(selectedDoctorId);
+              void fetchBlockedDates(selectedDoctorId);
+            }
+          }}
+          extraActions={
+            isCreatable ? (
+              <button
+                type="button"
+                onClick={() => handleOpenBlockModal(null)}
+                disabled={!selectedDoctorId}
+                className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold shadow-2xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <CalendarX size={13} />
+                <span>Block Date / Time</span>
+              </button>
+            ) : null
+          }
+          {...(isCreatable
+            ? {
+                createLabel: 'Add Availability Slot',
+                onCreate: () => {
+                  if (selectedDoctorId) handleOpenEditor(null);
+                },
               }
-            }}
-            disabled={loadingSlots || loadingBlocked}
-            style={{ fontSize: 12.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-          >
-            <RefreshCw size={13} className={loadingSlots || loadingBlocked ? 'animate-spin' : ''} /> Refresh
-          </button>
-
-          {isCreatable && (
-            <button
-              type="button"
-              className="ui-btn"
-              onClick={() => handleOpenBlockModal(null)}
-              disabled={!selectedDoctorId}
-              style={{
-                fontSize: 12.5,
-                fontWeight: 600,
-                background: '#fef2f2',
-                borderColor: '#fca5a5',
-                color: '#dc2626',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '6px 14px',
-                cursor: 'pointer',
-              }}
-            >
-              <CalendarX size={14} /> Block Date / Time
-            </button>
-          )}
-
-          {isCreatable && (
-            <button
-              type="button"
-              className="ui-btn ui-btn-primary"
-              onClick={() => handleOpenEditor(null)}
-              disabled={!selectedDoctorId}
-              style={{
-                fontSize: 12.5,
-                fontWeight: 600,
-                background: '#7c3aed',
-                borderColor: '#7c3aed',
-                color: '#ffffff',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '6px 14px',
-              }}
-            >
-              <Plus size={14} /> Add Availability Slot
-            </button>
-          )}
-        </div>
+            : {})}
+        />
       </div>
 
       {/* Doctor Profile Banner & Slot Duration Configuration Card */}
@@ -992,36 +885,37 @@ export default function DoctorAvailabilityPage() {
         style={{
           background: '#ffffff',
           border: '1px solid #e2e8f0',
-          borderRadius: 14,
-          padding: '14px 18px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          borderRadius: 12,
+          padding: '14px 16px',
+          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
           display: 'grid',
-          gridTemplateColumns: 'minmax(300px, 1.2fr) minmax(320px, 1fr)',
-          gap: 20,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))',
+          gap: 16,
           flexShrink: 0,
         }}
       >
         {/* Left: Doctor Profile Selector & Info */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: '#475569', letterSpacing: '0.03em' }}>
               SELECT DOCTOR PROFILE:
             </span>
-            <Select
-              showSearch
-              value={selectedDoctorId || null}
-              onChange={handleSelectDoctor}
-              loading={loadingDoctors}
-              placeholder="Search or Select Doctor..."
-              style={{ flex: 1 }}
-              filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-              }
-              options={doctors.map((d) => ({
-                value: d.id,
-                label: `${d.name} (${d.specialization || 'General'})`,
-              }))}
-            />
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <SearchableSelect
+                aria-label="Select Doctor Profile"
+                value={selectedDoctorId}
+                onChange={handleSelectDoctor}
+                loading={loadingDoctors}
+                searchable={true}
+                placeholder="Search or Select Doctor..."
+                searchPlaceholder="Search doctor name or specialization..."
+                options={doctors.map((d) => ({
+                  value: d.id,
+                  label: d.name,
+                  sublabel: d.specialization || 'General',
+                }))}
+              />
+            </div>
           </div>
 
           {currentDoctor && (
@@ -1041,8 +935,9 @@ export default function DoctorAvailabilityPage() {
                   width: 44,
                   height: 44,
                   borderRadius: 10,
-                  background: '#ede9fe',
-                  color: '#7c3aed',
+                  background: '#eff6ff',
+                  border: '1px solid #dbeafe',
+                  color: '#2563eb',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1064,11 +959,11 @@ export default function DoctorAvailabilityPage() {
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>
                     {currentDoctor.name}
                   </span>
-                  <Tag color="purple" style={{ margin: 0, fontWeight: 600, fontSize: 11 }}>
+                  <Tag color="blue" style={{ margin: 0, fontWeight: 600, fontSize: 11 }}>
                     {currentDoctor.specialization || 'Doctor'}
                   </Tag>
                   {currentDoctor.qualification && (
@@ -1077,7 +972,7 @@ export default function DoctorAvailabilityPage() {
                     </span>
                   )}
                 </div>
-                <div style={{ fontSize: 12, color: '#475569', marginTop: 2, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ fontSize: 12, color: '#475569', marginTop: 2, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                   <span>
                     🏥 {currentDoctor.hospital_name || 'Hospital Profile'}{' '}
                     {currentDoctor.branch_name ? `· ${currentDoctor.branch_name}` : ''}
@@ -1094,9 +989,9 @@ export default function DoctorAvailabilityPage() {
         {/* Right: Slot Duration Configuration */}
         <div
           style={{
-            background: '#f5f3ff',
-            border: '1px solid #ddd6fe',
-            borderRadius: 12,
+            background: '#eff6ff',
+            border: '1px solid #dbeafe',
+            borderRadius: 10,
             padding: '12px 16px',
             display: 'flex',
             flexDirection: 'column',
@@ -1109,7 +1004,7 @@ export default function DoctorAvailabilityPage() {
                 style={{
                   fontSize: 12,
                   fontWeight: 700,
-                  color: '#6b21a8',
+                  color: '#1e40af',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
@@ -1121,7 +1016,7 @@ export default function DoctorAvailabilityPage() {
                 style={{
                   fontSize: 11.5,
                   fontWeight: 700,
-                  background: '#7c3aed',
+                  background: '#2563eb',
                   color: '#ffffff',
                   padding: '1px 8px',
                   borderRadius: 12,
@@ -1130,7 +1025,7 @@ export default function DoctorAvailabilityPage() {
                 {selectedSlotDuration} Mins
               </span>
             </div>
-            <p style={{ margin: '0 0 10px', fontSize: 11.5, color: '#6b21a8' }}>
+            <p style={{ margin: '0 0 10px', fontSize: 11.5, color: '#1d4ed8' }}>
               {isUpdatable
                 ? `Set consultation appointment slot duration for ${currentDoctor?.name || 'this doctor'}:`
                 : `Consultation appointment slot duration for ${currentDoctor?.name || 'this doctor'} is configured to ${selectedSlotDuration} minutes (read-only).`}
@@ -1151,9 +1046,9 @@ export default function DoctorAvailabilityPage() {
                           setCustomSlotDuration('');
                         }}
                         style={{
-                          border: isSelected ? '1px solid #7c3aed' : '1px solid #d8b4fe',
-                          background: isSelected ? '#7c3aed' : '#ffffff',
-                          color: isSelected ? '#ffffff' : '#6b21a8',
+                          border: isSelected ? '1px solid #2563eb' : '1px solid #bfdbfe',
+                          background: isSelected ? '#2563eb' : '#ffffff',
+                          color: isSelected ? '#ffffff' : '#1d4ed8',
                           fontWeight: 650,
                           fontSize: 11.5,
                           borderRadius: 6,
@@ -1210,10 +1105,11 @@ export default function DoctorAvailabilityPage() {
                 style={{
                   fontSize: 12,
                   fontWeight: 600,
-                  background: '#6d28d9',
-                  borderColor: '#6d28d9',
+                  background: '#2563eb',
+                  borderColor: '#2563eb',
                   color: '#ffffff',
-                  padding: '4px 12px',
+                  padding: '5px 12px',
+                  borderRadius: 7,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 5,
@@ -1249,9 +1145,9 @@ export default function DoctorAvailabilityPage() {
             padding: '8px 16px',
             fontSize: 13,
             fontWeight: 700,
-            color: activeMainSection === 'schedule' ? '#7c3aed' : '#64748b',
+            color: activeMainSection === 'schedule' ? '#2563eb' : '#64748b',
             borderBottom:
-              activeMainSection === 'schedule' ? '2.5px solid #7c3aed' : '2.5px solid transparent',
+              activeMainSection === 'schedule' ? '2.5px solid #2563eb' : '2.5px solid transparent',
             display: 'inline-flex',
             alignItems: 'center',
             gap: 7,
@@ -1266,8 +1162,8 @@ export default function DoctorAvailabilityPage() {
               fontWeight: 700,
               padding: '1px 8px',
               borderRadius: 10,
-              background: activeMainSection === 'schedule' ? '#ede9fe' : '#f1f5f9',
-              color: activeMainSection === 'schedule' ? '#6d28d9' : '#64748b',
+              background: activeMainSection === 'schedule' ? '#eff6ff' : '#f1f5f9',
+              color: activeMainSection === 'schedule' ? '#1d4ed8' : '#64748b',
             }}
           >
             {slots.length} Slots
@@ -1314,102 +1210,62 @@ export default function DoctorAvailabilityPage() {
       {activeMainSection === 'schedule' && (
         <>
           {/* Filter and View Mode Controls for Weekly Schedule */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 12,
-              flexWrap: 'wrap',
-              background: '#ffffff',
-              padding: '8px 14px',
-              borderRadius: 10,
-              border: '1px solid #e2e8f0',
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, fontWeight: 650, color: '#334155' }}>Filter Day:</span>
-              <Select
-                value={dayFilter}
-                onChange={(val) => {
-                  setDayFilter(val);
-                  setPage(1);
-                }}
-                style={{ width: 140 }}
-                options={[
-                  { value: 'all', label: 'All Configured Days' },
-                  ...DAYS_OF_WEEK.map((d) => ({
+          <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs flex flex-wrap items-center justify-between gap-2 pr-3 shrink-0">
+            <CommonFilterBar
+              className="flex-1 border-b-0 bg-transparent !justify-start"
+              search={searchTerm}
+              onSearchChange={(val) => {
+                setSearchTerm(val);
+                setPage(1);
+              }}
+              searchPlaceholder="Search branch or day..."
+              dropdowns={[
+                {
+                  id: 'day',
+                  label: 'Day',
+                  allLabel: 'All Configured Days',
+                  value: dayFilter === 'all' ? '' : dayFilter,
+                  onChange: (val) => {
+                    setDayFilter(val || 'all');
+                    setPage(1);
+                  },
+                  options: DAYS_OF_WEEK.map((d) => ({
                     value: d,
                     label: titleCase(d),
+                    count: slots.filter((s) => s.day_of_week === d).length,
                   })),
-                ]}
-              />
-
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: 220 }}>
-                <Search size={13} style={{ position: 'absolute', left: 10, color: '#94a3b8' }} />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Search branch or day..."
-                  className="ui-input"
-                  style={{ paddingLeft: 28, height: 32, fontSize: 12, width: '100%' }}
-                />
-              </div>
-            </div>
+                },
+              ]}
+              hasActiveFilters={dayFilter !== 'all' || Boolean(searchTerm.trim())}
+              onReset={() => {
+                setDayFilter('all');
+                setSearchTerm('');
+                setPage(1);
+              }}
+            />
 
             {/* View Toggle */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div
-                style={{
-                  background: '#f1f5f9',
-                  borderRadius: 8,
-                  padding: 3,
-                  display: 'flex',
-                  gap: 2,
-                }}
-              >
+            <div className="flex items-center gap-1.5 py-1.5 pl-3 sm:pl-0">
+              <div className="bg-slate-100 rounded-lg p-0.5 flex gap-0.5">
                 <button
                   type="button"
                   onClick={() => setViewMode('schedule')}
-                  style={{
-                    border: 'none',
-                    background: viewMode === 'schedule' ? '#ffffff' : 'transparent',
-                    color: viewMode === 'schedule' ? '#7c3aed' : '#64748b',
-                    fontWeight: 600,
-                    fontSize: 12,
-                    borderRadius: 6,
-                    padding: '4px 10px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    boxShadow: viewMode === 'schedule' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
-                  }}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    viewMode === 'schedule'
+                      ? 'bg-white text-blue-600 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
                 >
                   <Grid size={13} /> Weekly Schedule
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode('table')}
-                  style={{
-                    border: 'none',
-                    background: viewMode === 'table' ? '#ffffff' : 'transparent',
-                    color: viewMode === 'table' ? '#7c3aed' : '#64748b',
-                    fontWeight: 600,
-                    fontSize: 12,
-                    borderRadius: 6,
-                    padding: '4px 10px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    boxShadow: viewMode === 'table' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
-                  }}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    viewMode === 'table'
+                      ? 'bg-white text-blue-600 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
                 >
                   <List size={13} /> All Slots Table
                 </button>
@@ -1458,8 +1314,8 @@ export default function DoctorAvailabilityPage() {
                       style={{
                         marginTop: 16,
                         fontSize: 12.5,
-                        background: '#7c3aed',
-                        borderColor: '#7c3aed',
+                        background: '#2563eb',
+                        borderColor: '#2563eb',
                         color: '#ffffff',
                       }}
                     >
@@ -1500,8 +1356,8 @@ export default function DoctorAvailabilityPage() {
                             style={{
                               fontSize: 11,
                               fontWeight: 650,
-                              background: daySlots.length > 0 ? '#ede9fe' : '#f1f5f9',
-                              color: daySlots.length > 0 ? '#6d28d9' : '#94a3b8',
+                              background: daySlots.length > 0 ? '#eff6ff' : '#f1f5f9',
+                              color: daySlots.length > 0 ? '#1d4ed8' : '#94a3b8',
                               padding: '1px 7px',
                               borderRadius: 12,
                             }}
@@ -1515,9 +1371,9 @@ export default function DoctorAvailabilityPage() {
                             type="button"
                             onClick={() => handleOpenEditor(null, day)}
                             style={{
-                              border: '1px dashed #c4b5fd',
-                              background: '#faf5ff',
-                              color: '#7c3aed',
+                              border: '1px dashed #bfdbfe',
+                              background: '#eff6ff',
+                              color: '#2563eb',
                               fontSize: 11.5,
                               fontWeight: 600,
                               borderRadius: 6,
@@ -1569,7 +1425,7 @@ export default function DoctorAvailabilityPage() {
                                     border: '1px solid #cbd5e1',
                                   }}
                                 >
-                                  <Clock size={13} style={{ color: '#7c3aed' }} />
+                                  <Clock size={13} style={{ color: '#2563eb' }} />
                                   <span>
                                     {formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}
                                   </span>
@@ -1607,9 +1463,9 @@ export default function DoctorAvailabilityPage() {
                                       type="button"
                                       onClick={() => handleOpenEditor(slot)}
                                       style={{
-                                        border: '1px solid #ede9fe',
-                                        background: '#ffffff',
-                                        color: '#7c3aed',
+                                        border: '1px solid #dbeafe',
+                                        background: '#eff6ff',
+                                        color: '#2563eb',
                                         fontSize: 11.5,
                                         fontWeight: 600,
                                         borderRadius: 5,
@@ -1666,125 +1522,86 @@ export default function DoctorAvailabilityPage() {
               )}
             </div>
           ) : (
-            /* Table View of Configured Slots */
-            <div
-              className="ui-card ui-table-card"
-              style={{
-                flex: 1,
-                minHeight: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden',
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: 16,
-                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-              }}
-            >
-              <div
-                className="ui-table-scroll availability-table-scroll"
-                style={{
-                  flex: 1,
-                  minHeight: 0,
-                  overflowY: 'auto',
-                  overflowX: 'auto',
-                }}
-              >
-                <Table
+            /* Table View of Configured Slots (CommonTable + CommonPagination matching Doctor page) */
+            <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col flex-1 min-h-0">
+              <div className="flex-1 min-h-0 overflow-y-auto [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none">
+                <CommonTable<DoctorAvailabilitySlot>
                   columns={columns}
-                  dataSource={pageRows}
-                  rowKey="id"
+                  data={pageRows}
                   loading={loadingSlots}
-                  pagination={false}
-                  scroll={{ x: 800 }}
-                  locale={{
-                    emptyText: (
-                      <div style={{ padding: '40px 0', textAlign: 'center' }}>
-                        <CalendarClock size={36} style={{ color: '#cbd5e1', margin: '0 auto 8px' }} />
-                        <div style={{ fontSize: 13, fontWeight: 650, color: '#475569' }}>
-                          No availability configured in this doctor profile
-                        </div>
-                        {isCreatable && (
-                          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
-                            Click &ldquo;+ Add Availability Slot&rdquo; to add consultation hours.
+                  sort={slotSort}
+                  onSortChange={toggleSlotSort}
+                  {...(isUpdatable || isDeletable
+                    ? {
+                        rowActions: (r) => (
+                          <div className="flex items-center justify-end gap-1">
+                            {isUpdatable && (
+                              <button
+                                type="button"
+                                className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEditor(r);
+                                }}
+                                title="Edit"
+                                aria-label="Edit"
+                              >
+                                <Pencil size={13} />
+                              </button>
+                            )}
+                            {isDeletable && (
+                              <Popconfirm
+                                title="Delete this availability slot?"
+                                description="Appointments outside remaining schedules may be affected."
+                                onConfirm={() => handleDeleteSlot(r.id, r.day_of_week)}
+                                okText="Delete"
+                                okButtonProps={{ danger: true }}
+                              >
+                                <button
+                                  type="button"
+                                  className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="Delete slot"
+                                  aria-label="Delete slot"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </Popconfirm>
+                            )}
                           </div>
-                        )}
+                        ),
+                      }
+                    : {})}
+                  emptyState={
+                    <div className="py-10 text-center">
+                      <CalendarClock size={36} className="text-slate-300 mx-auto mb-2" />
+                      <div className="text-xs font-semibold text-slate-600">
+                        No availability configured in this doctor profile
                       </div>
-                    ),
-                  }}
+                      {isCreatable && (
+                        <div className="text-[11px] text-slate-400 mt-1">
+                          Click &ldquo;+ Add Availability Slot&rdquo; to add consultation hours.
+                        </div>
+                      )}
+                    </div>
+                  }
                 />
               </div>
 
-              {/* Footer matching Doctor page */}
-              <footer className="ui-footer">
-                <span>
-                  {filteredSlots.length === 0 ? (
-                    'No results'
-                  ) : (
-                    <>
-                      Showing{' '}
-                      <strong>
-                        {startIdx + 1}–{startIdx + pageRows.length}
-                      </strong>{' '}
-                      of <strong>{filteredSlots.length}</strong>
-                      {filteredSlots.length !== slots.length && <> (filtered from {slots.length})</>}
-                    </>
-                  )}
-                </span>
-                <div className="ui-pager">
-                  <span>Per page</span>
-                  <select
-                    className="ui-select"
-                    value={perPage}
-                    onChange={(e) => {
-                      setPerPage(Number(e.target.value));
-                      setPage(1);
-                    }}
-                    aria-label="Rows per page"
-                  >
-                    {PAGE_SIZES.map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="ui-btn ui-btn-sm"
-                    onClick={() => setPage(1)}
-                    disabled={current === 1}
-                  >
-                    « First
-                  </button>
-                  <button
-                    type="button"
-                    className="ui-btn ui-btn-sm"
-                    onClick={() => setPage(current - 1)}
-                    disabled={current === 1}
-                  >
-                    ‹ Prev
-                  </button>
-                  <span className="ui-pager-page">
-                    Page {current} of {pageCount}
-                  </span>
-                  <button
-                    type="button"
-                    className="ui-btn ui-btn-sm"
-                    onClick={() => setPage(current + 1)}
-                    disabled={current === pageCount}
-                  >
-                    Next ›
-                  </button>
-                  <button
-                    type="button"
-                    className="ui-btn ui-btn-sm"
-                    onClick={() => setPage(pageCount)}
-                    disabled={current === pageCount}
-                  >
-                    Last »
-                  </button>
-                </div>
-              </footer>
+              <CommonPagination
+                total={sortedSlots.length}
+                startIdx={sortedSlots.length === 0 ? 0 : startIdx + 1}
+                endIdx={startIdx + pageRows.length}
+                nounPlural="slots"
+                page={current}
+                pageCount={pageCount}
+                perPage={perPage}
+                onPageChange={setPage}
+                onPerPageChange={(n) => {
+                  setPerPage(n);
+                  setPage(1);
+                }}
+              />
             </div>
           )}
         </>
@@ -1794,101 +1611,76 @@ export default function DoctorAvailabilityPage() {
       {activeMainSection === 'blocked' && (
         <>
           {/* Blocked Dates Controls */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 12,
-              flexWrap: 'wrap',
-              background: '#ffffff',
-              padding: '8px 14px',
-              borderRadius: 10,
-              border: '1px solid #e2e8f0',
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, fontWeight: 650, color: '#334155' }}>Filter Status:</span>
-              <Select
-                value={blockedStatusFilter}
-                onChange={(val) => {
-                  setBlockedStatusFilter(val);
-                  setBlockedPage(1);
-                }}
-                style={{ width: 140 }}
-                options={[
-                  { value: 'ALL', label: 'All Blocked Dates' },
-                  { value: 'UPCOMING', label: 'Upcoming Only' },
-                  { value: 'TODAY', label: 'Today' },
-                  { value: 'PAST', label: 'Past Dates' },
-                ]}
-              />
-
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: 240 }}>
-                <Search size={13} style={{ position: 'absolute', left: 10, color: '#94a3b8' }} />
-                <input
-                  type="text"
-                  value={blockedSearchTerm}
-                  onChange={(e) => {
-                    setBlockedSearchTerm(e.target.value);
+          <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs flex flex-wrap items-center justify-between gap-2 pr-3 shrink-0">
+            <CommonFilterBar
+              className="flex-1 border-b-0 bg-transparent !justify-start"
+              search={blockedSearchTerm}
+              onSearchChange={(val) => {
+                setBlockedSearchTerm(val);
+                setBlockedPage(1);
+              }}
+              searchPlaceholder="Search date (YYYY-MM-DD) or reason..."
+              dropdowns={[
+                {
+                  id: 'blockedStatus',
+                  label: 'Status',
+                  allLabel: 'All Blocked Dates',
+                  value: blockedStatusFilter === 'ALL' ? '' : blockedStatusFilter,
+                  onChange: (val) => {
+                    setBlockedStatusFilter((val || 'ALL') as 'ALL' | 'UPCOMING' | 'TODAY' | 'PAST');
                     setBlockedPage(1);
-                  }}
-                  placeholder="Search date (YYYY-MM-DD) or reason..."
-                  className="ui-input"
-                  style={{ paddingLeft: 28, height: 32, fontSize: 12, width: '100%' }}
-                />
-              </div>
-            </div>
+                  },
+                  options: [
+                    {
+                      value: 'UPCOMING',
+                      label: 'Upcoming Only',
+                      count: blockedDates.filter((b) => b.status === 'UPCOMING').length,
+                    },
+                    {
+                      value: 'TODAY',
+                      label: 'Today',
+                      count: blockedDates.filter((b) => b.status === 'TODAY').length,
+                    },
+                    {
+                      value: 'PAST',
+                      label: 'Past Dates',
+                      count: blockedDates.filter((b) => b.status === 'PAST').length,
+                    },
+                  ],
+                },
+              ]}
+              hasActiveFilters={
+                blockedStatusFilter !== 'ALL' || Boolean(blockedSearchTerm.trim())
+              }
+              onReset={() => {
+                setBlockedStatusFilter('ALL');
+                setBlockedSearchTerm('');
+                setBlockedPage(1);
+              }}
+            />
 
             {/* View Toggle */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div
-                style={{
-                  background: '#f1f5f9',
-                  borderRadius: 8,
-                  padding: 3,
-                  display: 'flex',
-                  gap: 2,
-                }}
-              >
+            <div className="flex items-center gap-1.5 py-1.5 pl-3 sm:pl-0">
+              <div className="bg-slate-100 rounded-lg p-0.5 flex gap-0.5">
                 <button
                   type="button"
                   onClick={() => setBlockedViewMode('table')}
-                  style={{
-                    border: 'none',
-                    background: blockedViewMode === 'table' ? '#ffffff' : 'transparent',
-                    color: blockedViewMode === 'table' ? '#dc2626' : '#64748b',
-                    fontWeight: 600,
-                    fontSize: 12,
-                    borderRadius: 6,
-                    padding: '4px 10px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    boxShadow: blockedViewMode === 'table' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
-                  }}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    blockedViewMode === 'table'
+                      ? 'bg-white text-rose-600 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
                 >
                   <List size={13} /> List View
                 </button>
                 <button
                   type="button"
                   onClick={() => setBlockedViewMode('cards')}
-                  style={{
-                    border: 'none',
-                    background: blockedViewMode === 'cards' ? '#ffffff' : 'transparent',
-                    color: blockedViewMode === 'cards' ? '#dc2626' : '#64748b',
-                    fontWeight: 600,
-                    fontSize: 12,
-                    borderRadius: 6,
-                    padding: '4px 10px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    boxShadow: blockedViewMode === 'cards' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
-                  }}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    blockedViewMode === 'cards'
+                      ? 'bg-white text-rose-600 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
                 >
                   <Grid size={13} /> Calendar Cards
                 </button>
@@ -1898,141 +1690,92 @@ export default function DoctorAvailabilityPage() {
 
           {/* Blocked Dates Content */}
           {blockedViewMode === 'table' ? (
-            <div
-              className="ui-card ui-table-card"
-              style={{
-                flex: 1,
-                minHeight: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden',
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: 16,
-                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-              }}
-            >
-              <div
-                className="ui-table-scroll availability-table-scroll"
-                style={{
-                  flex: 1,
-                  minHeight: 0,
-                  overflowY: 'auto',
-                  overflowX: 'auto',
-                }}
-              >
-                <Table
+            <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col flex-1 min-h-0">
+              <div className="flex-1 min-h-0 overflow-y-auto [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none">
+                <CommonTable<DoctorBlockedDate>
                   columns={blockedColumns}
-                  dataSource={blockedPageRows}
-                  rowKey="id"
+                  data={blockedPageRows}
                   loading={loadingBlocked}
-                  pagination={false}
-                  scroll={{ x: 800 }}
-                  locale={{
-                    emptyText: (
-                      <div style={{ padding: '44px 0', textAlign: 'center' }}>
-                        <CalendarX size={38} style={{ color: '#cbd5e1', margin: '0 auto 8px' }} />
-                        <div style={{ fontSize: 13.5, fontWeight: 700, color: '#334155' }}>
-                          No blocked dates or time ranges for this doctor
-                        </div>
-                        <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-                          Dr. {currentDoctor?.name || 'Doctor'} is currently available for appointments according to their configured weekly schedule.
-                        </div>
-                        {isCreatable && (
-                          <button
-                            type="button"
-                            className="ui-btn"
-                            onClick={() => handleOpenBlockModal(null)}
-                            style={{
-                              marginTop: 14,
-                              fontSize: 12,
-                              fontWeight: 600,
-                              color: '#dc2626',
-                              borderColor: '#fca5a5',
-                              background: '#fef2f2',
-                            }}
-                          >
-                            <Plus size={13} /> Block a Date / Leave
-                          </button>
-                        )}
+                  sort={blockedSort}
+                  onSortChange={toggleBlockedSort}
+                  {...(isUpdatable || isDeletable
+                    ? {
+                        rowActions: (r) => (
+                          <div className="flex items-center justify-end gap-1">
+                            {isUpdatable && (
+                              <button
+                                type="button"
+                                className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenBlockModal(r);
+                                }}
+                                title="Edit blocked schedule"
+                                aria-label="Edit"
+                              >
+                                <Pencil size={13} />
+                              </button>
+                            )}
+                            {isDeletable && (
+                              <Popconfirm
+                                title="Remove this blocked date?"
+                                description="The doctor will become available according to their weekly schedule on this date."
+                                onConfirm={() => handleDeleteBlockedDate(r.id, r.blocked_date)}
+                                okText="Unblock"
+                                okButtonProps={{ danger: true }}
+                              >
+                                <button
+                                  type="button"
+                                  className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="Unblock date"
+                                  aria-label="Delete"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </Popconfirm>
+                            )}
+                          </div>
+                        ),
+                      }
+                    : {})}
+                  emptyState={
+                    <div className="py-10 text-center">
+                      <CalendarX size={38} className="text-slate-300 mx-auto mb-2" />
+                      <div className="text-sm font-bold text-slate-700">
+                        No blocked dates or time ranges for this doctor
                       </div>
-                    ),
-                  }}
+                      <div className="text-xs text-slate-500 mt-1">
+                        Dr. {currentDoctor?.name || 'Doctor'} is currently available for appointments according to their configured weekly schedule.
+                      </div>
+                      {isCreatable && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenBlockModal(null)}
+                          className="mt-3.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-xs font-semibold text-rose-600 hover:bg-rose-100 transition-colors cursor-pointer"
+                        >
+                          <Plus size={13} /> Block a Date / Leave
+                        </button>
+                      )}
+                    </div>
+                  }
                 />
               </div>
 
-              {/* Blocked Dates Footer */}
-              <footer className="ui-footer">
-                <span>
-                  {filteredBlockedDates.length === 0 ? (
-                    'No results'
-                  ) : (
-                    <>
-                      Showing{' '}
-                      <strong>
-                        {blockedStartIdx + 1}–{blockedStartIdx + blockedPageRows.length}
-                      </strong>{' '}
-                      of <strong>{filteredBlockedDates.length}</strong>
-                      {filteredBlockedDates.length !== blockedDates.length && (
-                        <> (filtered from {blockedDates.length})</>
-                      )}
-                    </>
-                  )}
-                </span>
-                <div className="ui-pager">
-                  <span>Per page</span>
-                  <select
-                    className="ui-select"
-                    value={blockedPerPage}
-                    onChange={(e) => {
-                      setBlockedPerPage(Number(e.target.value));
-                      setBlockedPage(1);
-                    }}
-                    aria-label="Rows per page"
-                  >
-                    {PAGE_SIZES.map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="ui-btn ui-btn-sm"
-                    onClick={() => setBlockedPage(1)}
-                    disabled={currentBlockedPage === 1}
-                  >
-                    « First
-                  </button>
-                  <button
-                    type="button"
-                    className="ui-btn ui-btn-sm"
-                    onClick={() => setBlockedPage(currentBlockedPage - 1)}
-                    disabled={currentBlockedPage === 1}
-                  >
-                    ‹ Prev
-                  </button>
-                  <span className="ui-pager-page">
-                    Page {currentBlockedPage} of {blockedPageCount}
-                  </span>
-                  <button
-                    type="button"
-                    className="ui-btn ui-btn-sm"
-                    onClick={() => setBlockedPage(currentBlockedPage + 1)}
-                    disabled={currentBlockedPage === blockedPageCount}
-                  >
-                    Next ›
-                  </button>
-                  <button
-                    type="button"
-                    className="ui-btn ui-btn-sm"
-                    onClick={() => setBlockedPage(blockedPageCount)}
-                    disabled={currentBlockedPage === blockedPageCount}
-                  >
-                    Last »
-                  </button>
-                </div>
-              </footer>
+              <CommonPagination
+                total={sortedBlockedDates.length}
+                startIdx={sortedBlockedDates.length === 0 ? 0 : blockedStartIdx + 1}
+                endIdx={blockedStartIdx + blockedPageRows.length}
+                nounPlural="blocked dates"
+                page={currentBlockedPage}
+                pageCount={blockedPageCount}
+                perPage={blockedPerPage}
+                onPageChange={setBlockedPage}
+                onPerPageChange={(n) => {
+                  setBlockedPerPage(n);
+                  setBlockedPage(1);
+                }}
+              />
             </div>
           ) : (
             /* Cards / Calendar View */
@@ -2177,9 +1920,9 @@ export default function DoctorAvailabilityPage() {
                               type="button"
                               onClick={() => handleOpenBlockModal(b)}
                               style={{
-                                border: '1px solid #ede9fe',
-                                background: '#ffffff',
-                                color: '#7c3aed',
+                                border: '1px solid #dbeafe',
+                                background: '#eff6ff',
+                                color: '#2563eb',
                                 fontSize: 11.5,
                                 fontWeight: 600,
                                 borderRadius: 5,
@@ -2234,562 +1977,841 @@ export default function DoctorAvailabilityPage() {
         </>
       )}
 
-      {/* Create / Edit Availability Slot Drawer */}
-      <Drawer
+      {/* Create / Edit Availability Slot Common Drawer (matching DoctorModal) */}
+      <Modal
         open={isEditorOpen}
         onClose={() => setIsEditorOpen(false)}
-        width="min(520px, 95vw)"
-        destroyOnClose
+        size="lg"
+        variant="drawer"
+        className="doctor-create-drawer-modal"
         title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div
               style={{
-                width: 34,
-                height: 34,
-                borderRadius: 8,
-                background: '#f5f3ff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#7c3aed',
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                color: '#2563eb',
+                border: '1px solid #bfdbfe',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+                boxShadow: '0 2px 6px rgba(37, 99, 235, 0.16)',
               }}
             >
-              <CalendarClock size={18} />
+              {editingSlot ? <Pencil size={18} /> : <CalendarClock size={18} />}
             </div>
             <div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>
+              <div
+                style={{
+                  fontSize: 16.5,
+                  fontWeight: 700,
+                  color: 'var(--ui-text, #0f172a)',
+                  letterSpacing: '-0.01em',
+                }}
+              >
                 {editingSlot ? 'Edit Availability Slot' : 'Add Availability Slot'}
               </div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
                 {currentDoctor?.name
-                  ? `Configuring profile for ${currentDoctor.name}`
-                  : 'Configure consultation hours'}
+                  ? `Configuring consultation schedule for ${currentDoctor.name}`
+                  : 'Configure weekly consultation hours and slot duration'}
               </div>
             </div>
           </div>
         }
+        description=""
       >
-        <form onSubmit={handleSaveSlot} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          {/* Doctor Info (Fixed to current doctor) */}
-          <div
-            style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: 8,
-              padding: '10px 14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-            }}
-          >
-            <Stethoscope size={16} style={{ color: '#7c3aed' }} />
-            <div>
-              <div style={{ fontWeight: 650, color: '#0f172a', fontSize: 13 }}>
-                {currentDoctor?.name || 'Selected Doctor'}
+        <form onSubmit={handleSaveSlot} className="ui-modal-form" noValidate>
+          <style>{`
+            .doctor-create-drawer-modal {
+              width: min(640px, 100vw) !important;
+              max-width: 640px !important;
+              background: #ffffff;
+              box-shadow: -12px 0 36px rgba(15, 23, 42, 0.14) !important;
+            }
+            .doctor-create-drawer-modal .ui-modal-head {
+              padding: 18px 26px;
+              background: #ffffff;
+              border-bottom: 1px solid #f1f5f9;
+            }
+            .doctor-create-drawer-modal .ui-modal-body {
+              padding: 20px 24px;
+              background: #f8fafc;
+              display: flex;
+              flex-direction: column;
+              gap: 14px;
+            }
+            .doctor-section-card {
+              background: #ffffff;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              padding: 18px 20px;
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+              display: flex;
+              flex-direction: column;
+              gap: 14px;
+              transition: border-color 0.15s ease;
+            }
+            .doctor-section-card:hover {
+              border-color: #cbd5e1;
+            }
+            .doctor-section-header {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              padding-bottom: 8px;
+              border-bottom: 1px solid #f1f5f9;
+            }
+            .doctor-section-badge {
+              width: 26px;
+              height: 26px;
+              border-radius: 7px;
+              background: #eff6ff;
+              color: #2563eb;
+              border: 1px solid #dbeafe;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+            }
+            .doctor-section-tag {
+              font-size: 11px;
+              font-weight: 700;
+              letter-spacing: 0.06em;
+              color: #475569;
+              text-transform: uppercase;
+            }
+            .doctor-status-btn {
+              flex: 1;
+              padding: 12px 14px;
+              border-radius: 9px;
+              cursor: pointer;
+              text-align: left;
+              display: flex;
+              align-items: flex-start;
+              gap: 10px;
+              transition: all 0.15s ease;
+              position: relative;
+            }
+            .doctor-status-btn.is-active {
+              border: 1.5px solid #2563eb !important;
+              background: #eff6ff !important;
+              box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+            }
+            .doctor-status-btn:not(.is-active) {
+              border: 1px solid #e2e8f0;
+              background: #ffffff;
+            }
+            .doctor-status-btn:not(.is-active):hover {
+              background: #fafafa;
+              border-color: #cbd5e1;
+            }
+            .doctor-submit-btn {
+              background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+              box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28) !important;
+              border: none !important;
+              color: #ffffff !important;
+              height: 38px;
+              padding: 0 18px;
+              font-size: 13px;
+              font-weight: 600;
+              border-radius: 8px;
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              cursor: pointer;
+            }
+            .doctor-submit-btn:hover:not(:disabled) {
+              background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+              box-shadow: 0 4px 12px rgba(37, 99, 235, 0.36) !important;
+            }
+          `}</style>
+
+          <div className="ui-modal-body">
+            {/* Section 1: Doctor & Facility Assignment */}
+            <div className="doctor-section-card">
+              <div className="doctor-section-header">
+                <div className="doctor-section-badge">
+                  <Stethoscope size={13} />
+                </div>
+                <div className="doctor-section-tag">Doctor &amp; Facility Assignment</div>
               </div>
-              <div style={{ fontSize: 11.5, color: '#64748b' }}>
-                {[currentDoctor?.specialization, currentDoctor?.hospital_name].filter(Boolean).join(' · ')}
-              </div>
-            </div>
-          </div>
 
-          {/* Hospital Branch Selection */}
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 6 }}>
-              HOSPITAL BRANCH / CLINIC *
-            </label>
-            <Select
-              value={formBranchId}
-              onChange={(val) => setFormBranchId(val)}
-              style={{ width: '100%' }}
-              placeholder="Select Branch"
-              options={doctorBranches.map((b) => ({
-                value: b.id,
-                label: b.name,
-              }))}
-            />
-          </div>
-
-          {/* Day of Week */}
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 6 }}>
-              DAY OF WEEK *
-            </label>
-            <Select
-              value={formDay}
-              onChange={(val) => setFormDay(val as DayOfWeek)}
-              style={{ width: '100%' }}
-              options={DAYS_OF_WEEK.map((d) => ({
-                value: d,
-                label: titleCase(d),
-              }))}
-            />
-          </div>
-
-          {/* Time Window */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 6 }}>
-                START TIME *
-              </label>
-              <input
-                type="time"
-                value={formStartTime}
-                onChange={(e) => setFormStartTime(e.target.value)}
-                required
-                className="ui-input"
-                style={{ width: '100%', height: 36, fontSize: 13 }}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 6 }}>
-                END TIME *
-              </label>
-              <input
-                type="time"
-                value={formEndTime}
-                onChange={(e) => setFormEndTime(e.target.value)}
-                required
-                className="ui-input"
-                style={{ width: '100%', height: 36, fontSize: 13 }}
-              />
-            </div>
-          </div>
-
-          {/* Slot Duration */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>
-                APPOINTMENT SLOT DURATION (MINUTES) *
-              </label>
-              <span style={{ fontSize: 11.5, fontWeight: 700, color: '#7c3aed' }}>
-                {formSlotLength} Mins
-              </span>
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {COMMON_SLOT_LENGTHS.map((len) => (
-                <button
-                  key={len}
-                  type="button"
-                  onClick={() => setFormSlotLength(len)}
-                  style={{
-                    border: formSlotLength === len ? '1px solid #7c3aed' : '1px solid #e2e8f0',
-                    background: formSlotLength === len ? '#7c3aed' : '#ffffff',
-                    color: formSlotLength === len ? '#ffffff' : '#334155',
-                    borderRadius: 6,
-                    padding: '4px 10px',
-                    fontSize: 11.5,
-                    cursor: 'pointer',
-                    fontWeight: formSlotLength === len ? 650 : 500,
-                  }}
-                >
-                  {len} Mins
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Status */}
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 6 }}>
-              STATUS
-            </label>
-            <Select
-              value={formStatus}
-              onChange={(val) => setFormStatus(val as 'ACTIVE' | 'INACTIVE')}
-              style={{ width: '100%' }}
-              options={[
-                { value: 'ACTIVE', label: 'Active (Available for Appointments)' },
-                { value: 'INACTIVE', label: 'Inactive (Temporarily Paused)' },
-              ]}
-            />
-          </div>
-
-          {/* Multi-day replication (only on create) */}
-          {!editingSlot && (
-            <div
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: 8,
-                padding: '10px 14px',
-              }}
-            >
               <div
                 style={{
-                  fontSize: 12,
-                  fontWeight: 650,
-                  color: '#334155',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 8,
+                  padding: '10px 14px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 5,
-                  marginBottom: 6,
+                  gap: 10,
                 }}
               >
-                <Copy size={13} style={{ color: '#7c3aed' }} /> Replicate to other days (Optional)
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {DAYS_OF_WEEK.filter((d) => d !== formDay).map((d) => {
-                  const isChecked = formCopyDays.includes(d);
-                  return (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => {
-                        setFormCopyDays((prev) =>
-                          isChecked ? prev.filter((item) => item !== d) : [...prev, d]
-                        );
-                      }}
-                      style={{
-                        border: isChecked ? '1px solid #7c3aed' : '1px solid #cbd5e1',
-                        background: isChecked ? '#ede9fe' : '#ffffff',
-                        color: isChecked ? '#6d28d9' : '#475569',
-                        borderRadius: 5,
-                        padding: '3px 7px',
-                        fontSize: 11,
-                        cursor: 'pointer',
-                        fontWeight: isChecked ? 650 : 500,
-                      }}
-                    >
-                      {titleCase(d).slice(0, 3)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Drawer Actions */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: 10,
-              paddingTop: 12,
-              borderTop: '1px solid #e2e8f0',
-            }}
-          >
-            <button
-              type="button"
-              className="ui-btn"
-              onClick={() => setIsEditorOpen(false)}
-              disabled={savingSlot}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="ui-btn ui-btn-primary"
-              disabled={savingSlot}
-              style={{
-                background: '#7c3aed',
-                borderColor: '#7c3aed',
-                color: '#ffffff',
-                fontWeight: 600,
-                padding: '6px 18px',
-              }}
-            >
-              {savingSlot ? 'Saving...' : editingSlot ? 'Update Availability' : 'Save to Doctor Profile'}
-            </button>
-          </div>
-        </form>
-      </Drawer>
-
-      {/* Block Date & Time Slots Drawer */}
-      <Drawer
-        open={isBlockModalOpen}
-        onClose={() => setIsBlockModalOpen(false)}
-        width="min(520px, 95vw)"
-        destroyOnClose
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 8,
-                background: '#fef2f2',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#dc2626',
-              }}
-            >
-              <CalendarX size={18} />
-            </div>
-            <div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>
-                {editingBlock ? 'Edit Blocked Date / Time' : 'Block Date & Time Slots'}
-              </div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>
-                Prevent appointments during doctor leave, surgeries, or unavailable hours
-              </div>
-            </div>
-          </div>
-        }
-      >
-        <form onSubmit={handleSaveBlockedDate} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Doctor Info Card */}
-          <div
-            style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: 8,
-              padding: '10px 14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-            }}
-          >
-            <Stethoscope size={16} style={{ color: '#dc2626' }} />
-            <div>
-              <div style={{ fontWeight: 650, color: '#0f172a', fontSize: 13 }}>
-                {currentDoctor?.name || 'Selected Doctor'}
-              </div>
-              <div style={{ fontSize: 11.5, color: '#64748b' }}>
-                {[currentDoctor?.specialization, currentDoctor?.hospital_name].filter(Boolean).join(' · ')}
-              </div>
-            </div>
-          </div>
-
-          {/* Date Picker */}
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 6 }}>
-              DATE TO BLOCK *
-            </label>
-            <input
-              type="date"
-              value={blockFormDate}
-              onChange={(e) => setBlockFormDate(e.target.value)}
-              required
-              className="ui-input"
-              style={{ width: '100%', height: 38, fontSize: 13 }}
-            />
-          </div>
-
-          {/* Scope Selector: Full Day vs Specific Range */}
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 6 }}>
-              BLOCK TYPE / SCOPE *
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div
-                onClick={() => setBlockFormMode('all_day')}
-                style={{
-                  border: blockFormMode === 'all_day' ? '2px solid #dc2626' : '1px solid #e2e8f0',
-                  background: blockFormMode === 'all_day' ? '#fef2f2' : '#ffffff',
-                  borderRadius: 10,
-                  padding: '12px 14px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, color: '#991b1b' }}>
-                  <Ban size={15} />
-                  <span>Entire Day</span>
-                </div>
-                <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
-                  Block all consultation hours for this full date
+                <Stethoscope size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontWeight: 650, color: '#0f172a', fontSize: 13 }}>
+                    {currentDoctor?.name || 'Selected Doctor'}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                    {[currentDoctor?.specialization, currentDoctor?.hospital_name].filter(Boolean).join(' · ') ||
+                      'Doctor Profile'}
+                  </div>
                 </div>
               </div>
 
-              <div
-                onClick={() => setBlockFormMode('time_range')}
-                style={{
-                  border: blockFormMode === 'time_range' ? '2px solid #dc2626' : '1px solid #e2e8f0',
-                  background: blockFormMode === 'time_range' ? '#fef2f2' : '#ffffff',
-                  borderRadius: 10,
-                  padding: '12px 14px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, color: '#991b1b' }}>
-                  <Clock size={15} />
-                  <span>Time Range</span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                <div>
+                  <label
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      marginBottom: 5,
+                    }}
+                  >
+                    <span>Hospital Branch / Clinic</span>
+                    <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <SearchableSelect
+                    aria-label="Hospital Branch"
+                    value={formBranchId}
+                    onChange={(val) => setFormBranchId(val)}
+                    placeholder="Select Branch"
+                    searchPlaceholder="Search branches..."
+                    options={doctorBranches.map((b) => ({
+                      value: b.id,
+                      label: b.name,
+                    }))}
+                  />
                 </div>
-                <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
-                  Block specific hours (e.g. 10:00 AM – 01:00 PM)
+
+                <div>
+                  <label
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      marginBottom: 5,
+                    }}
+                  >
+                    <span>Day of Week</span>
+                    <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <SearchableSelect
+                    aria-label="Day of Week"
+                    searchable={false}
+                    value={formDay}
+                    onChange={(val) => setFormDay((val || 'MONDAY') as DayOfWeek)}
+                    options={DAYS_OF_WEEK.map((d) => ({
+                      value: d,
+                      label: titleCase(d),
+                    }))}
+                  />
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Time pickers when time_range is selected */}
-          {blockFormMode === 'time_range' && (
-            <div
-              style={{
-                background: '#fef2f2',
-                border: '1px solid #fee2e2',
-                borderRadius: 10,
-                padding: '12px 14px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-              }}
-            >
+            {/* Section 2: Consultation Hours & Slot Duration */}
+            <div className="doctor-section-card">
+              <div className="doctor-section-header">
+                <div className="doctor-section-badge">
+                  <Clock size={13} />
+                </div>
+                <div className="doctor-section-tag">Consultation Hours &amp; Duration</div>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label style={{ fontSize: 11.5, fontWeight: 650, color: '#7f1d1d', display: 'block', marginBottom: 4 }}>
-                    START TIME *
+                  <label
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      marginBottom: 5,
+                    }}
+                  >
+                    <span>Start Time</span>
+                    <span style={{ color: '#ef4444' }}>*</span>
                   </label>
                   <input
                     type="time"
-                    value={blockFormStartTime}
-                    onChange={(e) => setBlockFormStartTime(e.target.value)}
+                    value={formStartTime}
+                    onChange={(e) => setFormStartTime(e.target.value)}
                     required
                     className="ui-input"
-                    style={{ width: '100%', height: 34, fontSize: 12.5 }}
+                    style={{ width: '100%', height: 38, fontSize: 13 }}
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: 11.5, fontWeight: 650, color: '#7f1d1d', display: 'block', marginBottom: 4 }}>
-                    END TIME *
+                  <label
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      marginBottom: 5,
+                    }}
+                  >
+                    <span>End Time</span>
+                    <span style={{ color: '#ef4444' }}>*</span>
                   </label>
                   <input
                     type="time"
-                    value={blockFormEndTime}
-                    onChange={(e) => setBlockFormEndTime(e.target.value)}
+                    value={formEndTime}
+                    onChange={(e) => setFormEndTime(e.target.value)}
                     required
                     className="ui-input"
-                    style={{ width: '100%', height: 34, fontSize: 12.5 }}
+                    style={{ width: '100%', height: 38, fontSize: 13 }}
                   />
                 </div>
               </div>
 
-              {/* Quick Presets */}
               <div>
-                <span style={{ fontSize: 11, color: '#7f1d1d', fontWeight: 600 }}>Quick Presets:</span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                  {[
-                    { label: 'Morning (09:00 – 13:00)', s: '09:00', e: '13:00' },
-                    { label: 'Afternoon (14:00 – 17:00)', s: '14:00', e: '17:00' },
-                    { label: 'Evening (17:00 – 20:00)', s: '17:00', e: '20:00' },
-                  ].map((preset) => (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>
+                    Appointment Slot Duration (Minutes) <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: '#2563eb' }}>
+                    {formSlotLength} Mins
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {COMMON_SLOT_LENGTHS.map((len) => (
                     <button
-                      key={preset.label}
+                      key={len}
                       type="button"
-                      onClick={() => {
-                        setBlockFormStartTime(preset.s);
-                        setBlockFormEndTime(preset.e);
-                      }}
+                      onClick={() => setFormSlotLength(len)}
                       style={{
-                        background: '#ffffff',
-                        border: '1px solid #fca5a5',
-                        color: '#991b1b',
-                        borderRadius: 5,
-                        padding: '2px 8px',
-                        fontSize: 10.5,
-                        fontWeight: 600,
+                        border: formSlotLength === len ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                        background: formSlotLength === len ? '#2563eb' : '#ffffff',
+                        color: formSlotLength === len ? '#ffffff' : '#334155',
+                        borderRadius: 7,
+                        padding: '5px 11px',
+                        fontSize: 12,
                         cursor: 'pointer',
+                        fontWeight: formSlotLength === len ? 650 : 500,
                       }}
                     >
-                      {preset.label}
+                      {len} Mins
                     </button>
                   ))}
                 </div>
               </div>
             </div>
-          )}
 
-          {/* Reason / Notes */}
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 6 }}>
-              REASON FOR BLOCKING (OPTIONAL)
-            </label>
-            <input
-              type="text"
-              value={blockFormReason}
-              onChange={(e) => setBlockFormReason(e.target.value)}
-              placeholder="e.g. Annual Leave, Surgery / Operation, Medical Conference"
-              className="ui-input"
-              style={{ width: '100%', height: 36, fontSize: 13 }}
-            />
+            {/* Section 3: Status & Multi-Day Replication */}
+            <div className="doctor-section-card">
+              <div className="doctor-section-header">
+                <div className="doctor-section-badge">
+                  <Settings size={13} />
+                </div>
+                <div className="doctor-section-tag">Schedule Status{!editingSlot ? ' & Replication' : ''}</div>
+              </div>
 
-            {/* Quick Reason Presets */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
-              {REASON_PRESETS.map((reason) => (
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 <button
-                  key={reason}
                   type="button"
-                  onClick={() => setBlockFormReason(reason)}
+                  className={`doctor-status-btn ${formStatus === 'ACTIVE' ? 'is-active' : ''}`}
+                  onClick={() => setFormStatus('ACTIVE')}
+                >
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: '#22c55e',
+                      marginTop: 4,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 650,
+                        color: formStatus === 'ACTIVE' ? '#1d4ed8' : '#334155',
+                      }}
+                    >
+                      Active
+                    </div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>
+                      Available for appointment bookings.
+                    </div>
+                  </div>
+                  {formStatus === 'ACTIVE' && (
+                    <CheckCircle2 size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  className={`doctor-status-btn ${formStatus === 'INACTIVE' ? 'is-active' : ''}`}
+                  onClick={() => setFormStatus('INACTIVE')}
+                >
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: '#94a3b8',
+                      marginTop: 4,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 650,
+                        color: formStatus === 'INACTIVE' ? '#1d4ed8' : '#334155',
+                      }}
+                    >
+                      Inactive
+                    </div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>
+                      Temporarily paused for consultations.
+                    </div>
+                  </div>
+                  {formStatus === 'INACTIVE' && (
+                    <CheckCircle2 size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
+                  )}
+                </button>
+              </div>
+
+              {!editingSlot && (
+                <div
                   style={{
-                    background: blockFormReason === reason ? '#fee2e2' : '#f8fafc',
-                    border: blockFormReason === reason ? '1px solid #fca5a5' : '1px solid #e2e8f0',
-                    color: blockFormReason === reason ? '#991b1b' : '#64748b',
-                    borderRadius: 5,
-                    padding: '2px 8px',
-                    fontSize: 11,
-                    cursor: 'pointer',
-                    fontWeight: blockFormReason === reason ? 650 : 500,
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 8,
+                    padding: '10px 14px',
                   }}
                 >
-                  {reason}
-                </button>
-              ))}
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 650,
+                      color: '#334155',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      marginBottom: 6,
+                    }}
+                  >
+                    <Copy size={13} style={{ color: '#2563eb' }} /> Replicate to other days (Optional)
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {DAYS_OF_WEEK.filter((d) => d !== formDay).map((d) => {
+                      const isChecked = formCopyDays.includes(d);
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => {
+                            setFormCopyDays((prev) =>
+                              isChecked ? prev.filter((item) => item !== d) : [...prev, d]
+                            );
+                          }}
+                          style={{
+                            border: isChecked ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                            background: isChecked ? '#eff6ff' : '#ffffff',
+                            color: isChecked ? '#1d4ed8' : '#475569',
+                            borderRadius: 6,
+                            padding: '4px 9px',
+                            fontSize: 11.5,
+                            cursor: 'pointer',
+                            fontWeight: isChecked ? 650 : 500,
+                          }}
+                        >
+                          {titleCase(d).slice(0, 3)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Information Notice */}
           <div
-            style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: 8,
-              padding: '10px 14px',
-              fontSize: 11.5,
-              color: '#475569',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 8,
-            }}
+            className="ui-modal-foot"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
           >
-            <Info size={15} style={{ color: '#7c3aed', flexShrink: 0, marginTop: 1 }} />
-            <div>
-              <strong>Instant Appointment Integration:</strong> Any consultation appointment slots falling into this blocked date or time window will be excluded immediately from the scheduling drawer. Double bookings are strictly prevented.
+            <div style={{ fontSize: 12, color: '#64748b' }}>
+              Fields marked with <span style={{ color: '#ef4444' }}>*</span> are required
             </div>
-          </div>
-
-          {/* Drawer Actions */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: 10,
-              paddingTop: 12,
-              borderTop: '1px solid #e2e8f0',
-            }}
-          >
-            <button
-              type="button"
-              className="ui-btn"
-              onClick={() => setIsBlockModalOpen(false)}
-              disabled={savingBlock}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="ui-btn"
-              disabled={savingBlock}
-              style={{
-                background: '#dc2626',
-                borderColor: '#dc2626',
-                color: '#ffffff',
-                fontWeight: 600,
-                padding: '6px 18px',
-                cursor: 'pointer',
-              }}
-            >
-              {savingBlock
-                ? 'Saving...'
-                : editingBlock
-                  ? 'Update Blocked Date'
-                  : 'Confirm & Block Date'}
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                className="ui-btn ui-btn-neutral"
+                onClick={() => setIsEditorOpen(false)}
+                disabled={savingSlot}
+              >
+                Cancel
+              </button>
+              <button type="submit" disabled={savingSlot} className="doctor-submit-btn">
+                {savingSlot ? (
+                  'Saving…'
+                ) : editingSlot ? (
+                  <>
+                    <Pencil size={14} />
+                    <span>Update Availability</span>
+                  </>
+                ) : (
+                  <>
+                    <CalendarClock size={14} />
+                    <span>Save to Doctor Profile</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </form>
-      </Drawer>
+      </Modal>
+
+      {/* Block Date & Time Slots Common Drawer */}
+      <Modal
+        open={isBlockModalOpen}
+        onClose={() => setIsBlockModalOpen(false)}
+        size="lg"
+        variant="drawer"
+        className="doctor-create-drawer-modal"
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+                color: '#dc2626',
+                border: '1px solid #fecaca',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <CalendarX size={18} />
+            </div>
+            <div>
+              <div
+                style={{
+                  fontSize: 16.5,
+                  fontWeight: 700,
+                  color: 'var(--ui-text, #0f172a)',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                {editingBlock ? 'Edit Blocked Date / Time' : 'Block Date & Time Slots'}
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
+                Prevent appointments during doctor leave, surgeries, or unavailable hours
+              </div>
+            </div>
+          </div>
+        }
+        description=""
+      >
+        <form onSubmit={handleSaveBlockedDate} className="ui-modal-form" noValidate>
+          <div
+            className="ui-modal-body"
+            style={{
+              padding: '20px 24px',
+              background: '#f8fafc',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 14,
+            }}
+          >
+            {/* Doctor Info Card */}
+            <div
+              style={{
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: 12,
+                padding: '14px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+              }}
+            >
+              <Stethoscope size={16} style={{ color: '#dc2626' }} />
+              <div>
+                <div style={{ fontWeight: 650, color: '#0f172a', fontSize: 13 }}>
+                  {currentDoctor?.name || 'Selected Doctor'}
+                </div>
+                <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                  {[currentDoctor?.specialization, currentDoctor?.hospital_name].filter(Boolean).join(' · ')}
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: 12,
+                padding: '16px 18px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 14,
+              }}
+            >
+              {/* Date Picker */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 6 }}>
+                  DATE TO BLOCK <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="date"
+                  value={blockFormDate}
+                  onChange={(e) => setBlockFormDate(e.target.value)}
+                  required
+                  className="ui-input"
+                  style={{ width: '100%', height: 38, fontSize: 13 }}
+                />
+              </div>
+
+              {/* Scope Selector: Full Day vs Specific Range */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 6 }}>
+                  BLOCK TYPE / SCOPE <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div
+                    onClick={() => setBlockFormMode('all_day')}
+                    style={{
+                      border: blockFormMode === 'all_day' ? '2px solid #dc2626' : '1px solid #e2e8f0',
+                      background: blockFormMode === 'all_day' ? '#fef2f2' : '#ffffff',
+                      borderRadius: 10,
+                      padding: '12px 14px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, color: '#991b1b' }}>
+                      <Ban size={15} />
+                      <span>Entire Day</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                      Block all consultation hours for this full date
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => setBlockFormMode('time_range')}
+                    style={{
+                      border: blockFormMode === 'time_range' ? '2px solid #dc2626' : '1px solid #e2e8f0',
+                      background: blockFormMode === 'time_range' ? '#fef2f2' : '#ffffff',
+                      borderRadius: 10,
+                      padding: '12px 14px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, color: '#991b1b' }}>
+                      <Clock size={15} />
+                      <span>Time Range</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                      Block specific hours (e.g. 10:00 AM – 01:00 PM)
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Time pickers when time_range is selected */}
+              {blockFormMode === 'time_range' && (
+                <div
+                  style={{
+                    background: '#fef2f2',
+                    border: '1px solid #fee2e2',
+                    borderRadius: 10,
+                    padding: '12px 14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <label style={{ fontSize: 11.5, fontWeight: 650, color: '#7f1d1d', display: 'block', marginBottom: 4 }}>
+                        START TIME *
+                      </label>
+                      <input
+                        type="time"
+                        value={blockFormStartTime}
+                        onChange={(e) => setBlockFormStartTime(e.target.value)}
+                        required
+                        className="ui-input"
+                        style={{ width: '100%', height: 36, fontSize: 12.5 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11.5, fontWeight: 650, color: '#7f1d1d', display: 'block', marginBottom: 4 }}>
+                        END TIME *
+                      </label>
+                      <input
+                        type="time"
+                        value={blockFormEndTime}
+                        onChange={(e) => setBlockFormEndTime(e.target.value)}
+                        required
+                        className="ui-input"
+                        style={{ width: '100%', height: 36, fontSize: 12.5 }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick Presets */}
+                  <div>
+                    <span style={{ fontSize: 11, color: '#7f1d1d', fontWeight: 600 }}>Quick Presets:</span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                      {[
+                        { label: 'Morning (09:00 – 13:00)', s: '09:00', e: '13:00' },
+                        { label: 'Afternoon (14:00 – 17:00)', s: '14:00', e: '17:00' },
+                        { label: 'Evening (17:00 – 20:00)', s: '17:00', e: '20:00' },
+                      ].map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => {
+                            setBlockFormStartTime(preset.s);
+                            setBlockFormEndTime(preset.e);
+                          }}
+                          style={{
+                            background: '#ffffff',
+                            border: '1px solid #fca5a5',
+                            color: '#991b1b',
+                            borderRadius: 5,
+                            padding: '2px 8px',
+                            fontSize: 10.5,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Reason / Notes */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 6 }}>
+                  REASON FOR BLOCKING (OPTIONAL)
+                </label>
+                <input
+                  type="text"
+                  value={blockFormReason}
+                  onChange={(e) => setBlockFormReason(e.target.value)}
+                  placeholder="e.g. Annual Leave, Surgery / Operation, Medical Conference"
+                  className="ui-input"
+                  style={{ width: '100%', height: 38, fontSize: 13 }}
+                />
+
+                {/* Quick Reason Presets */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                  {REASON_PRESETS.map((reason) => (
+                    <button
+                      key={reason}
+                      type="button"
+                      onClick={() => setBlockFormReason(reason)}
+                      style={{
+                        background: blockFormReason === reason ? '#fee2e2' : '#f8fafc',
+                        border: blockFormReason === reason ? '1px solid #fca5a5' : '1px solid #e2e8f0',
+                        color: blockFormReason === reason ? '#991b1b' : '#64748b',
+                        borderRadius: 5,
+                        padding: '2px 8px',
+                        fontSize: 11,
+                        cursor: 'pointer',
+                        fontWeight: blockFormReason === reason ? 650 : 500,
+                      }}
+                    >
+                      {reason}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Information Notice */}
+            <div
+              style={{
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: 10,
+                padding: '10px 14px',
+                fontSize: 11.5,
+                color: '#475569',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+              }}
+            >
+              <Info size={15} style={{ color: '#2563eb', flexShrink: 0, marginTop: 1 }} />
+              <div>
+                <strong>Instant Appointment Integration:</strong> Any consultation appointment slots falling into this blocked date or time window will be excluded immediately from the scheduling drawer. Double bookings are strictly prevented.
+              </div>
+            </div>
+          </div>
+
+          <div
+            className="ui-modal-foot"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+          >
+            <div style={{ fontSize: 12, color: '#64748b' }}>
+              Fields marked with <span style={{ color: '#ef4444' }}>*</span> are required
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                className="ui-btn ui-btn-neutral"
+                onClick={() => setIsBlockModalOpen(false)}
+                disabled={savingBlock}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingBlock}
+                style={{
+                  background: '#dc2626',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontWeight: 600,
+                  height: 38,
+                  padding: '0 18px',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                {savingBlock
+                  ? 'Saving...'
+                  : editingBlock
+                    ? 'Update Blocked Date'
+                    : 'Confirm & Block Date'}
+              </button>
+            </div>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

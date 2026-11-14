@@ -1,103 +1,100 @@
-import {
-  Boxes,
-  Building2,
-  CalendarClock,
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  FlaskConical,
-  GitBranch,
-  Globe,
-  HeartPulse,
-  LifeBuoy,
-  LogOut,
-  Package,
-  Pill,
-  Shield,
-  ShoppingBag,
-  Star,
-  Stethoscope,
-  UserCog,
-  Users,
-} from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 
 import { usePermission } from '../context/PermissionContext';
-import { cx } from './ui/primitives';
-
-export interface NavItem {
-  name: string;
-  path: string;
-  icon: any;
-  slug: string;
-  fallbackSlugs?: string[];
-}
-
-export const NAV_ITEMS: readonly NavItem[] = [
-  { name: 'Hospitals', path: '/', icon: Building2, slug: 'HOSPITALS' },
-  { name: 'Branches', path: '/branches', icon: GitBranch, slug: 'BRANCHES' },
-  { name: 'Doctors', path: '/doctors', icon: Stethoscope, slug: 'DOCTORS' },
-  { name: 'Availability & Slots', path: '/availability', icon: CalendarClock, slug: 'AVAILABILITY' },
-  { name: 'Patients', path: '/patients', icon: HeartPulse, slug: 'PATIENTS' },
-  { name: 'Appointments', path: '/appointments', icon: CalendarDays, slug: 'APPOINTMENTS' },
-  { name: 'Pharmacy', path: '/pharmacy', icon: Pill, slug: 'PHARMACY' },
-  { name: 'Medicine Inventory', path: '/inventory', icon: Boxes, slug: 'INVENTORY' },
-  { name: 'Medicine Package', path: '/medicine-packages', icon: Package, slug: 'MEDICINE_PACKAGES' },
-  { name: 'Linked Labs', path: '/labs', icon: FlaskConical, slug: 'LABS' },
-  { name: 'Lab Services', path: '/lab-services', icon: FlaskConical, slug: 'LAB_SERVICES' },
-  { name: 'Linked Medicals', path: '/linked-medicals', icon: Stethoscope, slug: 'LINKED_MEDICALS' },
-  { name: 'Orders', path: '/orders', icon: ShoppingBag, slug: 'ORDERS' },
-  { name: 'Client Portals', path: '/client-portals', icon: Globe, slug: 'CLIENT_PORTALS' },
-  { name: 'User Accounts', path: '/users', icon: UserCog, slug: 'USERS' },
-  { name: 'Staff Management', path: '/staff', icon: Users, slug: 'STAFF' },
-  { name: 'Roles & Permissions', path: '/roles', icon: Shield, slug: 'ROLES' },
-  { name: 'Prescriptions', path: '/prescriptions', icon: FileText, slug: 'PRESCRIPTIONS' },
-  { name: 'Ratings & Reviews', path: '/reviews', icon: Star, slug: 'REVIEWS' },
-  { name: 'Patient Support', path: '/support', icon: LifeBuoy, slug: 'PATIENT_SUPPORT', fallbackSlugs: ['SUPPORT'] },
-  { name: 'Doctor Support', path: '/doctor-support', icon: Stethoscope, slug: 'DOCTOR_SUPPORT', fallbackSlugs: ['SUPPORT'] },
-];
-
-const EXPANDED_KEY = 'adminRailExpanded';
-
-function readExpanded(): boolean {
-  try {
-    return localStorage.getItem(EXPANDED_KEY) === '1';
-  } catch {
-    return true; // Default expanded for modern layout
-  }
-}
+import { MobileNavDrawer } from './navigation/MobileNavDrawer';
+import {
+  filterNavigationByPermissions,
+  findActiveNavigation,
+  NAVIGATION_CATEGORIES,
+  type NavCategory,
+  type NavModule,
+} from './navigation/navigationConfig';
+import { SubNavbar } from './navigation/SubNavbar';
+import { TopNavbar } from './navigation/TopNavbar';
 
 export default function SidebarLayout() {
-  const [isExpanded, setIsExpanded] = useState(readExpanded);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const currentUsername = localStorage.getItem('adminUsername') ?? 'Super Admin';
-  const { canView, roleName } = usePermission();
+  const currentUsername =
+    localStorage.getItem('adminUsername') ||
+    localStorage.getItem('adminEmail') ||
+    'Super Admin';
+  const { canView, isSystemAdmin, permissions, roleName } = usePermission();
   const currentRole = roleName || localStorage.getItem('adminRole') || 'System Administrator';
 
-  const userInitials = (currentUsername || 'SA')
-    .trim()
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase() || 'SA';
+  const userInitials = useMemo(() => {
+    const parts = (currentUsername || 'SA')
+      .trim()
+      .split(/[\s@._]+/)
+      .filter(Boolean);
+    const first = parts[0];
+    const second = parts[1];
+    if (first && second && first[0] && second[0]) {
+      return (first[0] + second[0]).toUpperCase();
+    }
+    return (first ? first.slice(0, 2) : 'SA').toUpperCase();
+  }, [currentUsername]);
 
-  const visibleNavItems = NAV_ITEMS.filter((item) => canView(item.slug, item.fallbackSlugs));
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
 
-  const toggle = () => {
-    setIsExpanded((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(EXPANDED_KEY, next ? '1' : '0');
-      } catch {
-        /* storage unavailable */
-      }
-      return next;
-    });
+  const allowedSlugs = useMemo(
+    () => Object.keys(permissions).filter((slug) => canView(slug)),
+    [permissions, canView],
+  );
+
+  // Filtered categories based on RBAC permissions
+  const visibleCategories = useMemo(
+    () => filterNavigationByPermissions(NAVIGATION_CATEGORIES, allowedSlugs, isSystemAdmin),
+    [allowedSlugs, isSystemAdmin],
+  );
+
+  // Determine active category and active module based on current URL path
+  const { activeCategory: matchedCategory, activeModule } = useMemo(
+    () => findActiveNavigation(location.pathname, visibleCategories),
+    [location.pathname, visibleCategories],
+  );
+
+  // If user explicitly clicked a category, use it; otherwise use category matching current URL
+  const currentCategory = useMemo(() => {
+    if (selectedCategoryKey) {
+      const found = visibleCategories.find((c) => c.key === selectedCategoryKey);
+      if (found) return found;
+    }
+    return matchedCategory;
+  }, [selectedCategoryKey, visibleCategories, matchedCategory]);
+
+  // Sync selectedCategoryKey when route changes outside manual selection
+  useEffect(() => {
+    if (matchedCategory && matchedCategory.key !== selectedCategoryKey) {
+      setSelectedCategoryKey(matchedCategory.key);
+    }
+  }, [matchedCategory]);
+
+  const handleSelectCategory = (category: NavCategory) => {
+    setSelectedCategoryKey(category.key);
+
+    // If currently on a path in this category, stay on it; otherwise navigate to first module
+    const hasCurrentModule = category.modules.some(
+      (m) =>
+        m.path === location.pathname || m.aliases?.some((a) => a === location.pathname),
+    );
+
+    if (!hasCurrentModule && category.modules.length > 0 && category.modules[0]) {
+      void navigate(category.modules[0].path);
+    }
+  };
+
+  const handleSelectModule = (mod: NavModule) => {
+    const parentCategory = visibleCategories.find((cat) =>
+      cat.modules.some((m) => m.path === mod.path),
+    );
+    if (parentCategory) {
+      setSelectedCategoryKey(parentCategory.key);
+    }
+    void navigate(mod.path);
   };
 
   const handleLogout = () => {
@@ -111,106 +108,52 @@ export default function SidebarLayout() {
   };
 
   return (
-    <div className="ui-shell">
-      <aside className={cx('ui-rail', isExpanded && 'is-expanded')} aria-label="Main navigation">
-        <div className="ui-rail-brand">
-          <div className="ui-rail-brand-main" onClick={!isExpanded ? toggle : undefined} role={!isExpanded ? 'button' : undefined}>
-            <span className="ui-rail-logo">
-              <HeartPulse size={16} strokeWidth={2.4} />
-            </span>
-            {isExpanded && (
-              <span className="ui-rail-brand-text">
-                <span className="ui-rail-brand-name">HMS Admin</span>
-                <span className="ui-rail-brand-sub">Dr Narendran</span>
-              </span>
-            )}
-          </div>
-          <button
-            type="button"
-            className="ui-rail-collapse-btn"
-            onClick={toggle}
-            title={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
-            aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
-          >
-            {isExpanded ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-          </button>
-        </div>
+    <div className="ui-app-layout">
+      {/* 1. Left Full-Height Sidebar with Brand Header at Top and User Profile + Sign Out at Bottom */}
+      <SubNavbar
+        activeCategory={currentCategory}
+        activeModule={activeModule}
+        onSelectModule={handleSelectModule}
+        currentUsername={currentUsername}
+        currentRole={currentRole}
+        userInitials={userInitials}
+        onLogout={handleLogout}
+      />
 
-        {isExpanded && <div className="ui-rail-category">MAIN</div>}
+      {/* 2. Right Main Column: TopNavbar on Top + Content Below */}
+      <div className="ui-app-right-column">
+        <TopNavbar
+          categories={visibleCategories}
+          activeCategory={currentCategory}
+          activeModule={activeModule}
+          onSelectCategory={handleSelectCategory}
+          onSelectModule={handleSelectModule}
+          currentUsername={currentUsername}
+          currentRole={currentRole}
+          userInitials={userInitials}
+          onLogout={handleLogout}
+          isMobileMenuOpen={isMobileMenuOpen}
+          onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)}
+        />
 
-        <nav className="ui-rail-nav">
-          {visibleNavItems.map((item) => {
-            const isActive =
-              item.path === '/'
-                ? location.pathname === '/'
-                : location.pathname.startsWith(item.path);
-            const Icon = item.icon;
-            return (
-              <button
-                type="button"
-                key={item.path}
-                className={cx('ui-rail-item', isActive && 'is-active')}
-                onClick={() => {
-                  void navigate(item.path);
-                }}
-                data-tip={item.name}
-                aria-label={item.name}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                <Icon size={18} strokeWidth={isActive ? 2.1 : 1.8} />
-                {isExpanded && <span className="ui-rail-item-label">{item.name}</span>}
-              </button>
-            );
-          })}
-        </nav>
+        <main className="ui-main">
+          <Outlet />
+        </main>
+      </div>
 
-        {/* Footer with ACCOUNT section and User Card matching Image 2 */}
-        {/* Footer with logged-in user card */}
-        <div className="ui-rail-footer">
-          {/* User Card */}
-          <div
-            className={cx('ui-rail-user-card', !isExpanded && 'is-collapsed')}
-            title={`${currentUsername} · ${currentRole}`}
-          >
-            <div className="ui-rail-user-avatar" onClick={!isExpanded ? toggle : undefined}>
-              {userInitials}
-            </div>
-            {isExpanded && (
-              <>
-                <div className="ui-rail-user-info" onClick={toggle}>
-                  <span className="ui-rail-user-name">{currentUsername}</span>
-                  <span className="ui-rail-user-sub">{currentRole}</span>
-                </div>
-                <button
-                  type="button"
-                  className="ui-rail-user-logout-btn"
-                  onClick={handleLogout}
-                  title="Log out"
-                  aria-label="Log out"
-                >
-                  <LogOut size={16} strokeWidth={1.8} />
-                </button>
-              </>
-            )}
-          </div>
-
-          {!isExpanded && (
-            <button
-              type="button"
-              className="ui-rail-item ui-rail-logout-collapsed"
-              onClick={handleLogout}
-              data-tip="Log out"
-              aria-label="Log out"
-            >
-              <LogOut size={18} strokeWidth={1.8} />
-            </button>
-          )}
-        </div>
-      </aside>
-
-      <main className="ui-main">
-        <Outlet />
-      </main>
+      {/* 3. Mobile Responsive Drawer */}
+      <MobileNavDrawer
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        categories={visibleCategories}
+        activeCategory={currentCategory}
+        activeModule={activeModule}
+        onSelectModule={handleSelectModule}
+        currentUsername={currentUsername}
+        currentRole={currentRole}
+        userInitials={userInitials}
+        onLogout={handleLogout}
+      />
     </div>
   );
 }

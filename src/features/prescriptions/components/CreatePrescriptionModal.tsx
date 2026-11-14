@@ -2,6 +2,7 @@ import { App, AutoComplete, Drawer, Dropdown, Select, Spin, Tag, Tooltip } from 
 import dayjs from 'dayjs';
 import {
   Building2,
+  Calendar,
   ChevronDown,
   Clock,
   FlaskConical,
@@ -524,10 +525,10 @@ export default function CreatePrescriptionModal({
                     fontSize: 10.5,
                     padding: '1px 6px',
                     borderRadius: 4,
-                    background: '#f5f3ff',
-                    color: '#7c3aed',
+                    background: '#eff6ff',
+                    color: '#2563eb',
                     fontWeight: 600,
-                    border: '1px solid #ede9fe',
+                    border: '1px solid #dbeafe',
                   }}
                 >
                   {strengthStr}
@@ -1002,46 +1003,49 @@ export default function CreatePrescriptionModal({
       keyboard={!isAddMedicineModalOpen}
       focusable={{ trap: !isAddMedicineModalOpen }}
       width="min(1150px, 95vw)"
-      destroyOnClose
+      destroyOnHidden
+      className="rx-drawer"
       styles={{
         header: {
-          padding: '16px 24px',
-          borderBottom: '1px solid #e2e8f0',
+          padding: '18px 28px',
+          borderBottom: '1px solid #f1f5f9',
           background: '#ffffff',
         },
         body: {
-          padding: '20px 24px 36px 24px',
+          padding: '24px 28px 40px 28px',
           background: '#f8fafc',
           overflowY: 'auto',
         },
         footer: {
-          padding: '14px 24px',
-          borderTop: '1px solid #e2e8f0',
+          padding: '16px 28px',
+          borderTop: '1px solid #f1f5f9',
           background: '#ffffff',
         },
       }}
       title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div
             style={{
-              width: 36,
-              height: 36,
-              borderRadius: 8,
-              background: '#f5f3ff',
-              border: '1px solid #ede9fe',
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+              border: '1px solid #bfdbfe',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#7c3aed',
+              color: '#2563eb',
+              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.14)',
+              flexShrink: 0,
             }}
           >
-            <Stethoscope size={20} />
+            <Stethoscope size={19} />
           </div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>
+            <div style={{ fontSize: 16.5, fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em' }}>
               {editingPrescription ? 'Edit Prescription' : 'Create Prescription'}
             </div>
-            <div style={{ fontSize: 12, color: '#64748b' }}>
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
               Integrated with Pharmacy Medicines & Linked Diagnostic Labs
             </div>
           </div>
@@ -1049,12 +1053,12 @@ export default function CreatePrescriptionModal({
       }
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: 12, color: '#64748b' }}>
-            <span style={{ fontWeight: 600, color: '#0f172a' }}>
+          <div style={{ fontSize: 12.5, color: '#64748b' }}>
+            <span style={{ fontWeight: 700, color: '#0f172a' }}>
               {medicines.filter((m) => m.name.trim()).length}
             </span>{' '}
             medicine(s) ·{' '}
-            <span style={{ fontWeight: 600, color: '#0f172a' }}>
+            <span style={{ fontWeight: 700, color: '#0f172a' }}>
               {labTests.filter((l) => l.testName.trim()).length}
             </span>{' '}
             investigation(s)
@@ -1062,10 +1066,10 @@ export default function CreatePrescriptionModal({
           <div style={{ display: 'flex', gap: 10 }}>
             <button
               type="button"
-              className="ui-btn"
+              className="ui-btn ui-btn-neutral"
               onClick={onClose}
               disabled={loading}
-              style={{ padding: '6px 14px', fontSize: 13 }}
+              style={{ height: 38, padding: '0 16px', fontSize: 13 }}
             >
               Cancel
             </button>
@@ -1075,15 +1079,19 @@ export default function CreatePrescriptionModal({
               onClick={handleSubmit}
               disabled={loading}
               style={{
-                padding: '6px 20px',
+                height: 38,
+                padding: '0 20px',
                 fontSize: 13,
                 fontWeight: 600,
-                background: '#7c3aed',
-                borderColor: '#7c3aed',
+                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                border: 'none',
+                borderRadius: 8,
+                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.28)',
                 color: '#ffffff',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
+                cursor: loading ? 'not-allowed' : 'pointer',
               }}
             >
               {loading && <Spin size="small" />}
@@ -1099,151 +1107,330 @@ export default function CreatePrescriptionModal({
         </div>
       }
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* Patient & Prescribing Doctor Header */}
-        <div
-          style={{
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: 10,
-            padding: 14,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: 12,
-          }}
-        >
-          {/* Patient Selector / Card */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <label htmlFor="prescription-patient-select" style={{ fontSize: 11.5, fontWeight: 600, color: '#475569' }}>
-                PATIENT *
-              </label>
-              {!selectedPatient && (
-                <button
-                  type="button"
-                  onClick={() => void fetchPatients()}
-                  disabled={patientSearchLoading}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#7c3aed',
-                    fontSize: 11,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 3,
-                    padding: 0,
-                  }}
-                  title="Reload patient list"
-                >
-                  <RefreshCw size={11} className={patientSearchLoading ? 'animate-spin' : ''} />
-                  Refresh
-                </button>
-              )}
-            </div>
-            {selectedPatient ? (
-              <div
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: 6,
-                  padding: '8px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  minHeight: 36,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <User size={16} style={{ color: '#7c3aed' }} />
-                  <div>
-                    <span style={{ fontWeight: 650, color: '#0f172a', fontSize: 13 }}>
-                      {selectedPatient.name}
-                    </span>
-                    <span style={{ fontSize: 11, color: '#64748b', marginLeft: 6 }}>
-                      {[selectedPatient.gender, selectedPatient.phone].filter(Boolean).join(' · ')}
-                    </span>
-                  </div>
+      <style>{`
+        .rx-section-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 20px 22px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .rx-section-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          flex-wrap: wrap;
+          padding-bottom: 12px;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        .rx-section-title-wrap {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .rx-section-badge {
+          width: 28px;
+          height: 28px;
+          border-radius: 8px;
+          background: #eff6ff;
+          color: #2563eb;
+          border: 1px solid #dbeafe;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .rx-label {
+          font-size: 11.5px;
+          font-weight: 650;
+          color: #475569;
+          letter-spacing: 0.03em;
+          text-transform: uppercase;
+          display: block;
+          margin-bottom: 6px;
+        }
+        .rx-field-input {
+          width: 100%;
+          height: 38px !important;
+          font-size: 13px !important;
+          border-radius: 8px !important;
+          border: 1px solid #e2e8f0 !important;
+          padding: 0 12px !important;
+          background: #ffffff !important;
+          box-sizing: border-box !important;
+          transition: all 0.15s ease !important;
+        }
+        .rx-field-input:hover {
+          border-color: #cbd5e1 !important;
+          background: #f8fafc !important;
+        }
+        .rx-field-input:focus {
+          border-color: #2563eb !important;
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+          background: #ffffff !important;
+          outline: none !important;
+        }
+        .rx-drawer .rx-select-tall {
+          height: 38px !important;
+        }
+        .rx-drawer .rx-select-tall .ant-select-selector {
+          height: 38px !important;
+          border-radius: 8px !important;
+          padding: 0 12px !important;
+          display: flex !important;
+          align-items: center !important;
+          border: 1px solid #e2e8f0 !important;
+          background: #ffffff !important;
+          box-shadow: none !important;
+          transition: all 0.15s ease !important;
+        }
+        .rx-drawer .rx-select-tall:hover .ant-select-selector {
+          border-color: #cbd5e1 !important;
+          background: #f8fafc !important;
+        }
+        .rx-drawer .rx-select-tall.ant-select-focused .ant-select-selector {
+          border-color: #2563eb !important;
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+          background: #ffffff !important;
+        }
+        .rx-drawer .rx-select-tall .ant-select-selection-item,
+        .rx-drawer .rx-select-tall .ant-select-selection-placeholder {
+          font-size: 13px !important;
+          line-height: 36px !important;
+          color: #334155 !important;
+        }
+        .rx-drawer .rx-select-compact {
+          height: 34px !important;
+        }
+        .rx-drawer .rx-select-compact .ant-select-selector {
+          height: 34px !important;
+          border-radius: 7px !important;
+          padding: 0 10px !important;
+          display: flex !important;
+          align-items: center !important;
+          border: 1px solid #e2e8f0 !important;
+          background: #ffffff !important;
+          box-shadow: none !important;
+          transition: all 0.15s ease !important;
+        }
+        .rx-drawer .rx-select-compact:hover .ant-select-selector {
+          border-color: #cbd5e1 !important;
+          background: #f8fafc !important;
+        }
+        .rx-drawer .rx-select-compact.ant-select-focused .ant-select-selector {
+          border-color: #2563eb !important;
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+          background: #ffffff !important;
+        }
+        .rx-drawer .rx-select-compact .ant-select-selection-item,
+        .rx-drawer .rx-select-compact .ant-select-selection-placeholder {
+          font-size: 12.5px !important;
+          line-height: 32px !important;
+        }
+        .rx-field-compact {
+          width: 100%;
+          height: 34px !important;
+          font-size: 12.5px !important;
+          border-radius: 7px !important;
+          border: 1px solid #e2e8f0 !important;
+          padding: 0 10px !important;
+          background: #ffffff !important;
+          box-sizing: border-box !important;
+          transition: all 0.15s ease !important;
+        }
+        .rx-field-compact:hover {
+          border-color: #cbd5e1 !important;
+          background: #f8fafc !important;
+        }
+        .rx-field-compact:focus {
+          border-color: #2563eb !important;
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+          background: #ffffff !important;
+          outline: none !important;
+        }
+      `}</style>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {/* Section 1: Patient & Prescribing Doctor */}
+        <div className="rx-section-card">
+          <div className="rx-section-header">
+            <div className="rx-section-title-wrap">
+              <div className="rx-section-badge">
+                <User size={14} />
+              </div>
+              <div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
+                  Patient &amp; Consultation Details
                 </div>
-                {!preselectedPatient && !editingPrescription && (
+                <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                  Select registered patient and prescribing doctor
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+              gap: 18,
+              alignItems: 'start',
+            }}
+          >
+            {/* Patient Selector / Card */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 20, marginBottom: 6 }}>
+                <label htmlFor="prescription-patient-select" className="rx-label" style={{ marginBottom: 0 }}>
+                  PATIENT <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                {!selectedPatient && (
                   <button
                     type="button"
-                    onClick={() => {
-                      setSelectedPatient(null);
-                      setSelectedPatientId('');
-                    }}
+                    onClick={() => void fetchPatients()}
+                    disabled={patientSearchLoading}
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#7c3aed',
+                      color: '#2563eb',
                       fontSize: 11.5,
-                      cursor: 'pointer',
                       fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: 0,
                     }}
+                    title="Reload patient list"
                   >
-                    Change
+                    <RefreshCw size={11} className={patientSearchLoading ? 'animate-spin' : ''} />
+                    Refresh
                   </button>
                 )}
               </div>
-            ) : (
-              <SearchableSelect
-                id="prescription-patient-select"
-                placeholder="Search patient by name or phone..."
-                searchPlaceholder="Search by name, phone, or gender..."
-                value={selectedPatientId}
-                options={patientOptions}
-                onChange={(val) => {
-                  setSelectedPatientId(val);
-                  const p = patients.find((pt) => pt.id === val);
-                  if (p) setSelectedPatient(p);
-                }}
-                disabled={Boolean(preselectedPatient)}
-                loading={patientSearchLoading}
-                emptyText={
-                  patientSearchLoading
-                    ? 'Loading registered patients...'
-                    : 'No registered patients found. Click Refresh to reload.'
-                }
-                width="100%"
-                searchable={true}
-              />
-            )}
-          </div>
+              {selectedPatient ? (
+                <div
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 8,
+                    padding: '0 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    height: 38,
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    <User size={15} style={{ color: '#2563eb', flexShrink: 0 }} />
+                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontWeight: 650, color: '#0f172a', fontSize: 13 }}>
+                        {selectedPatient.name}
+                      </span>
+                      <span style={{ fontSize: 11.5, color: '#64748b', marginLeft: 6 }}>
+                        {[selectedPatient.gender, selectedPatient.phone].filter(Boolean).join(' · ')}
+                      </span>
+                    </div>
+                  </div>
+                  {!preselectedPatient && !editingPrescription && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPatient(null);
+                        setSelectedPatientId('');
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#2563eb',
+                        fontSize: 11.5,
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        flexShrink: 0,
+                      }}
+                    >
+                      Change
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <SearchableSelect
+                  id="prescription-patient-select"
+                  placeholder="Search patient by name or phone..."
+                  searchPlaceholder="Search by name, phone, or gender..."
+                  value={selectedPatientId}
+                  options={patientOptions}
+                  onChange={(val) => {
+                    setSelectedPatientId(val);
+                    const p = patients.find((pt) => pt.id === val);
+                    if (p) setSelectedPatient(p);
+                  }}
+                  disabled={Boolean(preselectedPatient)}
+                  loading={patientSearchLoading}
+                  emptyText={
+                    patientSearchLoading
+                      ? 'Loading registered patients...'
+                      : 'No registered patients found. Click Refresh to reload.'
+                  }
+                  width="100%"
+                  searchable={true}
+                />
+              )}
+            </div>
 
-          {/* Doctor Selection */}
-          <div>
-            <label style={{ fontSize: 11.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
-              PRESCRIBING DOCTOR *
-            </label>
-            <Select
-              value={selectedDoctorId || undefined}
-              onChange={(val) => setSelectedDoctorId(val ?? '')}
-              placeholder="Select Doctor"
-              style={{ width: '100%' }}
-              options={doctors.map((d) => ({
-                value: d.id,
-                label: `${d.name} (${d.specialization || 'General Medicine'})`,
-              }))}
-            />
+            {/* Doctor Selection */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 20, marginBottom: 6 }}>
+                <label htmlFor="prescription-doctor-select" className="rx-label" style={{ marginBottom: 0 }}>
+                  PRESCRIBING DOCTOR <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+              </div>
+              <Select
+                id="prescription-doctor-select"
+                className="rx-select-tall"
+                value={selectedDoctorId || undefined}
+                onChange={(val) => setSelectedDoctorId(val ?? '')}
+                placeholder="Select Doctor"
+                style={{ width: '100%', height: 38 }}
+                options={doctors.map((d) => ({
+                  value: d.id,
+                  label: `${d.name} (${d.specialization || 'General Medicine'})`,
+                }))}
+              />
+            </div>
           </div>
 
           {/* Appointment Context Banner */}
           {appointmentId && (
-            <div style={{ gridColumn: '1 / -1', marginTop: 2, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: 8,
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                flexWrap: 'wrap',
+              }}
+            >
               <span
                 style={{
                   fontSize: 11.5,
-                  padding: '3px 8px',
+                  padding: '3px 9px',
                   borderRadius: 6,
-                  background: '#f5f3ff',
-                  border: '1px solid #ede9fe',
-                  color: '#6d28d9',
+                  background: '#eff6ff',
+                  border: '1px solid #dbeafe',
+                  color: '#1d4ed8',
                   fontWeight: 600,
                 }}
               >
                 Consultation #{appointmentToken || appointmentId.slice(0, 6)}
               </span>
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', color: '#1e293b' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, cursor: 'pointer', color: '#1e293b' }}>
                 <input
                   type="checkbox"
                   checked={markCompleted}
@@ -1257,69 +1444,75 @@ export default function CreatePrescriptionModal({
           )}
         </div>
 
-        {/* Diagnosis & Clinical Impression */}
-        <div>
-          <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 6 }}>
-            DIAGNOSIS & CLINICAL IMPRESSION
-          </label>
-          <AutoComplete
-            value={diagnosis}
-            onChange={(val) => setDiagnosis(val)}
-            placeholder="e.g. Hypertension, Acute Gastritis, Type 2 Diabetes, Viral Fever..."
-            options={COMMON_DIAGNOSES.map((d) => ({ value: d }))}
-            style={{ width: '100%' }}
-          />
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
-            {COMMON_DIAGNOSES.slice(0, 6).map((cd) => (
-              <button
-                key={cd}
-                type="button"
-                onClick={() => setDiagnosis(cd)}
-                style={{
-                  fontSize: 11,
-                  padding: '2px 8px',
-                  borderRadius: 4,
-                  border: '1px solid #e2e8f0',
-                  background: diagnosis === cd ? '#f5f3ff' : '#ffffff',
-                  color: diagnosis === cd ? '#7c3aed' : '#475569',
-                  cursor: 'pointer',
-                  fontWeight: diagnosis === cd ? 600 : 400,
-                }}
-              >
-                + {cd}
-              </button>
-            ))}
+        {/* Section 2: Diagnosis & Clinical Impression */}
+        <div className="rx-section-card">
+          <div className="rx-section-header">
+            <div className="rx-section-title-wrap">
+              <div className="rx-section-badge">
+                <Stethoscope size={14} />
+              </div>
+              <div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
+                  Diagnosis &amp; Clinical Impression
+                </div>
+                <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                  Enter primary diagnosis or quick-select from common clinical conditions
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <AutoComplete
+              className="rx-select-tall"
+              value={diagnosis}
+              onChange={(val) => setDiagnosis(val)}
+              placeholder="e.g. Hypertension, Acute Gastritis, Type 2 Diabetes, Viral Fever..."
+              options={COMMON_DIAGNOSES.map((d) => ({ value: d }))}
+              style={{ width: '100%' }}
+            />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+              {COMMON_DIAGNOSES.slice(0, 6).map((cd) => (
+                <button
+                  key={cd}
+                  type="button"
+                  onClick={() => setDiagnosis(cd)}
+                  style={{
+                    fontSize: 11.5,
+                    padding: '4px 10px',
+                    borderRadius: 6,
+                    border: diagnosis === cd ? '1px solid #93c5fd' : '1px solid #e2e8f0',
+                    background: diagnosis === cd ? '#eff6ff' : '#f8fafc',
+                    color: diagnosis === cd ? '#1d4ed8' : '#475569',
+                    cursor: 'pointer',
+                    fontWeight: diagnosis === cd ? 600 : 500,
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  + {cd}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* 1. Pharmacy Medicines Section */}
-        <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, background: '#ffffff' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div
-                style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: 6,
-                  background: '#f5f3ff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#7c3aed',
-                }}
-              >
-                <Pill size={16} />
+        {/* Section 3: Pharmacy Medicines Section */}
+        <div className="rx-section-card">
+          <div className="rx-section-header">
+            <div className="rx-section-title-wrap">
+              <div className="rx-section-badge">
+                <Pill size={15} />
               </div>
               <div>
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
                   Prescribed Medicines ({medicines.length})
-                </span>
-                <span style={{ fontSize: 11.5, color: '#64748b', marginLeft: 8 }}>
-                  Search & auto-populate from Pharmacy catalog
-                </span>
+                </div>
+                <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                  Search &amp; auto-populate from Pharmacy catalog
+                </div>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               {/* Available Packages Dropdown Button */}
               <Dropdown
                 menu={{
@@ -1353,7 +1546,7 @@ export default function CreatePrescriptionModal({
                           <div style={{ padding: '4px 2px', minWidth: 260 }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                               <span style={{ fontWeight: 650, color: '#0f172a' }}>{pkg.name}</span>
-                              <Tag color="purple" style={{ margin: 0, fontSize: 10.5, borderRadius: 4 }}>
+                              <Tag color="blue" style={{ margin: 0, fontSize: 10.5, borderRadius: 4 }}>
                                 {pkg.medicines?.length || 0} meds
                               </Tag>
                             </div>
@@ -1372,7 +1565,7 @@ export default function CreatePrescriptionModal({
                                 {pkg.description}
                               </div>
                             )}
-                            <div style={{ fontSize: 10.5, color: '#7c3aed', marginTop: 3 }}>
+                            <div style={{ fontSize: 10.5, color: '#2563eb', marginTop: 3 }}>
                               {(pkg.medicines || []).slice(0, 3).map((m) => m.medicine_name).join(', ')}
                               {(pkg.medicines?.length || 0) > 3 ? ` +${(pkg.medicines?.length || 0) - 3} more` : ''}
                             </div>
@@ -1389,9 +1582,9 @@ export default function CreatePrescriptionModal({
                   style={{
                     fontSize: 12,
                     fontWeight: 600,
-                    color: '#7c3aed',
-                    background: '#f5f3ff',
-                    border: '1px solid #ddd6fe',
+                    color: '#2563eb',
+                    background: '#eff6ff',
+                    border: '1px solid #dbeafe',
                     borderRadius: 6,
                     padding: '5px 12px',
                     cursor: 'pointer',
@@ -1431,9 +1624,9 @@ export default function CreatePrescriptionModal({
                   style={{
                     fontSize: 12,
                     fontWeight: 600,
-                    color: '#7c3aed',
-                    background: '#f5f3ff',
-                    border: '1px solid #ede9fe',
+                    color: '#2563eb',
+                    background: '#eff6ff',
+                    border: '1px solid #dbeafe',
                     borderRadius: 6,
                     padding: '5px 12px',
                     cursor: 'pointer',
@@ -1458,8 +1651,8 @@ export default function CreatePrescriptionModal({
                 gap: 6,
                 marginBottom: 14,
                 padding: '8px 12px',
-                background: '#faf5ff',
-                border: '1px solid #ede9fe',
+                background: '#eff6ff',
+                border: '1px solid #dbeafe',
                 borderRadius: 8,
               }}
             >
@@ -1467,14 +1660,14 @@ export default function CreatePrescriptionModal({
                 style={{
                   fontSize: 11.5,
                   fontWeight: 700,
-                  color: '#6b21a8',
+                  color: '#1e40af',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 5,
                   marginRight: 4,
                 }}
               >
-                <Package size={13} style={{ color: '#7c3aed' }} /> Available Packages:
+                <Package size={13} style={{ color: '#2563eb' }} /> Available Packages:
               </span>
               {availablePackages.map((pkg) => {
                 const medNames = (pkg.medicines || []).map((m) => m.medicine_name).join(', ');
@@ -1487,7 +1680,7 @@ export default function CreatePrescriptionModal({
                         {pkg.description && (
                           <div style={{ color: '#cbd5e1', marginTop: 2 }}>{pkg.description}</div>
                         )}
-                        <div style={{ marginTop: 4, color: '#e9d5ff' }}>
+                        <div style={{ marginTop: 4, color: '#bfdbfe' }}>
                           <strong>Includes:</strong> {medNames || 'No medicines'}
                         </div>
                       </div>
@@ -1500,9 +1693,9 @@ export default function CreatePrescriptionModal({
                         fontSize: 11,
                         padding: '3px 9px',
                         borderRadius: 6,
-                        border: '1px solid #d8b4fe',
+                        border: '1px solid #93c5fd',
                         background: '#ffffff',
-                        color: '#6b21a8',
+                        color: '#1d4ed8',
                         cursor: 'pointer',
                         fontWeight: 600,
                         display: 'inline-flex',
@@ -1511,14 +1704,14 @@ export default function CreatePrescriptionModal({
                         transition: 'all 0.15s ease',
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#7c3aed';
+                        e.currentTarget.style.background = '#2563eb';
                         e.currentTarget.style.color = '#ffffff';
-                        e.currentTarget.style.borderColor = '#7c3aed';
+                        e.currentTarget.style.borderColor = '#2563eb';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = '#ffffff';
-                        e.currentTarget.style.color = '#6b21a8';
-                        e.currentTarget.style.borderColor = '#d8b4fe';
+                        e.currentTarget.style.color = '#1d4ed8';
+                        e.currentTarget.style.borderColor = '#93c5fd';
                       }}
                     >
                       <Plus size={11} />
@@ -1531,33 +1724,33 @@ export default function CreatePrescriptionModal({
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {medicines.map((med, index) => {
               const isCatalogLinked = Boolean(med.medicineId);
               return (
                 <div
                   key={med.key}
                   style={{
-                    border: isCatalogLinked ? '1px solid #ddd6fe' : '1px solid #e2e8f0',
-                    borderRadius: 8,
-                    background: isCatalogLinked ? '#fdfcff' : '#fafafa',
-                    padding: 12,
+                    border: isCatalogLinked ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
+                    borderRadius: 10,
+                    background: isCatalogLinked ? '#f8fbff' : '#fafbfc',
+                    padding: '16px 18px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 10,
-                    boxShadow: isCatalogLinked ? '0 1px 3px rgba(124, 58, 237, 0.05)' : 'none',
+                    gap: 14,
+                    boxShadow: isCatalogLinked ? '0 1px 3px rgba(37, 99, 235, 0.06)' : 'none',
                   }}
                 >
                   {/* Top Bar: Number badge, Search/Name Autocomplete, Variants selector, Delete */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '26px 1fr auto auto', gap: 8, alignItems: 'center' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr auto auto', gap: 10, alignItems: 'center' }}>
                     <span
                       style={{
-                        width: 24,
-                        height: 24,
+                        width: 26,
+                        height: 26,
                         borderRadius: '50%',
-                        background: isCatalogLinked ? '#7c3aed' : '#ede9fe',
-                        color: isCatalogLinked ? '#ffffff' : '#6d28d9',
-                        fontSize: 11,
+                        background: isCatalogLinked ? '#2563eb' : '#dbeafe',
+                        color: isCatalogLinked ? '#ffffff' : '#1d4ed8',
+                        fontSize: 11.5,
                         fontWeight: 700,
                         display: 'flex',
                         alignItems: 'center',
@@ -1569,6 +1762,7 @@ export default function CreatePrescriptionModal({
 
                     {/* Autocomplete Search input */}
                     <AutoComplete
+                      className="rx-select-compact"
                       value={med.name}
                       placeholder="Search medicine by trade name, generic composition, or manufacturer..."
                       options={medicineOptions}
@@ -1601,9 +1795,9 @@ export default function CreatePrescriptionModal({
                                 style={{
                                   fontSize: 11.5,
                                   fontWeight: 600,
-                                  color: '#7c3aed',
-                                  background: '#f5f3ff',
-                                  border: '1px solid #ddd6fe',
+                                  color: '#2563eb',
+                                  background: '#eff6ff',
+                                  border: '1px solid #dbeafe',
                                   borderRadius: 5,
                                   padding: '3px 9px',
                                   cursor: 'pointer',
@@ -1679,7 +1873,7 @@ export default function CreatePrescriptionModal({
                           alignItems: 'center',
                           gap: 4,
                           fontWeight: 650,
-                          color: '#7c3aed',
+                          color: '#2563eb',
                         }}
                       >
                         <ShieldCheck size={13} />
@@ -1745,118 +1939,128 @@ export default function CreatePrescriptionModal({
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))',
-                      gap: 8,
-                      alignItems: 'center',
-                      paddingTop: 2,
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                      gap: 12,
+                      alignItems: 'start',
                     }}
                   >
                     {/* Dosage Form / Dose */}
                     <div>
-                      <label style={{ fontSize: 10.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 2 }}>
-                        DOSAGE / DOSE
-                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', minHeight: 18, marginBottom: 4 }}>
+                        <label style={{ fontSize: 10.5, fontWeight: 650, color: '#475569', display: 'block', marginBottom: 0 }}>
+                          DOSAGE / DOSE
+                        </label>
+                      </div>
                       <input
                         type="text"
                         value={med.dosage}
                         onChange={(e) => handleUpdateMedicine(index, 'dosage', e.target.value)}
                         placeholder="e.g. 1 Tablet"
-                        className="ui-input"
-                        style={{ height: 28, fontSize: 12, padding: '0 8px' }}
+                        className="ui-input rx-field-compact"
                       />
                     </div>
 
                     {/* Strength */}
                     <div>
-                      <label style={{ fontSize: 10.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 2 }}>
-                        STRENGTH
-                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', minHeight: 18, marginBottom: 4 }}>
+                        <label style={{ fontSize: 10.5, fontWeight: 650, color: '#475569', display: 'block', marginBottom: 0 }}>
+                          STRENGTH
+                        </label>
+                      </div>
                       <input
                         type="text"
                         value={med.strength}
                         onChange={(e) => handleUpdateMedicine(index, 'strength', e.target.value)}
                         placeholder="e.g. 500mg, 10ml"
-                        className="ui-input"
-                        style={{ height: 28, fontSize: 12, padding: '0 8px' }}
+                        className="ui-input rx-field-compact"
                       />
                     </div>
 
                     {/* Frequency */}
                     <div>
-                      <label
-                        style={{
-                          fontSize: 10.5,
-                          fontWeight: 600,
-                          color: !med.frequency && med.name.trim() ? '#b45309' : '#475569',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          marginBottom: 2,
-                        }}
-                      >
-                        <span>
-                          FREQUENCY <span style={{ color: '#ef4444' }}>*</span>
-                        </span>
-                        {!med.frequency && med.name.trim() && (
-                          <span
-                            style={{
-                              fontSize: 9.5,
-                              fontWeight: 700,
-                              color: '#b45309',
-                              background: '#fef3c7',
-                              padding: '0 4px',
-                              borderRadius: 3,
-                              border: '1px solid #fde68a',
-                            }}
-                          >
-                            Required
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 18, marginBottom: 4 }}>
+                        <label
+                          style={{
+                            fontSize: 10.5,
+                            fontWeight: 650,
+                            color: !med.frequency && med.name.trim() ? '#b45309' : '#475569',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            width: '100%',
+                            marginBottom: 0,
+                          }}
+                        >
+                          <span>
+                            FREQUENCY <span style={{ color: '#ef4444' }}>*</span>
                           </span>
-                        )}
-                      </label>
+                          {!med.frequency && med.name.trim() && (
+                            <span
+                              style={{
+                                fontSize: 9.5,
+                                fontWeight: 700,
+                                color: '#b45309',
+                                background: '#fef3c7',
+                                padding: '0 4px',
+                                borderRadius: 3,
+                                border: '1px solid #fde68a',
+                              }}
+                            >
+                              Required
+                            </span>
+                          )}
+                        </label>
+                      </div>
                       <Select
+                        className="rx-select-compact"
                         value={med.frequency || undefined}
                         placeholder="Select frequency *"
                         status={!med.frequency && med.name.trim() ? 'warning' : ''}
                         onChange={(val) => handleUpdateMedicine(index, 'frequency', val)}
                         style={{ width: '100%' }}
-                        size="small"
                         options={COMMON_FREQUENCIES}
                       />
                     </div>
 
                     {/* Meal Timing */}
                     <div>
-                      <label style={{ fontSize: 10.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 2 }}>
-                        MEAL TIMING
-                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', minHeight: 18, marginBottom: 4 }}>
+                        <label style={{ fontSize: 10.5, fontWeight: 650, color: '#475569', display: 'block', marginBottom: 0 }}>
+                          MEAL TIMING
+                        </label>
+                      </div>
                       <Select
+                        className="rx-select-compact"
                         value={med.mealTiming}
                         onChange={(val) => handleUpdateMedicine(index, 'mealTiming', val)}
                         style={{ width: '100%' }}
-                        size="small"
                         options={COMMON_MEAL_TIMINGS.map((m) => ({ label: m, value: m }))}
                       />
                     </div>
 
                     {/* Duration */}
                     <div>
-                      <label style={{ fontSize: 10.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 2 }}>
-                        DURATION
-                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', minHeight: 18, marginBottom: 4 }}>
+                        <label style={{ fontSize: 10.5, fontWeight: 650, color: '#475569', display: 'block', marginBottom: 0 }}>
+                          DURATION
+                        </label>
+                      </div>
                       <Select
+                        className="rx-select-compact"
                         value={med.duration}
                         onChange={(val) => handleUpdateMedicine(index, 'duration', val)}
                         style={{ width: '100%' }}
-                        size="small"
                         options={COMMON_DURATIONS.map((d) => ({ label: d, value: d }))}
                       />
                     </div>
 
                     {/* Prescribed Quantity */}
                     <div>
-                      <label style={{ fontSize: 10.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 2 }}>
-                        TOTAL QTY
-                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', minHeight: 18, marginBottom: 4 }}>
+                        <label style={{ fontSize: 10.5, fontWeight: 650, color: '#475569', display: 'block', marginBottom: 0 }}>
+                          TOTAL QTY
+                        </label>
+                      </div>
                       <input
                         type="number"
                         min={1}
@@ -1864,15 +2068,14 @@ export default function CreatePrescriptionModal({
                         onChange={(e) =>
                           handleUpdateMedicine(index, 'prescribedQuantity', parseInt(e.target.value, 10) || 1)
                         }
-                        className="ui-input"
-                        style={{ height: 28, fontSize: 12, padding: '0 8px' }}
+                        className="ui-input rx-field-compact"
                       />
                     </div>
                   </div>
 
                   {/* Special Instructions */}
                   <div>
-                    <label style={{ fontSize: 10.5, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 2 }}>
+                    <label style={{ fontSize: 10.5, fontWeight: 650, color: '#64748b', display: 'block', marginBottom: 4 }}>
                       SPECIFIC INSTRUCTIONS / REMARKS
                     </label>
                     <input
@@ -1880,8 +2083,7 @@ export default function CreatePrescriptionModal({
                       value={med.instructions}
                       onChange={(e) => handleUpdateMedicine(index, 'instructions', e.target.value)}
                       placeholder="e.g. Take with plenty of warm water. Avoid dairy products within 1 hour."
-                      className="ui-input"
-                      style={{ height: 28, fontSize: 12, padding: '0 8px' }}
+                      className="ui-input rx-field-compact"
                     />
                   </div>
                 </div>
@@ -1890,31 +2092,20 @@ export default function CreatePrescriptionModal({
           </div>
         </div>
 
-        {/* 2. Linked Labs & Diagnostic Investigations Section */}
-        <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, background: '#ffffff' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div
-                style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: 6,
-                  background: '#f0f9ff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#0284c7',
-                }}
-              >
-                <FlaskConical size={16} />
+        {/* Section 4: Linked Labs & Diagnostic Investigations Section */}
+        <div className="rx-section-card">
+          <div className="rx-section-header">
+            <div className="rx-section-title-wrap">
+              <div className="rx-section-badge" style={{ background: '#f0f9ff', borderColor: '#bae6fd', color: '#0284c7' }}>
+                <FlaskConical size={15} />
               </div>
               <div>
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
                   Recommended Lab Investigations ({labTests.length})
-                </span>
-                <span style={{ fontSize: 11.5, color: '#64748b', marginLeft: 8 }}>
+                </div>
+                <div style={{ fontSize: 11.5, color: '#64748b' }}>
                   Search and assign from Linked Labs network
-                </span>
+                </div>
               </div>
             </div>
             <button
@@ -1926,8 +2117,8 @@ export default function CreatePrescriptionModal({
                 color: '#0284c7',
                 background: '#f0f9ff',
                 border: '1px solid #bae6fd',
-                borderRadius: 6,
-                padding: '5px 12px',
+                borderRadius: 7,
+                padding: '6px 13px',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -1941,19 +2132,19 @@ export default function CreatePrescriptionModal({
           {labTests.length === 0 ? (
             <div
               style={{
-                fontSize: 12,
+                fontSize: 12.5,
                 color: '#64748b',
                 background: '#f8fafc',
                 border: '1px dashed #cbd5e1',
                 borderRadius: 8,
-                padding: '16px',
+                padding: '18px 16px',
                 textAlign: 'center',
               }}
             >
               No diagnostic tests recommended yet. Click <strong>"+ Add Investigation"</strong> to select a Linked Lab and prescribe diagnostic tests.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {labTests.map((lab, index) => {
                 const labObj = lab.selectedLab;
                 const labServices = labObj?.services || [];
@@ -1971,46 +2162,51 @@ export default function CreatePrescriptionModal({
                     key={lab.key}
                     style={{
                       border: labObj ? '1px solid #bae6fd' : '1px solid #e2e8f0',
-                      borderRadius: 8,
-                      background: labObj ? '#f8fcff' : '#fafafa',
-                      padding: 12,
+                      borderRadius: 10,
+                      background: labObj ? '#f8fcff' : '#fafbfc',
+                      padding: '16px 18px',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 10,
+                      gap: 14,
                       boxShadow: labObj ? '0 1px 3px rgba(2, 132, 199, 0.05)' : 'none',
                     }}
                   >
                     {/* Top Row: Lab Selection & Test Name */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '26px 1fr 1fr auto', gap: 10, alignItems: 'center' }}>
-                      <span
-                        style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: '50%',
-                          background: labObj ? '#0284c7' : '#e0f2fe',
-                          color: labObj ? '#ffffff' : '#0369a1',
-                          fontSize: 11,
-                          fontWeight: 700,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        {index + 1}
-                      </span>
+                    <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr auto', gap: 12, alignItems: 'start' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 22 }}>
+                        <span
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: '50%',
+                            background: labObj ? '#0284c7' : '#e0f2fe',
+                            color: labObj ? '#ffffff' : '#0369a1',
+                            fontSize: 11.5,
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {index + 1}
+                        </span>
+                      </div>
 
                       {/* Select Linked Lab */}
                       <div>
-                        <label style={{ fontSize: 10.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 2 }}>
-                          ASSIGN LINKED LAB *
-                        </label>
+                        <div style={{ display: 'flex', alignItems: 'center', minHeight: 18, marginBottom: 4 }}>
+                          <label style={{ fontSize: 10.5, fontWeight: 650, color: '#475569', display: 'block', marginBottom: 0 }}>
+                            ASSIGN LINKED LAB *
+                          </label>
+                        </div>
                         <Select
+                          className="rx-select-compact"
                           showSearch
                           value={lab.labId || undefined}
                           onChange={(val) => handleSelectLab(index, val)}
                           placeholder="Select Linked Lab..."
                           loading={labsLoading}
-                          style={{ width: '100%' }}
+                          style={{ width: '100%', height: 34 }}
                           filterOption={(input, option) =>
                             String(option?.label ?? '')
                               .toLowerCase()
@@ -2025,10 +2221,13 @@ export default function CreatePrescriptionModal({
 
                       {/* Test / Investigation Name Autocomplete */}
                       <div>
-                        <label style={{ fontSize: 10.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 2 }}>
-                          TEST / INVESTIGATION NAME *
-                        </label>
+                        <div style={{ display: 'flex', alignItems: 'center', minHeight: 18, marginBottom: 4 }}>
+                          <label style={{ fontSize: 10.5, fontWeight: 650, color: '#475569', display: 'block', marginBottom: 0 }}>
+                            TEST / INVESTIGATION NAME *
+                          </label>
+                        </div>
                         <AutoComplete
+                          className="rx-select-compact"
                           value={lab.testName}
                           onChange={(val) => {
                             const copy = [...labTests];
@@ -2040,29 +2239,31 @@ export default function CreatePrescriptionModal({
                           }}
                           placeholder="e.g. Complete Blood Count (CBC), Fasting Blood Sugar..."
                           options={uniqueSuggestedTests.map((t) => ({ value: t }))}
-                          style={{ width: '100%' }}
+                          style={{ width: '100%', height: 34 }}
                         />
                       </div>
 
                       {/* Remove Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveLabTest(index)}
-                        style={{
-                          border: 'none',
-                          background: 'none',
-                          color: '#ef4444',
-                          cursor: 'pointer',
-                          padding: 4,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          marginTop: 14,
-                        }}
-                        title="Remove investigation"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', paddingTop: 22 }}>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveLabTest(index)}
+                          style={{
+                            border: 'none',
+                            background: 'none',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            padding: 6,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: 6,
+                          }}
+                          title="Remove investigation"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Linked Lab Details Card */}
@@ -2165,8 +2366,8 @@ export default function CreatePrescriptionModal({
 
                     {/* Patient Preparation Instructions */}
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
-                        <label style={{ fontSize: 10.5, fontWeight: 600, color: '#64748b' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <label style={{ fontSize: 10.5, fontWeight: 650, color: '#64748b' }}>
                           PATIENT PREPARATION / INSTRUCTIONS
                         </label>
                         <div style={{ display: 'flex', gap: 4 }}>
@@ -2183,9 +2384,9 @@ export default function CreatePrescriptionModal({
                                 }
                               }}
                               style={{
-                                fontSize: 10,
-                                padding: '1px 5px',
-                                borderRadius: 3,
+                                fontSize: 10.5,
+                                padding: '2px 7px',
+                                borderRadius: 4,
                                 background: '#f8fafc',
                                 border: '1px solid #e2e8f0',
                                 color: '#475569',
@@ -2209,8 +2410,7 @@ export default function CreatePrescriptionModal({
                           }
                         }}
                         placeholder="e.g. 10-12 hours overnight fasting required. Water intake allowed."
-                        className="ui-input"
-                        style={{ height: 28, fontSize: 12, padding: '0 8px' }}
+                        className="ui-input rx-field-compact"
                       />
                     </div>
                   </div>
@@ -2220,61 +2420,78 @@ export default function CreatePrescriptionModal({
           )}
         </div>
 
-        {/* General Advice & Follow-up Scheduling */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
-          {/* General instructions */}
-          <div>
-            <label style={{ fontSize: 11.5, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
-              GENERAL ADVICE / DIETARY INSTRUCTIONS
-            </label>
-            <textarea
-              value={generalInstructions}
-              onChange={(e) => setGeneralInstructions(e.target.value)}
-              placeholder="e.g. Drink at least 3 liters of water daily. Avoid oily and spicy foods. Complete full antibiotic course."
-              rows={3}
-              className="ui-input"
-              style={{ width: '100%', height: 74, padding: '8px', fontSize: 12 }}
-            />
+        {/* Section 5: General Advice & Follow-up Scheduling */}
+        <div className="rx-section-card">
+          <div className="rx-section-header">
+            <div className="rx-section-title-wrap">
+              <div className="rx-section-badge">
+                <Calendar size={14} />
+              </div>
+              <div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
+                  General Advice &amp; Follow-up
+                </div>
+                <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                  Dietary instructions, lifestyle notes, and next review schedule
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Follow-up appointment scheduling */}
-          <div>
-            <label style={{ fontSize: 11.5, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
-              RECOMMENDED FOLLOW-UP
-            </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {[3, 5, 7, 14, 30].map((days) => (
-                  <button
-                    key={days}
-                    type="button"
-                    onClick={() => handleQuickFollowUp(days)}
-                    style={{
-                      flex: 1,
-                      padding: '4px 0',
-                      fontSize: 11,
-                      fontWeight: followUpDays === days ? 600 : 400,
-                      borderRadius: 4,
-                      border: '1px solid #cbd5e1',
-                      background: followUpDays === days ? '#7c3aed' : '#ffffff',
-                      color: followUpDays === days ? '#ffffff' : '#334155',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {days < 30 ? `${days}d` : '1m'}
-                  </button>
-                ))}
-              </div>
-              <input
-                type="date"
-                value={followUpDate}
-                onChange={(e) => {
-                  setFollowUpDate(e.target.value);
-                  setFollowUpDays(undefined);
-                }}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+            {/* General instructions */}
+            <div>
+              <label className="rx-label">
+                GENERAL ADVICE / DIETARY INSTRUCTIONS
+              </label>
+              <textarea
+                value={generalInstructions}
+                onChange={(e) => setGeneralInstructions(e.target.value)}
+                placeholder="e.g. Drink at least 3 liters of water daily. Avoid oily and spicy foods. Complete full antibiotic course."
+                rows={3}
                 className="ui-input"
-                style={{ height: 32, fontSize: 12, padding: '0 8px' }}
+                style={{ width: '100%', height: 84, padding: '10px 12px', fontSize: 12.5, borderRadius: 8 }}
               />
+            </div>
+
+            {/* Follow-up appointment scheduling */}
+            <div>
+              <label className="rx-label">
+                RECOMMENDED FOLLOW-UP
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[3, 5, 7, 14, 30].map((days) => (
+                    <button
+                      key={days}
+                      type="button"
+                      onClick={() => handleQuickFollowUp(days)}
+                      style={{
+                        flex: 1,
+                        height: 32,
+                        fontSize: 12,
+                        fontWeight: followUpDays === days ? 650 : 500,
+                        borderRadius: 7,
+                        border: followUpDays === days ? '1px solid #93c5fd' : '1px solid #e2e8f0',
+                        background: followUpDays === days ? '#eff6ff' : '#ffffff',
+                        color: followUpDays === days ? '#1d4ed8' : '#475569',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {days < 30 ? `${days}d` : '1m'}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="date"
+                  value={followUpDate}
+                  onChange={(e) => {
+                    setFollowUpDate(e.target.value);
+                    setFollowUpDays(undefined);
+                  }}
+                  className="ui-input rx-field-input"
+                />
+              </div>
             </div>
           </div>
         </div>

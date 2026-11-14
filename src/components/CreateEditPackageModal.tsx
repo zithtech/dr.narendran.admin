@@ -1,17 +1,18 @@
-import { App, Checkbox, Drawer, Empty, Input, Select, Spin, Tag } from 'antd';
+import { App, Checkbox, Drawer, Empty, Input, Spin } from 'antd';
 import {
   Check,
   CheckSquare,
   Package,
   Pill,
-  Search,
   Square,
+  X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { medicinePackagesApi } from '../api/medicinePackagesApi';
 import type { Medicine, MedicinePackage } from '../types/pharmacy';
 import { getErrorMessage } from '../utils/errors';
+import { CommonFilterBar, type FilterDropdownOption, StatusPill } from './ui/CommonTable';
 
 const { TextArea } = Input;
 
@@ -239,12 +240,37 @@ export default function CreateEditPackageModal({
     }
   };
 
+  const filterDropdowns: FilterDropdownOption[] = useMemo(() => {
+    const list: FilterDropdownOption[] = [];
+    if (categories.length > 0) {
+      list.push({
+        id: 'category',
+        label: 'Category',
+        allLabel: 'All Categories',
+        value: categoryFilter === 'all' ? '' : categoryFilter,
+        onChange: (val) => setCategoryFilter(val || 'all'),
+        options: categories.map((c) => ({ label: c, value: c })),
+      });
+    }
+    if (dosageForms.length > 0) {
+      list.push({
+        id: 'dosageForm',
+        label: 'Dosage Form',
+        allLabel: 'All Dosage Forms',
+        value: dosageFormFilter === 'all' ? '' : dosageFormFilter,
+        onChange: (val) => setDosageFormFilter(val || 'all'),
+        options: dosageForms.map((df) => ({ label: df, value: df })),
+      });
+    }
+    return list;
+  }, [categories, dosageForms, categoryFilter, dosageFormFilter]);
+
   return (
     <Drawer
       open={open}
       onClose={onClose}
       width="min(1150px, 95vw)"
-      destroyOnClose
+      destroyOnHidden
       styles={{
         header: {
           padding: '16px 24px',
@@ -263,66 +289,42 @@ export default function CreateEditPackageModal({
         },
       }}
       title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 8,
-              background: '#f5f3ff',
-              border: '1px solid #ddd6fe',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#7c3aed',
-            }}
-          >
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
             <Package size={18} />
           </div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>
+            <div className="text-[15px] font-bold text-slate-900 leading-snug">
               {editingPackage ? 'Edit Medicine Package' : 'Create Medicine Package'}
             </div>
-            <div style={{ fontSize: 12, color: '#64748b' }}>
+            <div className="text-xs text-slate-500 font-normal">
               Group multiple pharmacy medicines together into one reusable package
             </div>
           </div>
         </div>
       }
       footer={
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: 12.5, color: '#64748b' }}>
-            <strong style={{ color: selectedIds.length > 0 ? '#7c3aed' : '#94a3b8' }}>
+        <div className="flex justify-between items-center">
+          <div className="text-xs text-slate-500">
+            <strong className={selectedIds.length > 0 ? 'text-blue-600' : 'text-slate-400'}>
               {selectedIds.length}
             </strong>{' '}
             medicine(s) selected
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
+          <div className="flex gap-2.5">
             <button
               type="button"
-              className="ui-btn"
+              className="h-8 px-3.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
               onClick={onClose}
               disabled={submitting}
-              style={{ fontSize: 13, cursor: 'pointer' }}
             >
               Cancel
             </button>
             <button
               type="button"
-              className="ui-btn ui-btn-primary"
+              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               onClick={handleSave}
               disabled={submitting}
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                background: '#7c3aed',
-                borderColor: '#7c3aed',
-                color: '#ffffff',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                cursor: submitting ? 'not-allowed' : 'pointer',
-              }}
             >
               {submitting ? (
                 <>
@@ -382,25 +384,15 @@ export default function CreateEditPackageModal({
         `}</style>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         {/* Section 1: Package Basic Information */}
-        <div
-          style={{
-            padding: 16,
-            borderRadius: 10,
-            border: '1px solid #e2e8f0',
-            background: '#fafafa',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-          }}
-        >
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+        <div className="bg-white border border-slate-200/90 rounded-lg p-4 shadow-2xs flex flex-col gap-3">
+          <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">
             1. Package Information
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             <div>
-              <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 4 }}>
-                Package Name <span style={{ color: '#ef4444' }}>*</span>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Package Name <span className="text-rose-500">*</span>
               </label>
               <Input
                 placeholder="e.g. Post-Surgery Recovery Pack, Fever & Cold Relief"
@@ -408,13 +400,14 @@ export default function CreateEditPackageModal({
                 onChange={(e) => setName(e.target.value)}
                 maxLength={255}
                 size="middle"
-                style={{ borderRadius: 6 }}
+                style={{ borderRadius: 8 }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 4 }}>
-                Description / Clinical Purpose <span style={{ color: '#94a3b8', fontWeight: 400 }}>(Optional)</span>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Description / Clinical Purpose{' '}
+                <span className="text-slate-400 font-normal">(Optional)</span>
               </label>
               <TextArea
                 placeholder="e.g. Recommended combination for routine viral flu symptoms and body aches"
@@ -422,7 +415,7 @@ export default function CreateEditPackageModal({
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
                 maxLength={500}
-                style={{ borderRadius: 6, resize: 'none' }}
+                style={{ borderRadius: 8, resize: 'none' }}
               />
             </div>
           </div>
@@ -430,17 +423,19 @@ export default function CreateEditPackageModal({
 
         {/* Section 2: Selected Medicines Review Bar */}
         <div
-          style={{
-            padding: '12px 16px',
-            borderRadius: 10,
-            border: selectedIds.length > 0 ? '1px solid #ddd6fe' : '1px solid #e2e8f0',
-            background: selectedIds.length > 0 ? '#f5f3ff' : '#ffffff',
-          }}
+          className={`rounded-lg border px-4 py-3 shadow-2xs transition-colors ${
+            selectedIds.length > 0
+              ? 'border-blue-200 bg-blue-50/70'
+              : 'border-slate-200/90 bg-white'
+          }`}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Pill size={15} style={{ color: selectedIds.length > 0 ? '#7c3aed' : '#94a3b8' }} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-2">
+              <Pill
+                size={15}
+                className={selectedIds.length > 0 ? 'text-blue-600' : 'text-slate-400'}
+              />
+              <span className="text-xs font-bold text-slate-900">
                 Selected Medicines ({selectedIds.length})
               </span>
             </div>
@@ -448,15 +443,7 @@ export default function CreateEditPackageModal({
               <button
                 type="button"
                 onClick={() => setSelectedIds([])}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#dc2626',
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
+                className="text-xs font-semibold text-rose-600 hover:text-rose-700 cursor-pointer"
               >
                 Clear all selected
               </button>
@@ -464,33 +451,33 @@ export default function CreateEditPackageModal({
           </div>
 
           {selectedIds.length === 0 ? (
-            <div style={{ fontSize: 12, color: '#64748b' }}>
+            <div className="text-xs text-slate-500">
               No medicines selected yet. Use the checkboxes in the Pharmacy list below to add medicines to this package.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 100, overflowY: 'auto', paddingTop: 4 }}>
+            <div className="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto pt-1">
               {selectedIds.map((id) => {
                 const med = selectedMedicinesMap.get(id);
                 const title = med ? med.medicine_name : `Medicine #${id.slice(0, 6)}`;
                 const strength = med?.strength ? ` (${med.strength} ${med.strength_unit || ''})` : '';
                 return (
-                  <Tag
+                  <span
                     key={id}
-                    closable
-                    onClose={() => toggleMedicine(id)}
-                    color="purple"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      padding: '3px 8px',
-                      borderRadius: 6,
-                      fontSize: 12,
-                      fontWeight: 600,
-                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-blue-200 bg-white text-blue-700 text-xs font-semibold shadow-2xs"
                   >
-                    <span>{title}{strength}</span>
-                  </Tag>
+                    <span>
+                      {title}
+                      {strength}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleMedicine(id)}
+                      aria-label={`Remove ${title}`}
+                      className="text-blue-400 hover:text-blue-700 cursor-pointer flex items-center"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
                 );
               })}
             </div>
@@ -498,132 +485,62 @@ export default function CreateEditPackageModal({
         </div>
 
         {/* Section 3: Pharmacy Medicine Catalog with Checkboxes */}
-        <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
-          {/* Search & Filter Header */}
-          <div
-            style={{
-              padding: '12px 16px',
-              background: '#f8fafc',
-              borderBottom: '1px solid #e2e8f0',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-              <div>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
-                  2. Select Medicines from Pharmacy
-                </span>
-                <div style={{ fontSize: 11.5, color: '#64748b' }}>
-                  Choose from existing medicines. Duplicate records will not be created.
-                </div>
+        <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden">
+          {/* Header */}
+          <div className="px-4 py-3 bg-[#f8fafc] border-b border-slate-200/80 flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <div className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                2. Select Medicines from Pharmacy
               </div>
-
-              {filteredMedicines.length > 0 && (
-                <button
-                  type="button"
-                  onClick={toggleSelectAllFiltered}
-                  className="ui-btn ui-btn-sm"
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '4px 10px',
-                    borderColor: allFilteredSelected ? '#ddd6fe' : '#e2e8f0',
-                    background: allFilteredSelected ? '#f5f3ff' : '#ffffff',
-                    color: allFilteredSelected ? '#7c3aed' : '#334155',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {allFilteredSelected ? <CheckSquare size={14} /> : <Square size={14} />}
-                  <span>{allFilteredSelected ? 'Deselect Filtered' : 'Select All Filtered'}</span>
-                </button>
-              )}
+              <div className="text-[11px] text-slate-500 mt-0.5">
+                Choose from existing medicines. Duplicate records will not be created.
+              </div>
             </div>
 
-            {/* Filter controls bar */}
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-              <div style={{ flex: 1, minWidth: 220 }}>
-                <Input
-                  prefix={<Search size={14} style={{ color: '#94a3b8' }} />}
-                  placeholder="Search by medicine name, generic, brand, or code..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  allowClear
-                  size="middle"
-                  style={{ borderRadius: 6 }}
-                />
-              </div>
-
-              {categories.length > 0 && (
-                <div style={{ width: 170 }}>
-                  <Select
-                    value={categoryFilter}
-                    onChange={(val) => setCategoryFilter(val)}
-                    style={{ width: '100%' }}
-                    placeholder="All Categories"
-                    options={[
-                      { label: 'All Categories', value: 'all' },
-                      ...categories.map((c) => ({ label: c, value: c })),
-                    ]}
-                  />
-                </div>
-              )}
-
-              {dosageForms.length > 0 && (
-                <div style={{ width: 150 }}>
-                  <Select
-                    value={dosageFormFilter}
-                    onChange={(val) => setDosageFormFilter(val)}
-                    style={{ width: '100%' }}
-                    placeholder="All Dosage Forms"
-                    options={[
-                      { label: 'All Dosage Forms', value: 'all' },
-                      ...dosageForms.map((df) => ({ label: df, value: df })),
-                    ]}
-                  />
-                </div>
-              )}
-
-              {(searchTerm || categoryFilter !== 'all' || dosageFormFilter !== 'all') && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchTerm('');
-                    setCategoryFilter('all');
-                    setDosageFormFilter('all');
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#64748b',
-                    fontSize: 11.5,
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    padding: 0,
-                  }}
-                >
-                  Reset filters
-                </button>
-              )}
-            </div>
+            {filteredMedicines.length > 0 && (
+              <button
+                type="button"
+                onClick={toggleSelectAllFiltered}
+                className={`inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${
+                  allFilteredSelected
+                    ? 'border-blue-200 bg-blue-50 text-blue-700'
+                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {allFilteredSelected ? <CheckSquare size={14} /> : <Square size={14} />}
+                <span>{allFilteredSelected ? 'Deselect Filtered' : 'Select All Filtered'}</span>
+              </button>
+            )}
           </div>
+
+          {/* Common Filter Bar for Search & Filters */}
+          <CommonFilterBar
+            className="!justify-start"
+            search={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Search by medicine name, generic, brand, or code..."
+            dropdowns={filterDropdowns}
+            hasActiveFilters={
+              Boolean(searchTerm.trim()) || categoryFilter !== 'all' || dosageFormFilter !== 'all'
+            }
+            onReset={() => {
+              setSearchTerm('');
+              setCategoryFilter('all');
+              setDosageFormFilter('all');
+            }}
+          />
 
           {/* Medicines Checklist Table */}
           <div
             onWheel={handleTableWheel}
-            className="package-table-scroll"
-            style={{ maxHeight: 380, overflowY: 'auto', overscrollBehavior: 'auto' }}
+            className="package-table-scroll max-h-[380px] overflow-y-auto overscroll-auto"
           >
             {loadingMedicines ? (
-              <div style={{ padding: 40, textAlign: 'center' }}>
+              <div className="py-10 text-center">
                 <Spin tip="Loading Pharmacy medicines catalog..." />
               </div>
             ) : filteredMedicines.length === 0 ? (
-              <div style={{ padding: 36, textAlign: 'center' }}>
+              <div className="py-9 text-center">
                 <Empty
                   description={
                     medicines.length === 0
@@ -633,43 +550,45 @@ export default function CreateEditPackageModal({
                 />
               </div>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
-                <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: '#f8fafc' }}>
-                  <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', textAlign: 'left' }}>
-                    <th style={{ padding: '8px 12px', width: 44, textAlign: 'center' }}>
+              <table className="w-full text-left border-collapse">
+                <thead className="sticky top-0 z-10 bg-[#f8fafc] border-b border-slate-200/90 text-[11px] font-semibold text-slate-600">
+                  <tr>
+                    <th className="px-3.5 py-2 w-11 text-center">
                       <Checkbox
                         checked={allFilteredSelected}
-                        indeterminate={!allFilteredSelected && filteredMedicines.some((m) => selectedIds.includes(m.id))}
+                        indeterminate={
+                          !allFilteredSelected &&
+                          filteredMedicines.some((m) => selectedIds.includes(m.id))
+                        }
                         onChange={toggleSelectAllFiltered}
                       />
                     </th>
-                    <th style={{ padding: '8px 12px' }}>Medicine Name</th>
-                    <th style={{ padding: '8px 12px' }}>Brand / Manufacturer</th>
-                    <th style={{ padding: '8px 12px' }}>Category</th>
-                    <th style={{ padding: '8px 12px' }}>Dosage Form & Strength</th>
-                    <th style={{ padding: '8px 12px' }}>Price</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'center' }}>Status</th>
+                    <th className="px-3.5 py-2 whitespace-nowrap">Medicine Name</th>
+                    <th className="px-3.5 py-2 whitespace-nowrap">Brand / Manufacturer</th>
+                    <th className="px-3.5 py-2 whitespace-nowrap">Category</th>
+                    <th className="px-3.5 py-2 whitespace-nowrap">Dosage Form & Strength</th>
+                    <th className="px-3.5 py-2 whitespace-nowrap">Price</th>
+                    <th className="px-3.5 py-2 whitespace-nowrap text-center">Status</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100 text-xs text-slate-600">
                   {filteredMedicines.map((m) => {
                     const isSelected = selectedIds.includes(m.id);
                     const strengthDisplay = [m.strength, m.strength_unit].filter(Boolean).join(' ');
-                    const categoryDisplay = [m.therapeutic_category, m.sub_category].filter(Boolean).join(' · ');
+                    const categoryDisplay = [m.therapeutic_category, m.sub_category]
+                      .filter(Boolean)
+                      .join(' · ');
 
                     return (
                       <tr
                         key={m.id}
                         onClick={() => toggleMedicine(m.id)}
-                        style={{
-                          borderBottom: '1px solid #f1f5f9',
-                          background: isSelected ? '#f5f3ff' : '#ffffff',
-                          cursor: 'pointer',
-                          transition: 'background 0.15s ease',
-                        }}
+                        className={`transition-colors duration-100 cursor-pointer ${
+                          isSelected ? 'bg-blue-50/60' : 'hover:bg-slate-50/70 bg-white'
+                        }`}
                       >
                         <td
-                          style={{ padding: '9px 12px', textAlign: 'center', verticalAlign: 'middle' }}
+                          className="px-3.5 py-2 text-center align-middle"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <Checkbox
@@ -677,53 +596,59 @@ export default function CreateEditPackageModal({
                             onChange={() => toggleMedicine(m.id)}
                           />
                         </td>
-                        <td style={{ padding: '9px 12px', verticalAlign: 'middle' }}>
-                          <div style={{ fontWeight: 650, color: isSelected ? '#6d28d9' : '#0f172a' }}>
+                        <td className="px-3.5 py-2 align-middle">
+                          <div
+                            className={`font-semibold ${
+                              isSelected ? 'text-blue-700' : 'text-slate-900'
+                            }`}
+                          >
                             {m.medicine_name}
                           </div>
                           {m.generic_name && (
-                            <div style={{ fontSize: 11, color: '#64748b' }}>
+                            <div className="text-[11px] text-slate-500">
                               Generic: {m.generic_name}
                             </div>
                           )}
                           {m.medicine_code && (
-                            <div style={{ fontSize: 10.5, color: '#94a3b8', fontFamily: 'monospace' }}>
+                            <div className="text-[10.5px] text-slate-400 font-mono">
                               Code: {m.medicine_code}
                             </div>
                           )}
                         </td>
-                        <td style={{ padding: '9px 12px', verticalAlign: 'middle', color: '#334155' }}>
-                          {m.manufacturer || <span style={{ color: '#cbd5e1' }}>—</span>}
+                        <td className="px-3.5 py-2 align-middle text-slate-700">
+                          {m.manufacturer || <span className="text-slate-300">—</span>}
                         </td>
-                        <td style={{ padding: '9px 12px', verticalAlign: 'middle', color: '#475569' }}>
-                          {categoryDisplay || <span style={{ color: '#cbd5e1' }}>General</span>}
+                        <td className="px-3.5 py-2 align-middle text-slate-600">
+                          {categoryDisplay || <span className="text-slate-400">General</span>}
                         </td>
-                        <td style={{ padding: '9px 12px', verticalAlign: 'middle' }}>
-                          <div style={{ fontWeight: 600, color: '#1e293b' }}>
+                        <td className="px-3.5 py-2 align-middle">
+                          <div className="font-semibold text-slate-800">
                             {m.dosage_form || 'Tablet'}
                           </div>
                           {strengthDisplay && (
-                            <div style={{ fontSize: 11, color: '#6d28d9' }}>
+                            <div className="text-[11px] text-blue-600 font-medium">
                               {strengthDisplay}
                             </div>
                           )}
                         </td>
-                        <td style={{ padding: '9px 12px', verticalAlign: 'middle' }}>
+                        <td className="px-3.5 py-2 align-middle tabular-nums">
                           {m.final_price != null ? (
-                            <span style={{ fontWeight: 650, color: '#0f172a' }}>₹{Number(m.final_price).toFixed(2)}</span>
+                            <span className="font-semibold text-slate-900">
+                              ₹{Number(m.final_price).toFixed(2)}
+                            </span>
                           ) : m.mrp != null ? (
-                            <span style={{ fontWeight: 600, color: '#0f172a' }}>₹{Number(m.mrp).toFixed(2)}</span>
+                            <span className="font-semibold text-slate-900">
+                              ₹{Number(m.mrp).toFixed(2)}
+                            </span>
                           ) : (
-                            <span style={{ color: '#cbd5e1' }}>—</span>
+                            <span className="text-slate-300">—</span>
                           )}
                         </td>
-                        <td style={{ padding: '9px 12px', verticalAlign: 'middle', textAlign: 'center' }}>
-                          <Tag
-                            color={m.status === 'Active' ? 'cyan' : 'default'}
-                            style={{ fontSize: 11, margin: 0 }}
-                          >
-                            {m.status || 'Active'}
-                          </Tag>
+                        <td className="px-3.5 py-2 align-middle text-center">
+                          <StatusPill
+                            active={m.status !== 'Inactive'}
+                            label={m.status || 'Active'}
+                          />
                         </td>
                       </tr>
                     );

@@ -3,29 +3,27 @@ import {
   ArrowDown,
   ArrowRight,
   ArrowUp,
-  Building2,
-  ChevronDown,
-  GitBranch,
-  HeartPulse,
+  ChevronLeft,
+  ChevronRight,
+  FileSpreadsheet,
   type LucideIcon,
   Pencil,
   Plus,
   RefreshCw,
   Search,
   SearchX,
-  SlidersHorizontal,
-  Stethoscope,
   Trash2,
+  X,
 } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
 
 import type { Resource } from '../../hooks/useResource';
 import { timeAgo } from '../../lib/format';
 import { getErrorMessage } from '../../utils/errors';
 import { usePermission } from '../../context/PermissionContext';
+import { exportToCSV, PrimaryAvatarCell } from './CommonTable';
 import { ConfirmDialog } from './Modal';
-import { Alert, Avatar, cx } from './primitives';
+import { Alert, cx } from './primitives';
 import { SearchableSelect } from './SearchableSelect';
 
 /** A dimension the list can be sliced by: shown in the left panel and the filter bar. */
@@ -53,7 +51,14 @@ export interface Column<T> {
   width?: number | string;
 }
 
-interface DataViewProps<T extends { id: string }> {
+export interface DataViewTab {
+  id: string;
+  label: string;
+  count?: number;
+}
+
+export interface DataViewProps<T extends { id: string }> {
+  overline?: string;
   title: string;
   subtitle: string;
   icon: LucideIcon;
@@ -63,15 +68,20 @@ interface DataViewProps<T extends { id: string }> {
   searchPlaceholder: string;
   searchFields: (item: T) => (string | null | undefined)[];
   facets: Facet<T>[];
+  /** Optional quick filter tabs (e.g. All, Placed, Processing, Delivered) */
+  tabs?: DataViewTab[];
+  activeTab?: string;
+  onTabChange?: (tabId: string) => void;
+  tabFilter?: (item: T, activeTab: string) => boolean;
   /** Date used by the "Any time" preset and the date range. */
   dateOf?: (item: T) => string | null | undefined;
   dateLabel?: string;
   columns: Column<T>[];
-  createLabel: string;
-  onCreate: () => void;
+  createLabel?: string;
+  onCreate?: () => void;
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => Promise<unknown>;
-  nameOf: (item: T) => string;
+  nameOf?: (item: T) => string;
   deleteWarning?: string;
   rowActions?: (item: T) => ReactNode;
   /** Makes the whole row clickable (e.g. to open a details drawer). */
@@ -87,9 +97,12 @@ interface DataViewProps<T extends { id: string }> {
   canCreate?: boolean;
   canUpdate?: boolean;
   canDelete?: boolean;
+  /** Optional custom export action or label */
+  onExport?: () => void;
+  exportLabel?: string;
 }
 
-type TimePreset = 'any' | 'today' | '7' | '30' | '90' | 'year';
+type TimePreset = 'any' | 'today' | '7' | '30' | '90' | 'year' | 'custom';
 const TIME_PRESETS: { value: TimePreset; label: string }[] = [
   { value: 'any', label: 'Any time' },
   { value: 'today', label: 'Today' },
@@ -97,14 +110,16 @@ const TIME_PRESETS: { value: TimePreset; label: string }[] = [
   { value: '30', label: 'Last 30 days' },
   { value: '90', label: 'Last 90 days' },
   { value: 'year', label: 'This year' },
+  { value: 'custom', label: 'Custom range…' },
 ];
 const PAGE_SIZES = [10, 25, 50, 100];
-const SKELETON_ROWS = Array.from({ length: 8 }, (_, i) => i);
+const SKELETON_ROWS = Array.from({ length: 7 }, (_, i) => i);
 
 function presetStart(preset: TimePreset): number | null {
   const now = new Date();
   switch (preset) {
     case 'any':
+    case 'custom':
       return null;
     case 'today':
       return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -115,9 +130,9 @@ function presetStart(preset: TimePreset): number | null {
   }
 }
 
-
 export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
   const {
+    overline,
     title,
     subtitle,
     icon: Icon,
@@ -127,6 +142,10 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
     searchPlaceholder,
     searchFields,
     facets,
+    tabs,
+    activeTab,
+    onTabChange,
+    tabFilter,
     dateOf,
     dateLabel = 'Added',
     columns,
@@ -145,6 +164,8 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
     canCreate: propCanCreate,
     canUpdate: propCanUpdate,
     canDelete: propCanDelete,
+    onExport,
+    exportLabel = 'Export',
   } = props;
   const { items, loading, error, syncedAt, refresh } = resource;
   const { message } = App.useApp();
@@ -181,22 +202,21 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
-  const [filterbarOpen, setFilterbarOpen] = useState(true);
   const [pendingDelete, setPendingDelete] = useState<T[] | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
-  const [hubDropdownOpen, setHubDropdownOpen] = useState(false);
-  const hubDropdownRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Keyboard shortcut ⌘K / Ctrl+K to focus search
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (hubDropdownRef.current && !hubDropdownRef.current.contains(e.target as Node)) {
-        setHubDropdownOpen(false);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Keeps "Last synced 2 minutes ago" honest without a refetch.
@@ -241,6 +261,9 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
     const toTime = to ? new Date(`${to}T23:59:59.999`).getTime() : null;
 
     const rows = items.filter((item) => {
+      if (tabFilter && activeTab && activeTab !== 'ALL' && activeTab !== 'all') {
+        if (!tabFilter(item, activeTab)) return false;
+      }
       if (q && !searchFields(item).some((f) => f?.toLowerCase().includes(q))) return false;
       for (const facet of facets) {
         const want = filters[facet.id];
@@ -269,19 +292,19 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
       });
     }
     return rows;
-  }, [items, search, filters, facets, preset, from, to, dateOf, searchFields, sort, columns]);
+  }, [items, search, filters, facets, preset, from, to, dateOf, searchFields, sort, columns, tabFilter, activeTab]);
 
   const activeRules =
     Object.values(filters).filter(Boolean).length +
     (preset !== 'any' ? 1 : 0) +
-    (from || to ? 1 : 0);
+    (from || to ? 1 : 0) +
+    (search.trim() ? 1 : 0) +
+    (activeTab && activeTab !== 'ALL' && activeTab !== 'all' ? 1 : 0);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / perPage));
   const current = Math.min(page, pageCount);
   const startIdx = (current - 1) * perPage;
   const pageRows = filtered.slice(startIdx, startIdx + perPage);
-
-
 
   const clearAll = () => {
     setFilters({});
@@ -290,6 +313,9 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
     setTo('');
     setSearch('');
     setPage(1);
+    if (onTabChange && activeTab) {
+      onTabChange('ALL');
+    }
   };
 
   const toggleSort = (id: string) => {
@@ -345,6 +371,23 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
     await refresh();
   };
 
+  const handleExport = () => {
+    if (onExport) {
+      onExport();
+      return;
+    }
+    // Default CSV export of current filtered rows
+    const colsToExport = columns.map((c) => ({
+      header: c.header,
+      key: (item: T) => {
+        const val = (item as Record<string, unknown>)[c.id];
+        return val !== undefined && val !== null ? String(val) : '';
+      },
+    }));
+    exportToCSV(nounPlural, filtered, colsToExport);
+    void message.success(`Exported ${filtered.length} ${nounPlural} to CSV`);
+  };
+
   /* ── Render ────────────────────────────────────────────── */
 
   const syncedLabel = syncedAt
@@ -359,511 +402,566 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
   const colSpan = columns.length + (showCheckCol ? 1 : 0) + (showActionsCol ? 1 : 0);
 
   return (
-    <div className="ui-page">
-      <header className="ui-header">
-        <div className="ui-header-title">
-          <div className="ui-hub-selector-wrap" ref={hubDropdownRef}>
-            <button
-              type="button"
-              className={cx('ui-hub-btn', hubDropdownOpen && 'is-open')}
-              onClick={() => setHubDropdownOpen((o) => !o)}
-              aria-expanded={hubDropdownOpen}
-              aria-label={`${title} hub menu`}
-            >
-              <Icon size={16} strokeWidth={2.2} className="ui-hub-icon" />
-              <span className="ui-hub-title">{title}</span>
-              <ChevronDown size={14} className={cx('ui-hub-chevron', hubDropdownOpen && 'is-rotated')} />
-            </button>
-
-            {hubDropdownOpen && (
-              <div className="ui-hub-dropdown">
-                <div className="ui-hub-dropdown-label">Quick Switch Hub</div>
-                <button
-                  type="button"
-                  className={cx('ui-hub-dropdown-item', title === 'Hospitals' && 'is-active')}
-                  onClick={() => {
-                    setHubDropdownOpen(false);
-                    void navigate('/');
-                  }}
-                >
-                  <Building2 size={14} />
-                  <span>Hospitals</span>
-                </button>
-                <button
-                  type="button"
-                  className={cx('ui-hub-dropdown-item', title === 'Branches' && 'is-active')}
-                  onClick={() => {
-                    setHubDropdownOpen(false);
-                    void navigate('/branches');
-                  }}
-                >
-                  <GitBranch size={14} />
-                  <span>Branches</span>
-                </button>
-                <button
-                  type="button"
-                  className={cx('ui-hub-dropdown-item', title === 'Doctors' && 'is-active')}
-                  onClick={() => {
-                    setHubDropdownOpen(false);
-                    void navigate('/doctors');
-                  }}
-                >
-                  <Stethoscope size={14} />
-                  <span>Doctors</span>
-                </button>
-                <button
-                  type="button"
-                  className={cx('ui-hub-dropdown-item', title === 'Patients' && 'is-active')}
-                  onClick={() => {
-                    setHubDropdownOpen(false);
-                    void navigate('/patients');
-                  }}
-                >
-                  <HeartPulse size={14} />
-                  <span>Patients</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          <span className="ui-header-sub" title={subtitle}>
-            {subtitle}
-          </span>
+    <div className="ui-page space-y-3">
+      {/* ── Compact Page Header ── */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 py-1">
+        <div className="flex flex-col min-w-0 flex-1">
+          {overline && (
+            <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase mb-0.5">
+              {overline}
+            </span>
+          )}
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight leading-tight">
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="text-xs text-slate-500 mt-0.5 font-normal leading-normal">{subtitle}</p>
+          )}
         </div>
 
-        <div className="ui-header-actions">
-          <span className="ui-synced">{syncedLabel}</span>
+        {/* Right Header Actions */}
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap w-full sm:w-auto justify-start sm:justify-end">
+          {syncedLabel && (
+            <span className="text-[11px] text-slate-400 font-medium hidden md:inline-block mr-1">
+              {syncedLabel}
+            </span>
+          )}
+
           <button
             type="button"
-            className="ui-icon-btn is-bordered"
+            className="w-7.5 h-7.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
             onClick={() => {
               void refresh();
             }}
             aria-label="Refresh"
             title="Refresh"
           >
-            <RefreshCw size={15} className={loading ? 'is-spinning' : ''} />
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
           </button>
-          <div className="ui-search">
-            <Search size={15} />
-            <input
-              className="ui-input"
-              type="search"
-              placeholder={searchPlaceholder}
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              aria-label={`Search ${nounPlural}`}
-            />
-            <span className="ui-search-kbd">⌘K</span>
-          </div>
+
+          {extraActions}
+
           <button
             type="button"
-            className={cx('ui-btn ui-btn-pill', activeRules > 0 && 'ui-btn-soft')}
-            onClick={() => setFilterbarOpen((o) => !o)}
+            className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+            onClick={handleExport}
           >
-            <SlidersHorizontal size={15} />
-            Filters
-            {activeRules > 0 && <span className="ui-btn-count">{activeRules}</span>}
+            <FileSpreadsheet size={13} className="text-slate-500" />
+            <span>{exportLabel}</span>
           </button>
-          {extraActions}
-          {isCreateAllowed && (
-            <button type="button" className="ui-btn ui-btn-primary ui-btn-pill" onClick={onCreate}>
-              <Plus size={16} strokeWidth={2.4} />
-              {createLabel}
+
+          {onCreate && isCreateAllowed && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 h-7.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              onClick={onCreate}
+            >
+              <Plus size={13} strokeWidth={2.4} />
+              <span>{createLabel || 'Create'}</span>
             </button>
           )}
         </div>
       </header>
 
-      <div className="ui-workspace">
-        {/* ── Content ── */}
-        <section className="ui-content">
-          {error && <Alert>{error}</Alert>}
+      {error && <Alert>{error}</Alert>}
 
-          {filterbarOpen && (
-            <div className="ui-card ui-filterbar">
-              {facetOptions.map(({ facet, options }) => (
-                <SearchableSelect
-                  key={facet.id}
-                  variant="pill"
-                  size="sm"
-                  width="auto"
-                  aria-label={facet.label}
-                  value={filters[facet.id] ?? ''}
-                  onChange={(val) => {
-                    setFilters((prev) => ({ ...prev, [facet.id]: val }));
+      {/* ── Main Unified Container: Filters + Table + Pagination (Matching Image Card) ── */}
+      <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col">
+        {/* ── Optional Quick Filter Tabs Row ── */}
+        {tabs && tabs.length > 0 && (
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none px-3.5 py-1.5 border-b border-slate-100 bg-slate-50/60 flex-nowrap">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    onTabChange?.(tab.id);
                     setPage(1);
                   }}
-                  placeholder={facet.allLabel}
-                  searchPlaceholder={`Filter ${facet.label.toLowerCase()}...`}
-                  options={[
-                    { value: '', label: facet.allLabel },
-                    ...options.map((o) => ({
-                      value: o.value,
-                      label: o.label,
-                    })),
-                  ]}
-                />
-              ))}
-              {dateOf && (
-                <>
-                  <SearchableSelect
-                    variant="pill"
-                    size="sm"
-                    width="auto"
-                    aria-label="Time range"
-                    value={preset}
-                    onChange={(val) => {
-                      setPreset(val as TimePreset);
-                      setPage(1);
-                    }}
-                    placeholder="Time range"
-                    searchPlaceholder="Filter time presets..."
-                    searchable={false}
-                    options={TIME_PRESETS.map((p) => ({
-                      value: p.value,
-                      label: p.value === 'any' ? p.label : `${dateLabel} · ${p.label.toLowerCase()}`,
-                    }))}
-                  />
-                  <div className="ui-daterange">
-                    <span>{dateLabel}</span>
-                    <input
-                      type="date"
-                      value={from}
-                      max={to || undefined}
-                      onChange={(e) => {
-                        setFrom(e.target.value);
-                        setPage(1);
-                      }}
-                      aria-label={`${dateLabel} from`}
-                    />
-                    <ArrowRight size={13} />
-                    <input
-                      type="date"
-                      value={to}
-                      min={from || undefined}
-                      onChange={(e) => {
-                        setTo(e.target.value);
-                        setPage(1);
-                      }}
-                      aria-label={`${dateLabel} to`}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          <div className="ui-card ui-table-card">
-            <div className="ui-table-scroll">
-              <table className="ui-table">
-                <thead>
-                  <tr>
-                    {showCheckCol && (
-                      <th className="ui-col-check">
-                        <input
-                          type="checkbox"
-                          className="ui-checkbox"
-                          checked={pageAllSelected}
-                          ref={(el) => {
-                            if (el) el.indeterminate = !pageAllSelected && pageSomeSelected;
-                          }}
-                          onChange={togglePage}
-                          aria-label="Select all on this page"
-                          disabled={pageRows.length === 0}
-                        />
-                      </th>
-                    )}
-                    {columns.map((c) => {
-                      const sorted = sort?.id === c.id ? sort.dir : null;
-                      return (
-                        <th
-                          key={c.id}
-                          style={c.width !== undefined ? { width: c.width } : undefined}
-                        >
-                          {c.sort ? (
-                            <button
-                              type="button"
-                              className={cx('ui-th-sort', sorted && 'is-sorted')}
-                              onClick={() => toggleSort(c.id)}
-                            >
-                              {c.header}
-                              {sorted === 'asc' && <ArrowUp size={12} />}
-                              {sorted === 'desc' && <ArrowDown size={12} />}
-                            </button>
-                          ) : (
-                            c.header
-                          )}
-                        </th>
-                      );
-                    })}
-                    {showActionsCol && <th className="ui-col-actions">Actions</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && !hasData ? (
-                    SKELETON_ROWS.map((i) => (
-                      <tr key={i}>
-                        {showCheckCol && (
-                          <td className="ui-col-check">
-                            <span className="ui-skeleton" style={{ width: 14, height: 14 }} />
-                          </td>
-                        )}
-                        {columns.map((c, ci) => (
-                          <td key={c.id}>
-                            {ci === 0 ? (
-                              <div className="ui-primary-cell">
-                                <span
-                                  className="ui-skeleton"
-                                  style={{ width: 36, height: 36, borderRadius: '50%' }}
-                                />
-                                <div style={{ flex: 1 }}>
-                                  <span
-                                    className="ui-skeleton"
-                                    style={{ width: '60%', marginBottom: 7 }}
-                                  />
-                                  <span
-                                    className="ui-skeleton"
-                                    style={{ width: '40%', height: 8 }}
-                                  />
-                                </div>
-                              </div>
-                            ) : (
-                              <span
-                                className="ui-skeleton"
-                                style={{ width: `${50 + ((i * 7 + ci * 13) % 40)}%` }}
-                              />
-                            )}
-                          </td>
-                        ))}
-                        {showActionsCol && <td />}
-                      </tr>
-                    ))
-                  ) : pageRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={colSpan} style={{ height: 'auto' }}>
-                        <div className="ui-table-empty">
-                          <div className="ui-table-empty-icon">
-                            {hasData ? <SearchX size={20} /> : <Icon size={20} />}
-                          </div>
-                          <strong>
-                            {hasData ? 'No matching ' + nounPlural : `No ${nounPlural} yet`}
-                          </strong>
-                          <span>
-                            {hasData
-                              ? 'Try a different search or remove a filter.'
-                              : isCreateAllowed
-                                ? `Create your first ${noun} to get started.`
-                                : `No ${nounPlural} available.`}
-                          </span>
-                          <div style={{ marginTop: 8 }}>
-                            {hasData ? (
-                              <button type="button" className="ui-btn" onClick={clearAll}>
-                                Clear filters
-                              </button>
-                            ) : isCreateAllowed ? (
-                              <button
-                                type="button"
-                                className="ui-btn ui-btn-primary"
-                                onClick={onCreate}
-                              >
-                                <Plus size={16} /> {createLabel}
-                              </button>
-                            ) : null}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    pageRows.map((item) => {
-                      const isSel = selected.has(item.id);
-                      return (
-                        <tr
-                          key={item.id}
-                          className={cx(
-                            isSel && 'is-selected',
-                            onRowClick && 'is-clickable',
-                            activeId === item.id && 'is-open',
-                          )}
-                          onClick={
-                            onRowClick
-                              ? (e) => {
-                                // Checkboxes, buttons and links inside the row keep their own behaviour.
-                                if ((e.target as HTMLElement).closest('button, input, a, label'))
-                                  return;
-                                onRowClick(item);
-                              }
-                              : undefined
-                          }
-                        >
-                          {showCheckCol && (
-                            <td className="ui-col-check">
-                              <input
-                                type="checkbox"
-                                className="ui-checkbox"
-                                checked={isSel}
-                                onChange={() => toggleRow(item.id)}
-                                aria-label={`Select ${nameOf(item)}`}
-                              />
-                            </td>
-                          )}
-                          {columns.map((c) => (
-                            <td key={c.id}>{c.cell(item)}</td>
-                          ))}
-                          {showActionsCol && (
-                            <td className="ui-col-actions">
-                              <div className="ui-row-actions">
-                                {rowActions?.(item)}
-                                {!rowActions && onEdit && isUpdateAllowed && (
-                                  <button
-                                    type="button"
-                                    className="ui-icon-btn"
-                                    onClick={() => onEdit(item)}
-                                    aria-label={`Edit ${nameOf(item)}`}
-                                    title="Edit"
-                                  >
-                                    <Pencil size={15} />
-                                  </button>
-                                )}
-                                {!rowActions && onDelete && isDeleteAllowed && (
-                                  <button
-                                    type="button"
-                                    className="ui-icon-btn is-danger"
-                                    onClick={() => setPendingDelete([item])}
-                                    aria-label={`Delete ${nameOf(item)}`}
-                                    title="Delete"
-                                  >
-                                    <Trash2 size={15} />
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })
+                  className={cx(
+                    'inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer',
+                    isActive
+                      ? 'bg-white text-blue-700 font-semibold shadow-2xs border border-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60',
                   )}
-                </tbody>
-              </table>
-            </div>
-
-            {selectedItems.length > 0 && showCheckCol && (
-              <div className="ui-bulkbar" role="toolbar" aria-label="Bulk actions">
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <span
-                    style={{
-                      background: 'var(--ui-primary, #7c3aed)',
-                      color: '#ffffff',
-                      borderRadius: '50%',
-                      width: 20,
-                      height: 20,
-                      display: 'inline-grid',
-                      placeItems: 'center',
-                      fontSize: 11,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {selectedItems.length}
-                  </span>
-                  <span>
-                    <strong>{selectedItems.length}</strong> {selectedItems.length === 1 ? noun : nounPlural} selected
-                  </span>
-                </span>
-                <button
-                  type="button"
-                  className="ui-btn ui-btn-sm"
-                  onClick={() => setSelected(new Set())}
                 >
-                  Clear selection
+                  <span>{tab.label}</span>
+                  {tab.count !== undefined && (
+                    <span
+                      className={cx(
+                        'px-1.5 py-0.5 rounded text-[10.5px] font-semibold transition-colors',
+                        isActive ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600',
+                      )}
+                    >
+                      {tab.count}
+                    </span>
+                  )}
                 </button>
-                {onDelete && isDeleteAllowed && (
-                  <button
-                    type="button"
-                    className="ui-btn ui-btn-sm is-danger"
-                    onClick={() => setPendingDelete(selectedItems)}
-                    title="Delete selected"
-                  >
-                    <Trash2 size={13} /> Delete
-                  </button>
-                )}
-              </div>
-            )}
+              );
+            })}
           </div>
-        </section>
-      </div>
+        )}
 
-      <footer className="ui-footer">
-        <span>
-          {filtered.length === 0 ? (
-            'No results'
-          ) : (
+        {/* ── Filter Bar Section ── */}
+        <div className="flex items-center gap-2 flex-wrap px-3 sm:px-3.5 py-2.5 border-b border-slate-100 bg-white">
+          {/* Left: Search Input */}
+          <div className="relative flex items-center flex-1 min-w-[150px] sm:min-w-[190px] max-w-full sm:max-w-xs shrink-0">
+            <Search size={13} className="absolute left-2.5 text-slate-400 pointer-events-none" />
+            <input
+              ref={searchInputRef}
+              type="search"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder={searchPlaceholder}
+              className="w-full h-8 pl-8 pr-7 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-2xs"
+              aria-label={`Search ${nounPlural}`}
+            />
+            <span className="absolute right-2 text-[10px] text-slate-400 pointer-events-none select-none font-medium hidden sm:inline">
+              ⌘K
+            </span>
+          </div>
+
+          {/* Facets */}
+          {facetOptions.map(({ facet, options }) => (
+            <div key={facet.id} className="shrink-0 flex-1 sm:flex-initial min-w-[125px] sm:min-w-0">
+              <SearchableSelect
+                size="sm"
+                variant="default"
+                aria-label={facet.label}
+                value={filters[facet.id] ?? ''}
+                onChange={(val) => {
+                  setFilters((prev) => ({ ...prev, [facet.id]: val }));
+                  setPage(1);
+                }}
+                placeholder={facet.allLabel}
+                searchPlaceholder={`Filter ${facet.label.toLowerCase()}...`}
+                options={[
+                  { value: '', label: facet.allLabel },
+                  ...options.map((o) => ({
+                    value: o.value,
+                    label: `${o.label} (${o.count})`,
+                  })),
+                ]}
+              />
+            </div>
+          ))}
+
+          {/* Date Range if configured */}
+          {dateOf && (
             <>
-              Showing{' '}
-              <strong>
-                {startIdx + 1}–{startIdx + pageRows.length}
-              </strong>{' '}
-              of <strong>{filtered.length}</strong>
-              {filtered.length !== items.length && <> (filtered from {items.length})</>}
+              <div className="shrink-0 flex-1 sm:flex-initial min-w-[125px] sm:min-w-0">
+                <SearchableSelect
+                  size="sm"
+                  variant="default"
+                  aria-label="Time range"
+                  value={preset}
+                  onChange={(val) => {
+                    setPreset(val as TimePreset);
+                    setPage(1);
+                  }}
+                  placeholder="Time range"
+                  searchable={false}
+                  options={TIME_PRESETS.map((p) => ({
+                    value: p.value,
+                    label: p.value === 'any' ? p.label : `${dateLabel} · ${p.label.toLowerCase()}`,
+                  }))}
+                />
+              </div>
+
+              <div className="ui-daterange flex items-center gap-1 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-600 shadow-2xs shrink-0 max-w-full overflow-x-auto">
+                <span className="text-slate-400 font-medium text-[11px] select-none">{dateLabel}</span>
+                <input
+                  type="date"
+                  value={from}
+                  max={to || undefined}
+                  onChange={(e) => {
+                    setFrom(e.target.value);
+                    setPage(1);
+                  }}
+                  aria-label={`${dateLabel} from`}
+                  className="bg-transparent text-xs text-slate-700 outline-none w-20 cursor-pointer"
+                />
+                <ArrowRight size={11} className="text-slate-400 shrink-0" />
+                <input
+                  type="date"
+                  value={to}
+                  min={from || undefined}
+                  onChange={(e) => {
+                    setTo(e.target.value);
+                    setPage(1);
+                  }}
+                  aria-label={`${dateLabel} to`}
+                  className="bg-transparent text-xs text-slate-700 outline-none w-20 cursor-pointer"
+                />
+              </div>
             </>
           )}
-        </span>
-        <div className="ui-pager">
-          <span>Per page</span>
-          <select
-            className="ui-select"
-            value={perPage}
-            onChange={(e) => {
-              setPerPage(Number(e.target.value));
-              setPage(1);
-            }}
-            aria-label="Rows per page"
-          >
-            {PAGE_SIZES.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
+
+          {/* Reset Button (Matching Image Reset X) */}
           <button
             type="button"
-            className="ui-btn ui-btn-sm"
-            onClick={() => setPage(1)}
-            disabled={current === 1}
+            onClick={clearAll}
+            disabled={activeRules === 0}
+            className={cx(
+              'inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border text-xs font-medium transition-colors shadow-2xs cursor-pointer shrink-0',
+              activeRules > 0
+                ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300'
+                : 'border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed opacity-60',
+            )}
+            title="Reset all filters"
           >
-            « First
-          </button>
-          <button
-            type="button"
-            className="ui-btn ui-btn-sm"
-            onClick={() => setPage(current - 1)}
-            disabled={current === 1}
-          >
-            ‹ Prev
-          </button>
-          <span className="ui-pager-page">
-            Page {current} of {pageCount}
-          </span>
-          <button
-            type="button"
-            className="ui-btn ui-btn-sm"
-            onClick={() => setPage(current + 1)}
-            disabled={current === pageCount}
-          >
-            Next ›
-          </button>
-          <button
-            type="button"
-            className="ui-btn ui-btn-sm"
-            onClick={() => setPage(pageCount)}
-            disabled={current === pageCount}
-          >
-            Last »
+            <span>Reset</span>
+            <X size={12} className="text-slate-500" />
           </button>
         </div>
-      </footer>
+
+        {/* ── Table Section ── */}
+        <div className="overflow-x-auto min-h-[300px]">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200/90 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
+                {showCheckCol && (
+                  <th className="w-9 px-3.5 py-2 select-none">
+                    <input
+                      type="checkbox"
+                      className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      checked={pageAllSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = !pageAllSelected && pageSomeSelected;
+                      }}
+                      onChange={togglePage}
+                      aria-label="Select all on this page"
+                      disabled={pageRows.length === 0}
+                    />
+                  </th>
+                )}
+                {columns.map((c) => {
+                  const sorted = sort?.id === c.id ? sort.dir : null;
+                  return (
+                    <th
+                      key={c.id}
+                      style={c.width !== undefined ? { width: c.width } : undefined}
+                      className="px-3.5 py-2 whitespace-nowrap"
+                    >
+                      {c.sort ? (
+                        <button
+                          type="button"
+                          className={cx(
+                            'inline-flex items-center gap-1.5 hover:text-slate-900 transition-colors font-semibold cursor-pointer',
+                            sorted && 'text-blue-600',
+                          )}
+                          onClick={() => toggleSort(c.id)}
+                        >
+                          <span>{c.header}</span>
+                          {sorted === 'asc' && <ArrowUp size={11} />}
+                          {sorted === 'desc' && <ArrowDown size={11} />}
+                        </button>
+                      ) : (
+                        <span>{c.header}</span>
+                      )}
+                    </th>
+                  );
+                })}
+                {showActionsCol && (
+                  <th className="px-3.5 py-2 text-right whitespace-nowrap font-semibold">Actions</th>
+                )}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-xs sm:text-xs text-slate-600">
+              {loading && !hasData ? (
+                SKELETON_ROWS.map((i) => (
+                  <tr key={i} className="animate-pulse">
+                    {showCheckCol && (
+                      <td className="px-3.5 py-2">
+                        <div className="w-3.5 h-3.5 bg-slate-100 rounded" />
+                      </td>
+                    )}
+                    {columns.map((c, ci) => (
+                      <td key={c.id} className="px-3.5 py-2">
+                        {ci === 0 ? (
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-full bg-slate-100 shrink-0" />
+                            <div className="space-y-1 flex-1">
+                              <div className="h-3 bg-slate-100 rounded w-28" />
+                              <div className="h-2 bg-slate-50 rounded w-16" />
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            className="h-3 bg-slate-100 rounded"
+                            style={{ width: `${50 + ((i * 7 + ci * 13) % 40)}%` }}
+                          />
+                        )}
+                      </td>
+                    ))}
+                    {showActionsCol && (
+                      <td className="px-3.5 py-2 text-right">
+                        <div className="w-4 h-4 bg-slate-100 rounded ml-auto" />
+                      </td>
+                    )}
+                  </tr>
+                ))
+              ) : pageRows.length === 0 ? (
+                <tr>
+                  <td colSpan={colSpan} className="py-12 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
+                      <div className="p-2.5 rounded-full bg-slate-50 text-slate-400">
+                        {hasData ? <SearchX size={22} /> : <Icon size={22} />}
+                      </div>
+                      <strong className="text-xs font-semibold text-slate-700">
+                        {hasData ? `No matching ${nounPlural}` : `No ${nounPlural} yet`}
+                      </strong>
+                      <span className="text-[11px] text-slate-500 max-w-sm">
+                        {hasData
+                          ? 'Try a different search term or remove filters.'
+                          : isCreateAllowed
+                            ? `Create your first ${noun} to get started.`
+                            : `No ${nounPlural} available.`}
+                      </span>
+                      <div className="mt-1.5">
+                        {hasData ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                            onClick={clearAll}
+                          >
+                            Clear filters
+                          </button>
+                        ) : onCreate && isCreateAllowed ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 h-7 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium cursor-pointer"
+                            onClick={onCreate}
+                          >
+                            <Plus size={13} /> {createLabel || 'Create'}
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                pageRows.map((item) => {
+                  const isSel = selected.has(item.id);
+                  return (
+                    <tr
+                      key={item.id}
+                      className={cx(
+                        'group transition-colors duration-100 hover:bg-slate-50/70',
+                        isSel && 'bg-blue-50/40',
+                        (onRowClick || (onEdit && isUpdateAllowed)) && 'cursor-pointer',
+                        activeId === item.id && 'bg-blue-50/60',
+                      )}
+                      onClick={(e) => {
+                        // Let buttons, links, inputs, and selects handle their own clicks
+                        if ((e.target as HTMLElement).closest('button, input, a, label, select'))
+                          return;
+                        if (onRowClick) {
+                          onRowClick(item);
+                        } else if (onEdit && isUpdateAllowed) {
+                          onEdit(item);
+                        }
+                      }}
+                    >
+                      {/* Checkbox */}
+                      {showCheckCol && (
+                        <td className="w-9 px-3.5 py-2">
+                          <input
+                            type="checkbox"
+                            className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                            checked={isSel}
+                            onChange={() => toggleRow(item.id)}
+                            aria-label={`Select ${nameOf ? nameOf(item) : noun}`}
+                          />
+                        </td>
+                      )}
+
+                      {/* Data Columns */}
+                      {columns.map((c) => (
+                        <td key={c.id} className="px-3.5 py-2 align-middle whitespace-nowrap text-xs">
+                          {c.cell(item)}
+                        </td>
+                      ))}
+
+                      {/* Action Buttons */}
+                      {showActionsCol && (
+                        <td className="px-3.5 py-2 text-right whitespace-nowrap align-middle">
+                          <div className="flex items-center justify-end gap-1">
+                            {rowActions?.(item)}
+                            {!rowActions && onEdit && isUpdateAllowed && (
+                              <button
+                                type="button"
+                                className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEdit(item);
+                                }}
+                                aria-label={`Edit ${nameOf ? nameOf(item) : noun}`}
+                                title="Edit"
+                              >
+                                <Pencil size={13} />
+                              </button>
+                            )}
+                            {!rowActions && onDelete && isDeleteAllowed && (
+                              <button
+                                type="button"
+                                className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPendingDelete([item]);
+                                }}
+                                aria-label={`Delete ${nameOf ? nameOf(item) : noun}`}
+                                title="Delete"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Bulk Action Bar */}
+        {selectedItems.length > 0 && showCheckCol && (
+          <div
+            className="flex items-center justify-between px-4 py-2 bg-blue-50/80 border-t border-blue-100 text-xs text-blue-900"
+            role="toolbar"
+            aria-label="Bulk actions"
+          >
+            <div className="flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center">
+                {selectedItems.length}
+              </span>
+              <span>
+                <strong>{selectedItems.length}</strong>{' '}
+                {selectedItems.length === 1 ? noun : nounPlural} selected
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium cursor-pointer"
+                onClick={() => setSelected(new Set())}
+              >
+                Clear selection
+              </button>
+              {onDelete && isDeleteAllowed && (
+                <button
+                  type="button"
+                  className="px-2.5 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 font-semibold inline-flex items-center gap-1 cursor-pointer"
+                  onClick={() => setPendingDelete(selectedItems)}
+                >
+                  <Trash2 size={12} /> Delete
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Footer / Pagination (Responsive Across All Devices) ── */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 sm:px-5 py-3 sm:py-3.5 border-t border-slate-100 bg-white text-xs text-slate-500 w-full">
+          <div className="text-center sm:text-left w-full sm:w-auto">
+            {filtered.length === 0 ? (
+              'No results'
+            ) : (
+              <>
+                Showing{' '}
+                <span className="font-semibold text-slate-700">
+                  {startIdx + 1}–{startIdx + pageRows.length}
+                </span>{' '}
+                of <span className="font-semibold text-slate-700">{filtered.length}</span>{' '}
+                {nounPlural}
+                {filtered.length !== items.length && (
+                  <span className="text-slate-400"> (filtered from {items.length})</span>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-1.5 mr-1 sm:mr-2 shrink-0">
+              <span className="text-slate-500">Per page</span>
+              <select
+                value={perPage}
+                onChange={(e) => {
+                  setPerPage(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="h-7 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
+                aria-label="Rows per page"
+              >
+                {PAGE_SIZES.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setPage(page - 1)}
+                disabled={current <= 1}
+                aria-label="Previous page"
+                className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
+              >
+                <ChevronLeft size={14} />
+              </button>
+
+              {Array.from({ length: pageCount }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === pageCount || Math.abs(p - current) <= 1)
+                .reduce<(number | string)[]>((acc, p, idx, arr) => {
+                  if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...');
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, idx) =>
+                  typeof p === 'number' ? (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPage(p)}
+                      className={cx(
+                        'w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer shadow-2xs',
+                        current === p
+                          ? 'border border-slate-200 bg-slate-50 text-slate-900 font-bold'
+                          : 'border border-transparent bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-200',
+                      )}
+                    >
+                      {p}
+                    </button>
+                  ) : (
+                    <span key={`dots-${idx}`} className="px-1 text-slate-400 select-none">
+                      ...
+                    </span>
+                  ),
+                )}
+
+              <button
+                type="button"
+                onClick={() => setPage(page + 1)}
+                disabled={current >= pageCount}
+                aria-label="Next page"
+                className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {onDelete && (
         <ConfirmDialog
@@ -877,7 +975,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
             <>
               {pendingDelete?.length === 1 && pendingDelete[0] ? (
                 <>
-                  <strong>{nameOf(pendingDelete[0])}</strong> will be permanently removed.
+                  <strong>{nameOf ? nameOf(pendingDelete[0]) : noun}</strong> will be permanently removed.
                 </>
               ) : (
                 <>The selected {nounPlural} will be permanently removed.</>
@@ -906,21 +1004,12 @@ export function PrimaryCell({
   onOpen?: (() => void) | undefined;
 }) {
   return (
-    <div className="ui-primary-cell">
-      <Avatar name={name} src={avatarSrc} />
-      <div style={{ minWidth: 0 }}>
-        {onOpen ? (
-          <button type="button" className="ui-link ui-cell-title" onClick={onOpen}>
-            {name}
-          </button>
-        ) : (
-          <span className="ui-cell-title" style={{ fontWeight: 600, color: '#0f172a' }}>
-            {name}
-          </span>
-        )}
-        {sub && <div className="ui-cell-sub">{sub}</div>}
-      </div>
-    </div>
+    <PrimaryAvatarCell
+      name={name}
+      {...(sub !== undefined ? { sub } : {})}
+      {...(avatarSrc !== undefined ? { avatarSrc } : {})}
+      {...(onOpen !== undefined ? { onOpen } : {})}
+    />
   );
 }
 

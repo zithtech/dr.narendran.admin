@@ -444,7 +444,7 @@ export const ReviewsManagementPage: React.FC = () => {
 
             {/* Pagination Controls */}
             {pagination.totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 border-t border-slate-100 px-4 py-3 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 text-center sm:text-left">
                 <span className="text-xs text-slate-500">
                   Page {pagination.page} of {pagination.totalPages}
                 </span>

@@ -120,8 +120,9 @@ const getStatusBadgeTone = (status: AppointmentStatus): BadgeTone => {
       return 'green';
     case 'scheduled':
     case 'confirmed':
+      return 'green';
     case 'rescheduled':
-      return 'violet';
+      return 'amber';
     case 'cancelled':
       return 'red';
     case 'no_show':
@@ -399,8 +400,8 @@ export default function DoctorTodayAppointments() {
       items.push({
         key: 'prescription',
         label: (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#7c3aed' }}>
-            <Plus size={14} style={{ color: '#7c3aed' }} />
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#1e293b' }}>
+            <FileText size={14} style={{ color: '#2563eb' }} />
             <span>Create Prescription</span>
           </span>
         ),
@@ -424,7 +425,7 @@ export default function DoctorTodayAppointments() {
         key: 'edit',
         label: (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#1e293b' }}>
-            <Pencil size={14} style={{ color: '#7c3aed' }} />
+            <Pencil size={14} style={{ color: '#64748b' }} />
             <span>Edit</span>
           </span>
         ),
@@ -439,7 +440,7 @@ export default function DoctorTodayAppointments() {
           key: 'reschedule',
           label: (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#1e293b' }}>
-              <CalendarClock size={14} style={{ color: '#7c3aed' }} />
+              <CalendarClock size={14} style={{ color: '#64748b' }} />
               <span>Reschedule</span>
             </span>
           ),
@@ -545,17 +546,17 @@ export default function DoctorTodayAppointments() {
           padding: 0 14px;
           font-size: 12.5px;
           font-weight: 600;
-          background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+          background: #2563eb;
           color: #ffffff;
           border: none;
           border-radius: 8px;
           cursor: pointer;
-          box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+          box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
           transition: all 0.15s ease;
         }
         .dta-btn-violet:hover {
-          background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-          box-shadow: 0 3px 8px rgba(124, 58, 237, 0.35);
+          background: #1d4ed8;
+          box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
         }
         .dta-status-btn {
           display: flex;
@@ -579,9 +580,9 @@ export default function DoctorTodayAppointments() {
           color: #0f172a;
         }
         .dta-status-btn.is-active {
-          background: #f5f3ff;
-          border-color: #ddd6fe;
-          color: #6d28d9;
+          background: #f1f5f9;
+          border-color: #e2e8f0;
+          color: #0f172a;
           font-weight: 600;
         }
         .dta-input-field {
@@ -599,9 +600,9 @@ export default function DoctorTodayAppointments() {
           transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
         .dta-input-field:focus {
-          border-color: #7c3aed;
+          border-color: #2563eb;
           background: #ffffff;
-          box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.14);
+          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
         }
         .dta-table-row {
           transition: background-color 0.12s ease;
@@ -625,9 +626,9 @@ export default function DoctorTodayAppointments() {
         }
         .dta-action-icon-btn:hover,
         .dta-action-icon-btn:focus-visible {
-          background: #f5f3ff !important;
+          background: #f1f5f9 !important;
           border: none !important;
-          color: #7c3aed;
+          color: #0f172a;
         }
         .dta-action-icon-btn.is-danger:hover {
           background: #fef2f2;
@@ -647,6 +648,10 @@ export default function DoctorTodayAppointments() {
             max-width: none;
           }
           .dta-filters-card {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 12px;
+            align-items: flex-start;
             max-height: none;
             overflow-y: visible;
           }
@@ -655,10 +660,16 @@ export default function DoctorTodayAppointments() {
             overflow-y: visible;
           }
         }
+        @media (max-width: 600px) {
+          .dta-filters-card {
+            grid-template-columns: 1fr;
+          }
+        }
       `}</style>
 
       {/* Top Header Bar (Compact & Sleek) */}
       <div
+        className="dta-header-row"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -674,15 +685,15 @@ export default function DoctorTodayAppointments() {
               width: 34,
               height: 34,
               borderRadius: 10,
-              background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
-              color: '#ffffff',
+              background: '#f1f5f9',
+              color: '#0f172a',
+              border: '1px solid #e2e8f0',
               display: 'grid',
               placeItems: 'center',
-              boxShadow: '0 2px 8px rgba(109, 40, 217, 0.25)',
               flexShrink: 0,
             }}
           >
-            <Stethoscope size={17} />
+            <Stethoscope size={17} style={{ color: '#475569' }} />
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--ui-text, #0f172a)' }}>
@@ -741,8 +752,8 @@ export default function DoctorTodayAppointments() {
                     width: 22,
                     height: 22,
                     borderRadius: 6,
-                    background: '#f5f3ff',
-                    color: '#7c3aed',
+                    background: '#f1f5f9',
+                    color: '#64748b',
                     display: 'grid',
                     placeItems: 'center',
                   }}
@@ -754,9 +765,9 @@ export default function DoctorTodayAppointments() {
                   <span
                     style={{
                       fontSize: 10,
-                      fontWeight: 700,
-                      color: '#7c3aed',
-                      background: '#ede9fe',
+                      fontWeight: 600,
+                      color: '#0f172a',
+                      background: '#f1f5f9',
                       padding: '1px 5px',
                       borderRadius: 10,
                     }}
@@ -775,7 +786,7 @@ export default function DoctorTodayAppointments() {
                     gap: 3,
                     fontSize: 11,
                     fontWeight: 600,
-                    color: '#7c3aed',
+                    color: '#64748b',
                     background: 'transparent',
                     border: 'none',
                     cursor: 'pointer',
@@ -794,7 +805,7 @@ export default function DoctorTodayAppointments() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#64748b' }}>
-                  <CalendarDays size={13} style={{ color: '#7c3aed' }} />
+                  <CalendarDays size={13} style={{ color: '#64748b' }} />
                   <span>Date</span>
                 </span>
                 {isToday && (
@@ -803,9 +814,9 @@ export default function DoctorTodayAppointments() {
                       fontSize: 10,
                       fontWeight: 700,
                       textTransform: 'uppercase',
-                      color: '#7c3aed',
-                      background: '#f5f3ff',
-                      border: '1px solid #ede9fe',
+                      color: '#15803d',
+                      background: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
                       padding: '1px 6px',
                       borderRadius: 4,
                     }}
@@ -845,9 +856,9 @@ export default function DoctorTodayAppointments() {
                     borderRadius: 7,
                     fontSize: 11.5,
                     fontWeight: 600,
-                    border: isToday ? '1px solid #ddd6fe' : '1px solid #e2e8f0',
-                    background: isToday ? '#f5f3ff' : '#ffffff',
-                    color: isToday ? '#7c3aed' : '#475569',
+                    border: isToday ? '1px solid #cbd5e1' : '1px solid #e2e8f0',
+                    background: isToday ? '#f1f5f9' : '#ffffff',
+                    color: isToday ? '#0f172a' : '#475569',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -996,7 +1007,7 @@ export default function DoctorTodayAppointments() {
                     label: doc.name,
                     sublabel: doc.specialization,
                     badge: `${doc.stats.total} appts`,
-                    badgeTone: doc.stats.total > 0 ? ('violet' as const) : ('neutral' as const),
+                    badgeTone: doc.stats.total > 0 ? ('blue' as const) : ('neutral' as const),
                   })),
                 ]}
               />
@@ -1009,7 +1020,7 @@ export default function DoctorTodayAppointments() {
               </span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {[
-                  { key: 'all', label: 'All Statuses', count: metrics.totalAppointments, dot: '#7c3aed' },
+                  { key: 'all', label: 'All Statuses', count: metrics.totalAppointments, dot: '#64748b' },
                   { key: 'scheduled', label: 'Scheduled / Active', count: metrics.scheduled, dot: '#6366f1' },
                   { key: 'completed', label: 'Completed', count: metrics.completed, dot: '#10b981' },
                   { key: 'cancelled', label: 'Cancelled', count: metrics.cancelled, dot: '#ef4444' },
@@ -1040,7 +1051,7 @@ export default function DoctorTodayAppointments() {
                           fontWeight: 700,
                           padding: '1px 6px',
                           borderRadius: 6,
-                          background: isSelected ? '#7c3aed' : '#f1f5f9',
+                          background: isSelected ? '#0f172a' : '#f1f5f9',
                           color: isSelected ? '#ffffff' : '#64748b',
                         }}
                       >
@@ -1070,7 +1081,7 @@ export default function DoctorTodayAppointments() {
                   type="checkbox"
                   checked={onlyWithAppointments}
                   onChange={(e) => setOnlyWithAppointments(e.target.checked)}
-                  style={{ cursor: 'pointer', accentColor: '#7c3aed', width: 14, height: 14 }}
+                  style={{ cursor: 'pointer', accentColor: '#2563eb', width: 14, height: 14 }}
                 />
                 <span>Only show doctors with appointments</span>
               </label>
@@ -1103,9 +1114,9 @@ export default function DoctorTodayAppointments() {
                 style={{
                   fontSize: 10.5,
                   fontWeight: 700,
-                  color: '#7c3aed',
-                  background: '#f5f3ff',
-                  border: '1px solid #ddd6fe',
+                  color: '#334155',
+                  background: '#f1f5f9',
+                  border: '1px solid #e2e8f0',
                   padding: '2px 8px',
                   borderRadius: 10,
                 }}
@@ -1147,7 +1158,7 @@ export default function DoctorTodayAppointments() {
                 gap: 10,
               }}
             >
-              <Loader2 size={24} className="is-spinning" style={{ color: '#7c3aed' }} />
+              <Loader2 size={24} className="is-spinning" style={{ color: '#2563eb' }} />
               <div style={{ fontSize: 13.5, fontWeight: 600, color: '#1e293b' }}>
                 Loading doctor appointment schedules...
               </div>
@@ -1196,9 +1207,9 @@ export default function DoctorTodayAppointments() {
                   width: 42,
                   height: 42,
                   borderRadius: '50%',
-                  background: '#f5f3ff',
-                  color: '#7c3aed',
-                  border: '1px solid #ede9fe',
+                  background: '#f1f5f9',
+                  color: '#64748b',
+                  border: '1px solid #e2e8f0',
                   display: 'grid',
                   placeItems: 'center',
                 }}
@@ -1269,13 +1280,13 @@ export default function DoctorTodayAppointments() {
                             width: 36,
                             height: 36,
                             borderRadius: '50%',
-                            background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
-                            color: '#ffffff',
+                            background: '#f1f5f9',
+                            color: '#0f172a',
+                            border: '1px solid #e2e8f0',
                             display: 'grid',
                             placeItems: 'center',
                             fontSize: 13,
                             fontWeight: 700,
-                            boxShadow: '0 2px 6px rgba(109, 40, 217, 0.22)',
                             flexShrink: 0,
                           }}
                         >
@@ -1289,12 +1300,12 @@ export default function DoctorTodayAppointments() {
                             <span
                               style={{
                                 fontSize: 10.5,
-                                fontWeight: 600,
+                                fontWeight: 500,
                                 padding: '1px 6px',
                                 borderRadius: 5,
-                                background: '#f5f3ff',
-                                color: '#6d28d9',
-                                border: '1px solid #ede9fe',
+                                background: '#f8fafc',
+                                color: '#475569',
+                                border: '1px solid #e2e8f0',
                               }}
                             >
                               {doc.specialization}
@@ -1354,9 +1365,9 @@ export default function DoctorTodayAppointments() {
                                 fontWeight: 600,
                                 padding: '2px 7px',
                                 borderRadius: 5,
-                                background: '#f5f3ff',
-                                color: '#7c3aed',
-                                border: '1px solid #ede9fe',
+                                background: '#f1f5f9',
+                                color: '#334155',
+                                border: '1px solid #e2e8f0',
                               }}
                             >
                               {doc.stats.scheduled} scheduled
@@ -1402,9 +1413,9 @@ export default function DoctorTodayAppointments() {
                               borderRadius: 6,
                               fontSize: 11.5,
                               fontWeight: 600,
-                              border: '1px solid #7c3aed',
+                              border: '1px solid #e2e8f0',
                               background: '#ffffff',
-                              color: '#7c3aed',
+                              color: '#0f172a',
                               cursor: 'pointer',
                               display: 'inline-flex',
                               alignItems: 'center',
@@ -1412,10 +1423,12 @@ export default function DoctorTodayAppointments() {
                               transition: 'all 0.15s ease',
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = '#f5f3ff';
+                              e.currentTarget.style.background = '#f8fafc';
+                              e.currentTarget.style.borderColor = '#cbd5e1';
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.background = '#ffffff';
+                              e.currentTarget.style.borderColor = '#e2e8f0';
                             }}
                           >
                             <Plus size={12} />
@@ -1463,10 +1476,10 @@ export default function DoctorTodayAppointments() {
                                       <span
                                         style={{
                                           fontSize: 11,
-                                          fontWeight: 700,
-                                          color: '#7c3aed',
-                                          background: '#f5f3ff',
-                                          border: '1px solid #ede9fe',
+                                          fontWeight: 600,
+                                          color: '#334155',
+                                          background: '#f1f5f9',
+                                          border: '1px solid #e2e8f0',
                                           padding: '1px 6px',
                                           borderRadius: 4,
                                         }}
@@ -1505,13 +1518,13 @@ export default function DoctorTodayAppointments() {
                                           width: 28,
                                           height: 28,
                                           borderRadius: '50%',
-                                          background: '#f5f3ff',
-                                          color: '#7c3aed',
-                                          border: '1px solid #ede9fe',
+                                          background: '#f1f5f9',
+                                          color: '#334155',
+                                          border: '1px solid #e2e8f0',
                                           display: 'grid',
                                           placeItems: 'center',
                                           fontSize: 11,
-                                          fontWeight: 700,
+                                          fontWeight: 600,
                                           flexShrink: 0,
                                         }}
                                       >
@@ -1557,7 +1570,7 @@ export default function DoctorTodayAppointments() {
                                       </div>
                                     )}
                                     {appt.rescheduleReason && (
-                                      <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 1 }}>
+                                      <div style={{ fontSize: 11, color: '#b45309', marginTop: 1 }}>
                                         Rescheduled: {appt.rescheduleReason}
                                       </div>
                                     )}
@@ -1588,16 +1601,16 @@ export default function DoctorTodayAppointments() {
                                             fontSize: 11.5,
                                             fontWeight: 600,
                                             borderRadius: 6,
-                                            border: '1px solid #ede9fe',
-                                            background: '#f5f3ff',
-                                            color: '#7c3aed',
+                                            border: '1px solid #e2e8f0',
+                                            background: '#f8fafc',
+                                            color: '#0f172a',
                                             cursor: 'pointer',
                                             display: 'inline-flex',
                                             alignItems: 'center',
                                             gap: 4,
                                           }}
                                         >
-                                          <FileText size={12} />
+                                          <FileText size={12} style={{ color: '#64748b' }} />
                                           <span>Prescription</span>
                                         </button>
                                       )}
@@ -1649,9 +1662,9 @@ export default function DoctorTodayAppointments() {
                               fontSize: 11.5,
                               fontWeight: 600,
                               borderRadius: 6,
-                              border: '1px solid #7c3aed',
+                              border: '1px solid #e2e8f0',
                               background: '#ffffff',
-                              color: '#7c3aed',
+                              color: '#0f172a',
                               cursor: 'pointer',
                             }}
                           >

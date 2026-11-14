@@ -391,14 +391,14 @@ export default function MedicineModal({
               width: 38,
               height: 38,
               borderRadius: 10,
-              background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
-              color: '#7c3aed',
-              border: '1px solid #c4b5fd',
+              background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+              color: '#2563eb',
+              border: '1px solid #bfdbfe',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
-              boxShadow: '0 2px 6px rgba(124, 58, 237, 0.16)',
+              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.16)',
             }}
           >
             <Pill size={19} style={{ display: 'block', margin: 'auto' }} />
@@ -475,9 +475,9 @@ export default function MedicineModal({
             width: 26px;
             height: 26px;
             border-radius: 7px;
-            background: #f5f3ff;
-            color: #7c3aed;
-            border: 1px solid #ede9fe;
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #dbeafe;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -514,8 +514,8 @@ export default function MedicineModal({
           }
           .medicine-drawer-modal .ui-input:focus,
           .medicine-drawer-modal .ui-textarea:focus {
-            border-color: #7c3aed !important;
-            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12) !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
             outline: none;
           }
           .med-status-btn {
@@ -531,9 +531,9 @@ export default function MedicineModal({
             position: relative;
           }
           .med-status-btn.is-active {
-            border: 1.5px solid #7c3aed !important;
-            background: #f5f3ff !important;
-            box-shadow: 0 2px 6px rgba(124, 58, 237, 0.12);
+            border: 1.5px solid #2563eb !important;
+            background: #eff6ff !important;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
           }
           .med-status-btn:not(.is-active) {
             border: 1px solid #e2e8f0;
@@ -556,8 +556,8 @@ export default function MedicineModal({
             transition: all 0.15s ease;
           }
           .med-status-btn.is-active .med-radio-circle {
-            border-color: #7c3aed;
-            background: #7c3aed;
+            border-color: #2563eb;
+            background: #2563eb;
           }
           .med-radio-inner {
             width: 6px;
@@ -925,9 +925,9 @@ export default function MedicineModal({
                       width: 32,
                       height: 32,
                       borderRadius: 8,
-                      background: prescriptionRequired ? '#ede9fe' : '#f1f5f9',
-                      color: prescriptionRequired ? '#7c3aed' : '#64748b',
-                      border: prescriptionRequired ? '1px solid #c4b5fd' : '1px solid #e2e8f0',
+                      background: prescriptionRequired ? '#eff6ff' : '#f1f5f9',
+                      color: prescriptionRequired ? '#2563eb' : '#64748b',
+                      border: prescriptionRequired ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',

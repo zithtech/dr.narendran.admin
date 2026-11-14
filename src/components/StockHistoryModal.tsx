@@ -243,7 +243,7 @@ export default function StockHistoryModal({ isOpen, onClose, variant }: StockHis
 
         {/* Pagination footer */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-slate-200/60 pt-3 dark:border-slate-800">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 border-t border-slate-200/60 pt-3 dark:border-slate-800 text-center sm:text-left">
             <span className="text-xs text-slate-500">
               Showing page {page} of {totalPages} ({totalItems} total records)
             </span>

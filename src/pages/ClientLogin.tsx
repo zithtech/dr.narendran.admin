@@ -111,6 +111,13 @@ export default function ClientLogin() {
             <div className="client-field-group">
               <div className="flex items-center justify-between">
                 <label className="client-label">Password</label>
+                <button
+                  type="button"
+                  onClick={() => void navigate('/forgot-password')}
+                  className="text-xs text-sky-400 hover:text-sky-300 hover:underline cursor-pointer bg-transparent border-0 p-0"
+                >
+                  Forgot password?
+                </button>
               </div>
               <div className="client-input-wrapper">
                 <Lock size={16} className="client-input-icon" />

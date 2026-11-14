@@ -114,9 +114,15 @@ export const doctorAvailabilityApi = {
    */
   async getBlockedDates(doctorId: string): Promise<DoctorBlockedDate[]> {
     const res = await api.get(`doctor-availability/doctor/${doctorId}/blocked-dates`);
-    if (Array.isArray(res.data)) return res.data;
-    if (Array.isArray(res.data?.data)) return res.data.data;
-    return [];
+    const list: DoctorBlockedDate[] = Array.isArray(res.data)
+      ? res.data
+      : Array.isArray(res.data?.data)
+        ? res.data.data
+        : [];
+    return list.map((b) => ({
+      ...b,
+      blocked_date: typeof b.blocked_date === 'string' ? b.blocked_date.split('T')[0] || b.blocked_date : '',
+    }));
   },
 
   /**

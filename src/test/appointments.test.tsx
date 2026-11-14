@@ -178,6 +178,9 @@ const mockDoctorSchedules: DoctorDailyScheduleResult = {
 
 describe('Appointments Feature', () => {
   beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('adminRole', 'ADMIN');
+    localStorage.setItem('userRole', 'ADMIN');
     vi.clearAllMocks();
   });
 
@@ -459,11 +462,8 @@ describe('Appointments Feature', () => {
     });
   });
 
-  it('switches between All Appointments and Doctors Today Appointments tab in Appointments page', async () => {
+  it('renders All Appointments single view without redundant inner tabs', async () => {
     vi.mocked(api.get).mockImplementation((url: string) => {
-      if (url.includes('doctor-schedules')) {
-        return Promise.resolve({ data: { status: 'success', data: mockDoctorSchedules } });
-      }
       if (url.includes('appointments')) {
         return Promise.resolve({ data: mockAppointments });
       }
@@ -472,20 +472,10 @@ describe('Appointments Feature', () => {
 
     renderWithProviders(<Appointments />);
 
-    // By default, All Appointments is displayed
+    // By default, All Appointments single view is displayed
     await waitFor(() => {
-      expect(screen.getByText('All Appointments')).toBeInTheDocument();
-      expect(screen.getByText('Doctors Today Appointments')).toBeInTheDocument();
+      expect(screen.getByText('Appointments')).toBeInTheDocument();
       expect(screen.getByText('Jane Smith')).toBeInTheDocument();
-    });
-
-    // Click Doctors Today Appointments tab
-    fireEvent.click(screen.getByText('Doctors Today Appointments'));
-
-    // Should now display Doctor Today Appointments view
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /Doctors Today Appointments/i })).toBeInTheDocument();
-      expect(screen.getByText('Dr. Narendran')).toBeInTheDocument();
     });
   });
 

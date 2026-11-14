@@ -9,7 +9,6 @@ import {
   MoreVertical,
   Pencil,
   Phone,
-  Plus,
   Stethoscope,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -30,6 +29,7 @@ import DoctorTodayAppointments from './DoctorTodayAppointments';
 import CreatePrescriptionModal from '../features/prescriptions/components/CreatePrescriptionModal';
 import ViewPrescriptionModal from '../features/prescriptions/components/ViewPrescriptionModal';
 import { type Prescription, prescriptionsApi } from '../features/prescriptions/api/prescriptionsApi';
+import api from '../utils/api';
 
 const FACETS: Facet<Appointment>[] = [
   {
@@ -57,7 +57,7 @@ const FACETS: Facet<Appointment>[] = [
 ];
 
 export default function Appointments() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const currentTab = searchParams.get('tab') === 'today' ? 'today' : 'all';
 
   const resource = useResource<Appointment>('appointments', 'appointments');
@@ -118,18 +118,6 @@ export default function Appointments() {
     }
   };
 
-  const handleTabChange = (tab: 'all' | 'today') => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (tab === 'today') {
-        next.set('tab', 'today');
-      } else {
-        next.delete('tab');
-      }
-      return next;
-    });
-  };
-
   const renderStatus = (status: string) => {
     const s = status.toLowerCase();
     let bg = '#f8fafc';
@@ -138,15 +126,15 @@ export default function Appointments() {
     let dot = '#94a3b8';
 
     if (s === 'scheduled' || s === 'confirmed') {
-      bg = '#f5f3ff';
-      fg = '#6d28d9';
-      border = '#ede9fe';
-      dot = '#7c3aed';
-    } else if (s === 'completed') {
       bg = '#f0fdf4';
-      fg = '#166534';
-      border = '#dcfce7';
-      dot = '#22c55e';
+      fg = '#15803d';
+      border = '#bbf7d0';
+      dot = '#16a34a';
+    } else if (s === 'completed') {
+      bg = '#f8fafc';
+      fg = '#475569';
+      border = '#e2e8f0';
+      dot = '#94a3b8';
     } else if (s === 'rescheduled') {
       bg = '#fffbeb';
       fg = '#92400e';
@@ -212,8 +200,8 @@ export default function Appointments() {
       items.push({
         key: 'prescription',
         label: (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#7c3aed' }}>
-            <Plus size={14} style={{ color: '#7c3aed' }} />
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#1e293b' }}>
+            <FileText size={14} style={{ color: '#2563eb' }} />
             <span>Create Prescription</span>
           </span>
         ),
@@ -226,7 +214,7 @@ export default function Appointments() {
         key: 'edit',
         label: (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#1e293b' }}>
-            <Pencil size={14} style={{ color: '#7c3aed' }} />
+            <Pencil size={14} style={{ color: '#64748b' }} />
             <span>Edit</span>
           </span>
         ),
@@ -252,7 +240,7 @@ export default function Appointments() {
           key: 'reschedule',
           label: (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#1e293b' }}>
-              <CalendarClock size={14} style={{ color: '#7c3aed' }} />
+              <CalendarClock size={14} style={{ color: '#64748b' }} />
               <span>Reschedule</span>
             </span>
           ),
@@ -311,9 +299,9 @@ export default function Appointments() {
                 width: 32,
                 height: 32,
                 borderRadius: '50%',
-                background: '#f5f3ff',
-                color: '#6d28d9',
-                border: '1px solid #ede9fe',
+                background: '#f1f5f9',
+                color: '#334155',
+                border: '1px solid #e2e8f0',
                 fontSize: 11.5,
                 fontWeight: 650,
                 display: 'inline-flex',
@@ -425,10 +413,10 @@ export default function Appointments() {
             <span
               style={{
                 fontSize: 11,
-                fontWeight: 600,
-                color: '#6d28d9',
-                background: '#f5f3ff',
-                border: '1px solid #ddd6fe',
+                fontWeight: 500,
+                color: '#475569',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
                 borderRadius: 5,
                 padding: '1.5px 7px',
                 whiteSpace: 'nowrap',
@@ -437,7 +425,7 @@ export default function Appointments() {
                 gap: 3.5,
               }}
             >
-              <Stethoscope size={10.5} style={{ color: '#7c3aed' }} />
+              <Stethoscope size={10.5} style={{ color: '#64748b' }} />
               <span>{a.doctorSpecialty || 'General Practitioner'}</span>
             </span>
             {a.branchName && (
@@ -472,10 +460,10 @@ export default function Appointments() {
             <span
               style={{
                 fontSize: 11,
-                fontWeight: 700,
-                color: '#0284c7',
-                background: '#e0f2fe',
-                border: '1px solid #bae6fd',
+                fontWeight: 600,
+                color: '#334155',
+                background: '#f1f5f9',
+                border: '1px solid #e2e8f0',
                 padding: '1.5px 7px',
                 borderRadius: 5,
                 fontVariantNumeric: 'tabular-nums',
@@ -552,74 +540,6 @@ export default function Appointments() {
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* Navigation Tab Switcher */}
-      <div
-        style={{
-          padding: '6px 12px 0 12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          flexShrink: 0,
-        }}
-      >
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            background: 'var(--ui-surface-2, #f1f5f9)',
-            padding: 3,
-            borderRadius: 10,
-            border: '1px solid var(--ui-border, #e2e8f0)',
-            gap: 2,
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => handleTabChange('all')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '5px 14px',
-              borderRadius: 8,
-              border: 'none',
-              fontSize: 12.5,
-              fontWeight: currentTab === 'all' ? 600 : 500,
-              background: currentTab === 'all' ? '#ffffff' : 'transparent',
-              color: currentTab === 'all' ? '#6d28d9' : '#64748b',
-              boxShadow: currentTab === 'all' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <CalendarDays size={14} style={{ color: currentTab === 'all' ? '#7c3aed' : '#94a3b8' }} />
-            <span>All Appointments</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTabChange('today')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '5px 14px',
-              borderRadius: 8,
-              border: 'none',
-              fontSize: 12.5,
-              fontWeight: currentTab === 'today' ? 600 : 500,
-              background: currentTab === 'today' ? '#ffffff' : 'transparent',
-              color: currentTab === 'today' ? '#6d28d9' : '#64748b',
-              boxShadow: currentTab === 'today' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <Stethoscope size={14} style={{ color: currentTab === 'today' ? '#7c3aed' : '#94a3b8' }} />
-            <span>Doctors Today Appointments</span>
-          </button>
-        </div>
-      </div>
-
       {currentTab === 'today' ? (
         <DoctorTodayAppointments />
       ) : (
@@ -644,6 +564,7 @@ export default function Appointments() {
             columns={columns}
             createLabel="Schedule Appointment"
             onCreate={() => setIsScheduleOpen(true)}
+            onDelete={(a) => api.delete(`appointments/${a.id}`)}
             nameOf={(a) => `${a.patientName} (${a.tokenNumber})`}
             onRowClick={(a) => openDetails(a)}
             activeId={viewingAppointment?.id ?? null}
@@ -722,11 +643,11 @@ export default function Appointments() {
             onClose={() => setViewingAppointment(null)}
             {...(isApptUpdatable
               ? {
-                  onEdit: (appt: Appointment) => {
-                    setViewingAppointment(null);
-                    openEdit(appt);
-                  },
-                }
+                onEdit: (appt: Appointment) => {
+                  setViewingAppointment(null);
+                  openEdit(appt);
+                },
+              }
               : {})}
             onReschedule={(appt) => {
               openReschedule(appt);
@@ -736,10 +657,10 @@ export default function Appointments() {
             }}
             {...(isRxCreatable
               ? {
-                  onCreatePrescription: (appt: Appointment) => {
-                    setPrescriptionAppt(appt);
-                  },
-                }
+                onCreatePrescription: (appt: Appointment) => {
+                  setPrescriptionAppt(appt);
+                },
+              }
               : {})}
           />
 
@@ -777,11 +698,11 @@ export default function Appointments() {
             }}
             {...(isRxUpdatable
               ? {
-                  onEdit: (rx: Prescription) => {
-                    setIsViewRxOpen(false);
-                    setEditingPrescription(rx);
-                  },
-                }
+                onEdit: (rx: Prescription) => {
+                  setIsViewRxOpen(false);
+                  setEditingPrescription(rx);
+                },
+              }
               : {})}
           />
 
@@ -841,10 +762,10 @@ export default function Appointments() {
               background: #fafafa;
             }
             .appointments-all-view .ui-table tbody tr.is-selected td {
-              background: #f5f3ff;
+              background: #f8fafc;
             }
             .appointments-all-view .ui-table tbody tr.is-open td {
-              background: #f5f3ff;
+              background: #f8fafc;
             }
             .appointments-all-view .ui-table td.ui-col-actions {
               background: #ffffff;
@@ -855,10 +776,10 @@ export default function Appointments() {
             }
             .appointments-all-view .ui-table tbody tr.is-selected td.ui-col-actions,
             .appointments-all-view .ui-table tbody tr.is-open td.ui-col-actions {
-              background: #f5f3ff;
+              background: #f8fafc;
             }
             .appointments-all-view .appt-patient-name:hover {
-              color: #7c3aed !important;
+              color: #2563eb !important;
             }
             .appointments-all-view .appt-action-btn {
               width: 28px;
@@ -875,15 +796,15 @@ export default function Appointments() {
             }
             .appointments-all-view .appt-action-menu:hover,
             .appointments-all-view .appt-action-menu:focus-visible {
-              background: #f5f3ff !important;
+              background: #f1f5f9 !important;
               border: none !important;
-              color: #7c3aed;
+              color: #0f172a;
             }
             .appointments-all-view .ui-checkbox {
               width: 16px;
               height: 16px;
               cursor: pointer;
-              accent-color: #7c3aed;
+              accent-color: #2563eb;
               border-radius: 4px;
               transition: transform 0.12s ease, filter 0.12s ease;
               vertical-align: middle;
@@ -893,7 +814,7 @@ export default function Appointments() {
               filter: brightness(0.95);
             }
             .appointments-all-view .ui-checkbox:focus-visible {
-              outline: 2px solid #7c3aed;
+              outline: 2px solid #2563eb;
               outline-offset: 2px;
             }
             .appointments-all-view .ui-bulkbar {
@@ -907,18 +828,18 @@ export default function Appointments() {
               border-radius: 9999px;
             }
             .appointments-all-view .ui-btn-primary.ui-btn-pill {
-              background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%) !important;
-              box-shadow: 0 2px 6px rgba(124, 58, 237, 0.28) !important;
+              background: #2563eb !important;
+              box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25) !important;
             }
             .appointments-all-view .ui-btn-primary.ui-btn-pill:hover {
-              background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%) !important;
-              box-shadow: 0 4px 10px rgba(124, 58, 237, 0.35) !important;
+              background: #1d4ed8 !important;
+              box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3) !important;
             }
             .appointments-all-view .ui-hub-btn {
-              color: #6d28d9;
+              color: #2563eb;
             }
             .appointments-all-view .ui-hub-icon {
-              color: #7c3aed;
+              color: #2563eb;
             }
           `}</style>
         </div>

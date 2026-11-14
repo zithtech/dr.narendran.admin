@@ -1,4 +1,4 @@
-import { CalendarX2, Pencil, Plus, X } from 'lucide-react';
+import { CalendarClock, CalendarX2, Pencil, Plus, X } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { usePermission } from '../context/PermissionContext';
@@ -185,8 +185,36 @@ export default function DoctorAvailabilityModal({
         open={isOpen}
         onClose={onClose}
         size="xl"
-        title="Weekly schedule"
-        description={`${doctor.name}${doctor.hospital_name ? ` · ${doctor.hospital_name}` : ''}`}
+        variant="drawer"
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 8,
+                background: '#eff6ff',
+                border: '1px solid #dbeafe',
+                color: '#2563eb',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <CalendarClock size={18} />
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>
+                Weekly schedule
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b', fontWeight: 400 }}>
+                {doctor.name}
+                {doctor.hospital_name ? ` · ${doctor.hospital_name}` : ''}
+              </div>
+            </div>
+          </div>
+        }
       >
         <div className="ui-modal-body">
           {error && <Alert>{error}</Alert>}
@@ -274,7 +302,17 @@ export default function DoctorAvailabilityModal({
                     <option value={60}>60 Mins (1 Hour)</option>
                   </select>
                 </Field>
-                <button type="submit" disabled={loading} className="ui-btn ui-btn-primary">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="ui-btn ui-btn-primary"
+                  style={{
+                    background: '#2563eb',
+                    borderColor: '#2563eb',
+                    color: '#ffffff',
+                    fontWeight: 600,
+                  }}
+                >
                   {editingSlotId ? (
                     'Update'
                   ) : (

@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import Login from './pages/Login';
 import ClientLogin from './pages/ClientLogin';
 import Dashboard from './pages/Dashboard';
+import DashboardOverviewPage from './pages/DashboardOverviewPage';
 import ClientDashboard from './pages/ClientDashboard';
 import Branches from './pages/Branches';
 import Doctors from './pages/Doctors';
@@ -83,6 +84,8 @@ function App() {
       <Routes>
         {/* Admin Portal Authentication */}
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<Login defaultForgot={true} />} />
+        <Route path="/reset-password" element={<Login defaultForgot={true} />} />
 
         {/* Client Portal Authentication (Unique Dedicated URLs) */}
         <Route path="/client/login" element={<ClientLogin />} />
@@ -107,7 +110,7 @@ function App() {
           <Route path="change-password" element={<LabChangePasswordPage />} />
         </Route>
 
-        {/* Protected Admin Portal routes wrapped in SidebarLayout */}
+        {/* Protected Admin Portal routes wrapped in Top Navigation Layout */}
         <Route
           element={
             <ProtectedRoute>
@@ -115,8 +118,13 @@ function App() {
             </ProtectedRoute>
           }
         >
+          {/* Dashboard Module */}
+          <Route path="/" element={<DashboardOverviewPage />} />
+          <Route path="/dashboard" element={<DashboardOverviewPage />} />
+
+          {/* Network Modules */}
           <Route
-            path="/"
+            path="/hospitals"
             element={
               <ModuleRouteGuard module="HOSPITALS" title="Hospitals">
                 <Dashboard />
@@ -131,6 +139,24 @@ function App() {
               </ModuleRouteGuard>
             }
           />
+          <Route
+            path="/labs"
+            element={
+              <ModuleRouteGuard module="LABS" title="Linked Labs">
+                <Labs />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/linked-medicals"
+            element={
+              <ModuleRouteGuard module="LINKED_MEDICALS" title="Linked Medicals">
+                <LinkedMedicals />
+              </ModuleRouteGuard>
+            }
+          />
+
+          {/* Clinical Modules */}
           <Route
             path="/doctors"
             element={
@@ -173,6 +199,16 @@ function App() {
             }
           />
           <Route
+            path="/reviews"
+            element={
+              <ModuleRouteGuard module="REVIEWS" title="Ratings & Reviews">
+                <ReviewsManagementPage />
+              </ModuleRouteGuard>
+            }
+          />
+
+          {/* Operations Modules */}
+          <Route
             path="/pharmacy"
             element={
               <ModuleRouteGuard module="PHARMACY" title="Pharmacy">
@@ -189,6 +225,15 @@ function App() {
             }
           />
           <Route
+            path="/prescriptions"
+            element={
+              <ModuleRouteGuard module="PRESCRIPTIONS" title="Prescriptions">
+                <PrescriptionsPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route path="/medicine-package" element={<Navigate to="/medicine-packages" replace />} />
+          <Route
             path="/medicine-packages"
             element={
               <ModuleRouteGuard module="MEDICINE_PACKAGES" title="Medicine Packages">
@@ -204,20 +249,11 @@ function App() {
               </ModuleRouteGuard>
             }
           />
-          <Route path="/medicine-package" element={<Navigate to="/medicine-packages" replace />} />
           <Route
             path="/orders"
             element={
               <ModuleRouteGuard module="ORDERS" title="Pharmacy Orders">
                 <OrdersPage />
-              </ModuleRouteGuard>
-            }
-          />
-          <Route
-            path="/labs"
-            element={
-              <ModuleRouteGuard module="LABS" title="Linked Labs">
-                <Labs />
               </ModuleRouteGuard>
             }
           />
@@ -229,22 +265,8 @@ function App() {
               </ModuleRouteGuard>
             }
           />
-          <Route
-            path="/linked-medicals"
-            element={
-              <ModuleRouteGuard module="LINKED_MEDICALS" title="Linked Medicals">
-                <LinkedMedicals />
-              </ModuleRouteGuard>
-            }
-          />
-          <Route
-            path="/client-portals"
-            element={
-              <ModuleRouteGuard module="CLIENT_PORTALS" title="Client Portals">
-                <ClientPortals />
-              </ModuleRouteGuard>
-            }
-          />
+
+          {/* Administration Modules */}
           <Route
             path="/users"
             element={
@@ -270,21 +292,15 @@ function App() {
             }
           />
           <Route
-            path="/prescriptions"
+            path="/client-portals"
             element={
-              <ModuleRouteGuard module="PRESCRIPTIONS" title="Prescriptions">
-                <PrescriptionsPage />
+              <ModuleRouteGuard module="CLIENT_PORTALS" title="Client Portals">
+                <ClientPortals />
               </ModuleRouteGuard>
             }
           />
-          <Route
-            path="/reviews"
-            element={
-              <ModuleRouteGuard module="REVIEWS" title="Ratings & Reviews">
-                <ReviewsManagementPage />
-              </ModuleRouteGuard>
-            }
-          />
+
+          {/* Support Modules */}
           <Route
             path="/support"
             element={

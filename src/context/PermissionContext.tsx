@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router';
 import { Loader2, ShieldAlert } from 'lucide-react';
 
 import api from '../utils/api';
-import { NAV_ITEMS } from '../components/SidebarLayout';
+import { NAVIGATION_CATEGORIES } from '../components/navigation/navigationConfig';
 
 export interface PermissionRecord {
   module_slug: string;
@@ -437,7 +437,9 @@ export function AccessDenied({
   const { canView } = usePermission();
 
   const firstAccessible = useMemo(() => {
-    return NAV_ITEMS.find((item) => canView(item.slug, item.fallbackSlugs));
+    return NAVIGATION_CATEGORIES.flatMap((c) => c.modules).find(
+      (item) => item.slug === 'DASHBOARD' || canView(item.slug, item.fallbackSlugs),
+    );
   }, [canView]);
 
   const handleReturn = () => {

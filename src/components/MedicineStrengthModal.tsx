@@ -305,14 +305,14 @@ export default function MedicineStrengthModal({
               width: 38,
               height: 38,
               borderRadius: 10,
-              background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
-              color: '#7c3aed',
-              border: '1px solid #c4b5fd',
+              background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+              color: '#2563eb',
+              border: '1px solid #bfdbfe',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
-              boxShadow: '0 2px 6px rgba(124, 58, 237, 0.16)',
+              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.16)',
             }}
           >
             <Layers size={19} style={{ display: 'block', margin: 'auto' }} />
@@ -386,9 +386,9 @@ export default function MedicineStrengthModal({
             width: 26px;
             height: 26px;
             border-radius: 7px;
-            background: #f5f3ff;
-            color: #7c3aed;
-            border: 1px solid #ede9fe;
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #dbeafe;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -425,8 +425,8 @@ export default function MedicineStrengthModal({
           }
           .medicine-variant-drawer-modal .ui-input:focus,
           .medicine-variant-drawer-modal .ui-textarea:focus {
-            border-color: #7c3aed !important;
-            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12) !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
             outline: none;
           }
           .variant-status-btn {
@@ -442,9 +442,9 @@ export default function MedicineStrengthModal({
             position: relative;
           }
           .variant-status-btn.is-active {
-            border: 1.5px solid #7c3aed !important;
-            background: #f5f3ff !important;
-            box-shadow: 0 2px 6px rgba(124, 58, 237, 0.12);
+            border: 1.5px solid #2563eb !important;
+            background: #eff6ff !important;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
           }
           .variant-status-btn:not(.is-active) {
             border: 1px solid #e2e8f0;
@@ -467,8 +467,8 @@ export default function MedicineStrengthModal({
             transition: all 0.15s ease;
           }
           .variant-status-btn.is-active .variant-radio-circle {
-            border-color: #7c3aed;
-            background: #7c3aed;
+            border-color: #2563eb;
+            background: #2563eb;
           }
           .variant-radio-inner {
             width: 6px;
@@ -537,9 +537,9 @@ export default function MedicineStrengthModal({
                         width: 32,
                         height: 32,
                         borderRadius: 8,
-                        background: '#ffffff',
-                        border: '1px solid #ddd6fe',
-                        color: '#7c3aed',
+                        background: '#eff6ff',
+                        border: '1px solid #dbeafe',
+                        color: '#2563eb',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',

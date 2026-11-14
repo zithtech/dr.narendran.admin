@@ -400,7 +400,7 @@ export default function DoctorReviewsPage() {
             </div>
 
             {/* Pagination Controls */}
-            <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 dark:border-slate-800 text-xs">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 border-t border-slate-200 px-4 py-3 dark:border-slate-800 text-xs text-center sm:text-left">
               <span className="text-slate-500">
                 Page <span className="font-bold text-slate-800 dark:text-slate-200">{page}</span> of{' '}
                 <span className="font-bold text-slate-800 dark:text-slate-200">{totalPages}</span> ({totalCount} total)

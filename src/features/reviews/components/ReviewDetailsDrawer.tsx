@@ -1,6 +1,5 @@
 import { App } from 'antd';
 import {
-  AlertCircle,
   CheckCircle2,
   Copy,
   Flag,
@@ -9,10 +8,10 @@ import {
   ShieldAlert,
   Star,
   User,
-  X,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
+import { Drawer } from '../../../components/ui/Drawer';
 import { getErrorMessage } from '../../../utils/errors';
 import { usePermission } from '../../../context/PermissionContext';
 import { reviewsApi } from '../services/reviewsApi';
@@ -155,38 +154,37 @@ export const ReviewDetailsDrawer: React.FC<ReviewDetailsDrawerProps> = ({
   };
 
   return (
-    <>
-      <div
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in"
-        onClick={onClose}
-      />
-      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-2xl flex-col bg-white shadow-2xl dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 animate-in slide-in-from-right duration-200">
-        {/* Drawer Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-slate-900/60">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
-              <Star size={20} />
+    <Drawer
+      open={isOpen}
+      onClose={onClose}
+      label="Consultation Review"
+      size="lg"
+      hero={
+        review ? (
+          <div className="flex items-start gap-3 w-full">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 shadow-xs">
+              <Star size={20} className="fill-amber-400 text-amber-500" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
                   Doctor Consultation Review
                 </h2>
-                {review && renderStatusBadge(review.status)}
+                {renderStatusBadge(review.status)}
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                {review?.id && (
+              <div className="flex items-center gap-2 text-xs text-slate-500 mt-1 flex-wrap">
+                {review.id && (
                   <button
                     type="button"
                     onClick={() => copyToClipboard(review.id, 'Review ID')}
-                    className="inline-flex items-center gap-1 font-mono text-[11px] text-slate-400 hover:text-amber-600 transition-colors"
+                    className="inline-flex items-center gap-1 font-mono text-[11px] text-slate-400 hover:text-blue-600 transition-colors"
                     title="Copy internal review ID"
                   >
                     <span>ID: {review.id.slice(0, 13)}…</span>
                     <Copy size={11} />
                   </button>
                 )}
-                {review?.created_at && (
+                {review.created_at && (
                   <span>
                     · {new Date(review.created_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
                   </span>
@@ -194,37 +192,20 @@ export const ReviewDetailsDrawer: React.FC<ReviewDetailsDrawerProps> = ({
               </div>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Drawer Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-600 border-t-transparent" />
-              <p className="text-sm text-slate-500">Loading review details...</p>
-            </div>
-          )}
-
-          {error && !loading && (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400">
-              <div className="flex items-center gap-2 font-semibold">
-                <AlertCircle size={16} />
-                Failed to load review
-              </div>
-              <p className="mt-1">{error}</p>
-            </div>
-          )}
-
-          {review && !loading && (
-            <>
+        ) : null
+      }
+      loading={loading}
+      loadingText="Loading review details..."
+      error={error}
+      onRetry={() => reviewId && void fetchDetails(reviewId)}
+      footer={
+        <button type="button" className="ui-btn" onClick={onClose}>
+          Close
+        </button>
+      }
+    >
+      {review && !loading ? (
+        <div className="space-y-6">
               {/* Doctor & Patient Overview Card */}
               <div className="grid grid-cols-2 gap-4 rounded-xl border border-slate-200 p-4 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/40">
                 <div>
@@ -354,7 +335,7 @@ export const ReviewDetailsDrawer: React.FC<ReviewDetailsDrawerProps> = ({
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                        <Shield size={16} className="text-indigo-600" />
+                        <Shield size={16} className="text-blue-600" />
                         Moderation Actions
                       </h3>
                       <p className="text-xs text-slate-500 mt-0.5">
@@ -399,9 +380,9 @@ export const ReviewDetailsDrawer: React.FC<ReviewDetailsDrawerProps> = ({
                       )}
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-indigo-200 bg-indigo-50/40 dark:bg-indigo-950/20 dark:border-indigo-900 p-4 space-y-3">
+                    <div className="rounded-xl border border-blue-200 bg-blue-50/40 dark:bg-blue-950/20 dark:border-blue-900 p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">
+                        <span className="text-xs font-bold text-blue-900 dark:text-blue-300 uppercase tracking-wider">
                           Confirm Action: {pendingAction}
                         </span>
                         <button
@@ -425,7 +406,7 @@ export const ReviewDetailsDrawer: React.FC<ReviewDetailsDrawerProps> = ({
                             if (reasonError) setReasonError(null);
                           }}
                           placeholder="State why this review is being moderated (e.g. Clinical review required, Off-topic content, Verified resolved)..."
-                          className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 focus:outline-indigo-500"
+                          className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 focus:outline-blue-500"
                         />
                         {reasonError && (
                           <p className="text-xs text-rose-600 mt-1 font-medium">{reasonError}</p>
@@ -500,10 +481,8 @@ export const ReviewDetailsDrawer: React.FC<ReviewDetailsDrawerProps> = ({
                   <p className="text-xs text-slate-400 italic">No moderation actions have been performed yet.</p>
                 )}
               </div>
-            </>
-          )}
-        </div>
-      </div>
-    </>
+            </div>
+          ) : null}
+    </Drawer>
   );
 };
