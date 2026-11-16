@@ -154,7 +154,18 @@ export default function Patients() {
         nounPlural="patients"
         resource={resource}
         searchPlaceholder="Search name, phone, email…"
-        searchFields={(p) => [p.name, p.email, p.phone, p.hospital_name, p.branch_name]}
+        searchFields={(p) => [
+          p.name,
+          p.email,
+          p.phone,
+          p.hospital_name,
+          p.branch_name,
+          p.address_line_1,
+          p.city,
+          p.state,
+          p.pincode,
+          p.address,
+        ]}
         facets={FACETS}
         dateOf={(p) => p.created_at}
         dateLabel="Registered"

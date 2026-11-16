@@ -35,7 +35,12 @@ const mockBranch: Branch = {
   hospital_name: 'Apollo Multi-Specialty Hospital',
   branch_code: 'BRN-001',
   name: 'Apollo South Campus',
-  address: 'Block C, South Wing, Greams Road, Chennai',
+  address_line_1: 'Block C, South Wing',
+  address_line_2: 'Greams Road',
+  city: 'Chennai',
+  state: 'Tamil Nadu',
+  pincode: '600006',
+  address: 'Block C, South Wing, Greams Road, Chennai, Tamil Nadu, 600006',
   phone: '+91 44 2829 0250',
   status: 'ACTIVE',
   created_at: '2026-11-01T10:00:00.000Z',
@@ -73,7 +78,11 @@ describe('Branch Create/Edit Drawer', () => {
 
     // Contact & Location
     expect(screen.getByLabelText(/Branch Phone \/ Reception Contact/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Branch \/ Street Address/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Address Line 1/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Address Line 2 \(Optional\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/City \/ Town/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/State \/ Province/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Pincode \/ Postal Code/i)).toBeInTheDocument();
 
     // Status cards
     expect(screen.getByText(/Active & Operational/i)).toBeInTheDocument();
@@ -102,7 +111,11 @@ describe('Branch Create/Edit Drawer', () => {
     expect(screen.getAllByText(/BRN-001/i).length).toBeGreaterThan(0);
     expect(screen.getByDisplayValue('Apollo South Campus')).toBeInTheDocument();
     expect(screen.getByDisplayValue('+91 44 2829 0250')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Block C, South Wing, Greams Road, Chennai')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Block C, South Wing')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Greams Road')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Chennai')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Tamil Nadu')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('600006')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Save Changes/i })).toBeInTheDocument();
   });
 
@@ -186,8 +199,11 @@ describe('Branch Create/Edit Drawer', () => {
     fireEvent.change(phoneInput, { target: { value: '+91 44 2829 0300' } });
 
     // Enter address
-    const addressInput = screen.getByPlaceholderText(/e\.g\. Block C, South Wing/i);
+    const addressInput = screen.getByPlaceholderText(/e\.g\. Block C, South Wing, Greams Road/i);
     fireEvent.change(addressInput, { target: { value: 'North Wing, Greams Road' } });
+
+    const cityInput = screen.getByPlaceholderText(/e\.g\. Chennai/i);
+    fireEvent.change(cityInput, { target: { value: 'Bangalore' } });
 
     // Submit
     const submitBtn = screen.getByRole('button', { name: /Create Branch/i });
@@ -201,7 +217,12 @@ describe('Branch Create/Edit Drawer', () => {
           hospital_id: 'hosp-1',
           name: 'Apollo North Wing',
           phone: '+91 44 2829 0300',
-          address: 'North Wing, Greams Road',
+          address_line_1: 'North Wing, Greams Road',
+          address_line_2: null,
+          city: 'Bangalore',
+          state: null,
+          pincode: null,
+          address: 'North Wing, Greams Road, Bangalore',
           status: 'ACTIVE',
         },
       });

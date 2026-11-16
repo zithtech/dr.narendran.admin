@@ -1,11 +1,48 @@
-import { ArrowRight } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { AlertCircle, ArrowRight } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 import type { MedicineStrength } from '../types/inventory';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
 import { Field, Modal, Section } from './ui/Modal';
 import { Alert, Badge } from './ui/primitives';
+
+export function validateStockOutQuantity(
+  val: string,
+  maxOnHand: number,
+  isReturn: boolean,
+): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return 'Quantity is required.';
+  if (/[^0-9]/.test(trimmed)) return 'Quantity must contain only numbers.';
+  const n = parseInt(trimmed, 10);
+  if (isNaN(n) || n <= 0) return 'Quantity must be greater than zero.';
+  if (!isReturn && n > maxOnHand) {
+    return `Cannot issue ${n} units. Maximum stock on hand is ${maxOnHand} units.`;
+  }
+  if (n > 1000000) return 'Quantity cannot exceed 1,000,000.';
+  return undefined;
+}
+
+export function validateStockOutReferenceNumber(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) return 'Reference number cannot exceed 100 characters.';
+  if (/[^a-zA-Z0-9\-_/#\s]/.test(trimmed)) {
+    return 'Reference number contains invalid characters.';
+  }
+  return undefined;
+}
+
+export function validateStockOutReason(val: string, isReasonRequired: boolean): string | undefined {
+  const trimmed = val.trim();
+  if (isReasonRequired) {
+    if (!trimmed) return 'A specific reason is required for this operation.';
+    if (trimmed.length < 3) return 'Reason must be at least 3 characters.';
+    if (trimmed.length > 200) return 'Reason cannot exceed 200 characters.';
+  }
+  return undefined;
+}
 
 interface StockOutModalProps {
   isOpen: boolean;
@@ -32,6 +69,8 @@ export default function StockOutModal({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setOperationType(mode);
@@ -40,6 +79,8 @@ export default function StockOutModal({
     setReason('');
     setNotes('');
     setError('');
+    setErrors({});
+    setTouched({});
   }, [mode, variant, isOpen]);
 
   const currentOnHand = variant?.available_quantity ?? 0;
@@ -53,25 +94,82 @@ export default function StockOutModal({
   const newLoose =
     tabsPerStrip && tabsPerStrip > 0 && newBalance >= 0 ? newBalance % tabsPerStrip : 0;
 
+  const isReasonRequired =
+    operationType === 'DAMAGED' || operationType === 'EXPIRED' || operationType === 'RETURN';
+
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^0-9]/g, '').slice(0, 8);
+    setQuantity(sanitized);
+    if (touched.quantity) {
+      setErrors((prev) => ({
+        ...prev,
+        quantity: validateStockOutQuantity(sanitized, currentOnHand, isReturn),
+      }));
+    }
+  };
+
+  const handleReferenceNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^a-zA-Z0-9\-_/#\s]/g, '').slice(0, 100);
+    setReferenceNumber(sanitized);
+    if (touched.referenceNumber) {
+      setErrors((prev) => ({
+        ...prev,
+        referenceNumber: validateStockOutReferenceNumber(sanitized),
+      }));
+    }
+  };
+
+  const handleReasonChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.slice(0, 200);
+    setReason(raw);
+    if (touched.reason) {
+      setErrors((prev) => ({
+        ...prev,
+        reason: validateStockOutReason(raw, isReasonRequired),
+      }));
+    }
+  };
+
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    let err: string | undefined;
+    if (field === 'quantity')
+      err = validateStockOutQuantity(quantity, currentOnHand, isReturn);
+    else if (field === 'referenceNumber')
+      err = validateStockOutReferenceNumber(referenceNumber);
+    else if (field === 'reason') err = validateStockOutReason(reason, isReasonRequired);
+    setErrors((prev) => ({ ...prev, [field]: err }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!variant?.id) {
       setError('No medicine variant selected.');
       return;
     }
-    if (parsedQty <= 0) {
-      setError('Quantity must be a positive integer.');
-      return;
-    }
-    if (!isReturn && parsedQty > currentOnHand) {
-      setError(`Cannot issue ${parsedQty} units. Maximum stock on hand is ${currentOnHand} units.`);
-      return;
-    }
-    if (
-      (operationType === 'DAMAGED' || operationType === 'EXPIRED' || operationType === 'RETURN') &&
-      !reason.trim()
-    ) {
-      setError('A specific reason is required for this operation.');
+
+    const qtyErr = validateStockOutQuantity(quantity, currentOnHand, isReturn);
+    const refErr = validateStockOutReferenceNumber(referenceNumber);
+    const reasonErr = validateStockOutReason(reason, isReasonRequired);
+
+    const newErrors: Record<string, string | undefined> = {
+      quantity: qtyErr,
+      referenceNumber: refErr,
+      reason: reasonErr,
+    };
+
+    setErrors(newErrors);
+    setTouched({
+      quantity: true,
+      referenceNumber: true,
+      reason: true,
+    });
+
+    const hasErrors = Object.values(newErrors).some(Boolean);
+    if (hasErrors) {
+      setError('Please correct the highlighted fields before saving.');
       return;
     }
 
@@ -135,7 +233,7 @@ export default function StockOutModal({
       }
       size="md"
     >
-      <form id="stock-out-form" onSubmit={handleSubmit} className="ui-modal-form">
+      <form id="stock-out-form" onSubmit={handleSubmit} noValidate className="ui-modal-form">
         <div className="ui-modal-body space-y-4">
           {error && <Alert>{error}</Alert>}
 
@@ -151,8 +249,12 @@ export default function StockOutModal({
                 <button
                   key={opt.type}
                   type="button"
-                  onClick={() => setOperationType(opt.type as any)}
-                  className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-all ${
+                  onClick={() => {
+                    const nextType = opt.type as any;
+                    setOperationType(nextType);
+                    setErrors({});
+                  }}
+                  className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
                     operationType === opt.type
                       ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:border-indigo-500 dark:bg-indigo-950/40 dark:text-indigo-300'
                       : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
@@ -213,17 +315,25 @@ export default function StockOutModal({
 
           <Section title="Quantity & Reference">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Quantity (Units) *" hint={`Max available: ${currentOnHand} units`}>
+              <Field label="Quantity (Units) *">
                 <input
-                  type="number"
-                  min="1"
-                  max={!isReturn ? currentOnHand : undefined}
+                  type="text"
                   className="ui-input font-bold text-slate-900 dark:text-slate-100"
                   placeholder="e.g. 10"
                   value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  required
+                  onChange={handleQuantityChange}
+                  onBlur={() => handleBlur('quantity')}
+                  style={{
+                    borderColor: errors.quantity ? '#ef4444' : undefined,
+                    boxShadow: errors.quantity ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
                 />
+                {errors.quantity && (
+                  <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                    <AlertCircle size={12} className="shrink-0" />
+                    {errors.quantity}
+                  </span>
+                )}
               </Field>
 
               <Field label="Prescription / Reference #">
@@ -232,16 +342,27 @@ export default function StockOutModal({
                   className="ui-input font-mono"
                   placeholder="e.g. RX-2026-081"
                   value={referenceNumber}
-                  onChange={(e) => setReferenceNumber(e.target.value)}
+                  onChange={handleReferenceNumberChange}
+                  onBlur={() => handleBlur('referenceNumber')}
+                  style={{
+                    borderColor: errors.referenceNumber ? '#ef4444' : undefined,
+                    boxShadow: errors.referenceNumber
+                      ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                      : undefined,
+                  }}
                 />
+                {errors.referenceNumber && (
+                  <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                    <AlertCircle size={12} className="shrink-0" />
+                    {errors.referenceNumber}
+                  </span>
+                )}
               </Field>
             </div>
           </Section>
 
-          {(operationType === 'DAMAGED' ||
-            operationType === 'EXPIRED' ||
-            operationType === 'RETURN') && (
-            <Field label="Specific Reason *" hint="Mandatory audit reason">
+          {isReasonRequired && (
+            <Field label="Specific Reason *">
               <input
                 type="text"
                 className="ui-input"
@@ -253,9 +374,19 @@ export default function StockOutModal({
                       : 'e.g. Unopened blister strip returned by patient'
                 }
                 value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                required
+                onChange={handleReasonChange}
+                onBlur={() => handleBlur('reason')}
+                style={{
+                  borderColor: errors.reason ? '#ef4444' : undefined,
+                  boxShadow: errors.reason ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                }}
               />
+              {errors.reason && (
+                <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                  <AlertCircle size={12} className="shrink-0" />
+                  {errors.reason}
+                </span>
+              )}
             </Field>
           )}
 
@@ -265,7 +396,7 @@ export default function StockOutModal({
               rows={2}
               placeholder="Provide any additional clinical or administrative context..."
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={(e) => setNotes(e.target.value.slice(0, 1000))}
             />
           </Field>
         </div>
@@ -277,7 +408,7 @@ export default function StockOutModal({
           <button
             type="submit"
             className="ui-btn ui-btn-primary"
-            disabled={loading || parsedQty <= 0 || (!isReturn && parsedQty > currentOnHand)}
+            disabled={loading}
           >
             {loading ? 'Processing...' : 'Confirm Operation'}
           </button>

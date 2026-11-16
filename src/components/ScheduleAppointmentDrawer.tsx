@@ -1,7 +1,6 @@
-import ScheduleAppointmentModal, {
-  ScheduleAppointmentDrawer,
-} from './ScheduleAppointmentModal';
+import ScheduleAppointmentModal from './ScheduleAppointmentModal';
 
+export const ScheduleAppointmentDrawer = ScheduleAppointmentModal;
 export default ScheduleAppointmentModal;
-export { ScheduleAppointmentDrawer, ScheduleAppointmentModal };
+export { ScheduleAppointmentModal };
 

@@ -13,7 +13,12 @@ const mockHospital: Hospital = {
   id: 'hosp-1',
   name: 'Apollo Multi-Specialty Hospital',
   hospital_code: 'HSP-001',
-  address: '21 Greams Lane, Thousand Lights, Chennai',
+  address_line_1: '21 Greams Lane',
+  address_line_2: 'Thousand Lights',
+  city: 'Chennai',
+  state: 'Tamil Nadu',
+  pincode: '600006',
+  address: '21 Greams Lane, Thousand Lights, Chennai, Tamil Nadu, 600006',
   phone: '+91 44 2829 0200',
   email: 'info@apollohospital.org',
   status: 'ACTIVE',
@@ -50,7 +55,12 @@ describe('Hospital Create/Edit Drawer', () => {
     // Contact & Location
     expect(screen.getByLabelText(/Phone \/ Helpline/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Email Address/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Facility \/ Street Address/i)).toBeInTheDocument();
+    expect(screen.getByText(/Facility \/ Street Address/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Address Line 1')).toBeInTheDocument();
+    expect(screen.getByLabelText('Address Line 2 (Optional)')).toBeInTheDocument();
+    expect(screen.getByLabelText('City / Town')).toBeInTheDocument();
+    expect(screen.getByLabelText('State / Province')).toBeInTheDocument();
+    expect(screen.getByLabelText('Pincode / Postal Code')).toBeInTheDocument();
 
     // Status Cards
     expect(screen.getByText(/Active & Operational/i)).toBeInTheDocument();
@@ -78,7 +88,11 @@ describe('Hospital Create/Edit Drawer', () => {
     expect(screen.getByDisplayValue('Apollo Multi-Specialty Hospital')).toBeInTheDocument();
     expect(screen.getByDisplayValue('+91 44 2829 0200')).toBeInTheDocument();
     expect(screen.getByDisplayValue('info@apollohospital.org')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('21 Greams Lane, Thousand Lights, Chennai')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('21 Greams Lane')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Thousand Lights')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Chennai')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Tamil Nadu')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('600006')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Save Changes/i })).toBeInTheDocument();
   });
 
@@ -149,7 +163,10 @@ describe('Hospital Create/Edit Drawer', () => {
     fireEvent.change(emailInput, { target: { value: 'contact@citycentral.org' } });
 
     const addressInput = screen.getByPlaceholderText(/e\.g\. No\. 21 Greams Lane/i);
-    fireEvent.change(addressInput, { target: { value: '45 Lake View Road, Bangalore' } });
+    fireEvent.change(addressInput, { target: { value: '45 Lake View Road' } });
+
+    const cityInput = screen.getByPlaceholderText(/e\.g\. Chennai/i);
+    fireEvent.change(cityInput, { target: { value: 'Bangalore' } });
 
     // Switch status to INACTIVE
     const inactiveBtn = screen.getByText(/Inactive \/ Suspended/i);
@@ -166,6 +183,11 @@ describe('Hospital Create/Edit Drawer', () => {
           name: 'City Central Hospital',
           phone: '+91 9876543210',
           email: 'contact@citycentral.org',
+          address_line_1: '45 Lake View Road',
+          address_line_2: null,
+          city: 'Bangalore',
+          state: null,
+          pincode: null,
           address: '45 Lake View Road, Bangalore',
           status: 'INACTIVE',
         },

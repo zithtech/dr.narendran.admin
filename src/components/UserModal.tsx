@@ -30,6 +30,41 @@ export interface UserAccount {
   updated_at: string;
 }
 
+export function validateUserUsername(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return 'Username is required.';
+  if (trimmed.length < 3) return 'Username must be at least 3 characters.';
+  if (trimmed.length > 50) return 'Username cannot exceed 50 characters.';
+  if (/\s/.test(trimmed)) return 'Username cannot contain spaces.';
+  if (!/^[a-zA-Z][a-zA-Z0-9._\-@]*$/.test(trimmed)) {
+    return 'Username must start with a letter and can only contain letters, numbers, dots, underscores, hyphens, and @.';
+  }
+  return undefined;
+}
+
+export function validateUserPassword(val: string, isCreate: boolean): string | undefined {
+  if (isCreate && !val) {
+    return 'Password is required when creating a new user account.';
+  }
+  if (val) {
+    if (val.length < 6) {
+      return 'Password must be at least 6 characters long.';
+    }
+    if (val.length > 100) {
+      return 'Password cannot exceed 100 characters.';
+    }
+  }
+  return undefined;
+}
+
+export function validateUserRole(val: string): string | undefined {
+  if (!val) return 'Role is required.';
+  if (!['ADMIN', 'DOCTOR', 'PATIENT'].includes(val)) {
+    return 'Invalid user role selected.';
+  }
+  return undefined;
+}
+
 interface UserModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -78,6 +113,7 @@ export default function UserModal({
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<'ADMIN' | 'DOCTOR' | 'PATIENT'>('PATIENT');
   const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -102,6 +138,7 @@ export default function UserModal({
       setRole('PATIENT');
       setStatus('ACTIVE');
     }
+    setTouched({});
     setError('');
     setShowForgotPanel(false);
     setResetFeedback(null);
@@ -109,6 +146,27 @@ export default function UserModal({
     setIsSendingOtp(false);
     setOtpMessage(null);
   }, [userAccount, isOpen]);
+
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    // Strip disallowed chars, then remove any leading digits so the field
+    // never starts with a number (numbers mid-string are still allowed).
+    const sanitized = raw.replace(/[^a-zA-Z0-9._\-@]/g, '').replace(/^\d+/, '');
+    setUsername(sanitized);
+    if (touched['username']) {
+      setTouched((prev) => ({ ...prev, username: true }));
+    }
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+    if (touched['password']) {
+      setTouched((prev) => ({ ...prev, password: true }));
+    }
+  };
+
+  const usernameError = touched['username'] ? validateUserUsername(username) : undefined;
+  const passwordError = touched['password'] ? validateUserPassword(password, !userAccount) : undefined;
 
   const handleGeneratePassword = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*';
@@ -187,22 +245,20 @@ export default function UserModal({
       setIsSendingOtp(false);
     }
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!username.trim()) {
-      setError('Username is required.');
-      return;
-    }
+    const usernameValidation = validateUserUsername(username);
+    const passwordValidation = validateUserPassword(password, !userAccount);
+    const roleValidation = validateUserRole(role);
 
-    if (!userAccount && !password) {
-      setError('Password is required when creating a new user account.');
-      return;
-    }
-
-    if (password && password.length < 6) {
-      setError('Password must be at least 6 characters long.');
+    if (usernameValidation || passwordValidation || roleValidation) {
+      setTouched({ username: true, password: true });
+      if (usernameValidation) {
+        document.getElementById('user-username-input')?.focus();
+      } else if (passwordValidation) {
+        document.getElementById('user-password-input')?.focus();
+      }
       return;
     }
 
@@ -280,6 +336,7 @@ export default function UserModal({
       }
     >
       <form
+        noValidate
         onSubmit={(e) => {
           void handleSubmit(e);
         }}
@@ -368,6 +425,10 @@ export default function UserModal({
             border-color: #2563eb !important;
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
             outline: none;
+          }
+          .user-drawer-modal .ui-input.has-error {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
           }
           .user-role-card {
             padding: 12px 14px;
@@ -482,17 +543,20 @@ export default function UserModal({
                 </label>
                 <input
                   id="user-username-input"
-                  className="ui-input w-full"
+                  className={`ui-input w-full ${usernameError ? 'has-error' : ''}`}
                   type="text"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
+                  onChange={handleUsernameChange}
+                  onBlur={() => setTouched((prev) => ({ ...prev, username: true }))}
                   placeholder="e.g. drsmith_23 or admin.clinic"
                   autoComplete="off"
                 />
-                <span className="mt-1 block text-[11px] text-slate-500">
-                  Unique sign-in identifier for portal authentication
-                </span>
+                {usernameError && (
+                  <div className="mt-1.5 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                    <AlertCircle size={13} className="shrink-0 text-rose-600" />
+                    <span>{usernameError}</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -527,11 +591,11 @@ export default function UserModal({
                 <div className="relative">
                   <input
                     id="user-password-input"
-                    className="ui-input w-full pr-10"
+                    className={`ui-input w-full pr-10 ${passwordError ? 'has-error' : ''}`}
                     type={showPassword ? 'text' : 'password'}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required={!userAccount}
+                    onChange={handlePasswordChange}
+                    onBlur={() => setTouched((prev) => ({ ...prev, password: true }))}
                     placeholder={
                       userAccount ? '••••••••••••' : 'Enter a strong secret passphrase'
                     }
@@ -546,6 +610,12 @@ export default function UserModal({
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                {passwordError && (
+                  <div className="mt-1.5 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                    <AlertCircle size={13} className="shrink-0 text-rose-600" />
+                    <span>{passwordError}</span>
+                  </div>
+                )}
 
                 <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px]">
                   <span className="text-slate-500">

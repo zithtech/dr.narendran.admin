@@ -590,19 +590,19 @@ export default function LabDashboardPage() {
                   </button>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-auto max-h-[380px] no-scrollbar">
                   <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                        <th className="py-3 pr-4">Investigation Name</th>
-                        <th className="py-3 px-4 text-right">Standard Price</th>
-                        <th className="py-3 px-4 text-center">Status</th>
-                        <th className="py-3 pl-4 text-right">Action</th>
+                    <thead className="sticky top-0 z-20 bg-white shadow-xs">
+                      <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-white">
+                        <th className="py-3 pr-4 sticky top-0 z-20 bg-white">Investigation Name</th>
+                        <th className="py-3 px-4 text-right sticky top-0 z-20 bg-white">Standard Price</th>
+                        <th className="py-3 px-4 text-center sticky top-0 z-20 bg-white">Status</th>
+                        <th className="py-3 pl-4 text-right sticky top-0 right-0 z-30 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {recentServices.slice(0, 5).map((service) => (
-                        <tr key={service.id} className="hover:bg-slate-50/70 transition-colors">
+                        <tr key={service.id} className="group hover:bg-slate-50/70 transition-colors">
                           <td className="py-3.5 pr-4 font-semibold text-slate-800">
                             <div className="text-sm font-bold text-slate-900">{service.name}</div>
                             {service.description && (
@@ -627,7 +627,7 @@ export default function LabDashboardPage() {
                               {service.status}
                             </span>
                           </td>
-                          <td className="py-3.5 pl-4 text-right whitespace-nowrap">
+                          <td className="py-3.5 pl-4 text-right whitespace-nowrap sticky right-0 z-10 bg-white group-hover:bg-slate-50 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] transition-colors">
                             <button
                               type="button"
                               onClick={() => void navigate('/client/services')}

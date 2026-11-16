@@ -273,15 +273,15 @@ export const OrderDetailsDrawer: React.FC<OrderDetailsDrawerProps> = ({
                     <span>Ordered Items ({order.medicines?.length || 0})</span>
                   </div>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="overflow-auto max-h-[350px] no-scrollbar">
                   <table className="min-w-full divide-y divide-slate-100 text-left text-xs dark:divide-slate-800">
-                    <thead className="bg-slate-50/80 font-semibold text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+                    <thead className="sticky top-0 z-10 bg-slate-50 font-semibold text-slate-500 dark:bg-slate-900 dark:text-slate-400 shadow-xs">
                       <tr>
-                        <th className="px-4 py-2.5">Medicine & Strength</th>
-                        <th className="px-4 py-2.5">Dosage / Instructions</th>
-                        <th className="px-4 py-2.5 text-center">Qty</th>
-                        <th className="px-4 py-2.5 text-right">Price</th>
-                        <th className="px-4 py-2.5 text-right">Total</th>
+                        <th className="px-4 py-2.5 sticky top-0 z-10 bg-slate-50 dark:bg-slate-900">Medicine & Strength</th>
+                        <th className="px-4 py-2.5 sticky top-0 z-10 bg-slate-50 dark:bg-slate-900">Dosage / Instructions</th>
+                        <th className="px-4 py-2.5 text-center sticky top-0 z-10 bg-slate-50 dark:bg-slate-900">Qty</th>
+                        <th className="px-4 py-2.5 text-right sticky top-0 z-10 bg-slate-50 dark:bg-slate-900">Price</th>
+                        <th className="px-4 py-2.5 text-right sticky top-0 z-10 bg-slate-50 dark:bg-slate-900">Total</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">

@@ -1443,7 +1443,7 @@ export default function DoctorTodayAppointments() {
 
                     {/* Doctor's Appointments Table (Executive Table Layout) */}
                     {hasAppointments ? (
-                      <div style={{ overflowX: 'auto' }}>
+                      <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 280px)', scrollbarWidth: 'none', msOverflowStyle: 'none' }} className="no-scrollbar">
                         <table
                           style={{
                             width: '100%',
@@ -1453,14 +1453,14 @@ export default function DoctorTodayAppointments() {
                             textAlign: 'left',
                           }}
                         >
-                          <thead>
-                            <tr style={{ background: '#f8fafc', color: '#475569', fontSize: 11, fontWeight: 600, borderBottom: '1px solid rgba(226, 232, 240, 0.9)' }}>
-                              <th style={{ padding: '8px 14px', borderBottom: '1px solid rgba(226, 232, 240, 0.9)', width: 140 }}>Time & Token</th>
-                              <th style={{ padding: '8px 14px', borderBottom: '1px solid rgba(226, 232, 240, 0.9)', width: 200 }}>Patient</th>
-                              <th style={{ padding: '8px 14px', borderBottom: '1px solid rgba(226, 232, 240, 0.9)', width: 150 }}>Contact</th>
-                              <th style={{ padding: '8px 14px', borderBottom: '1px solid rgba(226, 232, 240, 0.9)' }}>Purpose / Remarks</th>
-                              <th style={{ padding: '8px 14px', borderBottom: '1px solid rgba(226, 232, 240, 0.9)', width: 130 }}>Status</th>
-                              <th style={{ padding: '8px 14px', borderBottom: '1px solid rgba(226, 232, 240, 0.9)', textAlign: 'right', width: 110 }}>Actions</th>
+                          <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}>
+                            <tr style={{ background: '#f8fafc', color: '#64748b', fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                              <th style={{ padding: '8px 14px', borderBottom: '1px solid #e2e8f0', width: 140, position: 'sticky', top: 0, background: '#f8fafc', zIndex: 20 }}>Time & Token</th>
+                              <th style={{ padding: '8px 14px', borderBottom: '1px solid #e2e8f0', width: 200, position: 'sticky', top: 0, background: '#f8fafc', zIndex: 20 }}>Patient</th>
+                              <th style={{ padding: '8px 14px', borderBottom: '1px solid #e2e8f0', width: 150, position: 'sticky', top: 0, background: '#f8fafc', zIndex: 20 }}>Contact</th>
+                              <th style={{ padding: '8px 14px', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, background: '#f8fafc', zIndex: 20 }}>Purpose / Remarks</th>
+                              <th style={{ padding: '8px 14px', borderBottom: '1px solid #e2e8f0', width: 130, position: 'sticky', top: 0, background: '#f8fafc', zIndex: 20 }}>Status</th>
+                              <th style={{ padding: '8px 14px', borderBottom: '1px solid #e2e8f0', textAlign: 'right', width: 110, position: 'sticky', top: 0, right: 0, background: '#f8fafc', zIndex: 30, boxShadow: '-4px 0 6px -2px rgba(0,0,0,0.05)' }}>Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1589,7 +1589,7 @@ export default function DoctorTodayAppointments() {
                                   </td>
 
                                   {/* Actions */}
-                                  <td style={{ padding: '9px 14px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle', textAlign: 'right' }}>
+                                  <td style={{ padding: '9px 14px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle', textAlign: 'right', position: 'sticky', right: 0, background: '#ffffff', zIndex: 1, boxShadow: '-4px 0 6px -2px rgba(0,0,0,0.05)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
                                       {isRxCreatable && (
                                         <button

@@ -503,12 +503,12 @@ export function CommonTable<T extends { id: string }>({
   const someSelected = data.some((d) => selected.has(d.id));
 
   return (
-    <div className="overflow-x-auto min-h-[300px] bg-white border border-slate-200/90 rounded-lg shadow-2xs">
+    <div className="overflow-auto min-h-[300px] max-h-[calc(100vh-270px)] bg-white border border-slate-200/90 rounded-lg shadow-2xs no-scrollbar">
       <table className="w-full text-left border-collapse">
-        <thead>
+        <thead className="sticky top-0 z-20 bg-[#f8fafc]">
           <tr className="border-b border-slate-200/90 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
             {onToggleSelect && (
-              <th className="w-9 px-3.5 py-2 select-none">
+              <th className="w-9 px-3.5 py-2 select-none sticky top-0 z-20 bg-[#f8fafc]">
                 <input
                   type="checkbox"
                   className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
@@ -528,7 +528,7 @@ export function CommonTable<T extends { id: string }>({
                 <th
                   key={c.id}
                   style={c.width !== undefined ? { width: c.width } : undefined}
-                  className="px-3.5 py-2 whitespace-nowrap"
+                  className="px-3.5 py-2 whitespace-nowrap sticky top-0 z-20 bg-[#f8fafc]"
                 >
                   {c.sort && onSortChange ? (
                     <button
@@ -549,7 +549,7 @@ export function CommonTable<T extends { id: string }>({
                 </th>
               );
             })}
-            <th className="px-3.5 py-2 text-right whitespace-nowrap font-semibold">Actions</th>
+            <th className="px-3.5 py-2 text-right whitespace-nowrap font-semibold sticky top-0 right-0 z-30 bg-[#f8fafc] shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100 text-xs sm:text-xs text-slate-600">
@@ -576,7 +576,7 @@ export function CommonTable<T extends { id: string }>({
                     )}
                   </td>
                 ))}
-                <td className="px-3.5 py-2 text-right">
+                <td className="px-3.5 py-2 text-right sticky right-0 z-10 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
                   <div className="w-4 h-4 bg-slate-100 rounded ml-auto" />
                 </td>
               </tr>
@@ -623,7 +623,12 @@ export function CommonTable<T extends { id: string }>({
                       {c.cell(item)}
                     </td>
                   ))}
-                  <td className="px-3.5 py-2 text-right whitespace-nowrap align-middle">
+                  <td
+                    className={cx(
+                      'px-3.5 py-2 text-right whitespace-nowrap align-middle sticky right-0 z-10 transition-colors duration-100 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]',
+                      isSel ? 'bg-blue-50/90 group-hover:bg-blue-100/70' : 'bg-white group-hover:bg-slate-50',
+                    )}
+                  >
                     <div className="flex items-center justify-end gap-1">
                       {rowActions?.(item)}
                       {!rowActions && onEdit && (

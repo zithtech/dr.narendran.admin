@@ -236,7 +236,7 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
   },
   {
     key: 'administration',
-    name: 'Administration',
+    name: 'Admin',
     icon: Shield,
     description: 'System access, staff credentials & role permissions',
     defaultPath: '/users',

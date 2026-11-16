@@ -75,6 +75,13 @@ export interface StaffMember {
   phone: string;
   email?: string;
   address?: string;
+  address_line_1?: string | null;
+  address_line_2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
   role: string;
   hospitalId?: string;
   hospital_id?: string;
@@ -105,6 +112,13 @@ export interface CreateStaffInput {
   phone: string;
   email?: string;
   address?: string;
+  address_line_1?: string | null;
+  address_line_2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
   role: string;
   hospitalId?: string;
   branchId?: string;

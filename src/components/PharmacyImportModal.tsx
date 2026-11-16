@@ -535,7 +535,7 @@ export default function PharmacyImportModal({
               </div>
 
               {/* Preview Table */}
-              <div className="border border-slate-200 rounded-xl overflow-hidden max-h-[340px] overflow-y-auto bg-white shadow-2xs">
+              <div className="border border-slate-200 rounded-xl overflow-hidden max-h-[340px] overflow-y-auto bg-white shadow-2xs no-scrollbar">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead className="bg-slate-50 text-slate-700 font-bold sticky top-0 border-b border-slate-200 shadow-2xs">
                     <tr>
@@ -732,7 +732,7 @@ export default function PharmacyImportModal({
                     </button>
                   </div>
 
-                  <div className="border border-rose-200 rounded-xl overflow-hidden max-h-40 overflow-y-auto bg-white shadow-2xs">
+                  <div className="border border-rose-200 rounded-xl overflow-hidden max-h-40 overflow-y-auto bg-white shadow-2xs no-scrollbar">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead className="bg-rose-100/70 text-rose-900 font-semibold sticky top-0 border-b border-rose-200">
                         <tr>
