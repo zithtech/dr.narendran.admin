@@ -28,6 +28,143 @@ import { calculateFinalPrice, validateDiscount } from '../utils/pricing';
 import { Modal } from './ui/Modal';
 import SearchableSelect, { type SearchableSelectOption } from './ui/SearchableSelect';
 
+export function validateMedicineName(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return 'Medicine name is required.';
+  if (trimmed.length < 2) return 'Medicine name must be at least 2 characters.';
+  if (trimmed.length > 150) return 'Medicine name cannot exceed 150 characters.';
+  if (/[^a-zA-Z0-9\s.,'&\-+/()]/i.test(trimmed)) {
+    return 'Medicine name contains invalid characters.';
+  }
+  return undefined;
+}
+
+export function validateGenericName(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 150) return 'Generic name cannot exceed 150 characters.';
+  if (/[^a-zA-Z0-9\s.,'&\-+/()]/i.test(trimmed)) {
+    return 'Generic name contains invalid characters.';
+  }
+  return undefined;
+}
+
+export function validateStrength(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 50) return 'Strength cannot exceed 50 characters.';
+  if (/[^0-9a-zA-Z\s.,/+\-]/i.test(trimmed)) {
+    return 'Strength contains invalid characters.';
+  }
+  return undefined;
+}
+
+export function validateSubCategory(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) return 'Sub category cannot exceed 100 characters.';
+  if (/[0-9]/.test(val)) return 'Numbers are not allowed in sub category.';
+  if (/[^a-zA-Z\s\-/]/.test(val)) {
+    return 'Sub category can only contain letters, spaces, hyphens, and slashes.';
+  }
+  return undefined;
+}
+
+export function validateManufacturer(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 150) return 'Manufacturer cannot exceed 150 characters.';
+  if (/[^a-zA-Z0-9\s.,'&-]/i.test(trimmed)) {
+    return 'Manufacturer contains invalid characters.';
+  }
+  return undefined;
+}
+
+export function validateMedicineCode(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 50) return 'Medicine code cannot exceed 50 characters.';
+  if (/[^a-zA-Z0-9-_]/.test(trimmed)) {
+    return 'Medicine code can only contain letters, numbers, hyphens, and underscores.';
+  }
+  return undefined;
+}
+
+export function validateBarcode(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 50) return 'Barcode cannot exceed 50 characters.';
+  if (/[^a-zA-Z0-9-]/.test(trimmed)) {
+    return 'Barcode can only contain letters, numbers, and hyphens.';
+  }
+  return undefined;
+}
+
+export function validateMrp(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  const n = parseFloat(trimmed);
+  if (isNaN(n) || (trimmed.match(/\./g) || []).length > 1 || /[^0-9.-]/.test(trimmed)) {
+    return 'MRP must be a valid number.';
+  }
+  if (n < 0) return 'MRP cannot be negative.';
+  if (n > 999999.99) return 'MRP cannot exceed 999,999.99.';
+  return undefined;
+}
+
+export function validateDiscountValue(
+  val: string,
+  discountType: string,
+  mrpVal?: string,
+): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  const n = parseFloat(trimmed);
+  if (isNaN(n) || (trimmed.match(/\./g) || []).length > 1 || /[^0-9.-]/.test(trimmed)) {
+    return 'Discount value must be a valid number.';
+  }
+  if (n < 0) return 'Discount value cannot be negative.';
+  if (discountType === 'Percentage' || discountType === 'PERCENTAGE') {
+    if (n > 100) return 'Percentage discount cannot exceed 100%.';
+  }
+  if (
+    (discountType === 'Fixed Amount' || discountType === 'FLAT' || discountType === 'Fixed') &&
+    mrpVal
+  ) {
+    const m = parseFloat(mrpVal);
+    if (!isNaN(m) && n > m) return 'Fixed discount cannot exceed MRP.';
+  }
+  return undefined;
+}
+
+export function validateFinalPrice(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  const n = parseFloat(trimmed);
+  if (isNaN(n) || (trimmed.match(/\./g) || []).length > 1 || /[^0-9.-]/.test(trimmed)) {
+    return 'Final price must be a valid number.';
+  }
+  if (n < 0) return 'Final price cannot be negative.';
+  if (n > 999999.99) return 'Final price cannot exceed 999,999.99.';
+  return undefined;
+}
+
+export function validateFrequency(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) return 'Frequency cannot exceed 100 characters.';
+  if (/[^a-zA-Z0-9\s\-/+,]/.test(val)) return 'Frequency contains invalid characters.';
+  return undefined;
+}
+
+export function validateDuration(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) return 'Duration cannot exceed 100 characters.';
+  if (/[^a-zA-Z0-9\s\-]/.test(val)) return 'Duration contains invalid characters.';
+  return undefined;
+}
+
 interface MedicineModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -109,6 +246,10 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Form validation state
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
   // AI-Assisted Search state
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<AIMedicineSuggestion[]>([]);
@@ -121,20 +262,21 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
 
   useEffect(() => {
     if (medicine) {
-      setMedicineName(medicine.medicine_name ?? '');
-      setGenericName(medicine.generic_name ?? '');
-      setDosageForm(medicine.dosage_form ?? 'Tablet');
-      setStrength(medicine.strength ?? '');
-      setStrengthUnit(medicine.strength_unit ?? 'mg');
-      setTherapeuticCategory(medicine.therapeutic_category ?? '');
-      setSubCategory(medicine.sub_category ?? '');
-      setManufacturer(medicine.manufacturer ?? '');
-      setPrescriptionRequired(Boolean(medicine.prescription_required));
-      setStatus(medicine.status ?? 'Active');
-      setMedicineCode(medicine.medicine_code ?? '');
-      setBarcode(medicine.barcode ?? '');
+      setMedicineName(medicine.medicine_name || '');
+      setGenericName(medicine.generic_name || '');
+      setDosageForm(medicine.dosage_form || 'Tablet');
+      setStrength(medicine.strength || '');
+      setStrengthUnit(medicine.strength_unit || 'mg');
+      setTherapeuticCategory(medicine.therapeutic_category || '');
+      setSubCategory(medicine.sub_category || '');
+      setManufacturer(medicine.manufacturer || '');
+      setPrescriptionRequired(medicine.prescription_required ?? false);
+      setStatus(medicine.status || 'Active');
+      setMedicineCode(medicine.medicine_code || '');
+      setBarcode(medicine.barcode || '');
       setMrp(medicine.mrp !== null && medicine.mrp !== undefined ? String(medicine.mrp) : '');
-      setDiscountType(normalizeMasterDiscountType(medicine.discount_type));
+      const normalizedDiscType = normalizeMasterDiscountType(medicine.discount_type);
+      setDiscountType(normalizedDiscType);
       setDiscountValue(
         medicine.discount_value !== null && medicine.discount_value !== undefined
           ? String(medicine.discount_value)
@@ -145,9 +287,9 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
           ? String(medicine.final_price)
           : '',
       );
-      setFrequency(medicine.frequency ?? '');
-      setDuration(medicine.duration ?? '');
-      setDescription(medicine.description ?? '');
+      setFrequency(medicine.frequency || '');
+      setDuration(medicine.duration || '');
+      setDescription(medicine.description || '');
     } else {
       setMedicineName('');
       setGenericName('');
@@ -170,30 +312,30 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
       setDescription('');
     }
     setError('');
-    setAiLoading(false);
-    setAiSuggestions([]);
-    setShowSuggestions(false);
+    setErrors({});
+    setTouched({});
     setAiError('');
     setAiEmptyNotice(false);
+    setShowSuggestions(false);
     setIsAiAssisted(false);
   }, [medicine, isOpen]);
 
-  // Handle clicking outside the AI suggestions dropdown to close it
+  // Close AI suggestion dropdown on outside click
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleOutsideClick = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setShowSuggestions(false);
       }
     };
     if (showSuggestions) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('mousedown', handleOutsideClick);
     }
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('mousedown', handleOutsideClick);
     };
   }, [showSuggestions]);
 
-  // Options memoization for SearchableSelect
+  // Memoized options for SearchableSelect
   const dosageFormOptions = useMemo<SearchableSelectOption[]>(() => {
     const forms = [...COMMON_DOSAGE_FORMS];
     if (dosageForm && !forms.includes(dosageForm)) {
@@ -304,23 +446,213 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
     setIsAiAssisted(true);
     setAiError('');
     setAiEmptyNotice(false);
+    setErrors({});
+    setTouched({});
+  };
+
+  // Real-time input handlers
+  const handleMedicineNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^a-zA-Z0-9\s.,'&\-+/()]/g, '').slice(0, 150);
+    setMedicineName(sanitized);
+    setAiError('');
+    setAiEmptyNotice(false);
+    if (touched.medicineName) {
+      setErrors((prev) => ({ ...prev, medicineName: validateMedicineName(sanitized) }));
+    }
+  };
+
+  const handleGenericNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^a-zA-Z0-9\s.,'&\-+/()]/g, '').slice(0, 150);
+    setGenericName(sanitized);
+    if (touched.genericName) {
+      setErrors((prev) => ({ ...prev, genericName: validateGenericName(sanitized) }));
+    }
+  };
+
+  const handleStrengthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^0-9a-zA-Z\s.,/+\-]/g, '').slice(0, 50);
+    setStrength(sanitized);
+    if (touched.strength) {
+      setErrors((prev) => ({ ...prev, strength: validateStrength(sanitized) }));
+    }
+  };
+
+  const handleSubCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^a-zA-Z\s\-/]/g, '').slice(0, 100);
+    setSubCategory(sanitized);
+    if (touched.subCategory) {
+      setErrors((prev) => ({ ...prev, subCategory: validateSubCategory(sanitized) }));
+    }
+  };
+
+  const handleManufacturerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^a-zA-Z0-9\s.,'&-]/g, '').slice(0, 150);
+    setManufacturer(sanitized);
+    if (touched.manufacturer) {
+      setErrors((prev) => ({ ...prev, manufacturer: validateManufacturer(sanitized) }));
+    }
+  };
+
+  const handleMedicineCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^a-zA-Z0-9-_]/g, '').slice(0, 50);
+    setMedicineCode(sanitized);
+    if (touched.medicineCode) {
+      setErrors((prev) => ({ ...prev, medicineCode: validateMedicineCode(sanitized) }));
+    }
+  };
+
+  const handleBarcodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 50);
+    setBarcode(sanitized);
+    if (touched.barcode) {
+      setErrors((prev) => ({ ...prev, barcode: validateBarcode(sanitized) }));
+    }
+  };
+
+  const handleMrpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let sanitized = e.target.value.replace(/[^0-9.]/g, '');
+    const parts = sanitized.split('.');
+    if (parts.length > 2) sanitized = parts[0] + '.' + parts.slice(1).join('');
+    if (parts[1] && parts[1].length > 2) sanitized = parts[0] + '.' + parts[1].slice(0, 2);
+    setMrp(sanitized);
+    handleMrpOrDiscountChange(sanitized, discountType, discountValue);
+    if (touched.mrp) {
+      setErrors((prev) => ({ ...prev, mrp: validateMrp(sanitized) }));
+    }
+    if (touched.discountValue) {
+      setErrors((prev) => ({
+        ...prev,
+        discountValue: validateDiscountValue(discountValue, discountType, sanitized),
+      }));
+    }
+  };
+
+  const handleDiscountValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let sanitized = e.target.value.replace(/[^0-9.]/g, '');
+    const parts = sanitized.split('.');
+    if (parts.length > 2) sanitized = parts[0] + '.' + parts.slice(1).join('');
+    if (parts[1] && parts[1].length > 2) sanitized = parts[0] + '.' + parts[1].slice(0, 2);
+    setDiscountValue(sanitized);
+    handleMrpOrDiscountChange(mrp, discountType, sanitized);
+    if (touched.discountValue) {
+      setErrors((prev) => ({
+        ...prev,
+        discountValue: validateDiscountValue(sanitized, discountType, mrp),
+      }));
+    }
+  };
+
+  const handleFinalPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let sanitized = e.target.value.replace(/[^0-9.]/g, '');
+    const parts = sanitized.split('.');
+    if (parts.length > 2) sanitized = parts[0] + '.' + parts.slice(1).join('');
+    if (parts[1] && parts[1].length > 2) sanitized = parts[0] + '.' + parts[1].slice(0, 2);
+    setFinalPrice(sanitized);
+    if (touched.finalPrice) {
+      setErrors((prev) => ({ ...prev, finalPrice: validateFinalPrice(sanitized) }));
+    }
+  };
+
+  const handleFrequencyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^a-zA-Z0-9\s\-/+,]/g, '').slice(0, 100);
+    setFrequency(sanitized);
+    if (touched.frequency) {
+      setErrors((prev) => ({ ...prev, frequency: validateFrequency(sanitized) }));
+    }
+  };
+
+  const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^a-zA-Z0-9\s\-]/g, '').slice(0, 100);
+    setDuration(sanitized);
+    if (touched.duration) {
+      setErrors((prev) => ({ ...prev, duration: validateDuration(sanitized) }));
+    }
+  };
+
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    let err: string | undefined;
+    if (field === 'medicineName') err = validateMedicineName(medicineName);
+    else if (field === 'genericName') err = validateGenericName(genericName);
+    else if (field === 'strength') err = validateStrength(strength);
+    else if (field === 'subCategory') err = validateSubCategory(subCategory);
+    else if (field === 'manufacturer') err = validateManufacturer(manufacturer);
+    else if (field === 'medicineCode') err = validateMedicineCode(medicineCode);
+    else if (field === 'barcode') err = validateBarcode(barcode);
+    else if (field === 'mrp') err = validateMrp(mrp);
+    else if (field === 'discountValue')
+      err = validateDiscountValue(discountValue, discountType, mrp);
+    else if (field === 'finalPrice') err = validateFinalPrice(finalPrice);
+    else if (field === 'frequency') err = validateFrequency(frequency);
+    else if (field === 'duration') err = validateDuration(duration);
+    setErrors((prev) => ({ ...prev, [field]: err }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!medicineName.trim()) {
-      setError('Medicine name is required.');
-      return;
-    }
+    const nameErr = validateMedicineName(medicineName);
+    const genericErr = validateGenericName(genericName);
+    const strengthErr = validateStrength(strength);
+    const subCatErr = validateSubCategory(subCategory);
+    const mfgErr = validateManufacturer(manufacturer);
+    const codeErr = validateMedicineCode(medicineCode);
+    const barcodeErr = validateBarcode(barcode);
+    const mrpErr = validateMrp(mrp);
+    const discErr = validateDiscountValue(discountValue, discountType, mrp);
+    const finalPriceErr = validateFinalPrice(finalPrice);
+    const freqErr = validateFrequency(frequency);
+    const durErr = validateDuration(duration);
 
     const discountValidationError = validateDiscount(
       mrp ? parseFloat(mrp) : null,
       discountType || null,
       discountValue ? parseFloat(discountValue) : null,
     );
-    if (discountValidationError) {
-      setError(discountValidationError);
+
+    const newErrors: Record<string, string | undefined> = {
+      medicineName: nameErr,
+      genericName: genericErr,
+      strength: strengthErr,
+      subCategory: subCatErr,
+      manufacturer: mfgErr,
+      medicineCode: codeErr,
+      barcode: barcodeErr,
+      mrp: mrpErr,
+      discountValue: discErr || discountValidationError || undefined,
+      finalPrice: finalPriceErr,
+      frequency: freqErr,
+      duration: durErr,
+    };
+
+    setErrors(newErrors);
+    setTouched({
+      medicineName: true,
+      genericName: true,
+      strength: true,
+      subCategory: true,
+      manufacturer: true,
+      medicineCode: true,
+      barcode: true,
+      mrp: true,
+      discountValue: true,
+      finalPrice: true,
+      frequency: true,
+      duration: true,
+    });
+
+    const hasErrors = Object.values(newErrors).some(Boolean);
+    if (hasErrors) {
+      setError('Please correct the highlighted fields before saving.');
       return;
     }
 
@@ -414,6 +746,7 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
         onSubmit={(e) => {
           void handleSubmit(e);
         }}
+        noValidate
         className="ui-modal-form"
         style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
       >
@@ -622,17 +955,22 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
                   className="ui-input w-full"
                   type="text"
                   value={medicineName}
-                  onChange={(e) => {
-                    setMedicineName(e.target.value);
-                    setAiError('');
-                    setAiEmptyNotice(false);
-                  }}
-                  required
+                  onChange={handleMedicineNameChange}
+                  onBlur={() => handleBlur('medicineName')}
                   placeholder="e.g. Paracetamol 500mg, Augmentin 625 Duo"
+                  style={{
+                    borderColor: errors.medicineName ? '#ef4444' : undefined,
+                    boxShadow: errors.medicineName
+                      ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                      : undefined,
+                  }}
                 />
-                <span className="mt-1 block text-[11px] text-slate-500">
-                  Brand or commercial trade name as dispensed
-                </span>
+                {errors.medicineName && (
+                  <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                    <AlertCircle size={12} className="shrink-0" />
+                    {errors.medicineName}
+                  </span>
+                )}
 
                 {/* AI Error Alert */}
                 {aiError && (
@@ -676,7 +1014,8 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
                     <div className="flex items-center gap-1.5">
                       <Sparkles size={14} className="shrink-0 text-purple-600" />
                       <span>
-                        <strong>AI details populated</strong> &bull; please review formulation and pricing before saving.
+                        <strong>AI details populated</strong> &bull; please review formulation and
+                        pricing before saving.
                       </span>
                     </div>
                     <button
@@ -764,19 +1103,33 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
 
               {/* Generic Name */}
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                <label
+                  htmlFor="medicine-generic-input"
+                  className="mb-1.5 block text-xs font-semibold text-slate-800"
+                >
                   Generic / Chemical Name
                 </label>
                 <input
+                  id="medicine-generic-input"
                   className="ui-input w-full"
                   type="text"
                   value={genericName}
-                  onChange={(e) => setGenericName(e.target.value)}
+                  onChange={handleGenericNameChange}
+                  onBlur={() => handleBlur('genericName')}
                   placeholder="e.g. Paracetamol, Amoxicillin + Clavulanic Acid"
+                  style={{
+                    borderColor: errors.genericName ? '#ef4444' : undefined,
+                    boxShadow: errors.genericName
+                      ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                      : undefined,
+                  }}
                 />
-                <span className="mt-1 block text-[11px] text-slate-500">
-                  Active pharmaceutical ingredient (API)
-                </span>
+                {errors.genericName && (
+                  <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                    <AlertCircle size={12} className="shrink-0" />
+                    {errors.genericName}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -808,16 +1161,31 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                <label
+                  htmlFor="medicine-strength-input"
+                  className="mb-1.5 block text-xs font-semibold text-slate-800"
+                >
                   Strength Value
                 </label>
                 <input
+                  id="medicine-strength-input"
                   className="ui-input w-full"
                   type="text"
                   value={strength}
-                  onChange={(e) => setStrength(e.target.value)}
+                  onChange={handleStrengthChange}
+                  onBlur={() => handleBlur('strength')}
                   placeholder="e.g. 500, 625, 10"
+                  style={{
+                    borderColor: errors.strength ? '#ef4444' : undefined,
+                    boxShadow: errors.strength ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
                 />
+                {errors.strength && (
+                  <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                    <AlertCircle size={12} className="shrink-0" />
+                    {errors.strength}
+                  </span>
+                )}
               </div>
 
               <div>
@@ -863,44 +1231,95 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label
+                    htmlFor="medicine-subcategory-input"
+                    className="mb-1.5 block text-xs font-semibold text-slate-800"
+                  >
                     Sub Category
                   </label>
                   <input
+                    id="medicine-subcategory-input"
                     className="ui-input w-full"
                     type="text"
                     value={subCategory}
-                    onChange={(e) => setSubCategory(e.target.value)}
+                    onChange={handleSubCategoryChange}
+                    onBlur={() => handleBlur('subCategory')}
                     placeholder="e.g. Pain Relief, NSAIDs"
+                    style={{
+                      borderColor: errors.subCategory ? '#ef4444' : undefined,
+                      boxShadow: errors.subCategory
+                        ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                        : undefined,
+                    }}
                   />
+                  {errors.subCategory && (
+                    <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                      <AlertCircle size={12} className="shrink-0" />
+                      {errors.subCategory}
+                    </span>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label
+                    htmlFor="medicine-manufacturer-input"
+                    className="mb-1.5 block text-xs font-semibold text-slate-800"
+                  >
                     Manufacturer / Pharma Company
                   </label>
                   <input
+                    id="medicine-manufacturer-input"
                     className="ui-input w-full"
                     type="text"
                     value={manufacturer}
-                    onChange={(e) => setManufacturer(e.target.value)}
+                    onChange={handleManufacturerChange}
+                    onBlur={() => handleBlur('manufacturer')}
                     placeholder="e.g. Cipla, Sun Pharma, Dr. Reddy's"
+                    style={{
+                      borderColor: errors.manufacturer ? '#ef4444' : undefined,
+                      boxShadow: errors.manufacturer
+                        ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                        : undefined,
+                    }}
                   />
+                  {errors.manufacturer && (
+                    <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                      <AlertCircle size={12} className="shrink-0" />
+                      {errors.manufacturer}
+                    </span>
+                  )}
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label
+                    htmlFor="medicine-code-input"
+                    className="mb-1.5 block text-xs font-semibold text-slate-800"
+                  >
                     Medicine Code / SKU
                   </label>
                   <input
+                    id="medicine-code-input"
                     className="ui-input w-full"
                     type="text"
                     value={medicineCode}
-                    onChange={(e) => setMedicineCode(e.target.value)}
+                    onChange={handleMedicineCodeChange}
+                    onBlur={() => handleBlur('medicineCode')}
                     placeholder="e.g. MED-PARA-500"
+                    style={{
+                      borderColor: errors.medicineCode ? '#ef4444' : undefined,
+                      boxShadow: errors.medicineCode
+                        ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                        : undefined,
+                    }}
                   />
+                  {errors.medicineCode && (
+                    <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                      <AlertCircle size={12} className="shrink-0" />
+                      {errors.medicineCode}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -974,34 +1393,59 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
             <div className="space-y-3.5">
               <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
-                    MRP (₹) <span className="text-[11px] font-normal text-slate-500">(Max Retail Price)</span>
+                  <label
+                    htmlFor="medicine-mrp-input"
+                    className="mb-1.5 block text-xs font-semibold text-slate-800"
+                  >
+                    MRP (₹)
                   </label>
                   <input
+                    id="medicine-mrp-input"
                     className="ui-input w-full font-medium"
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
                     value={mrp}
-                    onChange={(e) => {
-                      setMrp(e.target.value);
-                      handleMrpOrDiscountChange(e.target.value, discountType, discountValue);
-                    }}
+                    onChange={handleMrpChange}
+                    onBlur={() => handleBlur('mrp')}
                     placeholder="0.00"
+                    style={{
+                      borderColor: errors.mrp ? '#ef4444' : undefined,
+                      boxShadow: errors.mrp ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                    }}
                   />
+                  {errors.mrp && (
+                    <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                      <AlertCircle size={12} className="shrink-0" />
+                      {errors.mrp}
+                    </span>
+                  )}
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label
+                    htmlFor="medicine-barcode-input"
+                    className="mb-1.5 block text-xs font-semibold text-slate-800"
+                  >
                     Barcode / EAN
                   </label>
                   <input
+                    id="medicine-barcode-input"
                     className="ui-input w-full"
                     type="text"
                     value={barcode}
-                    onChange={(e) => setBarcode(e.target.value)}
+                    onChange={handleBarcodeChange}
+                    onBlur={() => handleBlur('barcode')}
                     placeholder="e.g. 8901234567890"
+                    style={{
+                      borderColor: errors.barcode ? '#ef4444' : undefined,
+                      boxShadow: errors.barcode ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                    }}
                   />
+                  {errors.barcode && (
+                    <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                      <AlertCircle size={12} className="shrink-0" />
+                      {errors.barcode}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -1016,6 +1460,12 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
                       const newType = val as DiscountType | '';
                       setDiscountType(newType);
                       handleMrpOrDiscountChange(mrp, newType, discountValue);
+                      if (touched.discountValue) {
+                        setErrors((prev) => ({
+                          ...prev,
+                          discountValue: validateDiscountValue(discountValue, newType, mrp),
+                        }));
+                      }
                     }}
                     options={DISCOUNT_TYPE_OPTIONS}
                     placeholder="Select discount..."
@@ -1023,37 +1473,64 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label
+                    htmlFor="medicine-discount-value-input"
+                    className="mb-1.5 block text-xs font-semibold text-slate-800"
+                  >
                     Discount Value
                   </label>
                   <input
+                    id="medicine-discount-value-input"
                     className="ui-input w-full"
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
                     value={discountValue}
-                    onChange={(e) => {
-                      setDiscountValue(e.target.value);
-                      handleMrpOrDiscountChange(mrp, discountType, e.target.value);
-                    }}
+                    onChange={handleDiscountValueChange}
+                    onBlur={() => handleBlur('discountValue')}
                     disabled={!discountType}
                     placeholder={discountType === 'Percentage' ? 'e.g. 10' : 'e.g. 5.00'}
+                    style={{
+                      borderColor: errors.discountValue ? '#ef4444' : undefined,
+                      boxShadow: errors.discountValue
+                        ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                        : undefined,
+                    }}
                   />
+                  {errors.discountValue && (
+                    <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                      <AlertCircle size={12} className="shrink-0" />
+                      {errors.discountValue}
+                    </span>
+                  )}
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
-                    Final Price (₹) <span className="text-[11px] font-normal text-slate-500">(Effective rate)</span>
+                  <label
+                    htmlFor="medicine-final-price-input"
+                    className="mb-1.5 block text-xs font-semibold text-slate-800"
+                  >
+                    Final Price (₹)
                   </label>
                   <input
+                    id="medicine-final-price-input"
                     className="ui-input w-full font-bold text-emerald-700"
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
                     value={finalPrice}
-                    onChange={(e) => setFinalPrice(e.target.value)}
+                    onChange={handleFinalPriceChange}
+                    onBlur={() => handleBlur('finalPrice')}
                     placeholder="0.00"
+                    style={{
+                      borderColor: errors.finalPrice ? '#ef4444' : undefined,
+                      boxShadow: errors.finalPrice
+                        ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                        : undefined,
+                    }}
                   />
+                  {errors.finalPrice && (
+                    <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                      <AlertCircle size={12} className="shrink-0" />
+                      {errors.finalPrice}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -1074,47 +1551,79 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSave }: Med
             <div className="space-y-3.5">
               <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label
+                    htmlFor="medicine-frequency-input"
+                    className="mb-1.5 block text-xs font-semibold text-slate-800"
+                  >
                     Default Frequency
                   </label>
                   <input
+                    id="medicine-frequency-input"
                     className="ui-input w-full"
                     type="text"
                     value={frequency}
-                    onChange={(e) => setFrequency(e.target.value)}
+                    onChange={handleFrequencyChange}
+                    onBlur={() => handleBlur('frequency')}
                     placeholder="e.g. 1-0-1, 1-1-1, Once daily"
+                    style={{
+                      borderColor: errors.frequency ? '#ef4444' : undefined,
+                      boxShadow: errors.frequency
+                        ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                        : undefined,
+                    }}
                   />
-                  <span className="mt-1 block text-[11px] text-slate-500">
-                    Suggested dosage schedule for prescription orders
-                  </span>
+                  {errors.frequency && (
+                    <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                      <AlertCircle size={12} className="shrink-0" />
+                      {errors.frequency}
+                    </span>
+                  )}
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label
+                    htmlFor="medicine-duration-input"
+                    className="mb-1.5 block text-xs font-semibold text-slate-800"
+                  >
                     Default Duration
                   </label>
                   <input
+                    id="medicine-duration-input"
                     className="ui-input w-full"
                     type="text"
                     value={duration}
-                    onChange={(e) => setDuration(e.target.value)}
+                    onChange={handleDurationChange}
+                    onBlur={() => handleBlur('duration')}
                     placeholder="e.g. 5 days, 14 days, 1 month"
+                    style={{
+                      borderColor: errors.duration ? '#ef4444' : undefined,
+                      boxShadow: errors.duration
+                        ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                        : undefined,
+                    }}
                   />
-                  <span className="mt-1 block text-[11px] text-slate-500">
-                    Suggested treatment length
-                  </span>
+                  {errors.duration && (
+                    <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                      <AlertCircle size={12} className="shrink-0" />
+                      {errors.duration}
+                    </span>
+                  )}
                 </div>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                <label
+                  htmlFor="medicine-description-input"
+                  className="mb-1.5 block text-xs font-semibold text-slate-800"
+                >
                   Clinical Description & Usage Notes
                 </label>
                 <textarea
+                  id="medicine-description-input"
                   className="ui-textarea w-full"
                   rows={2}
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={(e) => setDescription(e.target.value.slice(0, 1000))}
                   placeholder="e.g. Take after meals with a glass of water. Store in a cool dry place away from sunlight."
                 />
               </div>

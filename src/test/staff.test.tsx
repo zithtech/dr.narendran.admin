@@ -619,4 +619,80 @@ describe('Staff Management Feature', () => {
 
     confirmSpy.mockRestore();
   });
+
+  it('renders all 5 structured address fields in StaffModal', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: [] });
+
+    renderWithProviders(
+      <StaffModal
+        isOpen={true}
+        onClose={vi.fn()}
+        staff={null}
+        onSave={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Residential / Postal Address')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Address Line 1/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Address Line 2 \(Optional\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/City \/ Town/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/State \/ Province/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Pincode \/ Postal Code/i)).toBeInTheDocument();
+  });
+
+  it('submits multiple address fields when creating staff', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: [] });
+    vi.mocked(api.post).mockResolvedValue({ data: { status: 'success', data: { id: 'staff-999' } } });
+
+    const handleSave = vi.fn();
+
+    renderWithProviders(
+      <StaffModal
+        isOpen={true}
+        onClose={vi.fn()}
+        staff={null}
+        onSave={handleSave}
+      />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/e\.g\. Sister Mary Joseph/i), {
+      target: { value: 'Kavitha Raman' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/e\.g\. \+91 98765 43210/i), {
+      target: { value: '+91 9876543210' },
+    });
+
+    fireEvent.change(screen.getByPlaceholderText(/e\.g\. 12\/B Health Colony/i), {
+      target: { value: '12 Health Colony' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/e\.g\. Opp\. Apollo Hospital/i), {
+      target: { value: 'Block A, Flat 4' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/e\.g\. Chennai/i), {
+      target: { value: 'Chennai' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/e\.g\. Tamil Nadu/i), {
+      target: { value: 'Tamil Nadu' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/e\.g\. 600006/i), {
+      target: { value: '600028' },
+    });
+
+    const submitBtn = screen.getByRole('button', { name: /Register Staff/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('staff', expect.objectContaining({
+        name: 'Kavitha Raman',
+        phone: '+91 9876543210',
+        address_line_1: '12 Health Colony',
+        address_line_2: 'Block A, Flat 4',
+        city: 'Chennai',
+        state: 'Tamil Nadu',
+        pincode: '600028',
+        address: '12 Health Colony, Block A, Flat 4, Chennai, Tamil Nadu, 600028',
+      }));
+      expect(handleSave).toHaveBeenCalled();
+    });
+  });
 });

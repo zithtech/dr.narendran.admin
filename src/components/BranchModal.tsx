@@ -25,10 +25,104 @@ export interface Branch {
   branch_code: string;
   name: string;
   address: string | null;
+  address_line_1?: string | null;
+  address_line_2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
   phone: string | null;
   status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
   updated_at: string;
+}
+
+export function validateBranchName(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return 'Branch name is required.';
+  if (trimmed.length < 2) return 'Branch name must be at least 2 characters.';
+  if (trimmed.length > 150) return 'Branch name cannot exceed 150 characters.';
+  if (/[^a-zA-Z0-9\s.,'&-]/i.test(trimmed)) {
+    return 'Branch name contains invalid characters.';
+  }
+  return undefined;
+}
+
+export function validateBranchHospital(id: string): string | undefined {
+  if (!id || !id.trim()) return 'Please select a parent hospital.';
+  return undefined;
+}
+
+export function validateBranchPhone(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (/[a-zA-Z]/.test(val)) {
+    return 'Letters are not allowed in phone number.';
+  }
+  if (/[^0-9+\s-]/.test(val)) {
+    return 'Special characters are not allowed in phone number.';
+  }
+  const digits = val.replace(/\D/g, '');
+  if (digits.length < 7) {
+    return 'Phone number must be at least 7 digits.';
+  }
+  if (digits.length > 15) {
+    return 'Phone number cannot exceed 15 digits.';
+  }
+  return undefined;
+}
+
+export function validateBranchAddressLine(val: string, label = 'Address line'): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 255) {
+    return `${label} cannot exceed 255 characters.`;
+  }
+  if (/[^a-zA-Z0-9\s,./#&-]/.test(val)) {
+    return `${label} contains invalid characters.`;
+  }
+  return undefined;
+}
+
+export function validateBranchCity(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) {
+    return 'City cannot exceed 100 characters.';
+  }
+  if (/[0-9]/.test(val)) {
+    return 'Numbers are not allowed in city.';
+  }
+  if (/[^a-zA-Z\s-]/.test(val)) {
+    return 'City can only contain letters, spaces, and hyphens.';
+  }
+  return undefined;
+}
+
+export function validateBranchState(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) {
+    return 'State cannot exceed 100 characters.';
+  }
+  if (/[0-9]/.test(val)) {
+    return 'Numbers are not allowed in state.';
+  }
+  if (/[^a-zA-Z\s-]/.test(val)) {
+    return 'State can only contain letters, spaces, and hyphens.';
+  }
+  return undefined;
+}
+
+export function validateBranchPincode(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (/[^0-9]/.test(trimmed)) {
+    return 'Pincode must contain only numbers.';
+  }
+  if (trimmed.length < 5 || trimmed.length > 10) {
+    return 'Pincode must be between 5 and 10 digits.';
+  }
+  return undefined;
 }
 
 interface BranchModalProps {
@@ -41,7 +135,11 @@ interface BranchModalProps {
 export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchModalProps) {
   const [name, setName] = useState('');
   const [hospitalId, setHospitalId] = useState<string>('');
-  const [address, setAddress] = useState('');
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [pincode, setPincode] = useState('');
   const [phone, setPhone] = useState('');
   const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
 
@@ -52,15 +150,10 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
 
   // Form validation state
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [errors, setErrors] = useState<{
-    name?: string | null;
-    hospital?: string | null;
-    phone?: string | null;
-  }>({});
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
   const nameInputId = useId();
   const phoneInputId = useId();
-  const addressInputId = useId();
 
   // Fetch hospitals for SearchableSelect
   useEffect(() => {
@@ -86,13 +179,21 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
       if (branch) {
         setName(branch.name || '');
         setHospitalId(branch.hospital_id || '');
-        setAddress(branch.address || '');
+        setAddressLine1(branch.address_line_1 || branch.address || '');
+        setAddressLine2(branch.address_line_2 || '');
+        setCity(branch.city || '');
+        setState(branch.state || '');
+        setPincode(branch.pincode || '');
         setPhone(branch.phone || '');
         setStatus(branch.status || 'ACTIVE');
       } else {
         setName('');
         setHospitalId('');
-        setAddress('');
+        setAddressLine1('');
+        setAddressLine2('');
+        setCity('');
+        setState('');
+        setPincode('');
         setPhone('');
         setStatus('ACTIVE');
       }
@@ -102,40 +203,59 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
     }
   }, [branch, isOpen]);
 
-  // Validation functions
-  const validateName = (val: string): string | null => {
-    const trimmed = val.trim();
-    if (!trimmed) return 'Branch name is required.';
-    if (trimmed.length < 2) return 'Branch name must be at least 2 characters.';
-    return null;
-  };
-
-  const validateHospital = (id: string): string | null => {
-    if (!id) return 'Please select a parent hospital.';
-    return null;
-  };
-
-  const validatePhone = (val: string): string | null => {
-    const trimmed = val.trim();
-    if (!trimmed) return null; // optional
-    const digitsOnly = trimmed.replace(/[^0-9]/g, '');
-    if (digitsOnly.length < 7) return 'Please enter a valid phone number (at least 7 digits).';
-    return null;
-  };
-
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
+    const val = e.target.value.replace(/[^a-zA-Z0-9\s.,'&-]/g, '').slice(0, 150);
     setName(val);
     if (touched.name) {
-      setErrors((prev) => ({ ...prev, name: validateName(val) }));
+      setErrors((prev) => ({ ...prev, name: validateBranchName(val) }));
     }
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/[^0-9+\s()-]/g, '');
+    const val = e.target.value.replace(/[^0-9+\s-]/g, '').slice(0, 16);
     setPhone(val);
     if (touched.phone) {
-      setErrors((prev) => ({ ...prev, phone: validatePhone(val) }));
+      setErrors((prev) => ({ ...prev, phone: validateBranchPhone(val) }));
+    }
+  };
+
+  const handleAddressLine1Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^a-zA-Z0-9\s,./#&-]/g, '').slice(0, 255);
+    setAddressLine1(val);
+    if (touched.addressLine1) {
+      setErrors((prev) => ({ ...prev, addressLine1: validateBranchAddressLine(val, 'Address line 1') }));
+    }
+  };
+
+  const handleAddressLine2Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^a-zA-Z0-9\s,./#&-]/g, '').slice(0, 255);
+    setAddressLine2(val);
+    if (touched.addressLine2) {
+      setErrors((prev) => ({ ...prev, addressLine2: validateBranchAddressLine(val, 'Address line 2') }));
+    }
+  };
+
+  const handleCityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^a-zA-Z\s-]/g, '').slice(0, 100);
+    setCity(val);
+    if (touched.city) {
+      setErrors((prev) => ({ ...prev, city: validateBranchCity(val) }));
+    }
+  };
+
+  const handleStateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^a-zA-Z\s-]/g, '').slice(0, 100);
+    setState(val);
+    if (touched.state) {
+      setErrors((prev) => ({ ...prev, state: validateBranchState(val) }));
+    }
+  };
+
+  const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+    setPincode(val);
+    if (touched.pincode) {
+      setErrors((prev) => ({ ...prev, pincode: validateBranchPincode(val) }));
     }
   };
 
@@ -160,15 +280,40 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const nameErr = validateName(name);
-    const hospErr = validateHospital(hospitalId);
-    const phoneErr = validatePhone(phone);
+    const nameErr = validateBranchName(name);
+    const hospErr = validateBranchHospital(hospitalId);
+    const phoneErr = validateBranchPhone(phone);
+    const addr1Err = validateBranchAddressLine(addressLine1, 'Address line 1');
+    const addr2Err = validateBranchAddressLine(addressLine2, 'Address line 2');
+    const cityErr = validateBranchCity(city);
+    const stateErr = validateBranchState(state);
+    const pincodeErr = validateBranchPincode(pincode);
 
-    setTouched({ name: true, hospital: true, phone: true });
-    setErrors({ name: nameErr, hospital: hospErr, phone: phoneErr });
+    const newErrors: Record<string, string | undefined> = {
+      name: nameErr,
+      hospital: hospErr,
+      phone: phoneErr,
+      addressLine1: addr1Err,
+      addressLine2: addr2Err,
+      city: cityErr,
+      state: stateErr,
+      pincode: pincodeErr,
+    };
 
-    if (nameErr || hospErr || phoneErr) {
-      if (hospErr) setError(hospErr);
+    setTouched({
+      name: true,
+      hospital: true,
+      phone: true,
+      addressLine1: true,
+      addressLine2: true,
+      city: true,
+      state: true,
+      pincode: true,
+    });
+    setErrors(newErrors);
+
+    if (nameErr || hospErr || phoneErr || addr1Err || addr2Err || cityErr || stateErr || pincodeErr) {
+      setError('Please correct the highlighted fields before saving.');
       return;
     }
 
@@ -179,13 +324,28 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
       const url = branch ? `branches/${branch.id}` : `branches`;
       const method = branch ? 'PUT' : 'POST';
 
+      const addressLines = [
+        addressLine1.trim(),
+        addressLine2.trim(),
+        city.trim(),
+        state.trim(),
+        pincode.trim(),
+      ]
+        .filter(Boolean)
+        .join(', ');
+
       await api({
         method,
         url,
         data: {
           hospital_id: hospitalId,
           name: name.trim(),
-          address: address.trim() || null,
+          address_line_1: addressLine1.trim() || null,
+          address_line_2: addressLine2.trim() || null,
+          city: city.trim() || null,
+          state: state.trim() || null,
+          pincode: pincode.trim() || null,
+          address: addressLines || null,
           phone: phone.trim() || null,
           status,
         },
@@ -245,6 +405,7 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
       }
     >
       <form
+        noValidate
         onSubmit={(e) => {
           void handleSubmit(e);
         }}
@@ -389,17 +550,12 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
                     color: '#334155',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
+                    gap: 4,
                     marginBottom: 5,
                   }}
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span>Parent Hospital System</span>
-                    <span style={{ color: '#ef4444' }}>*</span>
-                  </span>
-                  <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>
-                    Affiliated Institution
-                  </span>
+                  <span>Parent Hospital System</span>
+                  <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <SearchableSelect
                   id="branch-hospital-select"
@@ -407,7 +563,7 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
                   onChange={(val) => {
                     setHospitalId(val);
                     setTouched((prev) => ({ ...prev, hospital: true }));
-                    setErrors((prev) => ({ ...prev, hospital: validateHospital(val) }));
+                    setErrors((prev) => ({ ...prev, hospital: validateBranchHospital(val) }));
                     setError('');
                   }}
                   searchable={true}
@@ -444,17 +600,12 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
                     color: '#334155',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
+                    gap: 4,
                     marginBottom: 5,
                   }}
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span>Branch Name</span>
-                    <span style={{ color: '#ef4444' }}>*</span>
-                  </span>
-                  <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>
-                    Campus / Facility Name
-                  </span>
+                  <span>Branch Name</span>
+                  <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <div style={{ position: 'relative' }}>
                   <GitBranch
@@ -476,14 +627,13 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
                     onChange={handleNameChange}
                     onBlur={() => {
                       setTouched((prev) => ({ ...prev, name: true }));
-                      setErrors((prev) => ({ ...prev, name: validateName(name) }));
+                      setErrors((prev) => ({ ...prev, name: validateBranchName(name) }));
                     }}
                     style={{
                       paddingLeft: 34,
                       borderColor: errors.name ? '#ef4444' : undefined,
                       boxShadow: errors.name ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
                     }}
-                    required
                   />
                 </div>
                 {errors.name && (
@@ -563,16 +713,11 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
                   color: '#334155',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
+                  gap: 4,
                   marginBottom: 5,
                 }}
               >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span>Branch Phone / Reception Contact</span>
-                </span>
-                <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>
-                  Optional
-                </span>
+                <span>Branch Phone / Reception Contact</span>
               </label>
               <div style={{ position: 'relative' }}>
                 <Phone
@@ -594,7 +739,7 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
                   onChange={handlePhoneChange}
                   onBlur={() => {
                     setTouched((prev) => ({ ...prev, phone: true }));
-                    setErrors((prev) => ({ ...prev, phone: validatePhone(phone) }));
+                    setErrors((prev) => ({ ...prev, phone: validateBranchPhone(phone) }));
                   }}
                   style={{
                     paddingLeft: 34,
@@ -634,39 +779,273 @@ export default function BranchModal({ isOpen, onClose, branch, onSave }: BranchM
 
             <div>
               <label
-                htmlFor={addressInputId}
                 style={{
                   fontSize: 12,
                   fontWeight: 600,
                   color: '#334155',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: 5,
+                  gap: 4,
+                  marginBottom: 8,
                 }}
               >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <MapPin size={13} style={{ color: '#94a3b8' }} />
-                  <span>Branch / Street Address</span>
-                </span>
-                <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>
-                  Floor, block, street, city
-                </span>
+                <MapPin size={13} style={{ color: '#64748b' }} />
+                <span>Facility / Street Address</span>
               </label>
-              <textarea
-                id={addressInputId}
-                className="ui-input"
-                rows={2}
-                placeholder="e.g. Block C, South Wing, Greams Road, Chennai 600006"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                style={{
-                  minHeight: 64,
-                  lineHeight: 1.45,
-                  padding: '9px 12px',
-                  resize: 'vertical',
-                }}
-              />
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <label
+                      htmlFor="branch-address-line-1"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: 5,
+                      }}
+                    >
+                      Address Line 1
+                    </label>
+                    <input
+                      id="branch-address-line-1"
+                      className="ui-input"
+                      type="text"
+                      value={addressLine1}
+                      onChange={handleAddressLine1Change}
+                      onBlur={() => {
+                        setTouched((prev) => ({ ...prev, addressLine1: true }));
+                        setErrors((prev) => ({
+                          ...prev,
+                          addressLine1: validateBranchAddressLine(addressLine1, 'Address line 1'),
+                        }));
+                      }}
+                      placeholder="e.g. Block C, South Wing, Greams Road"
+                      style={{
+                        borderColor: errors.addressLine1 ? '#ef4444' : undefined,
+                        boxShadow: errors.addressLine1 ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                    />
+                    {errors.addressLine1 && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          marginTop: 4,
+                          color: '#dc2626',
+                          fontSize: 11,
+                        }}
+                      >
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.addressLine1}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="branch-address-line-2"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: 5,
+                      }}
+                    >
+                      Address Line 2 (Optional)
+                    </label>
+                    <input
+                      id="branch-address-line-2"
+                      className="ui-input"
+                      type="text"
+                      value={addressLine2}
+                      onChange={handleAddressLine2Change}
+                      onBlur={() => {
+                        setTouched((prev) => ({ ...prev, addressLine2: true }));
+                        setErrors((prev) => ({
+                          ...prev,
+                          addressLine2: validateBranchAddressLine(addressLine2, 'Address line 2'),
+                        }));
+                      }}
+                      placeholder="e.g. Opp City Park"
+                      style={{
+                        borderColor: errors.addressLine2 ? '#ef4444' : undefined,
+                        boxShadow: errors.addressLine2 ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                    />
+                    {errors.addressLine2 && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          marginTop: 4,
+                          color: '#dc2626',
+                          fontSize: 11,
+                        }}
+                      >
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.addressLine2}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <label
+                      htmlFor="branch-city"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: 5,
+                      }}
+                    >
+                      City / Town
+                    </label>
+                    <input
+                      id="branch-city"
+                      className="ui-input"
+                      type="text"
+                      value={city}
+                      onChange={handleCityChange}
+                      onBlur={() => {
+                        setTouched((prev) => ({ ...prev, city: true }));
+                        setErrors((prev) => ({ ...prev, city: validateBranchCity(city) }));
+                      }}
+                      placeholder="e.g. Chennai"
+                      style={{
+                        borderColor: errors.city ? '#ef4444' : undefined,
+                        boxShadow: errors.city ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                    />
+                    {errors.city && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          marginTop: 4,
+                          color: '#dc2626',
+                          fontSize: 11,
+                        }}
+                      >
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.city}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="branch-state"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: 5,
+                      }}
+                    >
+                      State / Province
+                    </label>
+                    <input
+                      id="branch-state"
+                      className="ui-input"
+                      type="text"
+                      value={state}
+                      onChange={handleStateChange}
+                      onBlur={() => {
+                        setTouched((prev) => ({ ...prev, state: true }));
+                        setErrors((prev) => ({ ...prev, state: validateBranchState(state) }));
+                      }}
+                      placeholder="e.g. Tamil Nadu"
+                      style={{
+                        borderColor: errors.state ? '#ef4444' : undefined,
+                        boxShadow: errors.state ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                    />
+                    {errors.state && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          marginTop: 4,
+                          color: '#dc2626',
+                          fontSize: 11,
+                        }}
+                      >
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.state}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="branch-pincode"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: 5,
+                      }}
+                    >
+                      Pincode / Postal Code
+                    </label>
+                    <input
+                      id="branch-pincode"
+                      className="ui-input"
+                      type="text"
+                      value={pincode}
+                      onChange={handlePincodeChange}
+                      onBlur={() => {
+                        setTouched((prev) => ({ ...prev, pincode: true }));
+                        setErrors((prev) => ({ ...prev, pincode: validateBranchPincode(pincode) }));
+                      }}
+                      placeholder="e.g. 600006"
+                      style={{
+                        borderColor: errors.pincode ? '#ef4444' : undefined,
+                        boxShadow: errors.pincode ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                    />
+                    {errors.pincode && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          marginTop: 4,
+                          color: '#dc2626',
+                          fontSize: 11,
+                        }}
+                      >
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.pincode}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

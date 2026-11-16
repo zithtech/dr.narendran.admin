@@ -1,8 +1,10 @@
 import { App } from 'antd';
 import {
+  AlertCircle,
   CalendarPlus,
   Clock,
   Loader2,
+  Phone,
   Stethoscope,
   Sun,
   Sunset,
@@ -27,6 +29,67 @@ interface ScheduleAppointmentModalProps {
   onSuccess: () => void;
   preselectedDoctorId?: string | undefined;
   preselectedPatientId?: string | undefined;
+}
+
+export function validateAppointmentPatientName(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) {
+    return 'Patient full name is required.';
+  }
+  if (trimmed.length < 2) {
+    return 'Patient name must be at least 2 characters.';
+  }
+  if (trimmed.length > 100) {
+    return 'Patient name cannot exceed 100 characters.';
+  }
+  if (/[0-9]/.test(val)) {
+    return 'Numbers are not allowed in patient name.';
+  }
+  if (/[^a-zA-Z\s.-]/.test(val)) {
+    return 'Patient name can only contain letters, spaces, hyphens, and periods.';
+  }
+  return undefined;
+}
+
+export function validateAppointmentPatientPhone(val: string, isRequired = true): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) {
+    return isRequired ? 'Patient phone number is required.' : undefined;
+  }
+  if (/[a-zA-Z]/.test(val)) {
+    return 'Letters are not allowed in phone number.';
+  }
+  if (/[^0-9+\s-]/.test(val)) {
+    return 'Special characters are not allowed in phone number.';
+  }
+  const digits = val.replace(/\D/g, '');
+  if (digits.length < 7) {
+    return 'Phone number must be at least 7 digits.';
+  }
+  if (digits.length > 15) {
+    return 'Phone number cannot exceed 15 digits.';
+  }
+  return undefined;
+}
+
+export function validateAppointmentPurpose(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) {
+    return 'Please specify the purpose of the appointment.';
+  }
+  if (trimmed.length > 255) {
+    return 'Purpose cannot exceed 255 characters.';
+  }
+  return undefined;
+}
+
+export function validateAppointmentNote(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 500) {
+    return 'Note must be under 500 characters.';
+  }
+  return undefined;
 }
 
 const COMMON_PURPOSES = [
@@ -78,6 +141,7 @@ export default function ScheduleAppointmentModal({
   // Form handling
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
   // Fetch doctors and patients on modal open
   const fetchDoctors = useCallback(async () => {
@@ -153,6 +217,7 @@ export default function ScheduleAppointmentModal({
       void fetchPatients();
       setAppointmentDate(todayStr);
       setError('');
+      setErrors({});
       setPurpose('General Consultation');
       setPatientNote('');
       setSelectedSlotId('');
@@ -180,9 +245,16 @@ export default function ScheduleAppointmentModal({
       value: pat.id,
       label: pat.name,
       sublabel: [pat.phone, pat.email].filter(Boolean).join(' · ') || undefined,
-      badge: pat.branch_name || undefined,
-      badgeTone: 'neutral' as const,
-      extraSearchTerms: [pat.phone, pat.email, pat.blood_group, pat.branch_name].filter(Boolean) as string[],
+      badge: pat.blood_group || pat.branch_name || undefined,
+      badgeTone: pat.blood_group ? ('red' as const) : ('neutral' as const),
+      extraSearchTerms: [
+        pat.phone,
+        pat.email,
+        pat.blood_group,
+        pat.branch_name,
+        pat.gender,
+        pat.hospital_name,
+      ].filter(Boolean) as string[],
     }));
   }, [patients]);
 
@@ -195,44 +267,41 @@ export default function ScheduleAppointmentModal({
     e.preventDefault();
     setError('');
 
-    // Validations
+    const validationErrors: Record<string, string | undefined> = {};
+
     if (patientMode === 'existing') {
       if (!selectedPatient) {
-        setError('Please search and select an existing patient.');
-        return;
+        validationErrors.selectedPatient = 'Please search and select an existing patient.';
       }
     } else {
-      if (!newPatientName.trim()) {
-        setError("Please enter the patient's name.");
-        return;
-      }
-      if (!/^[a-zA-Z\s]+$/.test(newPatientName.trim())) {
-        setError('Patient name can only contain alphabetic letters and spaces.');
-        return;
-      }
-      if (!newPatientPhone.trim()) {
-        setError("Please enter the patient's phone number.");
-        return;
-      }
-      const digits = newPatientPhone.replace(/\D/g, '');
-      if (digits.length < 10 || digits.length > 15) {
-        setError('Patient phone number must contain between 10 and 15 digits.');
-        return;
-      }
+      validationErrors.newPatientName = validateAppointmentPatientName(newPatientName);
+      validationErrors.newPatientPhone = validateAppointmentPatientPhone(newPatientPhone, true);
     }
 
     if (!selectedDoctorId) {
-      setError('Please select a doctor.');
-      return;
+      validationErrors.selectedDoctorId = 'Please select a doctor.';
     }
 
     if (!selectedSlotId) {
-      setError('Please select an available time slot for the appointment.');
-      return;
+      validationErrors.selectedSlotId = 'Please select an available time slot for the appointment.';
     }
 
-    if (!purpose.trim()) {
-      setError('Please specify the purpose of the appointment.');
+    validationErrors.purpose = validateAppointmentPurpose(purpose);
+    validationErrors.patientNote = validateAppointmentNote(patientNote);
+
+    setErrors(validationErrors);
+
+    const firstMsg =
+      validationErrors.selectedPatient ||
+      validationErrors.newPatientName ||
+      validationErrors.newPatientPhone ||
+      validationErrors.selectedDoctorId ||
+      validationErrors.selectedSlotId ||
+      validationErrors.purpose ||
+      validationErrors.patientNote;
+
+    if (firstMsg) {
+      setError(firstMsg);
       return;
     }
 
@@ -389,7 +458,7 @@ export default function ScheduleAppointmentModal({
       }
       description=""
     >
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
         <style>{`
           .schedule-appointment-drawer-modal {
             width: min(740px, 100vw) !important;
@@ -530,6 +599,7 @@ export default function ScheduleAppointmentModal({
                 onClick={() => {
                   setPatientMode('existing');
                   setError('');
+                  setErrors({});
                 }}
               >
                 <UserCheck size={15} />
@@ -559,6 +629,7 @@ export default function ScheduleAppointmentModal({
                 onClick={() => {
                   setPatientMode('new');
                   setError('');
+                  setErrors({});
                 }}
               >
                 <UserPlus size={15} />
@@ -586,6 +657,154 @@ export default function ScheduleAppointmentModal({
                     searchPlaceholder="Search by name, phone number, email, branch..."
                     options={patientOptions}
                     emptyText='No matching patients found. Switch to "New Patient" above to register.'
+                    renderOption={(opt) => {
+                      const pat = patients.find((p) => p.id === opt.value);
+                      const initials = (opt.label || 'P')
+                        .split(' ')
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((w) => w[0]?.toUpperCase() || '')
+                        .join('');
+
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '2px 0' }}>
+                          <div
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: '50%',
+                              background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                              border: '1px solid #bfdbfe',
+                              color: '#2563eb',
+                              display: 'grid',
+                              placeItems: 'center',
+                              fontWeight: 700,
+                              fontSize: 12,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {initials || 'P'}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontWeight: 600, color: '#0f172a', fontSize: 13 }}>
+                                {opt.label}
+                              </span>
+                              {pat?.gender && (
+                                <span
+                                  style={{
+                                    fontSize: 10.5,
+                                    color: '#64748b',
+                                    background: '#f1f5f9',
+                                    border: '1px solid #e2e8f0',
+                                    padding: '0 5px',
+                                    borderRadius: 4,
+                                    textTransform: 'capitalize',
+                                  }}
+                                >
+                                  {pat.gender.toLowerCase()}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2, fontSize: 11.5, color: '#64748b' }}>
+                              {pat?.phone && (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3.5, color: '#2563eb', fontWeight: 500 }}>
+                                  <Phone size={11} />
+                                  <span>{pat.phone}</span>
+                                </span>
+                              )}
+                              {pat?.email && (
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>
+                                  {pat.email}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                            {pat?.blood_group && (
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  color: '#b91c1c',
+                                  background: '#fef2f2',
+                                  border: '1px solid #fee2e2',
+                                  padding: '1px 6px',
+                                  borderRadius: 5,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 3,
+                                }}
+                              >
+                                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#ef4444' }} />
+                                {pat.blood_group}
+                              </span>
+                            )}
+                            {pat?.branch_name && (
+                              <span
+                                style={{
+                                  fontSize: 10.5,
+                                  color: '#475569',
+                                  background: '#f8fafc',
+                                  border: '1px solid #e2e8f0',
+                                  padding: '1px 6px',
+                                  borderRadius: 5,
+                                }}
+                              >
+                                {pat.branch_name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }}
+                    renderSelected={(opt) => {
+                      if (!opt) return null;
+                      const pat = patients.find((p) => p.id === opt.value);
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              width: 22,
+                              height: 22,
+                              borderRadius: '50%',
+                              background: '#2563eb',
+                              color: '#ffffff',
+                              display: 'grid',
+                              placeItems: 'center',
+                              fontWeight: 700,
+                              fontSize: 10.5,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {opt.label.charAt(0).toUpperCase()}
+                          </div>
+                          <span style={{ fontWeight: 600, color: '#0f172a', fontSize: 13 }}>
+                            {opt.label}
+                          </span>
+                          {pat?.phone && (
+                            <span style={{ fontSize: 12, color: '#64748b' }}>
+                              ({pat.phone})
+                            </span>
+                          )}
+                          {pat?.blood_group && (
+                            <span
+                              style={{
+                                fontSize: 10.5,
+                                fontWeight: 700,
+                                color: '#b91c1c',
+                                background: '#fef2f2',
+                                border: '1px solid #fee2e2',
+                                padding: '0 5px',
+                                borderRadius: 4,
+                              }}
+                            >
+                              {pat.blood_group}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    }}
                   />
                 </Field>
 
@@ -655,59 +874,53 @@ export default function ScheduleAppointmentModal({
                   gap: 12,
                 }}
               >
-                <Field label="Patient Full Name" required hint="Letters & spaces only (no numbers/symbols)">
+                <Field label="Patient Full Name" required>
                   <input
                     type="text"
                     className="ui-input"
                     placeholder="Enter full name"
                     value={newPatientName}
-                    onKeyDown={(e) => {
-                      if (
-                        e.key === 'Backspace' ||
-                        e.key === 'Tab' ||
-                        e.key === 'Enter' ||
-                        e.key === 'Delete' ||
-                        e.key === 'Escape' ||
-                        e.key.startsWith('Arrow') ||
-                        e.ctrlKey ||
-                        e.metaKey
-                      ) {
-                        return;
-                      }
-                      if (!/^[a-zA-Z\s]$/.test(e.key)) {
-                        e.preventDefault();
-                      }
+                    style={{
+                      borderColor: errors.newPatientName ? '#ef4444' : undefined,
+                      boxShadow: errors.newPatientName ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
                     }}
-                    onChange={(e) => setNewPatientName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
+                    onChange={(e) => {
+                      const sanitized = e.target.value.replace(/[^a-zA-Z\s.-]/g, '').slice(0, 100);
+                      setNewPatientName(sanitized);
+                      setErrors((prev) => ({ ...prev, newPatientName: validateAppointmentPatientName(sanitized) }));
+                    }}
                     required
                   />
+                  {errors.newPatientName && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.newPatientName}</span>
+                    </div>
+                  )}
                 </Field>
-                <Field label="Patient Phone Number" required hint="Digits only (10-15 digits)">
+                <Field label="Patient Phone Number" required>
                   <input
                     type="tel"
                     className="ui-input"
                     placeholder="Enter contact number"
                     value={newPatientPhone}
-                    onKeyDown={(e) => {
-                      if (
-                        e.key === 'Backspace' ||
-                        e.key === 'Tab' ||
-                        e.key === 'Enter' ||
-                        e.key === 'Delete' ||
-                        e.key === 'Escape' ||
-                        e.key.startsWith('Arrow') ||
-                        e.ctrlKey ||
-                        e.metaKey
-                      ) {
-                        return;
-                      }
-                      if (!/^[0-9+\s-]$/.test(e.key)) {
-                        e.preventDefault();
-                      }
+                    style={{
+                      borderColor: errors.newPatientPhone ? '#ef4444' : undefined,
+                      boxShadow: errors.newPatientPhone ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
                     }}
-                    onChange={(e) => setNewPatientPhone(e.target.value.replace(/[^0-9+\s-]/g, ''))}
+                    onChange={(e) => {
+                      const sanitized = e.target.value.replace(/[^0-9+\s-]/g, '').slice(0, 16);
+                      setNewPatientPhone(sanitized);
+                      setErrors((prev) => ({ ...prev, newPatientPhone: validateAppointmentPatientPhone(sanitized, true) }));
+                    }}
                     required
                   />
+                  {errors.newPatientPhone && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.newPatientPhone}</span>
+                    </div>
+                  )}
                 </Field>
               </div>
             )}

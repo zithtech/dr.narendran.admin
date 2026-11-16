@@ -325,6 +325,11 @@ export function SearchableSelect({
           border-color: #cbd5e1;
           background: #f8fafc;
         }
+        .ui-searchable-select-wrap.has-error .ui-searchable-trigger,
+        .ui-searchable-trigger.has-error {
+          border-color: #ef4444 !important;
+          box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15) !important;
+        }
         .ui-searchable-trigger.variant-default.is-open {
           border-color: ${brandPrimary} !important;
           box-shadow: 0 0 0 3px ${brandShadow} !important;

@@ -326,17 +326,17 @@ export const ReviewsManagementPage: React.FC = () => {
 
           {/* Reviews Table */}
           <div className="rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="overflow-auto max-h-[calc(100vh-280px)] no-scrollbar">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider dark:bg-slate-950/50 dark:border-slate-800">
+                <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider dark:bg-slate-950 dark:border-slate-800 shadow-xs">
                   <tr>
-                    <th className="px-4 py-3">Patient</th>
-                    <th className="px-4 py-3">Doctor</th>
-                    <th className="px-4 py-3">Rating</th>
-                    <th className="px-4 py-3">Review Comment</th>
-                    <th className="px-4 py-3">Submission Date</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th className="px-4 py-3 sticky top-0 z-20 bg-slate-50 dark:bg-slate-950">Patient</th>
+                    <th className="px-4 py-3 sticky top-0 z-20 bg-slate-50 dark:bg-slate-950">Doctor</th>
+                    <th className="px-4 py-3 sticky top-0 z-20 bg-slate-50 dark:bg-slate-950">Rating</th>
+                    <th className="px-4 py-3 sticky top-0 z-20 bg-slate-50 dark:bg-slate-950">Review Comment</th>
+                    <th className="px-4 py-3 sticky top-0 z-20 bg-slate-50 dark:bg-slate-950">Submission Date</th>
+                    <th className="px-4 py-3 sticky top-0 z-20 bg-slate-50 dark:bg-slate-950">Status</th>
+                    <th className="px-4 py-3 text-right sticky top-0 right-0 z-30 bg-slate-50 dark:bg-slate-950 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -369,7 +369,7 @@ export const ReviewsManagementPage: React.FC = () => {
                       return (
                         <tr
                           key={r.id}
-                          className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
+                          className="group hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
                         >
                           <td className="px-4 py-3.5">
                             <span className="font-bold text-slate-900 dark:text-slate-100 block">
@@ -421,7 +421,7 @@ export const ReviewsManagementPage: React.FC = () => {
                             {renderStatusBadge(r.status)}
                           </td>
 
-                          <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                          <td className="px-4 py-3.5 text-right whitespace-nowrap sticky right-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] transition-colors">
                             <button
                               type="button"
                               onClick={() => handleOpenDrawer(r.id)}

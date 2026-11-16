@@ -555,6 +555,11 @@ export default function StaffManagement() {
           s.hospitalName,
           s.branchName,
           s.shiftTiming,
+          s.address,
+          s.address_line_1,
+          s.city,
+          s.state,
+          s.pincode,
           formatWorkDays(s.workDays || s.work_days),
         ]}
         facets={FACETS}

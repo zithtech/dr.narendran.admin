@@ -100,7 +100,17 @@ export default function Branches() {
         nounPlural="branches"
         resource={resource}
         searchPlaceholder="Search branch, code, hospital…"
-        searchFields={(b) => [b.name, b.branch_code, b.hospital_name, b.phone, b.address]}
+        searchFields={(b) => [
+          b.name,
+          b.branch_code,
+          b.hospital_name,
+          b.phone,
+          b.address,
+          b.address_line_1,
+          b.city,
+          b.state,
+          b.pincode,
+        ]}
         facets={FACETS}
         dateOf={(b) => b.created_at}
         columns={columns}

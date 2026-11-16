@@ -638,8 +638,55 @@ export default function CreatePrescriptionModal({
                 style={{ width: '100%' }}
                 options={patients.map((p) => ({
                   value: p.id,
-                  label: `${p.name} ${p.phone ? `(${p.phone})` : ''}`,
+                  label: p.name,
+                  phone: p.phone,
+                  gender: p.gender,
                 }))}
+                optionRender={(option) => {
+                  const data = option.data;
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: '50%',
+                            background: '#eff6ff',
+                            color: '#2563eb',
+                            display: 'grid',
+                            placeItems: 'center',
+                            fontWeight: 700,
+                            fontSize: 11,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {String(data.label || 'P').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600, color: '#0f172a', fontSize: 13 }}>{data.label}</div>
+                          {data.phone && (
+                            <div style={{ fontSize: 11, color: '#64748b' }}>{data.phone}</div>
+                          )}
+                        </div>
+                      </div>
+                      {data.gender && (
+                        <span
+                          style={{
+                            fontSize: 10,
+                            background: '#f1f5f9',
+                            color: '#475569',
+                            padding: '1px 5px',
+                            borderRadius: 4,
+                            textTransform: 'capitalize',
+                          }}
+                        >
+                          {data.gender.toLowerCase()}
+                        </span>
+                      )}
+                    </div>
+                  );
+                }}
               />
             )}
           </div>

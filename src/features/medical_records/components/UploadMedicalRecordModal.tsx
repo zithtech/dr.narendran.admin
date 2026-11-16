@@ -35,7 +35,7 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
   const [form] = Form.useForm();
   const [uploading, setUploading] = useState(false);
   const [recordType, setRecordType] = useState<'PRESCRIBED' | 'EXTERNAL'>('EXTERNAL');
-  const [patientOptions, setPatientOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [patientOptions, setPatientOptions] = useState<Array<{ value: string; label: string; name?: string | undefined; phone?: string | undefined }>>([]);
   const [searchingPatients, setSearchingPatients] = useState(false);
   const [prescribedTests, setPrescribedTests] = useState<PrescribedPendingTest[]>([]);
   const [loadingTests, setLoadingTests] = useState(false);
@@ -95,7 +95,9 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
       setPatientOptions(
         results.map((p) => ({
           value: p.id,
-          label: `${p.name} ${p.phone ? `(${p.phone})` : ''}`,
+          label: p.name,
+          name: p.name,
+          phone: p.phone || undefined,
         }))
       );
     } catch {
@@ -114,7 +116,9 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
       setPatientOptions(
         results.map((p) => ({
           value: p.id,
-          label: `${p.name} ${p.phone ? `(${p.phone})` : ''}`,
+          label: p.name,
+          name: p.name,
+          phone: p.phone || undefined,
         }))
       );
     } catch {
@@ -235,10 +239,42 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
             onSearch={handlePatientSearch}
             onChange={handlePatientChange}
             filterOption={(input, option) =>
-              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              (option?.label ?? '').toLowerCase().includes(input.toLowerCase()) ||
+              (option?.phone ?? '').includes(input)
             }
             loading={searchingPatients}
             disabled={Boolean(defaultPatient)}
+            optionRender={(option) => {
+              const data = option.data;
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: '50%',
+                        background: '#eff6ff',
+                        color: '#2563eb',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontWeight: 700,
+                        fontSize: 11,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {String(data.label || 'P').charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, color: '#0f172a', fontSize: 13 }}>{data.label}</div>
+                      {data.phone && (
+                        <div style={{ fontSize: 11, color: '#64748b' }}>{data.phone}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            }}
           />
         </Form.Item>
 

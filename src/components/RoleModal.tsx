@@ -463,14 +463,14 @@ export default function RoleModal({ isOpen, onClose, role, onSave }: RoleModalPr
             </div>
 
             {/* Permissions Table with Rounded Checkboxes */}
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div className="overflow-auto max-h-[350px] rounded-xl border border-slate-200 bg-white no-scrollbar">
               <table className="w-full text-left text-xs">
-                <thead>
+                <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
                   <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                    <th className="px-4 py-2.5">System Module</th>
-                    <th className="px-3 py-2.5 text-center">Read</th>
-                    <th className="px-3 py-2.5 text-center">Write</th>
-                    <th className="px-3 py-2.5 text-center">Delete</th>
+                    <th className="px-4 py-2.5 sticky top-0 z-10 bg-slate-50">System Module</th>
+                    <th className="px-3 py-2.5 text-center sticky top-0 z-10 bg-slate-50">Read</th>
+                    <th className="px-3 py-2.5 text-center sticky top-0 z-10 bg-slate-50">Write</th>
+                    <th className="px-3 py-2.5 text-center sticky top-0 z-10 bg-slate-50">Delete</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">

@@ -65,3 +65,25 @@
     -webkit-text-fill-color: inherit !important;
   }
 }
+
+/* 
+ * Hide scrollbars across all tables and table scroll containers 
+ * while preserving full trackpad, mousewheel, and touch scrollability.
+ */
+table,
+.no-scrollbar,
+div:has(> table),
+div:has(> * > table) {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+table::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar,
+div:has(> table)::-webkit-scrollbar,
+div:has(> * > table)::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+

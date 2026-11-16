@@ -1,5 +1,6 @@
 import { App } from 'antd';
 import {
+  AlertCircle,
   AlertTriangle,
   Edit2,
   FlaskConical,
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 
+import { validateLabServiceName } from '../../components/LabServiceModal';
 import api from '../../utils/api';
 import { getErrorMessage } from '../../utils/errors';
 
@@ -36,6 +38,7 @@ export default function LabServicesPage() {
   const [serviceDesc, setServiceDesc] = useState('');
   const [servicePrice, setServicePrice] = useState<string>('0');
   const [serviceStatus, setServiceStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
 
   // Modal State for Delete confirmation
@@ -64,6 +67,7 @@ export default function LabServicesPage() {
     setServiceDesc('');
     setServicePrice('0');
     setServiceStatus('ACTIVE');
+    setTouched({});
     setIsModalOpen(true);
   };
 
@@ -73,19 +77,48 @@ export default function LabServicesPage() {
     setServiceDesc(service.description || '');
     setServicePrice(service.price !== null && service.price !== undefined ? String(service.price) : '0');
     setServiceStatus(service.status || 'ACTIVE');
+    setTouched({});
     setIsModalOpen(true);
   };
 
+  const handleServiceNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^a-zA-Z0-9\s.,/+\-&()'%]/g, '');
+    setServiceName(sanitized);
+    if (touched['name']) {
+      setTouched((prev) => ({ ...prev, name: true }));
+    }
+  };
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    if (raw === '' || /^\d*(\.\d{0,2})?$/.test(raw)) {
+      setServicePrice(raw);
+    }
+    if (touched['price']) {
+      setTouched((prev) => ({ ...prev, price: true }));
+    }
+  };
+
+  const nameError = touched['name'] ? validateLabServiceName(serviceName) : undefined;
+  const priceError = touched['price']
+    ? servicePrice !== '' && (isNaN(Number(servicePrice)) || Number(servicePrice) < 0)
+      ? 'Please enter a valid non-negative price.'
+      : Number(servicePrice) > 999999.99
+        ? 'Price cannot exceed ₹999,999.99'
+        : undefined
+    : undefined;
+
   const handleSaveService = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!serviceName.trim()) {
-      void message.error('Service / Test name is required.');
-      return;
-    }
-
+    const nameErr = validateLabServiceName(serviceName);
     const parsedPrice = parseFloat(servicePrice);
-    if (isNaN(parsedPrice) || parsedPrice < 0) {
-      void message.error('Please enter a valid non-negative price.');
+    const isPriceInvalid = isNaN(parsedPrice) || parsedPrice < 0 || parsedPrice > 999999.99;
+
+    if (nameErr || isPriceInvalid) {
+      setTouched({ name: true, price: true });
+      if (nameErr) void message.error(nameErr);
+      else if (isPriceInvalid) void message.error('Please enter a valid non-negative price.');
       return;
     }
 
@@ -292,20 +325,20 @@ export default function LabServicesPage() {
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[calc(100vh-270px)] no-scrollbar">
             <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500">
-                  <th className="py-3.5 px-6">Investigation / Service Name</th>
-                  <th className="py-3.5 px-6">Description</th>
-                  <th className="py-3.5 px-6 text-right">Standard Rate</th>
-                  <th className="py-3.5 px-6 text-center">Status</th>
-                  <th className="py-3.5 px-6 text-right">Actions</th>
+              <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200">
+                <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500">
+                  <th className="py-3.5 px-6 sticky top-0 z-20 bg-slate-50">Investigation / Service Name</th>
+                  <th className="py-3.5 px-6 sticky top-0 z-20 bg-slate-50">Description</th>
+                  <th className="py-3.5 px-6 text-right sticky top-0 z-20 bg-slate-50">Standard Rate</th>
+                  <th className="py-3.5 px-6 text-center sticky top-0 z-20 bg-slate-50">Status</th>
+                  <th className="py-3.5 px-6 text-right sticky top-0 right-0 z-30 bg-slate-50 border-b border-slate-200 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredServices.map((service) => (
-                  <tr key={service.id} className="hover:bg-slate-50/70 transition-colors">
+                  <tr key={service.id} className="group hover:bg-slate-50/70 transition-colors">
                     <td className="py-4 px-6 font-semibold text-slate-900 align-middle">
                       <div className="flex items-center gap-2.5">
                         <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 border border-sky-100">
@@ -340,7 +373,7 @@ export default function LabServicesPage() {
                         {service.status}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-right align-middle whitespace-nowrap">
+                    <td className="py-4 px-6 text-right align-middle whitespace-nowrap sticky right-0 z-10 bg-white group-hover:bg-slate-50 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] transition-colors">
                       <div className="inline-flex items-center gap-2 justify-end">
                         <button
                           type="button"
@@ -390,20 +423,30 @@ export default function LabServicesPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveService} className="p-5 space-y-4">
+            <form noValidate onSubmit={handleSaveService} className="p-5 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   Service / Test Name <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
-                  required
                   autoFocus
                   value={serviceName}
-                  onChange={(e) => setServiceName(e.target.value)}
+                  onChange={handleServiceNameChange}
+                  onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
                   placeholder="e.g. Complete Blood Count (CBC)"
-                  className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  className={`w-full px-3.5 py-2 rounded-lg border text-sm focus:outline-none transition-all ${
+                    nameError
+                      ? 'border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+                      : 'border-slate-300 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500'
+                  }`}
                 />
+                {nameError && (
+                  <div className="mt-1 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                    <AlertCircle size={13} className="shrink-0 text-rose-600" />
+                    <span>{nameError}</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -427,15 +470,25 @@ export default function LabServicesPage() {
                   <div className="relative">
                     <IndianRupee size={14} className="absolute left-3.5 top-3 text-slate-400" />
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0"
+                      type="text"
+                      inputMode="decimal"
                       value={servicePrice}
-                      onChange={(e) => setServicePrice(e.target.value)}
+                      onChange={handlePriceChange}
+                      onBlur={() => setTouched((prev) => ({ ...prev, price: true }))}
                       placeholder="0.00"
-                      className="w-full pl-9 pr-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                      className={`w-full pl-9 pr-3.5 py-2 rounded-lg border text-sm focus:outline-none transition-all ${
+                        priceError
+                          ? 'border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+                          : 'border-slate-300 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500'
+                      }`}
                     />
                   </div>
+                  {priceError && (
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                      <AlertCircle size={13} className="shrink-0 text-rose-600" />
+                      <span>{priceError}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>

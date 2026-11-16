@@ -21,11 +21,112 @@ export interface Hospital {
   name: string;
   hospital_code: string;
   address: string | null;
+  address_line_1?: string | null;
+  address_line_2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
   phone: string | null;
   email: string | null;
   status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
   updated_at?: string;
+}
+
+export function validateHospitalName(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return 'Hospital name is required.';
+  if (trimmed.length < 2) return 'Hospital name must be at least 2 characters.';
+  if (trimmed.length > 150) return 'Hospital name cannot exceed 150 characters.';
+  if (/[^a-zA-Z0-9\s.,'&-]/i.test(trimmed)) {
+    return 'Hospital name contains invalid characters.';
+  }
+  return undefined;
+}
+
+export function validateHospitalPhone(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (/[a-zA-Z]/.test(val)) {
+    return 'Letters are not allowed in phone number.';
+  }
+  if (/[^0-9+\s-]/.test(val)) {
+    return 'Special characters are not allowed in phone number.';
+  }
+  const digits = val.replace(/\D/g, '');
+  if (digits.length < 7) {
+    return 'Phone number must be at least 7 digits.';
+  }
+  if (digits.length > 15) {
+    return 'Phone number cannot exceed 15 digits.';
+  }
+  return undefined;
+}
+
+export function validateHospitalEmail(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(trimmed)) {
+    return 'Please enter a valid email address (e.g. info@hospital.org).';
+  }
+  if (trimmed.length > 150) {
+    return 'Email address cannot exceed 150 characters.';
+  }
+  return undefined;
+}
+
+export function validateHospitalAddressLine(val: string, label = 'Address line'): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 255) {
+    return `${label} cannot exceed 255 characters.`;
+  }
+  if (/[^a-zA-Z0-9\s,./#&-]/.test(val)) {
+    return `${label} contains invalid characters.`;
+  }
+  return undefined;
+}
+
+export function validateHospitalCity(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) {
+    return 'City cannot exceed 100 characters.';
+  }
+  if (/[0-9]/.test(val)) {
+    return 'Numbers are not allowed in city.';
+  }
+  if (/[^a-zA-Z\s-]/.test(val)) {
+    return 'City can only contain letters, spaces, and hyphens.';
+  }
+  return undefined;
+}
+
+export function validateHospitalState(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) {
+    return 'State cannot exceed 100 characters.';
+  }
+  if (/[0-9]/.test(val)) {
+    return 'Numbers are not allowed in state.';
+  }
+  if (/[^a-zA-Z\s-]/.test(val)) {
+    return 'State can only contain letters, spaces, and hyphens.';
+  }
+  return undefined;
+}
+
+export function validateHospitalPincode(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (/[^0-9]/.test(trimmed)) {
+    return 'Pincode must contain only numbers.';
+  }
+  if (trimmed.length < 5 || trimmed.length > 10) {
+    return 'Pincode must be between 5 and 10 digits.';
+  }
+  return undefined;
 }
 
 interface HospitalModalProps {
@@ -37,7 +138,11 @@ interface HospitalModalProps {
 
 export default function HospitalModal({ isOpen, onClose, onSave, hospital }: HospitalModalProps) {
   const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [pincode, setPincode] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
@@ -46,28 +151,31 @@ export default function HospitalModal({ isOpen, onClose, onSave, hospital }: Hos
 
   // Validation state
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [errors, setErrors] = useState<{
-    name?: string | null;
-    email?: string | null;
-    phone?: string | null;
-  }>({});
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
   const nameInputId = useId();
   const phoneInputId = useId();
   const emailInputId = useId();
-  const addressInputId = useId();
 
   useEffect(() => {
     if (isOpen) {
       if (hospital) {
         setName(hospital.name || '');
-        setAddress(hospital.address || '');
+        setAddressLine1(hospital.address_line_1 || hospital.address || '');
+        setAddressLine2(hospital.address_line_2 || '');
+        setCity(hospital.city || '');
+        setState(hospital.state || '');
+        setPincode(hospital.pincode || '');
         setPhone(hospital.phone || '');
         setEmail(hospital.email || '');
         setStatus(hospital.status || 'ACTIVE');
       } else {
         setName('');
-        setAddress('');
+        setAddressLine1('');
+        setAddressLine2('');
+        setCity('');
+        setState('');
+        setPincode('');
         setPhone('');
         setEmail('');
         setStatus('ACTIVE');
@@ -78,66 +186,107 @@ export default function HospitalModal({ isOpen, onClose, onSave, hospital }: Hos
     }
   }, [isOpen, hospital]);
 
-  // Validation functions
-  const validateName = (val: string): string | null => {
-    const trimmed = val.trim();
-    if (!trimmed) return 'Hospital name is required.';
-    if (trimmed.length < 2) return 'Hospital name must be at least 2 characters.';
-    return null;
-  };
-
-  const validateEmail = (val: string): string | null => {
-    const trimmed = val.trim();
-    if (!trimmed) return null; // optional
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmed)) return 'Please enter a valid email address (e.g. info@hospital.org).';
-    return null;
-  };
-
-  const validatePhone = (val: string): string | null => {
-    const trimmed = val.trim();
-    if (!trimmed) return null; // optional
-    const digitsOnly = trimmed.replace(/[^0-9]/g, '');
-    if (digitsOnly.length < 7) return 'Please enter a valid contact number (at least 7 digits).';
-    return null;
-  };
-
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
+    const val = e.target.value.replace(/[^a-zA-Z0-9\s.,'&-]/g, '').slice(0, 150);
     setName(val);
     if (touched.name) {
-      setErrors((prev) => ({ ...prev, name: validateName(val) }));
+      setErrors((prev) => ({ ...prev, name: validateHospitalName(val) }));
     }
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Allow digits, spaces, plus, minus, parenthesis
-    const val = e.target.value.replace(/[^0-9+\s()-]/g, '');
+    const val = e.target.value.replace(/[^0-9+\s-]/g, '').slice(0, 16);
     setPhone(val);
     if (touched.phone) {
-      setErrors((prev) => ({ ...prev, phone: validatePhone(val) }));
+      setErrors((prev) => ({ ...prev, phone: validateHospitalPhone(val) }));
     }
   };
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
+    const val = e.target.value.slice(0, 150);
     setEmail(val);
     if (touched.email) {
-      setErrors((prev) => ({ ...prev, email: validateEmail(val) }));
+      setErrors((prev) => ({ ...prev, email: validateHospitalEmail(val) }));
+    }
+  };
+
+  const handleAddressLine1Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^a-zA-Z0-9\s,./#&-]/g, '').slice(0, 255);
+    setAddressLine1(val);
+    if (touched.addressLine1) {
+      setErrors((prev) => ({ ...prev, addressLine1: validateHospitalAddressLine(val, 'Address line 1') }));
+    }
+  };
+
+  const handleAddressLine2Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^a-zA-Z0-9\s,./#&-]/g, '').slice(0, 255);
+    setAddressLine2(val);
+    if (touched.addressLine2) {
+      setErrors((prev) => ({ ...prev, addressLine2: validateHospitalAddressLine(val, 'Address line 2') }));
+    }
+  };
+
+  const handleCityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^a-zA-Z\s-]/g, '').slice(0, 100);
+    setCity(val);
+    if (touched.city) {
+      setErrors((prev) => ({ ...prev, city: validateHospitalCity(val) }));
+    }
+  };
+
+  const handleStateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^a-zA-Z\s-]/g, '').slice(0, 100);
+    setState(val);
+    if (touched.state) {
+      setErrors((prev) => ({ ...prev, state: validateHospitalState(val) }));
+    }
+  };
+
+  const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+    setPincode(val);
+    if (touched.pincode) {
+      setErrors((prev) => ({ ...prev, pincode: validateHospitalPincode(val) }));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const nameErr = validateName(name);
-    const emailErr = validateEmail(email);
-    const phoneErr = validatePhone(phone);
+    const nameErr = validateHospitalName(name);
+    const emailErr = validateHospitalEmail(email);
+    const phoneErr = validateHospitalPhone(phone);
+    const addr1Err = validateHospitalAddressLine(addressLine1, 'Address line 1');
+    const addr2Err = validateHospitalAddressLine(addressLine2, 'Address line 2');
+    const cityErr = validateHospitalCity(city);
+    const stateErr = validateHospitalState(state);
+    const pincodeErr = validateHospitalPincode(pincode);
 
-    setTouched({ name: true, email: true, phone: true });
-    setErrors({ name: nameErr, email: emailErr, phone: phoneErr });
+    const newErrors: Record<string, string | undefined> = {
+      name: nameErr,
+      email: emailErr,
+      phone: phoneErr,
+      addressLine1: addr1Err,
+      addressLine2: addr2Err,
+      city: cityErr,
+      state: stateErr,
+      pincode: pincodeErr,
+    };
 
-    if (nameErr || emailErr || phoneErr) {
+    setTouched({
+      name: true,
+      email: true,
+      phone: true,
+      addressLine1: true,
+      addressLine2: true,
+      city: true,
+      state: true,
+      pincode: true,
+    });
+    setErrors(newErrors);
+
+    if (nameErr || emailErr || phoneErr || addr1Err || addr2Err || cityErr || stateErr || pincodeErr) {
+      setError('Please correct the highlighted fields before saving.');
       return;
     }
 
@@ -153,7 +302,15 @@ export default function HospitalModal({ isOpen, onClose, onSave, hospital }: Hos
         url,
         data: {
           name: name.trim(),
-          address: address.trim() || null,
+          address_line_1: addressLine1.trim() || null,
+          address_line_2: addressLine2.trim() || null,
+          city: city.trim() || null,
+          state: state.trim() || null,
+          pincode: pincode.trim() || null,
+          address:
+            [addressLine1.trim(), addressLine2.trim(), city.trim(), state.trim(), pincode.trim()]
+              .filter(Boolean)
+              .join(', ') || null,
           phone: phone.trim() || null,
           email: email.trim() || null,
           status,
@@ -214,6 +371,7 @@ export default function HospitalModal({ isOpen, onClose, onSave, hospital }: Hos
       }
     >
       <form
+        noValidate
         onSubmit={(e) => {
           void handleSubmit(e);
         }}
@@ -358,17 +516,12 @@ export default function HospitalModal({ isOpen, onClose, onSave, hospital }: Hos
                     color: '#334155',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
+                    gap: 4,
                     marginBottom: 5,
                   }}
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span>Hospital Name</span>
-                    <span style={{ color: '#ef4444' }}>*</span>
-                  </span>
-                  <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>
-                    Official Facility Name
-                  </span>
+                  <span>Hospital Name</span>
+                  <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <div style={{ position: 'relative' }}>
                   <Building2
@@ -390,14 +543,13 @@ export default function HospitalModal({ isOpen, onClose, onSave, hospital }: Hos
                     onChange={handleNameChange}
                     onBlur={() => {
                       setTouched((prev) => ({ ...prev, name: true }));
-                      setErrors((prev) => ({ ...prev, name: validateName(name) }));
+                      setErrors((prev) => ({ ...prev, name: validateHospitalName(name) }));
                     }}
                     style={{
                       paddingLeft: 34,
                       borderColor: errors.name ? '#ef4444' : undefined,
                       boxShadow: errors.name ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
                     }}
-                    required
                   />
                 </div>
                 {errors.name && (
@@ -485,16 +637,11 @@ export default function HospitalModal({ isOpen, onClose, onSave, hospital }: Hos
                     color: '#334155',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
+                    gap: 4,
                     marginBottom: 5,
                   }}
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span>Phone / Helpline</span>
-                  </span>
-                  <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>
-                    Optional
-                  </span>
+                  <span>Phone / Helpline</span>
                 </label>
                 <div style={{ position: 'relative' }}>
                   <Phone
@@ -516,7 +663,7 @@ export default function HospitalModal({ isOpen, onClose, onSave, hospital }: Hos
                     onChange={handlePhoneChange}
                     onBlur={() => {
                       setTouched((prev) => ({ ...prev, phone: true }));
-                      setErrors((prev) => ({ ...prev, phone: validatePhone(phone) }));
+                      setErrors((prev) => ({ ...prev, phone: validateHospitalPhone(phone) }));
                     }}
                     style={{
                       paddingLeft: 34,
@@ -552,16 +699,11 @@ export default function HospitalModal({ isOpen, onClose, onSave, hospital }: Hos
                     color: '#334155',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
+                    gap: 4,
                     marginBottom: 5,
                   }}
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span>Email Address</span>
-                  </span>
-                  <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>
-                    Optional
-                  </span>
+                  <span>Email Address</span>
                 </label>
                 <div style={{ position: 'relative' }}>
                   <Mail
@@ -583,7 +725,7 @@ export default function HospitalModal({ isOpen, onClose, onSave, hospital }: Hos
                     onChange={handleEmailChange}
                     onBlur={() => {
                       setTouched((prev) => ({ ...prev, email: true }));
-                      setErrors((prev) => ({ ...prev, email: validateEmail(email) }));
+                      setErrors((prev) => ({ ...prev, email: validateHospitalEmail(email) }));
                     }}
                     style={{
                       paddingLeft: 34,
@@ -624,39 +766,273 @@ export default function HospitalModal({ isOpen, onClose, onSave, hospital }: Hos
 
             <div>
               <label
-                htmlFor={addressInputId}
                 style={{
                   fontSize: 12,
                   fontWeight: 600,
                   color: '#334155',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: 5,
+                  gap: 4,
+                  marginBottom: 8,
                 }}
               >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <MapPin size={13} style={{ color: '#94a3b8' }} />
-                  <span>Facility / Street Address</span>
-                </span>
-                <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>
-                  Street, area, city, pincode
-                </span>
+                <MapPin size={13} style={{ color: '#64748b' }} />
+                <span>Facility / Street Address</span>
               </label>
-              <textarea
-                id={addressInputId}
-                className="ui-input"
-                rows={2}
-                placeholder="e.g. No. 21 Greams Lane, Thousand Lights West, Chennai, Tamil Nadu 600006"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                style={{
-                  minHeight: 64,
-                  lineHeight: 1.45,
-                  padding: '9px 12px',
-                  resize: 'vertical',
-                }}
-              />
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <label
+                      htmlFor="hospital-address-line-1"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: 5,
+                      }}
+                    >
+                      Address Line 1
+                    </label>
+                    <input
+                      id="hospital-address-line-1"
+                      className="ui-input"
+                      type="text"
+                      value={addressLine1}
+                      onChange={handleAddressLine1Change}
+                      onBlur={() => {
+                        setTouched((prev) => ({ ...prev, addressLine1: true }));
+                        setErrors((prev) => ({
+                          ...prev,
+                          addressLine1: validateHospitalAddressLine(addressLine1, 'Address line 1'),
+                        }));
+                      }}
+                      placeholder="e.g. No. 21 Greams Lane"
+                      style={{
+                        borderColor: errors.addressLine1 ? '#ef4444' : undefined,
+                        boxShadow: errors.addressLine1 ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                    />
+                    {errors.addressLine1 && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          marginTop: 4,
+                          color: '#dc2626',
+                          fontSize: 11,
+                        }}
+                      >
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.addressLine1}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="hospital-address-line-2"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: 5,
+                      }}
+                    >
+                      Address Line 2 (Optional)
+                    </label>
+                    <input
+                      id="hospital-address-line-2"
+                      className="ui-input"
+                      type="text"
+                      value={addressLine2}
+                      onChange={handleAddressLine2Change}
+                      onBlur={() => {
+                        setTouched((prev) => ({ ...prev, addressLine2: true }));
+                        setErrors((prev) => ({
+                          ...prev,
+                          addressLine2: validateHospitalAddressLine(addressLine2, 'Address line 2'),
+                        }));
+                      }}
+                      placeholder="e.g. Thousand Lights West"
+                      style={{
+                        borderColor: errors.addressLine2 ? '#ef4444' : undefined,
+                        boxShadow: errors.addressLine2 ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                    />
+                    {errors.addressLine2 && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          marginTop: 4,
+                          color: '#dc2626',
+                          fontSize: 11,
+                        }}
+                      >
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.addressLine2}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <label
+                      htmlFor="hospital-city"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: 5,
+                      }}
+                    >
+                      City / Town
+                    </label>
+                    <input
+                      id="hospital-city"
+                      className="ui-input"
+                      type="text"
+                      value={city}
+                      onChange={handleCityChange}
+                      onBlur={() => {
+                        setTouched((prev) => ({ ...prev, city: true }));
+                        setErrors((prev) => ({ ...prev, city: validateHospitalCity(city) }));
+                      }}
+                      placeholder="e.g. Chennai"
+                      style={{
+                        borderColor: errors.city ? '#ef4444' : undefined,
+                        boxShadow: errors.city ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                    />
+                    {errors.city && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          marginTop: 4,
+                          color: '#dc2626',
+                          fontSize: 11,
+                        }}
+                      >
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.city}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="hospital-state"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: 5,
+                      }}
+                    >
+                      State / Province
+                    </label>
+                    <input
+                      id="hospital-state"
+                      className="ui-input"
+                      type="text"
+                      value={state}
+                      onChange={handleStateChange}
+                      onBlur={() => {
+                        setTouched((prev) => ({ ...prev, state: true }));
+                        setErrors((prev) => ({ ...prev, state: validateHospitalState(state) }));
+                      }}
+                      placeholder="e.g. Tamil Nadu"
+                      style={{
+                        borderColor: errors.state ? '#ef4444' : undefined,
+                        boxShadow: errors.state ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                    />
+                    {errors.state && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          marginTop: 4,
+                          color: '#dc2626',
+                          fontSize: 11,
+                        }}
+                      >
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.state}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="hospital-pincode"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: 5,
+                      }}
+                    >
+                      Pincode / Postal Code
+                    </label>
+                    <input
+                      id="hospital-pincode"
+                      className="ui-input"
+                      type="text"
+                      value={pincode}
+                      onChange={handlePincodeChange}
+                      onBlur={() => {
+                        setTouched((prev) => ({ ...prev, pincode: true }));
+                        setErrors((prev) => ({ ...prev, pincode: validateHospitalPincode(pincode) }));
+                      }}
+                      placeholder="e.g. 600006"
+                      style={{
+                        borderColor: errors.pincode ? '#ef4444' : undefined,
+                        boxShadow: errors.pincode ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                    />
+                    {errors.pincode && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          marginTop: 4,
+                          color: '#dc2626',
+                          fontSize: 11,
+                        }}
+                      >
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.pincode}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

@@ -1,11 +1,43 @@
-import { ArrowRight } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { AlertCircle, ArrowRight } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 import type { MedicineStrength } from '../types/inventory';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
 import { Field, Modal, Section, SwitchRow } from './ui/Modal';
 import { Alert, Badge } from './ui/primitives';
+
+export function validateStockInQuantity(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return 'Quantity received is required.';
+  if (/[^0-9]/.test(trimmed)) return 'Quantity must contain only numbers.';
+  const n = parseInt(trimmed, 10);
+  if (isNaN(n) || n <= 0) return 'Quantity must be greater than zero.';
+  if (n > 1000000) return 'Quantity cannot exceed 1,000,000.';
+  return undefined;
+}
+
+export function validateStockInUnitCost(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  const n = parseFloat(trimmed);
+  if (isNaN(n) || (trimmed.match(/\./g) || []).length > 1 || /[^0-9.-]/.test(trimmed)) {
+    return 'Unit cost must be a valid number.';
+  }
+  if (n < 0) return 'Unit cost cannot be negative.';
+  if (n > 999999.99) return 'Unit cost cannot exceed 999,999.99.';
+  return undefined;
+}
+
+export function validateStockInReferenceNumber(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) return 'Reference number cannot exceed 100 characters.';
+  if (/[^a-zA-Z0-9\-_/#\s]/.test(trimmed)) {
+    return 'Reference number contains invalid characters.';
+  }
+  return undefined;
+}
 
 interface StockInModalProps {
   isOpen: boolean;
@@ -23,6 +55,8 @@ export default function StockInModal({ isOpen, onClose, variant, onSuccess }: St
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setQuantity('');
@@ -35,6 +69,8 @@ export default function StockInModal({ isOpen, onClose, variant, onSuccess }: St
     setIsOpeningStock(false);
     setNotes('');
     setError('');
+    setErrors({});
+    setTouched({});
   }, [variant, isOpen]);
 
   const currentOnHand = variant?.available_quantity ?? 0;
@@ -45,14 +81,75 @@ export default function StockInModal({ isOpen, onClose, variant, onSuccess }: St
   const newStrips = tabsPerStrip && tabsPerStrip > 0 ? Math.floor(newBalance / tabsPerStrip) : 0;
   const newLoose = tabsPerStrip && tabsPerStrip > 0 ? newBalance % tabsPerStrip : 0;
 
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^0-9]/g, '').slice(0, 8);
+    setQuantity(sanitized);
+    if (touched.quantity) {
+      setErrors((prev) => ({ ...prev, quantity: validateStockInQuantity(sanitized) }));
+    }
+  };
+
+  const handleUnitCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let sanitized = e.target.value.replace(/[^0-9.]/g, '');
+    const parts = sanitized.split('.');
+    if (parts.length > 2) sanitized = parts[0] + '.' + parts.slice(1).join('');
+    if (parts[1] && parts[1].length > 2) sanitized = parts[0] + '.' + parts[1].slice(0, 2);
+    setUnitCost(sanitized);
+    if (touched.unitCost) {
+      setErrors((prev) => ({ ...prev, unitCost: validateStockInUnitCost(sanitized) }));
+    }
+  };
+
+  const handleReferenceNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^a-zA-Z0-9\-_/#\s]/g, '').slice(0, 100);
+    setReferenceNumber(sanitized);
+    if (touched.referenceNumber) {
+      setErrors((prev) => ({
+        ...prev,
+        referenceNumber: validateStockInReferenceNumber(sanitized),
+      }));
+    }
+  };
+
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    let err: string | undefined;
+    if (field === 'quantity') err = validateStockInQuantity(quantity);
+    else if (field === 'unitCost') err = validateStockInUnitCost(unitCost);
+    else if (field === 'referenceNumber')
+      err = validateStockInReferenceNumber(referenceNumber);
+    setErrors((prev) => ({ ...prev, [field]: err }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!variant?.id) {
       setError('No medicine variant selected.');
       return;
     }
-    if (parsedQty <= 0) {
-      setError('Quantity received must be a positive integer.');
+
+    const qtyErr = validateStockInQuantity(quantity);
+    const costErr = validateStockInUnitCost(unitCost);
+    const refErr = validateStockInReferenceNumber(referenceNumber);
+
+    const newErrors: Record<string, string | undefined> = {
+      quantity: qtyErr,
+      unitCost: costErr,
+      referenceNumber: refErr,
+    };
+
+    setErrors(newErrors);
+    setTouched({
+      quantity: true,
+      unitCost: true,
+      referenceNumber: true,
+    });
+
+    const hasErrors = Object.values(newErrors).some(Boolean);
+    if (hasErrors) {
+      setError('Please correct the highlighted fields before saving.');
       return;
     }
 
@@ -90,7 +187,7 @@ export default function StockInModal({ isOpen, onClose, variant, onSuccess }: St
       }
       size="md"
     >
-      <form id="stock-in-form" onSubmit={handleSubmit} className="ui-modal-form">
+      <form id="stock-in-form" onSubmit={handleSubmit} noValidate className="ui-modal-form">
         <div className="ui-modal-body space-y-4">
           {error && <Alert>{error}</Alert>}
 
@@ -131,31 +228,46 @@ export default function StockInModal({ isOpen, onClose, variant, onSuccess }: St
 
           <Section title="Stock-In Quantity & Cost">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field
-                label="Quantity Received (Units) *"
-                hint={tabsPerStrip ? `1 strip = ${tabsPerStrip} units` : 'Smallest dispensing unit'}
-              >
+              <Field label="Quantity Received (Units) *">
                 <input
-                  type="number"
-                  min="1"
+                  type="text"
                   className="ui-input font-bold text-slate-900 dark:text-slate-100"
                   placeholder="e.g. 100"
                   value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  required
+                  onChange={handleQuantityChange}
+                  onBlur={() => handleBlur('quantity')}
+                  style={{
+                    borderColor: errors.quantity ? '#ef4444' : undefined,
+                    boxShadow: errors.quantity ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
                 />
+                {errors.quantity && (
+                  <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                    <AlertCircle size={12} className="shrink-0" />
+                    {errors.quantity}
+                  </span>
+                )}
               </Field>
 
               <Field label="Unit Purchase Cost (₹)">
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
                   className="ui-input"
                   placeholder="0.00"
                   value={unitCost}
-                  onChange={(e) => setUnitCost(e.target.value)}
+                  onChange={handleUnitCostChange}
+                  onBlur={() => handleBlur('unitCost')}
+                  style={{
+                    borderColor: errors.unitCost ? '#ef4444' : undefined,
+                    boxShadow: errors.unitCost ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
                 />
+                {errors.unitCost && (
+                  <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                    <AlertCircle size={12} className="shrink-0" />
+                    {errors.unitCost}
+                  </span>
+                )}
               </Field>
             </div>
           </Section>
@@ -167,8 +279,21 @@ export default function StockInModal({ isOpen, onClose, variant, onSuccess }: St
                 className="ui-input font-mono"
                 placeholder="e.g. INV-2026-9811"
                 value={referenceNumber}
-                onChange={(e) => setReferenceNumber(e.target.value)}
+                onChange={handleReferenceNumberChange}
+                onBlur={() => handleBlur('referenceNumber')}
+                style={{
+                  borderColor: errors.referenceNumber ? '#ef4444' : undefined,
+                  boxShadow: errors.referenceNumber
+                    ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                    : undefined,
+                }}
               />
+              {errors.referenceNumber && (
+                <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                  <AlertCircle size={12} className="shrink-0" />
+                  {errors.referenceNumber}
+                </span>
+              )}
             </Field>
 
             <Field label="Remarks / Storage Location">
@@ -177,7 +302,7 @@ export default function StockInModal({ isOpen, onClose, variant, onSuccess }: St
                 rows={2}
                 placeholder="Packaging condition, supplier name, or storage notes..."
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onChange={(e) => setNotes(e.target.value.slice(0, 1000))}
               />
             </Field>
           </Section>
@@ -197,7 +322,7 @@ export default function StockInModal({ isOpen, onClose, variant, onSuccess }: St
           <button
             type="submit"
             className="ui-btn ui-btn-primary"
-            disabled={loading || parsedQty <= 0}
+            disabled={loading}
           >
             {loading ? 'Recording...' : 'Confirm Stock-In'}
           </button>

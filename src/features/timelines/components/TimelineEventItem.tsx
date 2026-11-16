@@ -340,15 +340,15 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
                   <Pill className="w-3 h-3 text-blue-600" />
                   Prescribed Medicines Breakdown
                 </div>
-                <div className="overflow-x-auto bg-white border border-gray-200 rounded-md">
+                <div className="overflow-auto max-h-[300px] bg-white border border-gray-200 rounded-md no-scrollbar">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-semibold">
+                    <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200 text-gray-500 font-semibold shadow-xs">
                       <tr>
-                        <th className="py-2 px-3">Medicine</th>
-                        <th className="py-2 px-3">Dosage / Strength</th>
-                        <th className="py-2 px-3">Frequency</th>
-                        <th className="py-2 px-3">Duration</th>
-                        <th className="py-2 px-3">Instructions</th>
+                        <th className="py-2 px-3 sticky top-0 z-10 bg-gray-50">Medicine</th>
+                        <th className="py-2 px-3 sticky top-0 z-10 bg-gray-50">Dosage / Strength</th>
+                        <th className="py-2 px-3 sticky top-0 z-10 bg-gray-50">Frequency</th>
+                        <th className="py-2 px-3 sticky top-0 z-10 bg-gray-50">Duration</th>
+                        <th className="py-2 px-3 sticky top-0 z-10 bg-gray-50">Instructions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">

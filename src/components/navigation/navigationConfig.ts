@@ -17,6 +17,8 @@ import {
   Stethoscope,
   UserCog,
   Users,
+  MapPin,
+  History
 } from 'lucide-react';
 
 export interface NavModule {
@@ -84,6 +86,27 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         icon: HeartPulse,
         slug: 'PATIENTS',
         description: 'Patient registry, medical records & demographic data',
+      },
+      {
+        name: 'Patient Timelines',
+        path: '/patient-timelines',
+        icon: History,
+        slug: 'PATIENTS',
+        description: 'Patient timelines, medical history & health records',
+      },
+      {
+        name: 'Medical Records',
+        path: '/medical-records',
+        icon: HeartPulse,
+        slug: 'MEDICAL_RECORDS',
+        description: 'Patient health records, medical history & health records',
+      },
+      {
+        name: 'Location Management',
+        path: '/locations',
+        icon: MapPin,
+        slug: 'LOCATIONS',
+        description: 'Location management, clinics & facilities',
       },
       {
         name: 'Appointments',
@@ -192,7 +215,7 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
   },
   {
     key: 'administration',
-    name: 'Administration',
+    name: 'Admin',
     icon: Shield,
     description: 'System access, staff credentials & role permissions',
     defaultPath: '/users',

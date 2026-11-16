@@ -227,48 +227,48 @@ export default function MedicineInventory() {
           </div>
         </div>
 
-        <div className="ui-header-actions">
+        <div className="ui-header-actions flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
-            className="ui-btn"
+            className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0"
             onClick={reloadAll}
             disabled={loading || summaryLoading}
             title="Refresh inventory and summary KPIs"
           >
-            <RefreshCw size={14} className={loading || summaryLoading ? 'animate-spin' : ''} />
-            Refresh
+            <RefreshCw size={13} className={loading || summaryLoading ? 'animate-spin text-slate-500' : 'text-slate-500'} />
+            <span>Refresh</span>
           </button>
 
           <button
             type="button"
-            className="ui-btn"
+            className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0"
             onClick={downloadSampleTemplate}
             title="Download multi-variant Excel template"
           >
-            <Download size={14} />
-            Template
+            <Download size={13} className="text-slate-500" />
+            <span>Template</span>
           </button>
 
           <button
             type="button"
-            className="ui-btn"
+            className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0"
             onClick={() => setIsImportModalOpen(true)}
             title="Bulk import medicines and strength variants from Excel"
           >
-            <FileSpreadsheet size={14} />
-            Import Excel
+            <FileSpreadsheet size={13} />
+            <span>Import Excel</span>
           </button>
 
           <button
             type="button"
-            className="ui-btn ui-btn-primary"
+            className="inline-flex items-center gap-1.5 h-7.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0"
             onClick={() => {
               setSelectedVariant(null);
               setIsVariantModalOpen(true);
             }}
           >
-            <Plus size={15} strokeWidth={2.4} />
-            Add Strength Variant
+            <Plus size={13} strokeWidth={2.4} />
+            <span>Add Strength Variant</span>
           </button>
         </div>
       </header>
@@ -477,19 +477,19 @@ export default function MedicineInventory() {
           </div>
 
           {/* Variants Data Table - scrollable table data body */}
-          <div className="overflow-auto flex-1 min-h-0">
+          <div className="overflow-auto flex-1 min-h-0 no-scrollbar">
             <table className="min-w-full divide-y divide-slate-200 text-left text-xs dark:divide-slate-800">
-              <thead className="sticky top-0 z-10 bg-slate-50 font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300 shadow-xs">
+              <thead className="sticky top-0 z-20 bg-slate-50 font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300 shadow-xs">
                 <tr>
-                  <th className="px-4 py-3">Medicine & Strength</th>
-                  <th className="px-4 py-3">Dosage & Packaging</th>
-                  <th className="px-4 py-3 text-right">Available Stock</th>
+                  <th className="px-4 py-3 sticky top-0 z-20 bg-slate-50 dark:bg-slate-900">Medicine & Strength</th>
+                  <th className="px-4 py-3 sticky top-0 z-20 bg-slate-50 dark:bg-slate-900">Dosage & Packaging</th>
+                  <th className="px-4 py-3 text-right sticky top-0 z-20 bg-slate-50 dark:bg-slate-900">Available Stock</th>
                   {/* <th className="px-4 py-3 text-right">Purchase Price</th> */}
-                  <th className="px-4 py-3 text-center">Discount Type</th>
-                  <th className="px-4 py-3 text-right">Discount Value</th>
-                  <th className="px-4 py-3 text-right">Pricing (MRP / Final)</th>
-                  <th className="px-4 py-3 text-center">Status</th>
-                  <th className="px-4 py-3 text-right">Inventory Actions</th>
+                  <th className="px-4 py-3 text-center sticky top-0 z-20 bg-slate-50 dark:bg-slate-900">Discount Type</th>
+                  <th className="px-4 py-3 text-right sticky top-0 z-20 bg-slate-50 dark:bg-slate-900">Discount Value</th>
+                  <th className="px-4 py-3 text-right sticky top-0 z-20 bg-slate-50 dark:bg-slate-900">Pricing (MRP / Final)</th>
+                  <th className="px-4 py-3 text-center sticky top-0 z-20 bg-slate-50 dark:bg-slate-900">Status</th>
+                  <th className="px-4 py-3 text-right sticky top-0 right-0 z-30 bg-slate-50 dark:bg-slate-900 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Inventory Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white dark:divide-slate-800/60 dark:bg-slate-950">
@@ -518,7 +518,7 @@ export default function MedicineInventory() {
                   variants.map((v) => {
                     const hasStripPack = v.tablets_per_strip && v.tablets_per_strip > 0;
                     return (
-                      <tr key={v.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-900/40">
+                      <tr key={v.id} className="group hover:bg-slate-50/70 dark:hover:bg-slate-900/40">
                         {/* Medicine & Strength */}
                         <td className="px-4 py-3">
                           <div className="font-bold text-slate-900 dark:text-slate-100">
@@ -623,7 +623,7 @@ export default function MedicineInventory() {
                         </td>
 
                         {/* Inventory Actions */}
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-right whitespace-nowrap sticky right-0 z-10 bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-900/40 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] transition-colors">
                           <div className="flex items-center justify-end gap-1.5">
                             {/* Stock In */}
                             <button

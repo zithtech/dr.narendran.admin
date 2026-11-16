@@ -129,38 +129,25 @@ export const OrdersPage: React.FC = () => {
       header: 'Items',
       sort: (o) => o.item_count,
       cell: (o) => (
-        <div style={{ minWidth: 0, maxWidth: 160 }}>
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: '#334155',
-              background: '#f1f5f9',
-              border: '1px solid #e2e8f0',
-              padding: '1.5px 7px',
-              borderRadius: 5,
-              whiteSpace: 'nowrap',
-              display: 'inline-flex',
-            }}
-          >
-            {o.item_count} {o.item_count === 1 ? 'item' : 'items'}
-          </span>
-          {o.medicines_preview && (
-            <div
-              style={{
-                fontSize: 11,
-                color: '#64748b',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                marginTop: 2,
-              }}
-              title={o.medicines_preview}
-            >
-              {o.medicines_preview}
-            </div>
-          )}
-        </div>
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: '#334155',
+            background: '#f1f5f9',
+            border: '1px solid #e2e8f0',
+            padding: '2px 8px',
+            borderRadius: 6,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: 28,
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+          }}
+          title={o.medicines_preview || `${o.item_count ?? 0} items`}
+        >
+          {o.item_count ?? 0}
+        </span>
       ),
     },
     {

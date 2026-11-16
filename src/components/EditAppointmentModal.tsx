@@ -1,5 +1,6 @@
 import { App } from 'antd';
 import {
+  AlertCircle,
   CalendarClock,
   CheckCircle2,
   FileText,
@@ -16,6 +17,12 @@ import type { Appointment, AppointmentSlot, AppointmentStatus, DateSlotSummary }
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
 import type { Doctor } from './DoctorModal';
+import {
+  validateAppointmentNote,
+  validateAppointmentPatientName,
+  validateAppointmentPatientPhone,
+  validateAppointmentPurpose,
+} from './ScheduleAppointmentModal';
 import { Field, Modal } from './ui/Modal';
 import { Alert } from './ui/primitives';
 import SearchableSelect, { type SearchableSelectOption } from './ui/SearchableSelect';
@@ -76,6 +83,7 @@ export default function EditAppointmentModal({
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
   // Fetch doctors
   const fetchDoctors = useCallback(async () => {
@@ -162,6 +170,7 @@ export default function EditAppointmentModal({
       setRescheduleReason(appointment.rescheduleReason || '');
       setCancellationReason(appointment.cancellationReason || '');
       setError('');
+      setErrors({});
 
       if (appointment.doctorId && dStr) {
         void fetchSlots(appointment.doctorId, dStr);
@@ -193,24 +202,48 @@ export default function EditAppointmentModal({
     if (!appointment) return;
     setError('');
 
+    const validationErrors: Record<string, string | undefined> = {};
+
     const finalPurpose = isCustomPurpose ? customPurpose.trim() : purpose.trim();
-    if (!finalPurpose) {
-      setError('Please specify the purpose of the consultation.');
-      return;
-    }
+    validationErrors.purpose = validateAppointmentPurpose(finalPurpose);
 
     if (!selectedDoctorId) {
-      setError('Please select a doctor.');
-      return;
+      validationErrors.selectedDoctorId = 'Please select a doctor.';
     }
 
     if (!appointmentDate) {
-      setError('Please select an appointment date.');
-      return;
+      validationErrors.appointmentDate = 'Please select an appointment date.';
     }
 
     if (!keepCurrentSlot && !selectedSlotId) {
-      setError('Please select an available time slot or keep the current schedule.');
+      validationErrors.selectedSlotId = 'Please select an available time slot or keep the current schedule.';
+    }
+
+    if (patientName.trim()) {
+      validationErrors.patientName = validateAppointmentPatientName(patientName);
+    }
+
+    if (patientPhone.trim()) {
+      validationErrors.patientPhone = validateAppointmentPatientPhone(patientPhone, false);
+    }
+
+    if (patientNote.trim()) {
+      validationErrors.patientNote = validateAppointmentNote(patientNote);
+    }
+
+    setErrors(validationErrors);
+
+    const firstMsg =
+      validationErrors.purpose ||
+      validationErrors.selectedDoctorId ||
+      validationErrors.appointmentDate ||
+      validationErrors.selectedSlotId ||
+      validationErrors.patientName ||
+      validationErrors.patientPhone ||
+      validationErrors.patientNote;
+
+    if (firstMsg) {
+      setError(firstMsg);
       return;
     }
 
@@ -387,6 +420,7 @@ export default function EditAppointmentModal({
     >
       <form
         onSubmit={handleSubmit}
+        noValidate
         className="ui-modal-form"
         style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: '1 1 0%', overflow: 'hidden' }}
       >
@@ -793,9 +827,26 @@ export default function EditAppointmentModal({
                   type="text"
                   className="ui-input"
                   value={patientName}
-                  onChange={(e) => setPatientName(e.target.value)}
+                  style={{
+                    borderColor: errors.patientName ? '#ef4444' : undefined,
+                    boxShadow: errors.patientName ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
+                  onChange={(e) => {
+                    const sanitized = e.target.value.replace(/[^a-zA-Z\s.-]/g, '').slice(0, 100);
+                    setPatientName(sanitized);
+                    setErrors((prev) => ({
+                      ...prev,
+                      patientName: sanitized ? validateAppointmentPatientName(sanitized) : undefined,
+                    }));
+                  }}
                   placeholder="Patient full name"
                 />
+                {errors.patientName && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                    <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                    <span>{errors.patientName}</span>
+                  </div>
+                )}
               </Field>
 
               <Field label="Contact Phone">
@@ -803,9 +854,26 @@ export default function EditAppointmentModal({
                   type="tel"
                   className="ui-input"
                   value={patientPhone}
-                  onChange={(e) => setPatientPhone(e.target.value)}
+                  style={{
+                    borderColor: errors.patientPhone ? '#ef4444' : undefined,
+                    boxShadow: errors.patientPhone ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
+                  onChange={(e) => {
+                    const sanitized = e.target.value.replace(/[^0-9+\s-]/g, '').slice(0, 16);
+                    setPatientPhone(sanitized);
+                    setErrors((prev) => ({
+                      ...prev,
+                      patientPhone: sanitized ? validateAppointmentPatientPhone(sanitized, false) : undefined,
+                    }));
+                  }}
                   placeholder="Contact phone number"
                 />
+                {errors.patientPhone && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                    <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                    <span>{errors.patientPhone}</span>
+                  </div>
+                )}
               </Field>
             </div>
           </div>

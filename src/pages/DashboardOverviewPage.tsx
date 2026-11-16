@@ -795,16 +795,16 @@ export default function DashboardOverviewPage() {
                 </button>
               </div>
             ) : (
-              <div className="overflow-x-auto no-scrollbar mt-1.5">
+              <div className="overflow-auto max-h-[380px] no-scrollbar mt-1.5">
                 <table className="w-full text-left text-xs text-slate-600">
-                  <thead>
-                    <tr className="border-b border-slate-100 text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-50/70">
-                      <th className="py-1.5 px-2.5 rounded-l-lg">Patient</th>
-                      <th className="py-1.5 px-2.5">Doctor &amp; Specialty</th>
-                      <th className="py-1.5 px-2.5">Schedule</th>
-                      <th className="py-1.5 px-2.5 hidden sm:table-cell">Location</th>
-                      <th className="py-1.5 px-2.5">Status</th>
-                      <th className="py-1.5 px-2.5 text-right rounded-r-lg">Action</th>
+                  <thead className="sticky top-0 z-20 bg-slate-50 shadow-xs">
+                    <tr className="border-b border-slate-100 text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">
+                      <th className="py-1.5 px-2.5 rounded-l-lg sticky top-0 z-20 bg-slate-50">Patient</th>
+                      <th className="py-1.5 px-2.5 sticky top-0 z-20 bg-slate-50">Doctor &amp; Specialty</th>
+                      <th className="py-1.5 px-2.5 sticky top-0 z-20 bg-slate-50">Schedule</th>
+                      <th className="py-1.5 px-2.5 hidden sm:table-cell sticky top-0 z-20 bg-slate-50">Location</th>
+                      <th className="py-1.5 px-2.5 sticky top-0 z-20 bg-slate-50">Status</th>
+                      <th className="py-1.5 px-2.5 text-right rounded-r-lg sticky top-0 right-0 z-30 bg-slate-50 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -846,7 +846,7 @@ export default function DashboardOverviewPage() {
                       return (
                         <tr
                           key={apt.id || idx}
-                          className="hover:bg-slate-50/80 transition-colors"
+                          className="group hover:bg-slate-50/80 transition-colors"
                         >
                           <td className="py-1.5 px-2.5">
                             <div className="flex items-center gap-2">
@@ -907,7 +907,7 @@ export default function DashboardOverviewPage() {
                               </span>
                             )}
                           </td>
-                          <td className="py-1.5 px-2.5 text-right">
+                          <td className="py-1.5 px-2.5 text-right sticky right-0 z-10 bg-white group-hover:bg-slate-50 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] transition-colors">
                             <button
                               onClick={() => void navigate('/appointments')}
                               className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline"

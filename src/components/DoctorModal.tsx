@@ -1,4 +1,5 @@
 import {
+  AlertCircle,
   Award,
   Building2,
   CheckCircle2,
@@ -12,7 +13,7 @@ import {
   User,
   Video,
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
@@ -20,6 +21,7 @@ import { type Branch } from './BranchModal';
 import { type Hospital } from './HospitalModal';
 import { Modal, SwitchRow } from './ui/Modal';
 import { Alert, Avatar } from './ui/primitives';
+import { SearchableSelect, type SearchableSelectOption } from './ui/SearchableSelect';
 import { type UserAccount } from './UserModal';
 
 export interface Doctor {
@@ -37,12 +39,208 @@ export interface Doctor {
   qualification?: string | null;
   medical_registration_number?: string | null;
   clinic_address?: string | null;
+  address_line_1?: string | null;
+  address_line_2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
   years_of_experience?: number | null;
   profile_image_url?: string | null;
   podcast_url?: string | null;
   is_active?: boolean | null;
   created_at: string;
   updated_at: string;
+}
+
+export function validateDoctorName(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) {
+    return 'Doctor full name is required.';
+  }
+  if (trimmed.length < 2) {
+    return 'Doctor name must be at least 2 characters.';
+  }
+  if (trimmed.length > 100) {
+    return 'Doctor name cannot exceed 100 characters.';
+  }
+  if (/[0-9]/.test(val)) {
+    return 'Numbers are not allowed in doctor name.';
+  }
+  if (/[^a-zA-Z\s.-]/.test(val)) {
+    return 'Doctor name can only contain letters, spaces, hyphens, and periods.';
+  }
+  return undefined;
+}
+
+export function validateDoctorPhone(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (/[a-zA-Z]/.test(val)) {
+    return 'Letters are not allowed in phone number.';
+  }
+  if (/[^0-9+\s-]/.test(val)) {
+    return 'Special characters are not allowed in phone number.';
+  }
+  const digits = val.replace(/\D/g, '');
+  if (digits.length < 7) {
+    return 'Phone number must be at least 7 digits.';
+  }
+  if (digits.length > 15) {
+    return 'Phone number cannot exceed 15 digits.';
+  }
+  return undefined;
+}
+
+export function validateDoctorEmail(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(trimmed)) {
+    return 'Please enter a valid email address (e.g. doctor@hospital.com).';
+  }
+  if (trimmed.length > 150) {
+    return 'Email address cannot exceed 150 characters.';
+  }
+  return undefined;
+}
+
+export function validateDoctorHospital(val: string): string | undefined {
+  if (!val || !val.trim()) {
+    return 'Please select an assigned hospital.';
+  }
+  return undefined;
+}
+
+export function validateDoctorSpecialization(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) {
+    return 'Specialization cannot exceed 100 characters.';
+  }
+  if (/[0-9]/.test(val)) {
+    return 'Numbers are not allowed in specialization.';
+  }
+  if (/[^a-zA-Z\s,()./&-]/.test(val)) {
+    return 'Specialization can only contain letters and standard punctuation.';
+  }
+  return undefined;
+}
+
+export function validateDoctorQualification(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) {
+    return 'Qualification cannot exceed 100 characters.';
+  }
+  if (/[0-9]/.test(val)) {
+    return 'Numbers are not allowed in qualification.';
+  }
+  if (/[^a-zA-Z\s.,/()-]/.test(val)) {
+    return 'Qualification can only contain letters and academic punctuation.';
+  }
+  return undefined;
+}
+
+export function validateDoctorRegistrationNumber(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length < 3) {
+    return 'Registration number must be at least 3 characters.';
+  }
+  if (trimmed.length > 50) {
+    return 'Registration number cannot exceed 50 characters.';
+  }
+  if (/[^a-zA-Z0-9/-]/.test(val)) {
+    return 'Medical registration number can only contain letters, numbers, hyphens, and slashes.';
+  }
+  return undefined;
+}
+
+export function validateDoctorExperience(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (/[^0-9]/.test(trimmed)) {
+    return 'Years of experience must contain only numbers.';
+  }
+  const num = parseInt(trimmed, 10);
+  if (isNaN(num) || num < 0) {
+    return 'Years of experience cannot be negative.';
+  }
+  if (num > 70) {
+    return 'Years of experience cannot exceed 70.';
+  }
+  return undefined;
+}
+
+export function validateDoctorAddressLine(val: string, label = 'Address line'): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 255) {
+    return `${label} cannot exceed 255 characters.`;
+  }
+  if (/[^a-zA-Z0-9\s,./#&-]/.test(val)) {
+    return `${label} contains invalid characters.`;
+  }
+  return undefined;
+}
+
+export function validateDoctorCity(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) {
+    return 'City cannot exceed 100 characters.';
+  }
+  if (/[0-9]/.test(val)) {
+    return 'Numbers are not allowed in city.';
+  }
+  if (/[^a-zA-Z\s-]/.test(val)) {
+    return 'City can only contain letters, spaces, and hyphens.';
+  }
+  return undefined;
+}
+
+export function validateDoctorState(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) {
+    return 'State cannot exceed 100 characters.';
+  }
+  if (/[0-9]/.test(val)) {
+    return 'Numbers are not allowed in state.';
+  }
+  if (/[^a-zA-Z\s-]/.test(val)) {
+    return 'State can only contain letters, spaces, and hyphens.';
+  }
+  return undefined;
+}
+
+export function validateDoctorPincode(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (/[^0-9]/.test(trimmed)) {
+    return 'Pincode must contain only numbers.';
+  }
+  if (trimmed.length < 5 || trimmed.length > 10) {
+    return 'Pincode must be between 5 and 10 digits.';
+  }
+  return undefined;
+}
+
+export function validateDoctorPodcastUrl(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 255) {
+    return 'Podcast link cannot exceed 255 characters.';
+  }
+  return undefined;
+}
+
+export function validateDoctorImageUrl(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 500) {
+    return 'Profile image URL cannot exceed 500 characters.';
+  }
+  return undefined;
 }
 
 interface DoctorModalProps {
@@ -63,11 +261,17 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
   const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
   const [qualification, setQualification] = useState('');
   const [medicalRegistrationNumber, setMedicalRegistrationNumber] = useState('');
-  const [clinicAddress, setClinicAddress] = useState('');
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [pincode, setPincode] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState<string>('');
   const [profileImageUrl, setProfileImageUrl] = useState('');
   const [podcastUrl, setPodcastUrl] = useState('');
   const [isActive, setIsActive] = useState<boolean>(true);
+
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -108,7 +312,11 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
       setStatus(doctor.status);
       setQualification(doctor.qualification || '');
       setMedicalRegistrationNumber(doctor.medical_registration_number || '');
-      setClinicAddress(doctor.clinic_address || '');
+      setAddressLine1(doctor.address_line_1 || doctor.clinic_address || '');
+      setAddressLine2(doctor.address_line_2 || '');
+      setCity(doctor.city || '');
+      setState(doctor.state || '');
+      setPincode(doctor.pincode || '');
       setYearsOfExperience(doctor.years_of_experience ? doctor.years_of_experience.toString() : '');
       setProfileImageUrl(doctor.profile_image_url || '');
       setPodcastUrl(doctor.podcast_url || '');
@@ -126,28 +334,160 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
       setStatus('ACTIVE');
       setQualification('');
       setMedicalRegistrationNumber('');
-      setClinicAddress('');
+      setAddressLine1('');
+      setAddressLine2('');
+      setCity('');
+      setState('');
+      setPincode('');
       setYearsOfExperience('');
       setProfileImageUrl('');
       setPodcastUrl('');
       setIsActive(true);
     }
     setError('');
+    setErrors({});
   }, [doctor, isOpen]);
 
   // Filter branches by selected hospital
-  const availableBranches = branches.filter((b) => b.hospital_id === hospitalId);
+  const availableBranches = useMemo(
+    () => branches.filter((b) => b.hospital_id === hospitalId),
+    [branches, hospitalId]
+  );
+
+  const hospitalOptions = useMemo<SearchableSelectOption[]>(() => {
+    return hospitals.map((h) => {
+      const code = h.hospital_code || (h as any).code;
+      return {
+        value: h.id,
+        label: h.name,
+        sublabel: [code ? `Code: ${code}` : null, h.city || null]
+          .filter(Boolean)
+          .join(' · ') || undefined,
+        badge: h.status === 'ACTIVE' ? 'Active' : 'Inactive',
+        badgeTone: h.status === 'ACTIVE' ? ('blue' as const) : ('neutral' as const),
+        icon: <Building2 size={14} style={{ color: '#2563eb' }} />,
+        extraSearchTerms: [code, h.address, h.phone, h.email, h.city].filter(Boolean) as string[],
+      };
+    });
+  }, [hospitals]);
+
+  const selectedHospital = useMemo(
+    () => hospitals.find((h) => h.id === hospitalId) || null,
+    [hospitals, hospitalId]
+  );
+
+  const branchOptions = useMemo<SearchableSelectOption[]>(() => {
+    const noneOption: SearchableSelectOption = {
+      value: '',
+      label: 'No specific branch (All Branches)',
+      sublabel: 'Consulting across any campus or general facility',
+      badge: 'General',
+      badgeTone: 'neutral',
+      icon: <Building2 size={14} style={{ color: '#94a3b8' }} />,
+    };
+
+    const bOpts: SearchableSelectOption[] = availableBranches.map((b) => ({
+      value: b.id,
+      label: b.name,
+      sublabel: b.branch_code ? `Branch Code: ${b.branch_code}` : undefined,
+      badge: b.status === 'ACTIVE' ? 'Active' : 'Inactive',
+      badgeTone: b.status === 'ACTIVE' ? ('violet' as const) : ('neutral' as const),
+      icon: <Building2 size={14} style={{ color: '#7c3aed' }} />,
+      extraSearchTerms: [b.branch_code, b.address, b.phone].filter(Boolean) as string[],
+    }));
+
+    return [noneOption, ...bOpts];
+  }, [availableBranches]);
+
+  const userAccountOptions = useMemo<SearchableSelectOption[]>(() => {
+    const unlinkedOption: SearchableSelectOption = {
+      value: '',
+      label: 'No account linked (External / Guest Doctor)',
+      sublabel: 'Practicing without doctor portal web login credentials',
+      badge: 'Unlinked',
+      badgeTone: 'neutral',
+      icon: <User size={14} style={{ color: '#94a3b8' }} />,
+    };
+
+    const uOpts: SearchableSelectOption[] = users.map((u) => ({
+      value: u.id,
+      label: u.username,
+      sublabel: `Doctor Portal Login · Active Account`,
+      badge: 'Doctor Login',
+      badgeTone: 'green',
+      icon: <ShieldCheck size={14} style={{ color: '#16a34a' }} />,
+      extraSearchTerms: [u.username, u.role],
+    }));
+
+    return [unlinkedOption, ...uOpts];
+  }, [users]);
+
+  const selectedUserAccount = useMemo(
+    () => users.find((u) => u.id === userAccountId) || null,
+    [users, userAccountId]
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      setError('Please enter the doctor’s full name.');
+
+    const nameErr = validateDoctorName(name);
+    const hospErr = validateDoctorHospital(hospitalId);
+    const phoneErr = validateDoctorPhone(phone);
+    const emailErr = validateDoctorEmail(email);
+    const specErr = validateDoctorSpecialization(specialization);
+    const qualErr = validateDoctorQualification(qualification);
+    const regErr = validateDoctorRegistrationNumber(medicalRegistrationNumber);
+    const addr1Err = validateDoctorAddressLine(addressLine1, 'Address line 1');
+    const addr2Err = validateDoctorAddressLine(addressLine2, 'Address line 2');
+    const cityErr = validateDoctorCity(city);
+    const stateErr = validateDoctorState(state);
+    const pinErr = validateDoctorPincode(pincode);
+    const expErr = validateDoctorExperience(yearsOfExperience);
+    const podErr = validateDoctorPodcastUrl(podcastUrl);
+    const imgErr = validateDoctorImageUrl(profileImageUrl);
+
+    const validationErrors = {
+      name: nameErr,
+      hospitalId: hospErr,
+      phone: phoneErr,
+      email: emailErr,
+      specialization: specErr,
+      qualification: qualErr,
+      medicalRegistrationNumber: regErr,
+      addressLine1: addr1Err,
+      addressLine2: addr2Err,
+      city: cityErr,
+      state: stateErr,
+      pincode: pinErr,
+      yearsOfExperience: expErr,
+      podcastUrl: podErr,
+      profileImageUrl: imgErr,
+    };
+
+    setErrors(validationErrors);
+
+    const firstMsg =
+      nameErr ||
+      hospErr ||
+      phoneErr ||
+      emailErr ||
+      specErr ||
+      qualErr ||
+      regErr ||
+      addr1Err ||
+      addr2Err ||
+      cityErr ||
+      stateErr ||
+      pinErr ||
+      expErr ||
+      podErr ||
+      imgErr;
+
+    if (firstMsg) {
+      setError(firstMsg);
       return;
     }
-    if (hospitalId === '') {
-      setError('Please select an assigned hospital.');
-      return;
-    }
+
     setLoading(true);
     setError('');
 
@@ -178,7 +518,15 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
           status,
           qualification: qualification.trim() || null,
           medical_registration_number: medicalRegistrationNumber.trim() || null,
-          clinic_address: clinicAddress.trim() || null,
+          address_line_1: addressLine1.trim() || null,
+          address_line_2: addressLine2.trim() || null,
+          city: city.trim() || null,
+          state: state.trim() || null,
+          pincode: pincode.trim() || null,
+          clinic_address:
+            [addressLine1.trim(), addressLine2.trim(), city.trim(), state.trim(), pincode.trim()]
+              .filter(Boolean)
+              .join(', ') || null,
           years_of_experience: yearsOfExperience ? parseInt(yearsOfExperience, 10) : null,
           profile_image_url: normalizeUrl(profileImageUrl),
           podcast_url: normalizeUrl(podcastUrl),
@@ -411,20 +759,34 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                     left: 11,
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    color: '#94a3b8',
+                    color: errors.name ? '#ef4444' : '#94a3b8',
                   }}
                 />
                 <input
                   id="doctor-name"
                   className="ui-input"
-                  style={{ paddingLeft: 34 }}
+                  style={{
+                    paddingLeft: 34,
+                    borderColor: errors.name ? '#ef4444' : undefined,
+                    boxShadow: errors.name ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    const sanitized = e.target.value.replace(/[^a-zA-Z\s.-]/g, '').slice(0, 100);
+                    setName(sanitized);
+                    setErrors((prev) => ({ ...prev, name: validateDoctorName(sanitized) }));
+                  }}
                   required
                   placeholder="e.g. Dr. Jane Smith"
                 />
               </div>
+              {errors.name && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                  <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                  <span>{errors.name}</span>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
@@ -449,19 +811,33 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                       left: 11,
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      color: '#94a3b8',
+                      color: errors.phone ? '#ef4444' : '#94a3b8',
                     }}
                   />
                   <input
                     id="doctor-phone"
                     className="ui-input"
-                    style={{ paddingLeft: 34 }}
+                    style={{
+                      paddingLeft: 34,
+                      borderColor: errors.phone ? '#ef4444' : undefined,
+                      boxShadow: errors.phone ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                    }}
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      const sanitized = e.target.value.replace(/[^0-9+]/g, '').slice(0, 16);
+                      setPhone(sanitized);
+                      setErrors((prev) => ({ ...prev, phone: validateDoctorPhone(sanitized) }));
+                    }}
                     placeholder="e.g. +91 98765 43210"
                   />
                 </div>
+                {errors.phone && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                    <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                    <span>{errors.phone}</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -485,19 +861,33 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                       left: 11,
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      color: '#94a3b8',
+                      color: errors.email ? '#ef4444' : '#94a3b8',
                     }}
                   />
                   <input
                     id="doctor-email"
                     className="ui-input"
-                    style={{ paddingLeft: 34 }}
+                    style={{
+                      paddingLeft: 34,
+                      borderColor: errors.email ? '#ef4444' : undefined,
+                      boxShadow: errors.email ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                    }}
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      const sanitized = e.target.value.trim().slice(0, 150);
+                      setEmail(sanitized);
+                      setErrors((prev) => ({ ...prev, email: validateDoctorEmail(sanitized) }));
+                    }}
                     placeholder="e.g. doctor@hospital.com"
                   />
                 </div>
+                {errors.email && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                    <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                    <span>{errors.email}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -519,11 +909,19 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                 <input
                   id="doctor-image-url"
                   className="ui-input"
-                  style={{ flex: 1 }}
+                  style={{
+                    flex: 1,
+                    borderColor: errors.profileImageUrl ? '#ef4444' : undefined,
+                    boxShadow: errors.profileImageUrl ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
                   type="text"
                   inputMode="url"
                   value={profileImageUrl}
-                  onChange={(e) => setProfileImageUrl(e.target.value)}
+                  onChange={(e) => {
+                    const sanitized = e.target.value.slice(0, 500);
+                    setProfileImageUrl(sanitized);
+                    setErrors((prev) => ({ ...prev, profileImageUrl: validateDoctorImageUrl(sanitized) }));
+                  }}
                   onBlur={() => {
                     const trimmed = profileImageUrl.trim();
                     if (trimmed && !/^https?:\/\//i.test(trimmed) && !trimmed.startsWith('/')) {
@@ -533,6 +931,12 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                   placeholder="https://… (Direct photo or avatar URL)"
                 />
               </div>
+              {errors.profileImageUrl && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                  <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                  <span>{errors.profileImageUrl}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -545,7 +949,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
               <div className="doctor-section-tag">Hospital & Practice Assignment</div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
               <div>
                 <label
                   htmlFor="doctor-hospital"
@@ -559,28 +963,73 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                     marginBottom: 5,
                   }}
                 >
+                  <Building2 size={13} style={{ color: '#64748b' }} />
                   <span>Assigned Hospital</span>
                   <span style={{ color: '#ef4444' }}>*</span>
                 </label>
-                <select
+                <SearchableSelect
                   id="doctor-hospital"
-                  className="ui-select"
+                  aria-label="Assigned Hospital"
                   value={hospitalId}
-                  onChange={(e) => {
-                    setHospitalId(e.target.value);
+                  onChange={(val) => {
+                    setHospitalId(val);
                     setBranchId('');
+                    setErrors((prev) => ({ ...prev, hospitalId: validateDoctorHospital(val) }));
                   }}
+                  options={hospitalOptions}
+                  placeholder="Select assigned hospital system..."
+                  searchPlaceholder="Search hospital by name, code or location..."
                   required
-                >
-                  <option value="" disabled>
-                    Select hospital…
-                  </option>
-                  {hospitals.map((h) => (
-                    <option key={h.id} value={h.id}>
-                      {h.name}
-                    </option>
-                  ))}
-                </select>
+                />
+                {errors.hospitalId && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                    <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                    <span>{errors.hospitalId}</span>
+                  </div>
+                )}
+                {selectedHospital && (
+                  <div
+                    style={{
+                      marginTop: 6,
+                      padding: '7px 10px',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      fontSize: 11.5,
+                      color: '#475569',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background: '#22c55e',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span style={{ fontWeight: 600, color: '#1e293b' }}>
+                      {selectedHospital.name}
+                    </span>
+                    {(selectedHospital.hospital_code || (selectedHospital as any).code) && (
+                      <span
+                        style={{
+                          fontSize: 10.5,
+                          fontFamily: 'monospace',
+                          background: '#e0e7ff',
+                          color: '#3730a3',
+                          padding: '1px 5px',
+                          borderRadius: 4,
+                        }}
+                      >
+                        {selectedHospital.hospital_code || (selectedHospital as any).code}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -590,32 +1039,32 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                     fontSize: 12,
                     fontWeight: 600,
                     color: '#334155',
-                    display: 'block',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
                     marginBottom: 5,
                   }}
                 >
-                  Branch Location
+                  <span>Branch Location</span>
+                  <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>
+                    (Optional)
+                  </span>
                 </label>
-                <select
+                <SearchableSelect
                   id="doctor-branch"
-                  className="ui-select"
+                  aria-label="Branch Location"
                   value={branchId}
-                  onChange={(e) => setBranchId(e.target.value)}
-                  disabled={hospitalId === ''}
-                >
-                  <option value="">No specific branch</option>
-                  {availableBranches.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setBranchId(val)}
+                  options={branchOptions}
+                  disabled={!hospitalId}
+                  placeholder={!hospitalId ? 'Select hospital first...' : 'Select branch location...'}
+                  searchPlaceholder="Search branch by name or code..."
+                />
               </div>
             </div>
 
             <div>
               <label
-                htmlFor="doctor-clinic-address"
                 style={{
                   fontSize: 12,
                   fontWeight: 600,
@@ -623,20 +1072,216 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                   display: 'flex',
                   alignItems: 'center',
                   gap: 4,
-                  marginBottom: 5,
+                  marginBottom: 8,
                 }}
               >
                 <MapPin size={13} style={{ color: '#64748b' }} />
                 <span>Clinic / Consultation Room Address</span>
               </label>
-              <textarea
-                id="doctor-clinic-address"
-                className="ui-textarea"
-                rows={2}
-                value={clinicAddress}
-                onChange={(e) => setClinicAddress(e.target.value)}
-                placeholder="e.g. Block B, 3rd Floor, Suite 302, Dr. Narendran Specialty Clinic"
-              />
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <label
+                      htmlFor="doctor-address-line-1"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: 5,
+                      }}
+                    >
+                      Address Line 1
+                    </label>
+                    <input
+                      id="doctor-address-line-1"
+                      className="ui-input"
+                      style={{
+                        borderColor: errors.addressLine1 ? '#ef4444' : undefined,
+                        boxShadow: errors.addressLine1 ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                      type="text"
+                      value={addressLine1}
+                      onChange={(e) => {
+                        const sanitized = e.target.value.replace(/[^a-zA-Z0-9\s,./#&-]/g, '').slice(0, 255);
+                        setAddressLine1(sanitized);
+                        setErrors((prev) => ({ ...prev, addressLine1: validateDoctorAddressLine(sanitized, 'Address line 1') }));
+                      }}
+                      placeholder="e.g. Block B, 3rd Floor, Suite 302"
+                    />
+                    {errors.addressLine1 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.addressLine1}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="doctor-address-line-2"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: 5,
+                      }}
+                    >
+                      Address Line 2 (Optional)
+                    </label>
+                    <input
+                      id="doctor-address-line-2"
+                      className="ui-input"
+                      style={{
+                        borderColor: errors.addressLine2 ? '#ef4444' : undefined,
+                        boxShadow: errors.addressLine2 ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                      type="text"
+                      value={addressLine2}
+                      onChange={(e) => {
+                        const sanitized = e.target.value.replace(/[^a-zA-Z0-9\s,./#&-]/g, '').slice(0, 255);
+                        setAddressLine2(sanitized);
+                        setErrors((prev) => ({ ...prev, addressLine2: validateDoctorAddressLine(sanitized, 'Address line 2') }));
+                      }}
+                      placeholder="e.g. Near Apollo Hospital, Anna Nagar"
+                    />
+                    {errors.addressLine2 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.addressLine2}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <label
+                      htmlFor="doctor-city"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: 5,
+                      }}
+                    >
+                      City / Town
+                    </label>
+                    <input
+                      id="doctor-city"
+                      className="ui-input"
+                      style={{
+                        borderColor: errors.city ? '#ef4444' : undefined,
+                        boxShadow: errors.city ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                      type="text"
+                      value={city}
+                      onChange={(e) => {
+                        const sanitized = e.target.value.replace(/[^a-zA-Z\s-]/g, '').slice(0, 100);
+                        setCity(sanitized);
+                        setErrors((prev) => ({ ...prev, city: validateDoctorCity(sanitized) }));
+                      }}
+                      placeholder="e.g. Chennai"
+                    />
+                    {errors.city && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.city}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="doctor-state"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: 5,
+                      }}
+                    >
+                      State / Province
+                    </label>
+                    <input
+                      id="doctor-state"
+                      className="ui-input"
+                      style={{
+                        borderColor: errors.state ? '#ef4444' : undefined,
+                        boxShadow: errors.state ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                      type="text"
+                      value={state}
+                      onChange={(e) => {
+                        const sanitized = e.target.value.replace(/[^a-zA-Z\s-]/g, '').slice(0, 100);
+                        setState(sanitized);
+                        setErrors((prev) => ({ ...prev, state: validateDoctorState(sanitized) }));
+                      }}
+                      placeholder="e.g. Tamil Nadu"
+                    />
+                    {errors.state && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.state}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="doctor-pincode"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#334155',
+                        display: 'block',
+                        marginBottom: 5,
+                      }}
+                    >
+                      Pincode / Postal Code
+                    </label>
+                    <input
+                      id="doctor-pincode"
+                      className="ui-input"
+                      style={{
+                        borderColor: errors.pincode ? '#ef4444' : undefined,
+                        boxShadow: errors.pincode ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                      type="text"
+                      inputMode="numeric"
+                      value={pincode}
+                      onChange={(e) => {
+                        const sanitized = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                        setPincode(sanitized);
+                        setErrors((prev) => ({ ...prev, pincode: validateDoctorPincode(sanitized) }));
+                      }}
+                      placeholder="e.g. 600040"
+                    />
+                    {errors.pincode && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>{errors.pincode}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -666,11 +1311,25 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                 <input
                   id="doctor-specialization"
                   className="ui-input"
+                  style={{
+                    borderColor: errors.specialization ? '#ef4444' : undefined,
+                    boxShadow: errors.specialization ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
                   type="text"
                   value={specialization}
-                  onChange={(e) => setSpecialization(e.target.value)}
+                  onChange={(e) => {
+                    const sanitized = e.target.value.replace(/[^a-zA-Z\s,()./&-]/g, '').slice(0, 100);
+                    setSpecialization(sanitized);
+                    setErrors((prev) => ({ ...prev, specialization: validateDoctorSpecialization(sanitized) }));
+                  }}
                   placeholder="e.g. Cardiologist, Neurologist, General"
                 />
+                {errors.specialization && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                    <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                    <span>{errors.specialization}</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -692,11 +1351,25 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                 <input
                   id="doctor-qualification"
                   className="ui-input"
+                  style={{
+                    borderColor: errors.qualification ? '#ef4444' : undefined,
+                    boxShadow: errors.qualification ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
                   type="text"
                   value={qualification}
-                  onChange={(e) => setQualification(e.target.value)}
+                  onChange={(e) => {
+                    const sanitized = e.target.value.replace(/[^a-zA-Z\s.,/()-]/g, '').slice(0, 100);
+                    setQualification(sanitized);
+                    setErrors((prev) => ({ ...prev, qualification: validateDoctorQualification(sanitized) }));
+                  }}
                   placeholder="e.g. MBBS, MD (General Medicine), FRCP"
                 />
+                {errors.qualification && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                    <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                    <span>{errors.qualification}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -717,11 +1390,28 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                 <input
                   id="doctor-med-reg"
                   className="ui-input"
+                  style={{
+                    borderColor: errors.medicalRegistrationNumber ? '#ef4444' : undefined,
+                    boxShadow: errors.medicalRegistrationNumber ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
                   type="text"
                   value={medicalRegistrationNumber}
-                  onChange={(e) => setMedicalRegistrationNumber(e.target.value)}
+                  onChange={(e) => {
+                    const sanitized = e.target.value.replace(/[^a-zA-Z0-9/-]/g, '').slice(0, 50);
+                    setMedicalRegistrationNumber(sanitized);
+                    setErrors((prev) => ({
+                      ...prev,
+                      medicalRegistrationNumber: validateDoctorRegistrationNumber(sanitized),
+                    }));
+                  }}
                   placeholder="e.g. MCI-2018-98421"
                 />
+                {errors.medicalRegistrationNumber && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                    <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                    <span>{errors.medicalRegistrationNumber}</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -740,13 +1430,26 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                 <input
                   id="doctor-experience"
                   className="ui-input"
-                  type="number"
-                  min="0"
-                  max="70"
+                  style={{
+                    borderColor: errors.yearsOfExperience ? '#ef4444' : undefined,
+                    boxShadow: errors.yearsOfExperience ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
+                  type="text"
+                  inputMode="numeric"
                   value={yearsOfExperience}
-                  onChange={(e) => setYearsOfExperience(e.target.value)}
+                  onChange={(e) => {
+                    const sanitized = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
+                    setYearsOfExperience(sanitized);
+                    setErrors((prev) => ({ ...prev, yearsOfExperience: validateDoctorExperience(sanitized) }));
+                  }}
                   placeholder="e.g. 12"
                 />
+                {errors.yearsOfExperience && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                    <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                    <span>{errors.yearsOfExperience}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -784,17 +1487,25 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                     left: 11,
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    color: '#94a3b8',
+                    color: errors.podcastUrl ? '#ef4444' : '#94a3b8',
                   }}
                 />
                 <input
                   id="doctor-podcast-url"
                   className="ui-input"
-                  style={{ paddingLeft: 34 }}
+                  style={{
+                    paddingLeft: 34,
+                    borderColor: errors.podcastUrl ? '#ef4444' : undefined,
+                    boxShadow: errors.podcastUrl ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
                   type="text"
                   inputMode="url"
                   value={podcastUrl}
-                  onChange={(e) => setPodcastUrl(e.target.value)}
+                  onChange={(e) => {
+                    const sanitized = e.target.value.slice(0, 255);
+                    setPodcastUrl(sanitized);
+                    setErrors((prev) => ({ ...prev, podcastUrl: validateDoctorPodcastUrl(sanitized) }));
+                  }}
                   onBlur={() => {
                     const trimmed = podcastUrl.trim();
                     if (trimmed && !/^https?:\/\//i.test(trimmed)) {
@@ -804,6 +1515,12 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                   placeholder="e.g. https://youtube.com/@doctorchannel or video podcast URL"
                 />
               </div>
+              {errors.podcastUrl && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                  <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                  <span>{errors.podcastUrl}</span>
+                </div>
+              )}
               <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
                 Enables patients to watch educational videos, health podcasts, or clinical discussions.
               </div>
@@ -826,27 +1543,68 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                   fontSize: 12,
                   fontWeight: 600,
                   color: '#334155',
-                  display: 'block',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                   marginBottom: 5,
                 }}
               >
-                Linked User Account
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <ShieldCheck size={13} style={{ color: '#2563eb' }} />
+                  <span>Linked User Account</span>
+                </span>
+                <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>
+                  Doctor portal web login credentials
+                </span>
               </label>
-              <select
+              <SearchableSelect
                 id="doctor-user-account"
-                className="ui-select"
+                aria-label="Linked User Account"
                 value={userAccountId}
-                onChange={(e) => setUserAccountId(e.target.value)}
+                onChange={(val) => setUserAccountId(val)}
+                options={userAccountOptions}
+                placeholder="No account linked (External / Guest Doctor)"
+                searchPlaceholder="Search doctor portal usernames..."
+              />
+              <div
+                style={{
+                  marginTop: 6,
+                  padding: '9px 12px',
+                  background: selectedUserAccount ? '#f0fdf4' : '#f8fafc',
+                  border: `1px solid ${selectedUserAccount ? '#bbf7d0' : '#e2e8f0'}`,
+                  borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 8,
+                  fontSize: 11.5,
+                  color: selectedUserAccount ? '#166534' : '#64748b',
+                }}
               >
-                <option value="">No account linked (External / Guest Doctor)</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.username}
-                  </option>
-                ))}
-              </select>
-              <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
-                Only active doctor logins are listed.
+                {selectedUserAccount ? (
+                  <>
+                    <ShieldCheck size={15} style={{ color: '#16a34a', flexShrink: 0, marginTop: 1 }} />
+                    <div>
+                      <div style={{ fontWeight: 650, color: '#14532d' }}>
+                        Portal Login Linked: @{selectedUserAccount.username}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#15803d', marginTop: 1 }}>
+                        Doctor can authenticate with this username to access their consultation schedules and patient records.
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <User size={15} style={{ color: '#94a3b8', flexShrink: 0, marginTop: 1 }} />
+                    <div>
+                      <div style={{ fontWeight: 600, color: '#334155' }}>
+                        No portal account linked
+                      </div>
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>
+                        Doctor profile will appear on booking schedules, but the doctor will not have self-service doctor portal login.
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

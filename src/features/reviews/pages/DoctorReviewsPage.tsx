@@ -265,17 +265,17 @@ export default function DoctorReviewsPage() {
 
           {/* Table Container */}
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
-            <div className="overflow-x-auto">
+            <div className="overflow-auto max-h-[calc(100vh-280px)] no-scrollbar">
               <table className="w-full text-left text-xs">
-                <thead className="border-b border-slate-200 bg-slate-50/75 dark:border-slate-800 dark:bg-slate-800/50 uppercase tracking-wider text-slate-500 font-bold">
+                <thead className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800 uppercase tracking-wider text-slate-500 font-bold shadow-xs">
                   <tr>
-                    <th className="py-3 px-4">Patient</th>
-                    <th className="py-3 px-4">Doctor</th>
-                    <th className="py-3 px-4">Rating</th>
-                    <th className="py-3 px-4">Review Comment</th>
-                    <th className="py-3 px-4">Consultation / Date</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
+                    <th className="py-3 px-4 sticky top-0 z-20 bg-slate-50 dark:bg-slate-800">Patient</th>
+                    <th className="py-3 px-4 sticky top-0 z-20 bg-slate-50 dark:bg-slate-800">Doctor</th>
+                    <th className="py-3 px-4 sticky top-0 z-20 bg-slate-50 dark:bg-slate-800">Rating</th>
+                    <th className="py-3 px-4 sticky top-0 z-20 bg-slate-50 dark:bg-slate-800">Review Comment</th>
+                    <th className="py-3 px-4 sticky top-0 z-20 bg-slate-50 dark:bg-slate-800">Consultation / Date</th>
+                    <th className="py-3 px-4 sticky top-0 z-20 bg-slate-50 dark:bg-slate-800">Status</th>
+                    <th className="py-3 px-4 text-right sticky top-0 right-0 z-30 bg-slate-50 dark:bg-slate-800 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
@@ -303,7 +303,7 @@ export default function DoctorReviewsPage() {
                       return (
                         <tr
                           key={r.id}
-                          className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition"
+                          className="group hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition"
                         >
                           <td className="py-3 px-4">
                             <p className="font-bold text-slate-900 dark:text-white">
@@ -367,7 +367,7 @@ export default function DoctorReviewsPage() {
                             </span>
                           </td>
 
-                          <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <td className="py-3 px-4 text-right whitespace-nowrap sticky right-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] transition-colors">
                             <div className="inline-flex items-center gap-1.5">
                               <button
                                 onClick={() => handleOpenDetails(r)}
@@ -422,16 +422,16 @@ export default function DoctorReviewsPage() {
       ) : (
         /* Doctor Rating Summaries Section */
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[calc(100vh-280px)] no-scrollbar">
             <table className="w-full text-left text-xs">
-              <thead className="border-b border-slate-200 bg-slate-50/75 dark:border-slate-800 dark:bg-slate-800/50 uppercase tracking-wider text-slate-500 font-bold">
+              <thead className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800 uppercase tracking-wider text-slate-500 font-bold shadow-xs">
                 <tr>
-                  <th className="py-3 px-4">Doctor</th>
-                  <th className="py-3 px-4">Specialization</th>
-                  <th className="py-3 px-4">Average Rating</th>
-                  <th className="py-3 px-4">Total Reviews</th>
-                  <th className="py-3 px-4">Star Breakdown</th>
-                  <th className="py-3 px-4">Moderation Status</th>
+                  <th className="py-3 px-4 sticky top-0 z-20 bg-slate-50 dark:bg-slate-800">Doctor</th>
+                  <th className="py-3 px-4 sticky top-0 z-20 bg-slate-50 dark:bg-slate-800">Specialization</th>
+                  <th className="py-3 px-4 sticky top-0 z-20 bg-slate-50 dark:bg-slate-800">Average Rating</th>
+                  <th className="py-3 px-4 sticky top-0 z-20 bg-slate-50 dark:bg-slate-800">Total Reviews</th>
+                  <th className="py-3 px-4 sticky top-0 z-20 bg-slate-50 dark:bg-slate-800">Star Breakdown</th>
+                  <th className="py-3 px-4 sticky top-0 z-20 bg-slate-50 dark:bg-slate-800">Moderation Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">

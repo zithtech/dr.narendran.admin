@@ -155,6 +155,11 @@ export default function Doctors() {
           d.phone,
           d.medical_registration_number,
           d.podcast_url,
+          d.address_line_1,
+          d.city,
+          d.state,
+          d.pincode,
+          d.clinic_address,
         ]}
         facets={FACETS}
         dateOf={(d) => d.created_at}
@@ -166,13 +171,19 @@ export default function Doctors() {
         nameOf={(d) => d.name}
         onRowClick={openDetails}
         activeId={viewingId}
+        keepDefaultActions
         rowActions={(d) => (
           <button
             type="button"
-            className="ui-btn ui-btn-sm ui-btn-soft"
-            onClick={() => openAvailability(d)}
+            className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              openAvailability(d);
+            }}
+            title="Schedule"
+            aria-label={`Schedule ${d.name}`}
           >
-            <CalendarClock size={13} /> Schedule
+            <CalendarClock size={13} />
           </button>
         )}
       />
