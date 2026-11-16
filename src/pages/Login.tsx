@@ -68,14 +68,22 @@ export default function Login({ defaultForgot = false }: { defaultForgot?: boole
       if (data.id) {
         localStorage.setItem('adminUserId', data.id);
       }
-      window.dispatchEvent(new Event('admin-auth-changed'));
-
-      const roleUpper = (data.role || '').toUpperCase();
-      if (roleUpper === 'DOCTOR') {
-        void navigate('/appointments/today');
-      } else {
-        void navigate('/');
+      if (data.firstName) {
+        localStorage.setItem('adminFirstName', data.firstName);
       }
+      if (data.lastName) {
+        localStorage.setItem('adminLastName', data.lastName);
+      }
+      if (data.fullName) {
+        localStorage.setItem('adminFullName', data.fullName);
+      }
+      if (data.logoUrl) {
+        localStorage.setItem('adminLogoUrl', data.logoUrl);
+      }
+      window.dispatchEvent(new Event('admin-auth-changed'));
+      window.dispatchEvent(new Event('admin-settings-changed'));
+
+      void navigate('/');
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Login failed. Please try again.'));
     } finally {

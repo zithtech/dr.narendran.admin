@@ -65,7 +65,7 @@ describe('Top Navigation Restructuring', () => {
       'Lab Services',
     ]);
 
-    // 5. Administration: Client Portals, User Accounts, Staff Management, Roles & Permissions
+    // 5. Administration: Client Portals, User Accounts, Staff Management, Roles & Permissions, Settings
     const adminCat = NAVIGATION_CATEGORIES.find((c) => c.key === 'administration')!;
     expect(adminCat.name).toBe('Administration');
     expect(adminCat.modules.map((m) => m.name)).toEqual([
@@ -73,6 +73,7 @@ describe('Top Navigation Restructuring', () => {
       'User Accounts',
       'Staff Management',
       'Roles & Permissions',
+      'Settings',
     ]);
 
     // 6. Support: Patient Support, Doctor Support

@@ -1,7 +1,9 @@
 import { HeartPulse, LogOut } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import { cx } from '../ui/primitives';
+import { getMediaProxyUrl } from '../../utils/mediaProxy';
 import type { NavCategory, NavModule } from './navigationConfig';
 
 interface SubNavbarProps {
@@ -12,6 +14,9 @@ interface SubNavbarProps {
   currentRole?: string;
   userInitials?: string;
   onLogout?: () => void;
+  brandFirstName?: string;
+  brandLastName?: string;
+  brandLogoUrl?: string;
 }
 
 export function SubNavbar({
@@ -19,6 +24,9 @@ export function SubNavbar({
   activeModule,
   onSelectModule,
   onLogout,
+  brandFirstName,
+  brandLastName,
+  brandLogoUrl,
 }: SubNavbarProps) {
   let navigate: ReturnType<typeof useNavigate> | null = null;
   try {
@@ -26,6 +34,29 @@ export function SubNavbar({
   } catch {
     navigate = null;
   }
+
+  const [logoError, setLogoError] = useState<boolean>(false);
+
+  const firstName =
+    brandFirstName && brandFirstName.trim()
+      ? brandFirstName.trim()
+      : localStorage.getItem('adminFirstName') || 'HMS Admin';
+
+  const lastName =
+    brandLastName && brandLastName.trim()
+      ? brandLastName.trim()
+      : localStorage.getItem('adminLastName') || 'Hospital';
+
+  const logoUrl =
+    brandLogoUrl !== undefined
+      ? brandLogoUrl
+      : localStorage.getItem('adminLogoUrl') || '';
+
+  useEffect(() => {
+    setLogoError(false);
+  }, [logoUrl]);
+
+  const proxiedLogo = useMemo(() => getMediaProxyUrl(logoUrl), [logoUrl]);
 
   const handleBrandClick = () => {
     if (navigate) {
@@ -46,14 +77,33 @@ export function SubNavbar({
             handleBrandClick();
           }
         }}
-        title="HMS Admin - Dr Narendran"
+        title={`${firstName} - ${lastName}`}
       >
-        <div className="ui-sidebar-brand-icon">
-          <HeartPulse size={20} strokeWidth={2.4} />
+        <div
+          className={cx(
+            'ui-sidebar-brand-icon',
+            proxiedLogo && !logoError && 'has-custom-logo',
+          )}
+          style={proxiedLogo && !logoError ? { background: '#ffffff' } : undefined}
+        >
+          {proxiedLogo && !logoError ? (
+            <img
+              src={proxiedLogo}
+              alt="Hospital Logo"
+              className="w-full h-full object-contain rounded-md"
+              onError={() => setLogoError(true)}
+            />
+          ) : (
+            <HeartPulse size={20} strokeWidth={2.4} />
+          )}
         </div>
         <div className="ui-sidebar-brand-text">
-          <span className="ui-sidebar-brand-name">HMS Admin</span>
-          <span className="ui-sidebar-brand-sub">Dr Narendran</span>
+          <span className="ui-sidebar-brand-name" title={firstName}>
+            {firstName}
+          </span>
+          <span className="ui-sidebar-brand-sub" title={lastName}>
+            {lastName}
+          </span>
         </div>
       </div>
 

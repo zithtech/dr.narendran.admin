@@ -2,6 +2,7 @@ import { HeartPulse, LogOut, X } from 'lucide-react';
 import React from 'react';
 
 import { cx } from '../ui/primitives';
+import { getMediaProxyUrl } from '../../utils/mediaProxy';
 import type { NavCategory, NavModule } from './navigationConfig';
 
 export interface MobileNavDrawerProps {
@@ -15,6 +16,9 @@ export interface MobileNavDrawerProps {
   currentRole?: string;
   userInitials?: string;
   onLogout: () => void;
+  brandFirstName?: string;
+  brandLastName?: string;
+  brandLogoUrl?: string;
 }
 
 /**
@@ -29,7 +33,33 @@ export function MobileNavDrawer({
   activeModule,
   onSelectModule,
   onLogout,
+  brandFirstName,
+  brandLastName,
+  brandLogoUrl,
 }: MobileNavDrawerProps) {
+  const [logoError, setLogoError] = React.useState<boolean>(false);
+
+  const firstName =
+    brandFirstName && brandFirstName.trim()
+      ? brandFirstName.trim()
+      : localStorage.getItem('adminFirstName') || 'HMS Admin';
+
+  const lastName =
+    brandLastName && brandLastName.trim()
+      ? brandLastName.trim()
+      : localStorage.getItem('adminLastName') || 'Hospital';
+
+  const logoUrl =
+    brandLogoUrl !== undefined
+      ? brandLogoUrl
+      : localStorage.getItem('adminLogoUrl') || '';
+
+  React.useEffect(() => {
+    setLogoError(false);
+  }, [logoUrl]);
+
+  const proxiedLogo = React.useMemo(() => getMediaProxyUrl(logoUrl), [logoUrl]);
+
   if (!isOpen) return null;
 
   const handleModuleClick = (mod: NavModule) => {
@@ -61,12 +91,31 @@ export function MobileNavDrawer({
         {/* Drawer Header */}
         <div className="ui-mobile-drawer-header">
           <div className="ui-sidebar-brand" style={{ padding: 0, height: 'auto', minHeight: 'unset' }}>
-            <div className="ui-sidebar-brand-icon">
-              <HeartPulse size={18} strokeWidth={2.4} />
+            <div
+              className={cx(
+                'ui-sidebar-brand-icon',
+                proxiedLogo && !logoError && 'has-custom-logo',
+              )}
+              style={proxiedLogo && !logoError ? { background: '#ffffff' } : undefined}
+            >
+              {proxiedLogo && !logoError ? (
+                <img
+                  src={proxiedLogo}
+                  alt="Hospital Logo"
+                  className="w-full h-full object-contain rounded-md"
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                <HeartPulse size={18} strokeWidth={2.4} />
+              )}
             </div>
             <div className="ui-sidebar-brand-text">
-              <span className="ui-sidebar-brand-name">HMS Admin</span>
-              <span className="ui-sidebar-brand-sub">Dr Narendran</span>
+              <span className="ui-sidebar-brand-name" title={firstName}>
+                {firstName}
+              </span>
+              <span className="ui-sidebar-brand-sub" title={lastName}>
+                {lastName}
+              </span>
             </div>
           </div>
           <button

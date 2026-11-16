@@ -40,6 +40,7 @@ import LabReportsPage from './pages/client/LabReportsPage';
 
 import SupportCenterPage from './features/support/pages/SupportCenterPage';
 import { ReviewsManagementPage } from './features/reviews/pages/ReviewsManagementPage';
+import SettingsPage from './pages/SettingsPage';
 import { ModuleRouteGuard } from './context/PermissionContext';
 import { LocationManagementPage } from './features/locations/pages/LocationManagementPage';
 
@@ -348,6 +349,14 @@ function App() {
             element={
               <ModuleRouteGuard module="CLIENT_PORTALS" title="Client Portals">
                 <ClientPortals />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ModuleRouteGuard module="SETTINGS" title="Settings" fallbackSlugs={['USERS', 'ROLES']}>
+                <SettingsPage />
               </ModuleRouteGuard>
             }
           />
