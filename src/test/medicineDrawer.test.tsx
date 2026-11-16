@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import MedicineModal from '../components/MedicineModal';
 import MedicineStrengthModal from '../components/MedicineStrengthModal';
+import { PermissionProvider } from '../context/PermissionContext';
 import Pharmacy from '../pages/Pharmacy';
 import type { MedicineStrength } from '../types/inventory';
 import type { Medicine } from '../types/pharmacy';
@@ -218,22 +219,47 @@ describe('Medicine Drawer (Pharmacy & Inventory UI Enhancements)', () => {
 
   describe('Pharmacy Page Row Actions', () => {
     it('renders edit action icon in row actions and opens MedicineModal on click', async () => {
-      vi.mocked(api.get).mockResolvedValue({
-        data: {
-          medicines: [mockMedicine],
-          total: 1,
-          page: 1,
-          limit: 10,
-        },
+      localStorage.setItem('adminRole', 'ADMIN');
+      vi.mocked(api.get).mockImplementation(async (url: string) => {
+        if (url.includes('rbac/roles/')) {
+          return {
+            data: {
+              name: 'ADMIN',
+              is_system_role: true,
+              permissions: [
+                {
+                  module_slug: 'PHARMACY',
+                  can_read: true,
+                  can_create: true,
+                  can_update: true,
+                  can_delete: true,
+                  can_manage: true,
+                },
+              ],
+            },
+          };
+        }
+        return {
+          data: {
+            medicines: [mockMedicine],
+            total: 1,
+            page: 1,
+            limit: 10,
+          },
+        };
       });
 
-      renderWithProviders(<Pharmacy />);
+      renderWithProviders(
+        <PermissionProvider>
+          <Pharmacy />
+        </PermissionProvider>,
+      );
 
       await waitFor(() => {
         expect(screen.getByText('Augmentin 625 Duo')).toBeInTheDocument();
       });
 
-      const editBtn = screen.getByRole('button', { name: /Edit Augmentin 625 Duo/i });
+      const editBtn = await screen.findByRole('button', { name: /Edit Augmentin 625 Duo/i });
       expect(editBtn).toBeInTheDocument();
 
       fireEvent.click(editBtn);

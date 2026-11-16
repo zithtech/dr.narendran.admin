@@ -19,6 +19,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import { Avatar, Badge, cx } from '../../../components/ui/primitives';
+import { usePermission } from '../../../context/PermissionContext';
 import type {
   MedicalRecord,
   PatientDossier,
@@ -43,6 +44,11 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
   onDeleteClick,
 }) => {
   const navigate = useNavigate();
+  const { canCreate, canUpdate, canDelete } = usePermission();
+  const isRecordCreatable = canCreate('MEDICAL_RECORDS', ['PATIENTS']);
+  const isRecordUpdatable = canUpdate('MEDICAL_RECORDS', ['PATIENTS']);
+  const isRecordDeletable = canDelete('MEDICAL_RECORDS', ['PATIENTS']);
+
   const { patient, pendingPrescribedTests, records } = dossier;
   const [activeTab, setActiveTab] = useState<'records' | 'prescribed'>('records');
 
@@ -134,14 +140,16 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
             <span>Patient Timeline</span>
           </button>
 
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 h-7.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-            onClick={() => onUploadClick()}
-          >
-            <Plus size={13} strokeWidth={2.4} />
-            <span>Upload Record</span>
-          </button>
+          {isRecordCreatable && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 h-7.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              onClick={() => onUploadClick()}
+            >
+              <Plus size={13} strokeWidth={2.4} />
+              <span>Upload Record</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -231,13 +239,15 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
                         <span className="text-[11px] text-slate-500 max-w-sm">
                           Upload patient lab reports, discharge summaries, or diagnostic documents directly.
                         </span>
-                        <button
-                          type="button"
-                          className="mt-1.5 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium cursor-pointer shadow-2xs"
-                          onClick={() => onUploadClick()}
-                        >
-                          <Plus size={13} /> Upload First Record
-                        </button>
+                        {isRecordCreatable && (
+                          <button
+                            type="button"
+                            className="mt-1.5 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium cursor-pointer shadow-2xs"
+                            onClick={() => onUploadClick()}
+                          >
+                            <Plus size={13} /> Upload First Record
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -311,24 +321,28 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
                           >
                             <Download size={13} />
                           </button>
-                          <button
-                            type="button"
-                            className="p-1 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
-                            onClick={() => onEditClick(rec)}
-                            title="Edit metadata"
-                            aria-label="Edit"
-                          >
-                            <Pencil size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                            onClick={() => onDeleteClick(rec)}
-                            title="Delete record"
-                            aria-label="Delete"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          {isRecordUpdatable && (
+                            <button
+                              type="button"
+                              className="p-1 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                              onClick={() => onEditClick(rec)}
+                              title="Edit metadata"
+                              aria-label="Edit"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                          )}
+                          {isRecordDeletable && (
+                            <button
+                              type="button"
+                              className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                              onClick={() => onDeleteClick(rec)}
+                              title="Delete record"
+                              aria-label="Delete"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -417,14 +431,16 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
 
                       {/* Action */}
                       <td className="px-3.5 py-2 text-right whitespace-nowrap">
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 h-6 px-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold transition-colors shadow-2xs cursor-pointer"
-                          onClick={() => onUploadClick(item)}
-                        >
-                          <Upload size={11} />
-                          <span>Upload Report</span>
-                        </button>
+                        {isRecordCreatable && (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 h-6 px-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold transition-colors shadow-2xs cursor-pointer"
+                            onClick={() => onUploadClick(item)}
+                          >
+                            <Upload size={11} />
+                            <span>Upload Report</span>
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))

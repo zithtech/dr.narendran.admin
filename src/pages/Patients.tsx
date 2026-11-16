@@ -146,6 +146,7 @@ export default function Patients() {
   return (
     <>
       <DataView
+        moduleSlug="PATIENTS"
         title="Patients"
         subtitle="Patient records and hospital assignments."
         icon={HeartPulse}

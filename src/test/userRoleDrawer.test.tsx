@@ -155,6 +155,39 @@ describe('User Accounts & Roles & Permissions Drawers', () => {
 
       expect(screen.getByText(/Username is required/i)).toBeInTheDocument();
     });
+
+    it('renders forgot password option and allows generating a secure password or resetting to default', async () => {
+      renderWithProviders(
+        <UserModal
+          isOpen={true}
+          onClose={vi.fn()}
+          userAccount={mockUser}
+          onSave={vi.fn()}
+        />,
+      );
+
+      // Verify "Forgot password?" is present in both header and helper positions
+      const forgotBtns = screen.getAllByRole('button', { name: /Forgot password\?/i });
+      expect(forgotBtns.length).toBeGreaterThanOrEqual(1);
+
+      // Click "Forgot password?" to expand helper panel
+      fireEvent.click(forgotBtns[0]!);
+
+      expect(screen.getByText(/Forgot Password & Reset Helper/i)).toBeInTheDocument();
+      expect(screen.getByText(/Manage credentials & recovery for @drsmith_cardio/i)).toBeInTheDocument();
+
+      // Click "Generate Random"
+      const generateBtn = screen.getByRole('button', { name: /Generate Random/i });
+      fireEvent.click(generateBtn);
+
+      expect(screen.getByText(/Secure password generated and applied/i)).toBeInTheDocument();
+
+      // Click "Set Welcome@123"
+      const defaultBtn = screen.getByRole('button', { name: /Set Welcome@123/i });
+      fireEvent.click(defaultBtn);
+
+      expect(screen.getByText(/Temporary default password applied \(Welcome@123\)/i)).toBeInTheDocument();
+    });
   });
 
   describe('RoleModal (Roles & Permissions Drawer)', () => {
@@ -165,7 +198,9 @@ describe('User Accounts & Roles & Permissions Drawers', () => {
 
       expect(screen.getAllByText('Create Role & Permissions').length).toBeGreaterThanOrEqual(1);
       expect(
-        screen.getByText(/Define a custom staff role and configure read, write, and delete permissions/i),
+        screen.getByText(
+          /Define a custom staff role and configure create, read, update, delete, and manage permissions/i,
+        ),
       ).toBeInTheDocument();
       expect(screen.getByLabelText(/Role Name/i)).toBeInTheDocument();
       expect(screen.getByText(/Role Identity/i)).toBeInTheDocument();
@@ -179,6 +214,13 @@ describe('User Accounts & Roles & Permissions Drawers', () => {
         expect(screen.getByText('Pharmacy')).toBeInTheDocument();
         expect(screen.getByText('Labs')).toBeInTheDocument();
       });
+
+      expect(screen.getByLabelText('Create permission for Appointments')).toBeInTheDocument();
+      expect(screen.getByLabelText('Read permission for Appointments')).toBeInTheDocument();
+      expect(screen.getByLabelText('Update permission for Appointments')).toBeInTheDocument();
+      expect(screen.getByLabelText('Delete permission for Appointments')).toBeInTheDocument();
+      expect(screen.getByLabelText('Manage permission for Appointments')).toBeInTheDocument();
+      expect(screen.getAllByText('0 / 5').length).toBe(3);
     });
 
     it('allows toggling permissions and batch actions in RoleModal', async () => {
@@ -190,11 +232,24 @@ describe('User Accounts & Roles & Permissions Drawers', () => {
         expect(screen.getByText('Appointments')).toBeInTheDocument();
       });
 
-      // Click Full Access batch button
+      // Toggling Manage grants all 5 options for that module
+      const manageCheckbox = screen.getByLabelText('Manage permission for Appointments');
+      fireEvent.click(manageCheckbox);
+      expect(screen.getByText(/5 active grants/i)).toBeInTheDocument();
+      expect(screen.getByText('5 / 5')).toBeInTheDocument();
+
+      // Unchecking Update automatically clears Manage leaving Create, Read, Delete (3 / 5)
+      const updateCheckbox = screen.getByLabelText('Update permission for Appointments');
+      fireEvent.click(updateCheckbox);
+      expect(screen.getByText(/3 active grants/i)).toBeInTheDocument();
+      expect(screen.getByText('3 / 5')).toBeInTheDocument();
+      expect(manageCheckbox).not.toBeChecked();
+
+      // Click Full Access batch button (3 modules * 5 options = 15 active grants)
       const fullAccessBtn = screen.getByText('Full Access');
       fireEvent.click(fullAccessBtn);
 
-      expect(screen.getByText(/9 active grants/i)).toBeInTheDocument();
+      expect(screen.getByText(/15 active grants/i)).toBeInTheDocument();
 
       // Click Reset batch button
       const resetBtn = screen.getByText('Reset');

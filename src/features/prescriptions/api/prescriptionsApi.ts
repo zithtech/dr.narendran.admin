@@ -12,6 +12,13 @@ export interface PrescriptionMedicineItem {
   food_instruction?: string | undefined;
   instructions?: string | undefined;
   prescribed_quantity?: number | undefined;
+  generic_name?: string | undefined;
+  dosage_form?: string | undefined;
+  manufacturer?: string | undefined;
+  therapeutic_category?: string | undefined;
+  mrp?: number | null | undefined;
+  final_price?: number | null | undefined;
+  available_quantity?: number | null | undefined;
 }
 
 export interface PrescribedLabTestItem {
@@ -23,7 +30,10 @@ export interface PrescribedLabTestItem {
   lab_id?: string | undefined;
   lab_name?: string | undefined;
   lab_city?: string | undefined;
+  lab_address?: string | undefined;
   lab_phone?: string | undefined;
+  lab_email?: string | undefined;
+  lab_timings?: string | undefined;
 }
 
 export interface Prescription {
@@ -157,6 +167,35 @@ export const prescriptionsApi = {
   getPdfDownloadUrl(id: string): string {
     const token = localStorage.getItem('adminToken') || '';
     return `/api/prescriptions/${id}/pdf?token=${encodeURIComponent(token)}`;
+  },
+
+  async downloadPdf(id: string, filenameFallback?: string): Promise<void> {
+    const res = await api.get<Blob>(`/prescriptions/${id}/pdf`, {
+      responseType: 'blob',
+    });
+    const blob =
+      res.data instanceof Blob
+        ? res.data
+        : new Blob([res.data], { type: 'application/pdf' });
+    const disposition =
+      typeof res.headers?.['content-disposition'] === 'string'
+        ? res.headers['content-disposition']
+        : '';
+    const match = disposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i);
+    const filename =
+      match?.[1]?.trim() || filenameFallback || `prescription-${id.slice(0, 8)}.pdf`;
+
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.setTimeout(() => {
+      window.URL.revokeObjectURL(blobUrl);
+    }, 1000);
   },
 
   getHtmlPreviewUrl(id: string): string {

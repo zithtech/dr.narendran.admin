@@ -20,6 +20,7 @@ import {
 import React, { useState } from 'react';
 
 import { getErrorMessage } from '../../../utils/errors';
+import { usePermission } from '../../../context/PermissionContext';
 import { ordersApi } from '../services/ordersApi';
 import type {
   DeliveryMethodType,
@@ -70,6 +71,8 @@ export const OrderDeliveryManager: React.FC<OrderDeliveryManagerProps> = ({
   onUpdated,
 }) => {
   const { message } = App.useApp();
+  const { canUpdate } = usePermission();
+  const isOrderUpdatable = canUpdate('ORDERS');
 
   // Extraction with nested and flat fallbacks using nullish coalescing
   const savedMethod = normalizeDeliveryMethod(delivery?.delivery_method);
@@ -289,7 +292,7 @@ export const OrderDeliveryManager: React.FC<OrderDeliveryManagerProps> = ({
           <Truck size={15} className="text-teal-600" />
           <span>Delivery & Fulfillment</span>
         </div>
-        {!isEditing && !isTerminalStatus && (
+        {!isEditing && !isTerminalStatus && isOrderUpdatable && (
           <button
             type="button"
             onClick={() => setIsEditing(true)}

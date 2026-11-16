@@ -5,8 +5,6 @@ import {
   RefreshCw,
   Eye,
   ShieldAlert,
-  ChevronLeft,
-  ChevronRight,
   Stethoscope,
   CheckCircle,
   AlertTriangle,
@@ -18,11 +16,15 @@ import type {
   DoctorReview,
   ReviewModerationLog,
 } from '../types/reviews';
+import { usePermission } from '../../../context/PermissionContext';
 import { reviewsApi } from '../services/reviewsApi';
 import { ReviewDetailsModal } from '../components/ReviewDetailsModal';
 import { ReviewModerationModal } from '../components/ReviewModerationModal';
+import { CommonPagination } from '../../../components/ui/CommonTable';
 
 export default function DoctorReviewsPage() {
+  const { canUpdate } = usePermission();
+  const canModerate = canUpdate('REVIEWS');
   const [activeTab, setActiveTab] = useState<'reviews' | 'summary'>('reviews');
 
   // Reviews listing state
@@ -117,6 +119,7 @@ export default function DoctorReviewsPage() {
   };
 
   const handleOpenModerate = (review: DoctorReview) => {
+    if (!canModerate) return;
     setSelectedReview(review);
     setIsModerateOpen(true);
   };
@@ -376,13 +379,15 @@ export default function DoctorReviewsPage() {
                               >
                                 <Eye size={15} />
                               </button>
-                              <button
-                                onClick={() => handleOpenModerate(r)}
-                                className="rounded-lg p-1.5 text-teal-600 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-950/40"
-                                title="Moderate Review"
-                              >
-                                <ShieldAlert size={15} />
-                              </button>
+                              {canModerate && (
+                                <button
+                                  onClick={() => handleOpenModerate(r)}
+                                  className="rounded-lg p-1.5 text-teal-600 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-950/40"
+                                  title="Moderate Review"
+                                >
+                                  <ShieldAlert size={15} />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -394,29 +399,16 @@ export default function DoctorReviewsPage() {
             </div>
 
             {/* Pagination Controls */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 border-t border-slate-200 px-4 py-3 dark:border-slate-800 text-xs text-center sm:text-left">
-              <span className="text-slate-500">
-                Page <span className="font-bold text-slate-800 dark:text-slate-200">{page}</span> of{' '}
-                <span className="font-bold text-slate-800 dark:text-slate-200">{totalPages}</span> ({totalCount} total)
-              </span>
-
-              <div className="flex items-center gap-2">
-                <button
-                  disabled={page <= 1 || loading}
-                  onClick={() => fetchReviews(page - 1)}
-                  className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                >
-                  <ChevronLeft size={14} /> Previous
-                </button>
-                <button
-                  disabled={page >= totalPages || loading}
-                  onClick={() => fetchReviews(page + 1)}
-                  className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                >
-                  Next <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
+            <CommonPagination
+              total={totalCount}
+              startIdx={totalCount === 0 ? 0 : (page - 1) * 15 + 1}
+              endIdx={Math.min(page * 15, totalCount)}
+              nounPlural="reviews"
+              page={page}
+              pageCount={totalPages}
+              perPage={15}
+              onPageChange={(newPage) => void fetchReviews(newPage)}
+            />
           </div>
         </>
       ) : (
@@ -507,7 +499,7 @@ export default function DoctorReviewsPage() {
         moderationLogs={moderationLogs}
         isOpen={isDetailsOpen}
         onClose={() => setIsDetailsOpen(false)}
-        onOpenModerate={(r) => handleOpenModerate(r)}
+        {...(canModerate ? { onOpenModerate: (r: DoctorReview) => handleOpenModerate(r) } : {})}
       />
 
       {/* Moderation Modal */}

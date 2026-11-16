@@ -14,6 +14,7 @@ import { OrderDetailsDrawer } from '../components/OrderDetailsDrawer';
 import { OrderStatusBadge } from '../components/OrderStatusBadge';
 import { PaymentStatusBadge } from '../components/PaymentStatusBadge';
 import { UpdateOrderStatusModal } from '../components/UpdateOrderStatusModal';
+import { usePermission } from '../../../context/PermissionContext';
 import type { OrderListItem } from '../types/orders';
 
 function formatCurrency(val: number | string | null | undefined): string {
@@ -42,6 +43,8 @@ const FACETS: Facet<OrderListItem>[] = [
 ];
 
 export const OrdersPage: React.FC = () => {
+  const { canUpdate } = usePermission();
+  const isOrderUpdatable = canUpdate('ORDERS');
   const resource = useResource<OrderListItem>('orders?limit=250', 'orders');
 
   // Drawer & Modal State
@@ -217,6 +220,7 @@ export const OrdersPage: React.FC = () => {
         icon={ShoppingBag}
         noun="order"
         nounPlural="orders"
+        moduleSlug="ORDERS"
         resource={resource}
         searchPlaceholder="Search order #, patient name, phone..."
         searchFields={(o) => [o.order_number, o.patient?.name, o.patient?.phone, o.medicines_preview, o.delivery_address]}
@@ -242,7 +246,7 @@ export const OrdersPage: React.FC = () => {
               <Eye size={12} />
               <span>Details</span>
             </button>
-            {o.status !== 'delivered' && o.status !== 'cancelled' && (
+            {o.status !== 'delivered' && o.status !== 'cancelled' && isOrderUpdatable && (
               <button
                 type="button"
                 className="ui-btn ui-btn-primary ui-btn-xs"

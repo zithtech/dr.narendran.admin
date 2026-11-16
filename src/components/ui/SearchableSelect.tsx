@@ -1,6 +1,7 @@
 import {
   Check,
   ChevronDown,
+  Loader2,
   Search,
   X,
 } from 'lucide-react';
@@ -31,6 +32,7 @@ export interface SearchableSelectProps {
   placeholder?: string | undefined;
   searchPlaceholder?: string | undefined;
   disabled?: boolean | undefined;
+  loading?: boolean | undefined;
   required?: boolean | undefined;
   id?: string | undefined;
   name?: string | undefined;
@@ -59,6 +61,7 @@ export function SearchableSelect({
   placeholder = 'Select an option...',
   searchPlaceholder = 'Search options...',
   disabled = false,
+  loading = false,
   required = false,
   id,
   name,
@@ -580,14 +583,22 @@ export function SearchableSelect({
               <X size={12} />
             </span>
           )}
-          <ChevronDown
-            size={13}
-            style={{
-              color: isOpen ? brandPrimary : pillIsActive ? brandPrimary : '#94a3b8',
-              transition: 'transform 0.18s ease',
-              transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-            }}
-          />
+          {loading ? (
+            <Loader2
+              size={13}
+              className="animate-spin"
+              style={{ color: brandPrimary, flexShrink: 0 }}
+            />
+          ) : (
+            <ChevronDown
+              size={13}
+              style={{
+                color: isOpen ? brandPrimary : pillIsActive ? brandPrimary : '#94a3b8',
+                transition: 'transform 0.18s ease',
+                transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+              }}
+            />
+          )}
         </div>
       </button>
 
@@ -651,7 +662,23 @@ export function SearchableSelect({
               }
             }}
           >
-            {filteredOptions.length === 0 ? (
+            {loading && filteredOptions.length === 0 ? (
+              <div
+                style={{
+                  padding: '16px 14px',
+                  textAlign: 'center',
+                  fontSize: 12,
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <Loader2 size={14} className="animate-spin" style={{ color: brandPrimary }} />
+                <span>Loading options...</span>
+              </div>
+            ) : filteredOptions.length === 0 ? (
               <div
                 style={{
                   padding: '12px 14px',

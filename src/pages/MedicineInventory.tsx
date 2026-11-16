@@ -3,8 +3,6 @@ import {
   AlertTriangle,
   Boxes,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   Download,
   FileSpreadsheet,
   History,
@@ -29,6 +27,8 @@ import StockAdjustModal from '../components/StockAdjustModal';
 import StockHistoryModal from '../components/StockHistoryModal';
 import StockInModal from '../components/StockInModal';
 import StockOutModal from '../components/StockOutModal';
+import { usePermission } from '../context/PermissionContext';
+import { CommonPagination } from '../components/ui/CommonTable';
 import { Alert, Badge, cx, StatusDot } from '../components/ui/primitives';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { timeAgo } from '../lib/format';
@@ -60,11 +60,14 @@ const DOSAGE_FORMS = [
 ];
 
 const SKELETON_ROWS = Array.from({ length: 6 }, (_, i) => i);
-const PAGE_SIZES = [10, 15, 25, 50, 100];
 
 export default function MedicineInventory() {
   const { message } = App.useApp();
   const [searchParams] = useSearchParams();
+  const { canCreate, canUpdate } = usePermission();
+
+  const isInvCreatable = canCreate('INVENTORY');
+  const isInvUpdatable = canUpdate('INVENTORY');
   const urlSearch = searchParams.get('search') ?? '';
 
   // Data state
@@ -247,14 +250,6 @@ export default function MedicineInventory() {
   const startIdx = (page - 1) * limit;
   const endIdx = Math.min(startIdx + variants.length, totalVariants);
 
-  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1)
-    .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-    .reduce<(number | string)[]>((acc, p, idx, arr) => {
-      if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...');
-      acc.push(p);
-      return acc;
-    }, []);
-
   return (
     <div className="ui-page space-y-3">
       {/* ── Compact Page Header Matching Patients Page ── */}
@@ -303,27 +298,31 @@ export default function MedicineInventory() {
             <span>Template</span>
           </button>
 
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-            onClick={() => setIsImportModalOpen(true)}
-            title="Bulk import medicines and strength variants from Excel"
-          >
-            <FileSpreadsheet size={13} className="text-slate-500" />
-            <span>Import Excel</span>
-          </button>
+          {isInvCreatable && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              onClick={() => setIsImportModalOpen(true)}
+              title="Bulk import medicines and strength variants from Excel"
+            >
+              <FileSpreadsheet size={13} className="text-slate-500" />
+              <span>Import Excel</span>
+            </button>
+          )}
 
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 h-7.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-            onClick={() => {
-              setSelectedVariant(null);
-              setIsVariantModalOpen(true);
-            }}
-          >
-            <Plus size={13} strokeWidth={2.4} />
-            <span>Add Strength Variant</span>
-          </button>
+          {isInvCreatable && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 h-7.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              onClick={() => {
+                setSelectedVariant(null);
+                setIsVariantModalOpen(true);
+              }}
+            >
+              <Plus size={13} strokeWidth={2.4} />
+              <span>Add Strength Variant</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -467,8 +466,8 @@ export default function MedicineInventory() {
         </div>
       </div>
 
-      {/* ── Main Unified Container: Filters Toolbar + Table + Pagination (Matching Patients Page Design) ── */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl shadow-2xs overflow-hidden flex flex-col">
+      {/* ── Main Unified Container: Filters Toolbar + Table + Pagination (Matching SupportCenterPage & Patients Page Design) ── */}
+      <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col">
         {/* ── Combined Filter Toolbar: Tabs on Left, Search & Dropdowns on Right ── */}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between px-3.5 py-2.5 border-b border-slate-100 bg-white">
           {/* Left: Quick stock filter tabs */}
@@ -764,47 +763,51 @@ export default function MedicineInventory() {
                       {/* Inventory Actions */}
                       <td className="px-3.5 py-2 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
-                          {/* Stock In */}
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-emerald-200 bg-emerald-50 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100/70 transition-colors shadow-2xs cursor-pointer"
-                            onClick={() => {
-                              setSelectedVariant(v);
-                              setIsStockInModalOpen(true);
-                            }}
-                            title="Receive Stock"
-                          >
-                            <PackagePlus size={12} />
-                            <span>Stock In</span>
-                          </button>
+                          {isInvUpdatable && (
+                            <>
+                              {/* Stock In */}
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-emerald-200 bg-emerald-50 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100/70 transition-colors shadow-2xs cursor-pointer"
+                                onClick={() => {
+                                  setSelectedVariant(v);
+                                  setIsStockInModalOpen(true);
+                                }}
+                                title="Receive Stock"
+                              >
+                                <PackagePlus size={12} />
+                                <span>Stock In</span>
+                              </button>
 
-                          {/* Stock Out */}
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-slate-200 bg-white text-[11px] font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
-                            onClick={() => {
-                              setSelectedVariant(v);
-                              setIsStockOutModalOpen(true);
-                            }}
-                            title="Issue / Dispense Stock"
-                          >
-                            <PackageMinus size={12} />
-                            <span>Stock Out</span>
-                          </button>
+                              {/* Stock Out */}
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-slate-200 bg-white text-[11px] font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+                                onClick={() => {
+                                  setSelectedVariant(v);
+                                  setIsStockOutModalOpen(true);
+                                }}
+                                title="Issue / Dispense Stock"
+                              >
+                                <PackageMinus size={12} />
+                                <span>Stock Out</span>
+                              </button>
 
-                          {/* Adjust Count */}
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-slate-200 bg-white text-[11px] font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
-                            onClick={() => {
-                              setSelectedVariant(v);
-                              setIsAdjustModalOpen(true);
-                            }}
-                            title="Reconcile Physical Count"
-                          >
-                            <Scale size={12} />
-                            <span>Adjust</span>
-                          </button>
+                              {/* Adjust Count */}
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-slate-200 bg-white text-[11px] font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+                                onClick={() => {
+                                  setSelectedVariant(v);
+                                  setIsAdjustModalOpen(true);
+                                }}
+                                title="Reconcile Physical Count"
+                              >
+                                <Scale size={12} />
+                                <span>Adjust</span>
+                              </button>
+                            </>
+                          )}
 
                           {/* History */}
                           <button
@@ -821,18 +824,20 @@ export default function MedicineInventory() {
                           </button>
 
                           {/* Edit Variant */}
-                          <button
-                            type="button"
-                            className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                            onClick={() => {
-                              setSelectedVariant(v);
-                              setIsVariantModalOpen(true);
-                            }}
-                            title="Edit Strength Configuration"
-                            aria-label="Edit Variant"
-                          >
-                            <Pencil size={13} />
-                          </button>
+                          {isInvUpdatable && (
+                            <button
+                              type="button"
+                              className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                              onClick={() => {
+                                setSelectedVariant(v);
+                                setIsVariantModalOpen(true);
+                              }}
+                              title="Edit Strength Configuration"
+                              aria-label="Edit Variant"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -843,88 +848,21 @@ export default function MedicineInventory() {
           </table>
         </div>
 
-        {/* ── Footer / Pagination (Matching Patients Page DataView) ── */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 sm:px-5 py-3 sm:py-3.5 border-t border-slate-100 bg-white text-xs text-slate-500 w-full">
-          <div className="text-center sm:text-left w-full sm:w-auto">
-            {totalVariants === 0 ? (
-              'No formulations found'
-            ) : (
-              <>
-                Showing{' '}
-                <span className="font-semibold text-slate-700">
-                  {startIdx + 1}–{endIdx}
-                </span>{' '}
-                of <span className="font-semibold text-slate-700">{totalVariants}</span>{' '}
-                formulations
-              </>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto">
-            <div className="flex items-center gap-1.5 mr-1 sm:mr-2 shrink-0">
-              <span className="text-slate-500">Per page</span>
-              <select
-                value={limit}
-                onChange={(e) => {
-                  setLimit(Number(e.target.value));
-                  setPage(1);
-                }}
-                className="h-7 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
-                aria-label="Rows per page"
-              >
-                {PAGE_SIZES.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1 || loading}
-                aria-label="Previous page"
-                className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
-              >
-                <ChevronLeft size={14} />
-              </button>
-
-              {pageNumbers.map((p, idx) =>
-                typeof p === 'number' ? (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setPage(p)}
-                    className={cx(
-                      'w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer shadow-2xs',
-                      page === p
-                        ? 'border-blue-600 bg-blue-600 text-white'
-                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
-                    )}
-                  >
-                    {p}
-                  </button>
-                ) : (
-                  <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 select-none">
-                    …
-                  </span>
-                ),
-              )}
-
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages || loading}
-                aria-label="Next page"
-                className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* ── Footer / Pagination (Matching SupportCenterPage & CommonTable) ── */}
+        <CommonPagination
+          total={totalVariants}
+          startIdx={totalVariants === 0 ? 0 : startIdx + 1}
+          endIdx={endIdx}
+          nounPlural="formulations"
+          page={page}
+          pageCount={totalPages}
+          perPage={limit}
+          onPageChange={(p) => setPage(p)}
+          onPerPageChange={(n) => {
+            setLimit(n);
+            setPage(1);
+          }}
+        />
       </div>
 
       {/* Modals */}

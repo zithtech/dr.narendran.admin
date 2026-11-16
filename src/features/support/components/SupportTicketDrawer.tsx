@@ -31,7 +31,7 @@ import {
 import React, { useCallback, useEffect, useState } from "react";
 
 import { getErrorMessage } from "../../../utils/errors";
-// import { adminSupportApi, type TicketDetailsResponse } from "../api/adminSupportApi";
+import { usePermission } from "../../../context/PermissionContext";
 import { adminSupportApi, type TicketDetailsResponse } from "../api/adminSupportApi";
 import type { AdminAgent, TicketPriority, TicketStatus } from "../types/support";
 
@@ -232,6 +232,11 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
   };
 
   const isDoctor = ticket?.user_type?.toUpperCase() === "DOCTOR";
+  const { canUpdate } = usePermission();
+  const canModify = isDoctor
+    ? canUpdate('DOCTOR_SUPPORT', ['SUPPORT'])
+    : canUpdate('PATIENT_SUPPORT', ['SUPPORT']);
+
   const rawDocName = ticket?.doctor_name || ticket?.user_name || "Doctor";
   const formattedDocName = rawDocName.startsWith("Dr.") ? rawDocName : `Dr. ${rawDocName.replace(/^Dr\.?\s*/i, "")}`;
 
@@ -272,26 +277,28 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
         </div>
       }
       extra={
-        <Space size="small" wrap>
-          {ticket?.status !== "RESOLVED" && ticket?.status !== "CLOSED" && (
-            <Button
-              type="primary"
-              style={{ backgroundColor: "#52c41a" }}
-              icon={<CheckCircle2 size={15} />}
-              onClick={() => setResolutionModalVisible(true)}
-            >
-              Mark Resolved
-            </Button>
-          )}
-          {ticket?.status === "RESOLVED" && (
-            <Button onClick={() => { void handleCloseTicket(); }}>Close Ticket</Button>
-          )}
-          {(ticket?.status === "RESOLVED" || ticket?.status === "CLOSED") && (
-            <Button onClick={() => { void handleReopenTicket(); }} icon={<RefreshCw size={15} />}>
-              Reopen Ticket
-            </Button>
-          )}
-        </Space>
+        canModify ? (
+          <Space size="small" wrap>
+            {ticket?.status !== "RESOLVED" && ticket?.status !== "CLOSED" && (
+              <Button
+                type="primary"
+                style={{ backgroundColor: "#52c41a" }}
+                icon={<CheckCircle2 size={15} />}
+                onClick={() => setResolutionModalVisible(true)}
+              >
+                Mark Resolved
+              </Button>
+            )}
+            {ticket?.status === "RESOLVED" && (
+              <Button onClick={() => { void handleCloseTicket(); }}>Close Ticket</Button>
+            )}
+            {(ticket?.status === "RESOLVED" || ticket?.status === "CLOSED") && (
+              <Button onClick={() => { void handleReopenTicket(); }} icon={<RefreshCw size={15} />}>
+                Reopen Ticket
+              </Button>
+            )}
+          </Space>
+        ) : null
       }
       placement="right"
       width={880}
@@ -488,6 +495,7 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
                       style={{ width: "100%" }}
                       placeholder="Unassigned"
                       allowClear
+                      disabled={!canModify}
                       value={ticket.assigned_to ?? undefined}
                       onChange={(val) => {
                         void handleAssignChange(val ?? null);
@@ -629,6 +637,7 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
                       style={{ width: "100%" }}
                       placeholder="Unassigned"
                       allowClear
+                      disabled={!canModify}
                       value={ticket.assigned_to ?? undefined}
                       onChange={(val) => {
                         void handleAssignChange(val ?? null);
@@ -912,7 +921,8 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
           </div>
 
           {/* Action / Reply Composer */}
-          <Card size="small" style={{ borderRadius: 8 }}>
+          {canModify && (
+            <Card size="small" style={{ borderRadius: 8 }}>
             <Tabs
               defaultActiveKey="reply"
               items={[
@@ -1010,6 +1020,7 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
               ]}
             />
           </Card>
+          )}
         </div>
       )}
 

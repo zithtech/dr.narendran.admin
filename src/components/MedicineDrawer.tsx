@@ -14,6 +14,7 @@ import {
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
+import { usePermission } from '../context/PermissionContext';
 import { formatDate, timeAgo } from '../lib/format';
 import type { Medicine } from '../types/pharmacy';
 import api from '../utils/api';
@@ -37,6 +38,10 @@ export default function MedicineDrawer({
   onStatusChange,
 }: MedicineDrawerProps) {
   const navigate = useNavigate();
+  const { canCreate, canUpdate, canView } = usePermission();
+  const isPharmCreatable = canCreate('PHARMACY');
+  const isPharmUpdatable = canUpdate('PHARMACY');
+  const isInventoryViewable = canView('INVENTORY');
   const [togglingStatus, setTogglingStatus] = useState(false);
 
   if (!medicine) return null;
@@ -44,6 +49,7 @@ export default function MedicineDrawer({
   const isActive = medicine.status === 'Active';
 
   const handleToggleStatus = async () => {
+    if (!isPharmUpdatable) return;
     setTogglingStatus(true);
     try {
       const nextStatus = isActive ? 'Inactive' : 'Active';
@@ -138,33 +144,39 @@ export default function MedicineDrawer({
       hero={hero}
       stats={stats}
       footer={
-        <div className="flex w-full items-center justify-between gap-2">
-          <button
-            type="button"
-            className="ui-btn"
-            onClick={() => {
-              void handleToggleStatus();
-            }}
-            disabled={togglingStatus}
-          >
-            <Power size={14} />
-            {togglingStatus
-              ? 'Updating...'
-              : isActive
-                ? 'Deactivate Medicine'
-                : 'Activate Medicine'}
+        isPharmUpdatable ? (
+          <div className="flex w-full items-center justify-between gap-2">
+            <button
+              type="button"
+              className="ui-btn"
+              onClick={() => {
+                void handleToggleStatus();
+              }}
+              disabled={togglingStatus}
+            >
+              <Power size={14} />
+              {togglingStatus
+                ? 'Updating...'
+                : isActive
+                  ? 'Deactivate Medicine'
+                  : 'Activate Medicine'}
+            </button>
+            <button
+              type="button"
+              className="ui-btn ui-btn-primary"
+              onClick={() => {
+                onClose();
+                onEdit(medicine);
+              }}
+            >
+              <Edit2 size={14} /> Edit Medicine
+            </button>
+          </div>
+        ) : (
+          <button type="button" className="ui-btn" onClick={onClose}>
+            Close
           </button>
-          <button
-            type="button"
-            className="ui-btn ui-btn-primary"
-            onClick={() => {
-              onClose();
-              onEdit(medicine);
-            }}
-          >
-            <Edit2 size={14} /> Edit Medicine
-          </button>
-        </div>
+        )
       }
     >
       <div className="space-y-4">
@@ -178,7 +190,7 @@ export default function MedicineDrawer({
               </h3>
             </div>
             <div className="flex items-center gap-2">
-              {onAddVariant && (
+              {onAddVariant && isPharmCreatable && (
                 <button
                   type="button"
                   onClick={() => onAddVariant(medicine)}
@@ -187,17 +199,19 @@ export default function MedicineDrawer({
                   <Plus size={13} /> Add Variant
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  navigate(`/inventory?search=${encodeURIComponent(medicine.medicine_name)}`);
-                }}
-                className="inline-flex cursor-pointer items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                title="Open in Medicine Inventory to manage physical stock and batches"
-              >
-                <Boxes size={13} /> Inventory <ArrowRight size={12} />
-              </button>
+              {isInventoryViewable && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    navigate(`/inventory?search=${encodeURIComponent(medicine.medicine_name)}`);
+                  }}
+                  className="inline-flex cursor-pointer items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                  title="Open in Medicine Inventory to manage physical stock and batches"
+                >
+                  <Boxes size={13} /> Inventory <ArrowRight size={12} />
+                </button>
+              )}
             </div>
           </div>
 

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { type Column, DataView, PrimaryCell } from '../components/ui/DataView';
 import { StatusDot } from '../components/ui/primitives';
 import ClientPortalModal, { type ClientPortalUser } from '../components/ClientPortalModal';
+import { usePermission } from '../context/PermissionContext';
 import { useResource } from '../hooks/useResource';
 import { formatDate } from '../lib/format';
 import api from '../utils/api';
@@ -12,11 +13,15 @@ import api from '../utils/api';
 export default function ClientPortals() {
   const resource = useResource<ClientPortalUser>('client-portals', 'client portals');
   const { message, modal } = App.useApp();
+  const { canCreate, canUpdate } = usePermission();
+  const isCreatable = canCreate('CLIENT_PORTALS');
+  const isUpdatable = canUpdate('CLIENT_PORTALS');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<ClientPortalUser | null>(null);
 
   const openEditor = (u: ClientPortalUser | null) => {
+    if (u ? !isUpdatable : !isCreatable) return;
     setEditingUser(u);
     setIsModalOpen(true);
   };
@@ -75,7 +80,7 @@ export default function ClientPortals() {
         <PrimaryCell
           name={u.email}
           sub={`Portal Role: ${u.role}`}
-          onOpen={() => openEditor(u)}
+          {...(isUpdatable ? { onOpen: () => openEditor(u) } : {})}
         />
       ),
     },
@@ -106,15 +111,17 @@ export default function ClientPortals() {
               <span>Copy Link</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => void resendInvite(u)}
-              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded transition-colors"
-              title="Resend invitation email"
-            >
-              <Mail size={13} />
-              <span>Resend Email</span>
-            </button>
+            {isUpdatable && (
+              <button
+                type="button"
+                onClick={() => void resendInvite(u)}
+                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded transition-colors"
+                title="Resend invitation email"
+              >
+                <Mail size={13} />
+                <span>Resend Email</span>
+              </button>
+            )}
 
             <a
               href={url}
@@ -146,6 +153,7 @@ export default function ClientPortals() {
   return (
     <>
       <DataView
+        moduleSlug="CLIENT_PORTALS"
         title="Client Portals"
         subtitle="Manage credentials, unique portal login links, and email invites for external clients and lab partners."
         icon={ExternalLink}

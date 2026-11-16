@@ -2,7 +2,6 @@ import { App } from 'antd';
 import dayjs from 'dayjs';
 import {
   ArrowRight,
-  ChevronLeft,
   ChevronRight,
   Clock,
   FileSpreadsheet,
@@ -14,20 +13,22 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 
-import { exportToCSV } from '../components/ui/CommonTable';
+import { CommonPagination, exportToCSV } from '../components/ui/CommonTable';
 import { PrimaryCell } from '../components/ui/DataView';
 import { Alert, cx, StatusDot } from '../components/ui/primitives';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { usePermission } from '../context/PermissionContext';
 import { patientTimelinesApi } from '../features/timelines/services/patientTimelinesApi';
 import type { AdminPatientListItem } from '../features/timelines/types/patientTimelines';
 import { formatDate, formatPatientAge, timeAgo, titleCase } from '../lib/format';
 
 const SKELETON_ROWS = Array.from({ length: 6 }, (_, i) => i);
-const PAGE_SIZES = [10, 20, 50, 100];
 
 export default function PatientTimelinesPage() {
   const navigate = useNavigate();
   const { message } = App.useApp();
+  const { canView } = usePermission();
+  const canReadTimelines = canView('PATIENT_TIMELINES', ['PATIENTS']);
 
   const [patients, setPatients] = useState<AdminPatientListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -160,14 +161,6 @@ export default function PatientTimelinesPage() {
     );
     void message.success(`Exported ${patients.length} patient records to CSV`);
   };
-
-  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1)
-    .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-    .reduce<(number | string)[]>((acc, p, idx, arr) => {
-      if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...');
-      acc.push(p);
-      return acc;
-    }, []);
 
   return (
     <div className="ui-page space-y-3">
@@ -505,18 +498,20 @@ export default function PatientTimelinesPage() {
 
                       {/* Action Button: View Timeline */}
                       <td className="w-32 px-3.5 py-2 text-right whitespace-nowrap align-middle">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/patient-timelines/${patient.id}`);
-                          }}
-                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-blue-600 hover:text-blue-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-                          title="View clinical timeline"
-                        >
-                          <span>View Timeline</span>
-                          <ChevronRight size={13} />
-                        </button>
+                        {canReadTimelines && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/patient-timelines/${patient.id}`);
+                            }}
+                            className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-blue-600 hover:text-blue-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                            title="View clinical timeline"
+                          >
+                            <span>View Timeline</span>
+                            <ChevronRight size={13} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -526,88 +521,21 @@ export default function PatientTimelinesPage() {
           </table>
         </div>
 
-        {/* ── Footer / Pagination Section (Matching Patients Page Design) ── */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 sm:px-5 py-3 sm:py-3.5 border-t border-slate-100 bg-white text-xs text-slate-500 w-full">
-          <div className="text-center sm:text-left w-full sm:w-auto">
-            {patients.length === 0 ? (
-              'No results'
-            ) : (
-              <>
-                Showing{' '}
-                <span className="font-semibold text-slate-700">
-                  {startIdx + 1}–{endIdx}
-                </span>{' '}
-                of <span className="font-semibold text-slate-700">{totalCount}</span> registered
-                patients
-              </>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto">
-            <div className="flex items-center gap-1.5 mr-1 sm:mr-2 shrink-0">
-              <span className="text-slate-500">Per page</span>
-              <select
-                value={limit}
-                onChange={(e) => {
-                  setLimit(Number(e.target.value));
-                  setPage(1);
-                }}
-                className="h-7 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
-                aria-label="Rows per page"
-              >
-                {PAGE_SIZES.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setPage(page - 1)}
-                disabled={page <= 1}
-                aria-label="Previous page"
-                className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
-              >
-                <ChevronLeft size={14} />
-              </button>
-
-              {pageNumbers.map((p, idx) =>
-                typeof p === 'number' ? (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setPage(p)}
-                    className={cx(
-                      'w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer shadow-2xs',
-                      page === p
-                        ? 'border border-slate-200 bg-slate-50 text-slate-900 font-bold'
-                        : 'border border-transparent bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-200',
-                    )}
-                  >
-                    {p}
-                  </button>
-                ) : (
-                  <span key={`dots-${idx}`} className="px-1 text-slate-400 select-none">
-                    ...
-                  </span>
-                ),
-              )}
-
-              <button
-                type="button"
-                onClick={() => setPage(page + 1)}
-                disabled={page >= totalPages}
-                aria-label="Next page"
-                className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* ── Footer / Pagination (Matching SupportCenterPage & CommonTable) ── */}
+        <CommonPagination
+          total={totalCount}
+          startIdx={patients.length === 0 ? 0 : startIdx + 1}
+          endIdx={endIdx}
+          nounPlural="registered patients"
+          page={page}
+          pageCount={totalPages}
+          perPage={limit}
+          onPageChange={(p) => setPage(p)}
+          onPerPageChange={(n) => {
+            setLimit(n);
+            setPage(1);
+          }}
+        />
       </div>
     </div>
   );

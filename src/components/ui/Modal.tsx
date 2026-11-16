@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { type ReactNode, useEffect, useId, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { cx } from './primitives';
 
@@ -12,6 +13,7 @@ interface ModalProps {
   /** 'drawer' slides in from the right at full height instead of centering. */
   variant?: 'dialog' | 'drawer';
   className?: string;
+  zIndex?: number | undefined;
   children: ReactNode;
 }
 
@@ -28,6 +30,7 @@ export function Modal({
   size = 'md',
   variant = 'dialog',
   className,
+  zIndex,
   children,
 }: ModalProps) {
   const titleId = useId();
@@ -43,11 +46,12 @@ export function Modal({
 
   if (!open) return null;
 
-  return (
+  const content = (
     // Backdrop click is a mouse shortcut only; keyboard users close with Esc (above).
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       className={cx('ui-overlay', variant === 'drawer' && 'is-drawer')}
+      style={zIndex !== undefined ? { zIndex } : undefined}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -71,6 +75,8 @@ export function Modal({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(content, document.body) : content;
 }
 
 export function Field({

@@ -295,7 +295,7 @@ export default function LabServicesPage() {
       </div>
 
       {/* ── Services Table ── */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+      <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col">
         {loading ? (
           <div className="py-20 flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-sky-600 border-t-transparent" />
