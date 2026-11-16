@@ -8,11 +8,13 @@ import {
 import React, {
   type CSSProperties,
   type ReactNode,
+  useCallback,
   useEffect,
   useId,
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 
 export interface SearchableSelectOption {
   value: string;
@@ -49,6 +51,7 @@ export interface SearchableSelectProps {
   menuWidth?: 'trigger' | 'auto' | string | number | undefined;
   menuAlign?: 'left' | 'right' | undefined;
   isSet?: boolean | undefined;
+  portal?: boolean | undefined;
   'aria-label'?: string | undefined;
   renderOption?: ((option: SearchableSelectOption) => ReactNode) | undefined;
   renderSelected?: ((option: SearchableSelectOption | undefined) => ReactNode) | undefined;
@@ -78,6 +81,7 @@ export function SearchableSelect({
   menuWidth,
   menuAlign = 'left',
   isSet,
+  portal = true,
   'aria-label': ariaLabel,
   renderOption,
   renderSelected,
@@ -91,8 +95,90 @@ export function SearchableSelect({
   const [resolvedAlign, setResolvedAlign] = useState<'left' | 'right'>(menuAlign);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  const canUsePortal = portal !== false && typeof document !== 'undefined' && Boolean(document.body);
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
+
+  const updateMenuPosition = useCallback(() => {
+    if (!triggerRef.current || typeof window === 'undefined') return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Check if scrolled completely out of view (e.g. inside scrollable table or modal)
+    if (rect.bottom < -40 || rect.top > viewportHeight + 40) {
+      setIsOpen(false);
+      return;
+    }
+
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const openUpward = spaceBelow < 220 && spaceAbove > spaceBelow;
+
+    let targetWidth: string | number;
+    let targetMinWidth: string | number;
+    if (menuWidth === 'trigger') {
+      targetWidth = rect.width || '100%';
+      targetMinWidth = rect.width || 200;
+    } else if (typeof menuWidth === 'number') {
+      targetWidth = menuWidth;
+      targetMinWidth = menuWidth;
+    } else if (typeof menuWidth === 'string') {
+      targetWidth = menuWidth;
+      targetMinWidth = menuWidth;
+    } else {
+      targetWidth = 'max-content';
+      targetMinWidth = Math.max(rect.width || 0, 220);
+    }
+
+    const shouldAlignRight = menuAlign === 'right' || (rect.left + 240 > viewportWidth);
+
+    let left: number | undefined;
+    let right: number | undefined;
+
+    if (shouldAlignRight) {
+      right = Math.max(8, viewportWidth - rect.right);
+      left = undefined;
+    } else {
+      left = Math.max(8, rect.left);
+      right = undefined;
+    }
+
+    setMenuStyle({
+      position: 'fixed',
+      top: openUpward ? undefined : Math.max(0, rect.bottom + 4),
+      bottom: openUpward ? Math.max(0, viewportHeight - rect.top + 4) : undefined,
+      left: left !== undefined ? `${left}px` : undefined,
+      right: right !== undefined ? `${right}px` : undefined,
+      width: typeof targetWidth === 'number' ? `${targetWidth}px` : targetWidth,
+      minWidth: typeof targetMinWidth === 'number' ? `${targetMinWidth}px` : targetMinWidth,
+      maxWidth: 'min(380px, calc(100vw - 16px))',
+      zIndex: 99999,
+    });
+  }, [menuAlign, menuWidth]);
+
+  // Update positioning when opening or on scroll/resize
+  useEffect(() => {
+    if (!isOpen) return;
+
+    updateMenuPosition();
+
+    const handleScrollOrResize = () => {
+      updateMenuPosition();
+    };
+
+    window.addEventListener('resize', handleScrollOrResize);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+
+    return () => {
+      window.removeEventListener('resize', handleScrollOrResize);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+    };
+  }, [isOpen, updateMenuPosition]);
 
   // Whether search input should be visible in dropdown
   const showSearch = searchable !== undefined ? searchable : options.length > 3;
@@ -117,7 +203,10 @@ export function SearchableSelect({
     if (!isOpen) return;
 
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const insideContainer = containerRef.current?.contains(target);
+      const insideMenu = menuRef.current?.contains(target);
+      if (!insideContainer && !insideMenu) {
         setIsOpen(false);
         setSearchQuery('');
         setHighlightedIndex(-1);
@@ -489,6 +578,7 @@ export function SearchableSelect({
 
       {/* Visible Interactive Trigger */}
       <button
+        ref={triggerRef}
         type="button"
         className={`ui-searchable-trigger ${isPill ? 'variant-pill' : 'variant-default'} ${isOpen ? 'is-open' : ''} ${pillIsActive ? 'is-active' : ''}`}
         onClick={() => {
@@ -603,98 +693,118 @@ export function SearchableSelect({
       </button>
 
       {/* Floating Popover Dropdown */}
-      {isOpen && (
-        <div
-          className="ui-searchable-menu"
-          role="listbox"
-          style={{
-            left: resolvedAlign === 'left' ? 0 : 'auto',
-            right: resolvedAlign === 'right' ? 0 : 'auto',
-            width: computedMenuWidth,
-            minWidth: computedMinWidth,
-            maxWidth: computedMaxWidth,
-          }}
-        >
-          {/* Search Box Header */}
-          {showSearch && (
-            <div className="ui-searchable-search-box">
-              <Search size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
-              <input
-                ref={searchInputRef}
-                type="text"
-                className="ui-searchable-search-input"
-                placeholder={searchPlaceholder}
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setHighlightedIndex(0);
-                }}
-                onClick={(e) => e.stopPropagation()}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                    color: '#94a3b8',
-                    display: 'grid',
-                    placeItems: 'center',
-                  }}
-                  title="Clear filter text"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Options Scroll List */}
+      {isOpen && (() => {
+        const menuElement = (
           <div
-            ref={listRef}
-            className="ui-searchable-options-list"
-            onScroll={(e) => {
-              if (e.currentTarget.scrollLeft !== 0) {
-                e.currentTarget.scrollLeft = 0;
-              }
+            ref={menuRef}
+            className="ui-searchable-menu"
+            role="listbox"
+            onKeyDown={handleKeyDown}
+            style={{
+              ...(canUsePortal
+                ? menuStyle
+                : {
+                    left: resolvedAlign === 'left' ? 0 : 'auto',
+                    right: resolvedAlign === 'right' ? 0 : 'auto',
+                    width: computedMenuWidth,
+                    minWidth: computedMinWidth,
+                    maxWidth: computedMaxWidth,
+                  }),
             }}
           >
-            {loading && filteredOptions.length === 0 ? (
-              <div
-                style={{
-                  padding: '16px 14px',
-                  textAlign: 'center',
-                  fontSize: 12,
-                  color: '#64748b',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                }}
-              >
-                <Loader2 size={14} className="animate-spin" style={{ color: brandPrimary }} />
-                <span>Loading options...</span>
+            {/* Search Box Header */}
+            {showSearch && (
+              <div className="ui-searchable-search-box">
+                <Search size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  className="ui-searchable-search-input"
+                  placeholder={searchPlaceholder}
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setHighlightedIndex(0);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      color: '#94a3b8',
+                      display: 'grid',
+                      placeItems: 'center',
+                    }}
+                    title="Clear filter text"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
               </div>
-            ) : filteredOptions.length === 0 ? (
-              <div
-                style={{
-                  padding: '12px 14px',
-                  textAlign: 'center',
-                  fontSize: 12,
-                  color: '#64748b',
-                }}
-              >
-                {emptyText}
-              </div>
-            ) : (
-              filteredOptions.map((opt, idx) => {
-                const isSelected = opt.value === value;
-                const isHighlighted = idx === highlightedIndex;
+            )}
 
-                if (renderOption) {
+            {/* Options Scroll List */}
+            <div
+              ref={listRef}
+              className="ui-searchable-options-list"
+              onScroll={(e) => {
+                if (e.currentTarget.scrollLeft !== 0) {
+                  e.currentTarget.scrollLeft = 0;
+                }
+              }}
+            >
+              {loading && filteredOptions.length === 0 ? (
+                <div
+                  style={{
+                    padding: '16px 14px',
+                    textAlign: 'center',
+                    fontSize: 12,
+                    color: '#64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <Loader2 size={14} className="animate-spin" style={{ color: brandPrimary }} />
+                  <span>Loading options...</span>
+                </div>
+              ) : filteredOptions.length === 0 ? (
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    textAlign: 'center',
+                    fontSize: 12,
+                    color: '#64748b',
+                  }}
+                >
+                  {emptyText}
+                </div>
+              ) : (
+                filteredOptions.map((opt, idx) => {
+                  const isSelected = opt.value === value;
+                  const isHighlighted = idx === highlightedIndex;
+
+                  if (renderOption) {
+                    return (
+                      <div
+                        key={opt.value}
+                        onClick={() => handleSelectOption(opt)}
+                        role="option"
+                        aria-selected={isSelected}
+                        className={`ui-searchable-option ${isSelected ? 'is-selected' : ''} ${isHighlighted ? 'is-highlighted' : ''} ${opt.disabled ? 'is-disabled' : ''}`}
+                      >
+                        {renderOption(opt)}
+                      </div>
+                    );
+                  }
+
                   return (
                     <div
                       key={opt.value}
@@ -703,72 +813,62 @@ export function SearchableSelect({
                       aria-selected={isSelected}
                       className={`ui-searchable-option ${isSelected ? 'is-selected' : ''} ${isHighlighted ? 'is-highlighted' : ''} ${opt.disabled ? 'is-disabled' : ''}`}
                     >
-                      {renderOption(opt)}
-                    </div>
-                  );
-                }
-
-                return (
-                  <div
-                    key={opt.value}
-                    onClick={() => handleSelectOption(opt)}
-                    role="option"
-                    aria-selected={isSelected}
-                    className={`ui-searchable-option ${isSelected ? 'is-selected' : ''} ${isHighlighted ? 'is-highlighted' : ''} ${opt.disabled ? 'is-disabled' : ''}`}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: 1, overflow: 'hidden' }}>
-                      {opt.icon && (
-                        <span style={{ display: 'inline-flex', flexShrink: 0, color: isSelected ? brandPrimary : '#64748b' }}>
-                          {opt.icon}
-                        </span>
-                      )}
-                      <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
-                        <div
-                          style={{
-                            fontWeight: isSelected ? 600 : 500,
-                            color: isSelected ? brandDark : '#1e293b',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            paddingLeft: 1,
-                          }}
-                          title={opt.label}
-                        >
-                          {opt.label}
-                        </div>
-                        {opt.sublabel && (
-                          <div style={{ fontSize: 11, color: '#64748b', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingLeft: 1 }}>
-                            {opt.sublabel}
-                          </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                        {opt.icon && (
+                          <span style={{ display: 'inline-flex', flexShrink: 0, color: isSelected ? brandPrimary : '#64748b' }}>
+                            {opt.icon}
+                          </span>
                         )}
+                        <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              fontWeight: isSelected ? 600 : 500,
+                              color: isSelected ? brandDark : '#1e293b',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              paddingLeft: 1,
+                            }}
+                            title={opt.label}
+                          >
+                            {opt.label}
+                          </div>
+                          {opt.sublabel && (
+                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingLeft: 1 }}>
+                              {opt.sublabel}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
+                        {opt.badge && (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 600,
+                              padding: '1px 6px',
+                              borderRadius: 9999,
+                              background: opt.badgeTone === 'green' ? '#f0fdf4' : opt.badgeTone === 'amber' ? '#fffbeb' : brandLight,
+                              color: opt.badgeTone === 'green' ? '#16a34a' : opt.badgeTone === 'amber' ? '#d97706' : brandDark,
+                              border: `1px solid ${opt.badgeTone === 'green' ? '#bbf7d0' : opt.badgeTone === 'amber' ? '#fde68a' : brandBorder}`,
+                            }}
+                          >
+                            {opt.badge}
+                          </span>
+                        )}
+                        {isSelected && <Check size={14} style={{ color: brandPrimary, strokeWidth: 2.5 }} />}
                       </div>
                     </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
-                      {opt.badge && (
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 600,
-                            padding: '1px 6px',
-                            borderRadius: 9999,
-                            background: opt.badgeTone === 'green' ? '#f0fdf4' : opt.badgeTone === 'amber' ? '#fffbeb' : brandLight,
-                            color: opt.badgeTone === 'green' ? '#16a34a' : opt.badgeTone === 'amber' ? '#d97706' : brandDark,
-                            border: `1px solid ${opt.badgeTone === 'green' ? '#bbf7d0' : opt.badgeTone === 'amber' ? '#fde68a' : brandBorder}`,
-                          }}
-                        >
-                          {opt.badge}
-                        </span>
-                      )}
-                      {isSelected && <Check size={14} style={{ color: brandPrimary, strokeWidth: 2.5 }} />}
-                    </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+
+        return canUsePortal ? createPortal(menuElement, document.body) : menuElement;
+      })()}
     </div>
   );
 }

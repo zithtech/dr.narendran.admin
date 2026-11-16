@@ -102,33 +102,33 @@ function getShiftDetails(shift: string) {
       return {
         icon: Sun,
         period: '08:00 AM - 04:00 PM',
-        background: '#f8fafc',
-        color: '#334155',
-        border: '1px solid #e2e8f0',
+        background: '#eff6ff',
+        color: '#1d4ed8',
+        border: '1px solid #bfdbfe',
       };
     case 'evening':
       return {
         icon: Sunset,
-        period: '04:00 PM - 12:00 AM',
-        background: '#f8fafc',
-        color: '#334155',
-        border: '1px solid #e2e8f0',
+        period: '02:00 PM - 10:00 PM',
+        background: '#eff6ff',
+        color: '#1d4ed8',
+        border: '1px solid #bfdbfe',
       };
     case 'night':
       return {
         icon: Moon,
-        period: '12:00 AM - 08:00 AM',
-        background: '#f8fafc',
-        color: '#334155',
-        border: '1px solid #e2e8f0',
+        period: '10:00 PM - 06:00 AM',
+        background: '#eff6ff',
+        color: '#1d4ed8',
+        border: '1px solid #bfdbfe',
       };
     default:
       return {
         icon: Clock,
         period: 'Custom Roster',
-        background: '#f8fafc',
-        color: '#334155',
-        border: '1px solid #e2e8f0',
+        background: '#eff6ff',
+        color: '#1d4ed8',
+        border: '1px solid #bfdbfe',
       };
   }
 }
@@ -431,16 +431,16 @@ export default function StaffManagement() {
     {
       id: 'shift',
       header: 'Shift Timing',
-      width: '16%',
+      width: '18%',
       sort: (s) => s.shiftTiming,
       cell: (s) => {
         const shiftCfg = getShiftDetails(s.shiftTiming);
         const timeText = s.customShiftDetails || shiftCfg.period;
         return (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5.5, fontSize: 12.5, fontWeight: 500, color: '#334155' }}>
-            <Clock size={12.5} style={{ color: '#64748b', flexShrink: 0 }} />
-            <span>{timeText}</span>
-            <span className="sr-only">{s.shiftTiming}</span>
+            <Clock size={12.5} style={{ color: '#2563eb', flexShrink: 0 }} />
+            <span style={{ fontWeight: 600, color: '#0f172a' }}>{s.shiftTiming}</span>
+            <span style={{ color: '#64748b' }}>({timeText})</span>
           </div>
         );
       },

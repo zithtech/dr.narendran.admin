@@ -140,7 +140,12 @@ export function Drawer({
 
           {/* Key Metrics / Figures Strip */}
           {stats && stats.length > 0 && (
-            <div className="ui-drawer-stats">
+            <div
+              className="ui-drawer-stats"
+              style={{
+                gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))`,
+              }}
+            >
               {stats.map((s) => (
                 <div className="ui-drawer-stat" key={s.label}>
                   <div className="ui-drawer-stat-label flex items-center gap-1">

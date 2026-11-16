@@ -3152,6 +3152,13 @@ body {
   position: relative;
 }
 
+/* Patient Detail Page: lock parent overflow so header stays fixed and only right pane scrolls */
+.ui-app-right-column .ui-main:has(.patient-page-container) {
+  overflow: hidden !important;
+  height: calc(100vh - 52px);
+  padding: 0;
+}
+
 .ui-app-right-column .ui-main::-webkit-scrollbar {
   display: none;
   width: 0;

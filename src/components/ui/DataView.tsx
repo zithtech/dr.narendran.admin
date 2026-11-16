@@ -465,7 +465,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
 
       {error && <Alert>{error}</Alert>}
 
-      {/* ── Main Unified Container: Filters + Table + Pagination (Matching Image Card) ── */}
+     
       <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col">
         {/* ── Optional Quick Filter Tabs Row ── */}
         {tabs && tabs.length > 0 && (

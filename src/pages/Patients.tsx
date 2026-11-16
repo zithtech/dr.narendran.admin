@@ -1,8 +1,8 @@
 import { App } from 'antd';
 import { HeartPulse } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 
-import PatientDrawer from '../components/PatientDrawer';
 import PatientModal, { type Patient } from '../components/PatientModal';
 import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
 import { addedFacet, statusFacet } from '../components/ui/facets';
@@ -45,17 +45,15 @@ const FACETS: Facet<Patient>[] = [
 ];
 
 export default function Patients() {
+  const navigate = useNavigate();
   const resource = useResource<Patient>('patients', 'patients');
   const { message } = App.useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
-  const [viewingId, setViewingId] = useState<string | null>(null);
 
-  // Looked up from the live list so the drawer reflects edits and closes on delete.
-  const viewingPatient = viewingId
-    ? (resource.items.find((p) => p.id === viewingId) ?? null)
-    : null;
-  const openDetails = (patient: Patient) => setViewingId(patient.id);
+  const openDetails = (patient: Patient) => {
+    navigate(`/patients/${patient.id}`);
+  };
 
   const openEditor = (patient: Patient | null) => {
     setEditingPatient(patient);
@@ -176,7 +174,6 @@ export default function Patients() {
         onDelete={(p) => api.delete(`patients/${p.id}`)}
         nameOf={(p) => p.name}
         onRowClick={openDetails}
-        activeId={viewingId}
       />
 
       <PatientModal
@@ -188,12 +185,6 @@ export default function Patients() {
           void message.success(editingPatient ? 'Patient updated' : 'Patient created');
           void resource.refresh();
         }}
-      />
-
-      <PatientDrawer
-        patient={viewingPatient}
-        onClose={() => setViewingId(null)}
-        onEdit={openEditor}
       />
     </>
   );

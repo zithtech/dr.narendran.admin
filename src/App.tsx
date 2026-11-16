@@ -8,9 +8,11 @@ import DashboardOverviewPage from './pages/DashboardOverviewPage';
 import ClientDashboard from './pages/ClientDashboard';
 import Branches from './pages/Branches';
 import Doctors from './pages/Doctors';
+import DoctorProfilePage from './pages/DoctorProfilePage';
 import DoctorAvailabilityPage from './pages/DoctorAvailabilityPage';
 import Users from './pages/Users';
 import Patients from './pages/Patients';
+import PatientDetailPage from './pages/PatientDetailPage';
 import PatientTimelinesPage from './pages/PatientTimelinesPage';
 import PatientTimelineDetailPage from './pages/PatientTimelineDetailPage';
 import MedicalRecordsPage from './features/medical_records/pages/MedicalRecordsPage';
@@ -162,6 +164,22 @@ function App() {
 
           {/* Clinical Modules */}
           <Route
+            path="/doctor/profile"
+            element={
+              <ModuleRouteGuard module="DOCTORS" title="Doctor Profile" fallbackSlugs={['TODAYS_SCHEDULE', 'AVAILABILITY', 'APPOINTMENTS']}>
+                <DoctorProfilePage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ModuleRouteGuard module="DOCTORS" title="Doctor Profile" fallbackSlugs={['TODAYS_SCHEDULE', 'AVAILABILITY', 'APPOINTMENTS']}>
+                <DoctorProfilePage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
             path="/doctors"
             element={
               <ModuleRouteGuard module="DOCTORS" title="Doctors">
@@ -199,6 +217,14 @@ function App() {
             element={
               <ModuleRouteGuard module="PATIENTS" title="Patients">
                 <Patients />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/patients/:patientId"
+            element={
+              <ModuleRouteGuard module="PATIENTS" title="Patient Details">
+                <PatientDetailPage />
               </ModuleRouteGuard>
             }
           />

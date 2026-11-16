@@ -22,6 +22,40 @@ export const SHIFT_TIMINGS = [
   { id: 'Custom Shift', label: 'Custom Shift', period: 'Custom' },
 ] as const;
 
+/**
+ * Format a staff member's shift timing to always include the operational hours.
+ * e.g., 'Morning' -> 'Morning (08:00 AM - 04:00 PM)'
+ */
+export function getShiftTimingDisplay(shiftTiming?: string | null, customShiftDetails?: string | null): string {
+  const raw = (shiftTiming || '').trim();
+  const custom = (customShiftDetails || '').trim();
+
+  if (!raw) {
+    return 'Morning (08:00 AM - 04:00 PM)';
+  }
+
+  // If already contains parenthesis with time range, return as-is
+  if (raw.includes('(') && raw.includes(')')) {
+    return raw;
+  }
+
+  const lower = raw.toLowerCase();
+  if (lower === 'morning') {
+    return custom ? `Morning (${custom})` : 'Morning (08:00 AM - 04:00 PM)';
+  }
+  if (lower === 'evening') {
+    return custom ? `Evening (${custom})` : 'Evening (02:00 PM - 10:00 PM)';
+  }
+  if (lower === 'night') {
+    return custom ? `Night (${custom})` : 'Night (10:00 PM - 06:00 AM)';
+  }
+  if (lower === 'custom shift' || lower === 'custom') {
+    return custom ? `Custom Shift (${custom})` : 'Custom Shift';
+  }
+
+  return custom ? `${raw} (${custom})` : raw;
+}
+
 export const WORK_DAY_OPTIONS = [
   { id: 'Mon', label: 'Mon', fullLabel: 'Monday' },
   { id: 'Tue', label: 'Tue', fullLabel: 'Tuesday' },

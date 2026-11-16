@@ -108,8 +108,9 @@ export default function SidebarLayout() {
   };
 
   const isSeamlessMain =
-    location.pathname.startsWith('/patient-timelines/') &&
-    location.pathname !== '/patient-timelines';
+    (location.pathname.startsWith('/patient-timelines/') &&
+      location.pathname !== '/patient-timelines') ||
+    (location.pathname.startsWith('/patients/') && location.pathname !== '/patients');
 
   return (
     <div className="ui-app-layout">
