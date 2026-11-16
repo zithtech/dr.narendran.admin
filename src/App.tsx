@@ -181,7 +181,7 @@ function App() {
           <Route
             path="/locations"
             element={
-              <ModuleRouteGuard module="DOCTORS" title="Doctor Locations" fallbackSlugs={['LOCATIONS']}>
+              <ModuleRouteGuard module="LOCATIONS" title="Location Management" fallbackSlugs={['DOCTORS']}>
                 <LocationManagementPage />
               </ModuleRouteGuard>
             }
@@ -189,7 +189,7 @@ function App() {
           <Route
             path="/locations/:doctorId"
             element={
-              <ModuleRouteGuard module="DOCTORS" title="Doctor Locations" fallbackSlugs={['LOCATIONS']}>
+              <ModuleRouteGuard module="LOCATIONS" title="Location Management" fallbackSlugs={['DOCTORS']}>
                 <LocationManagementPage />
               </ModuleRouteGuard>
             }
@@ -205,7 +205,7 @@ function App() {
           <Route
             path="/patient-timelines"
             element={
-              <ModuleRouteGuard module="PATIENTS" title="Patient Timelines">
+              <ModuleRouteGuard module="PATIENT_TIMELINES" title="Patient Timelines" fallbackSlugs={['PATIENTS']}>
                 <PatientTimelinesPage />
               </ModuleRouteGuard>
             }
@@ -213,7 +213,7 @@ function App() {
           <Route
             path="/patient-timelines/:patientId"
             element={
-              <ModuleRouteGuard module="PATIENTS" title="Patient Timelines">
+              <ModuleRouteGuard module="PATIENT_TIMELINES" title="Patient Timelines" fallbackSlugs={['PATIENTS']}>
                 <PatientTimelineDetailPage />
               </ModuleRouteGuard>
             }

@@ -417,5 +417,135 @@ describe('RBAC UI Action Visibility', () => {
     expect(screen.queryByRole('button', { name: /Add Hospital/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Delete Main Hospital/i })).not.toBeInTheDocument();
   });
+
+  it('correctly evaluates granular permissions for PATIENT_TIMELINES, MEDICAL_RECORDS, and LOCATIONS', async () => {
+    localStorage.setItem('adminRole', 'STAFF');
+
+    vi.mocked(api.get).mockResolvedValueOnce({
+      data: {
+        name: 'STAFF',
+        is_system_role: false,
+        permissions: [
+          {
+            module_slug: 'PATIENT_TIMELINES',
+            can_read: true,
+            can_create: false,
+            can_update: false,
+            can_delete: false,
+          },
+          {
+            module_slug: 'MEDICAL_RECORDS',
+            can_read: true,
+            can_create: true,
+            can_update: false,
+            can_delete: false,
+          },
+          {
+            module_slug: 'LOCATIONS',
+            can_read: true,
+            can_create: true,
+            can_update: true,
+            can_delete: true,
+            can_manage: true,
+          },
+        ],
+      },
+    });
+
+    function NewModulesProbe() {
+      const { canView, canCreate, canUpdate, canDelete } = usePermission();
+      return (
+        <div>
+          <span data-testid="timeline-view">{String(canView('PATIENT_TIMELINES', ['PATIENTS']))}</span>
+          <span data-testid="timeline-create">{String(canCreate('PATIENT_TIMELINES', ['PATIENTS']))}</span>
+          <span data-testid="medrecords-view">{String(canView('MEDICAL_RECORDS', ['PATIENTS']))}</span>
+          <span data-testid="medrecords-create">{String(canCreate('MEDICAL_RECORDS', ['PATIENTS']))}</span>
+          <span data-testid="medrecords-update">{String(canUpdate('MEDICAL_RECORDS', ['PATIENTS']))}</span>
+          <span data-testid="medrecords-delete">{String(canDelete('MEDICAL_RECORDS', ['PATIENTS']))}</span>
+          <span data-testid="locations-create">{String(canCreate('LOCATIONS', ['DOCTORS']))}</span>
+          <span data-testid="locations-update">{String(canUpdate('LOCATIONS', ['DOCTORS']))}</span>
+          <span data-testid="locations-delete">{String(canDelete('LOCATIONS', ['DOCTORS']))}</span>
+        </div>
+      );
+    }
+
+    renderWithProviders(
+      <PermissionProvider>
+        <NewModulesProbe />
+      </PermissionProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('timeline-view')).toHaveTextContent('true');
+    });
+
+    expect(screen.getByTestId('timeline-create')).toHaveTextContent('false');
+    expect(screen.getByTestId('medrecords-view')).toHaveTextContent('true');
+    expect(screen.getByTestId('medrecords-create')).toHaveTextContent('true');
+    expect(screen.getByTestId('medrecords-update')).toHaveTextContent('false');
+    expect(screen.getByTestId('medrecords-delete')).toHaveTextContent('false');
+    expect(screen.getByTestId('locations-create')).toHaveTextContent('true');
+    expect(screen.getByTestId('locations-update')).toHaveTextContent('true');
+    expect(screen.getByTestId('locations-delete')).toHaveTextContent('true');
+  });
+
+  it('falls back to parent modules PATIENTS and DOCTORS when specific module permission is not defined', async () => {
+    localStorage.setItem('adminRole', 'NURSE');
+
+    vi.mocked(api.get).mockResolvedValueOnce({
+      data: {
+        name: 'NURSE',
+        is_system_role: false,
+        permissions: [
+          {
+            module_slug: 'PATIENTS',
+            can_read: true,
+            can_create: true,
+            can_update: false,
+            can_delete: false,
+          },
+          {
+            module_slug: 'DOCTORS',
+            can_read: true,
+            can_create: false,
+            can_update: true,
+            can_delete: false,
+          },
+        ],
+      },
+    });
+
+    function FallbackProbe() {
+      const { canView, canCreate, canUpdate, canDelete } = usePermission();
+      return (
+        <div>
+          <span data-testid="fb-timeline-view">{String(canView('PATIENT_TIMELINES', ['PATIENTS']))}</span>
+          <span data-testid="fb-timeline-create">{String(canCreate('PATIENT_TIMELINES', ['PATIENTS']))}</span>
+          <span data-testid="fb-medrec-view">{String(canView('MEDICAL_RECORDS', ['PATIENTS']))}</span>
+          <span data-testid="fb-medrec-update">{String(canUpdate('MEDICAL_RECORDS', ['PATIENTS']))}</span>
+          <span data-testid="fb-loc-view">{String(canView('LOCATIONS', ['DOCTORS']))}</span>
+          <span data-testid="fb-loc-update">{String(canUpdate('LOCATIONS', ['DOCTORS']))}</span>
+          <span data-testid="fb-loc-delete">{String(canDelete('LOCATIONS', ['DOCTORS']))}</span>
+        </div>
+      );
+    }
+
+    renderWithProviders(
+      <PermissionProvider>
+        <FallbackProbe />
+      </PermissionProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('fb-timeline-view')).toHaveTextContent('true');
+    });
+
+    expect(screen.getByTestId('fb-timeline-create')).toHaveTextContent('true');
+    expect(screen.getByTestId('fb-medrec-view')).toHaveTextContent('true');
+    expect(screen.getByTestId('fb-medrec-update')).toHaveTextContent('false');
+    expect(screen.getByTestId('fb-loc-view')).toHaveTextContent('true');
+    expect(screen.getByTestId('fb-loc-update')).toHaveTextContent('true');
+    expect(screen.getByTestId('fb-loc-delete')).toHaveTextContent('false');
+  });
 });
 

@@ -3,8 +3,6 @@ import {
   AlertTriangle,
   BarChart2,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   FileSpreadsheet,
   Flag,
@@ -20,7 +18,7 @@ import {
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { usePermission } from '../../../context/PermissionContext';
-import { exportToCSV } from '../../../components/ui/CommonTable';
+import { CommonPagination, exportToCSV } from '../../../components/ui/CommonTable';
 import { Alert, Badge, cx } from '../../../components/ui/primitives';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
 import { formatDate, timeAgo } from '../../../lib/format';
@@ -33,7 +31,6 @@ import type {
 } from '../types/reviews';
 
 const SKELETON_ROWS = Array.from({ length: 6 }, (_, i) => i);
-const PAGE_SIZES = [10, 15, 25, 50];
 
 export const ReviewsManagementPage: React.FC = () => {
   const { message } = App.useApp();
@@ -287,15 +284,6 @@ export const ReviewsManagementPage: React.FC = () => {
 
   const startIdx = (pagination.page - 1) * pagination.limit;
   const endIdx = Math.min(startIdx + reviews.length, pagination.totalCount);
-
-  // Pagination page numbers generator
-  const pageNumbers = Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-    .filter((p) => p === 1 || p === pagination.totalPages || Math.abs(p - pagination.page) <= 1)
-    .reduce<(number | string)[]>((acc, p, idx, arr) => {
-      if (idx > 0 && (p) - (arr[idx - 1]!) > 1) acc.push('...');
-      acc.push(p);
-      return acc;
-    }, []);
 
   const renderStatusBadge = (status: string) => {
     switch (status) {
@@ -664,7 +652,7 @@ export const ReviewsManagementPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200/80 bg-slate-50/75">
+                <tr className="border-b border-slate-200/90 bg-[#f8fafc]">
                   <th className="px-3.5 py-2 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
                     Patient
                   </th>
@@ -828,102 +816,24 @@ export const ReviewsManagementPage: React.FC = () => {
             </table>
           </div>
 
-          {/* ── Standard Patients Pagination Footer ── */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3.5 py-2.5 border-t border-slate-200/80 bg-slate-50/50 text-xs text-slate-500">
-            {/* Record count indicator */}
-            <div className="flex items-center gap-2">
-              <span>
-                Showing{' '}
-                <strong className="text-slate-700 font-semibold">
-                  {pagination.totalCount === 0 ? 0 : startIdx + 1}–{endIdx}
-                </strong>{' '}
-                of{' '}
-                <strong className="text-slate-700 font-semibold">
-                  {pagination.totalCount}
-                </strong>{' '}
-                reviews
-              </span>
-            </div>
-
-            {/* Per-page selector & page numbers */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-slate-400">Per page:</span>
-                <select
-                  value={pagination.limit}
-                  onChange={(e) => {
-                    const newLimit = Number(e.target.value);
-                    setPagination((prev) => ({ ...prev, limit: newLimit, page: 1 }));
-                    void fetchReviews(1, newLimit);
-                  }}
-                  className="h-7 px-2 text-xs rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
-                >
-                  {PAGE_SIZES.map((sz) => (
-                    <option key={sz} value={sz}>
-                      {sz}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {pagination.totalPages > 1 && (
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    disabled={pagination.page <= 1 || loading}
-                    onClick={() => {
-                      const prevPage = pagination.page - 1;
-                      setPagination((prev) => ({ ...prev, page: prevPage }));
-                      void fetchReviews(prevPage);
-                    }}
-                    className="w-7 h-7 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors cursor-pointer"
-                    aria-label="Previous page"
-                  >
-                    <ChevronLeft size={13} />
-                  </button>
-
-                  {pageNumbers.map((p, idx) =>
-                    typeof p === 'number' ? (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => {
-                          setPagination((prev) => ({ ...prev, page: p }));
-                          void fetchReviews(p);
-                        }}
-                        className={cx(
-                          'w-7 h-7 rounded-md text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer',
-                          p === pagination.page
-                            ? 'bg-blue-600 text-white shadow-2xs'
-                            : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-                        )}
-                      >
-                        {p}
-                      </button>
-                    ) : (
-                      <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 text-xs">
-                        {p}
-                      </span>
-                    ),
-                  )}
-
-                  <button
-                    type="button"
-                    disabled={pagination.page >= pagination.totalPages || loading}
-                    onClick={() => {
-                      const nextPage = pagination.page + 1;
-                      setPagination((prev) => ({ ...prev, page: nextPage }));
-                      void fetchReviews(nextPage);
-                    }}
-                    className="w-7 h-7 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors cursor-pointer"
-                    aria-label="Next page"
-                  >
-                    <ChevronRight size={13} />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* ── Standard Pagination Footer (Matching SupportCenterPage & CommonTable) ── */}
+          <CommonPagination
+            total={pagination.totalCount}
+            startIdx={pagination.totalCount === 0 ? 0 : startIdx + 1}
+            endIdx={endIdx}
+            nounPlural="reviews"
+            page={pagination.page}
+            pageCount={pagination.totalPages}
+            perPage={pagination.limit}
+            onPageChange={(p) => {
+              setPagination((prev) => ({ ...prev, page: p }));
+              void fetchReviews(p);
+            }}
+            onPerPageChange={(l) => {
+              setPagination((prev) => ({ ...prev, limit: l, page: 1 }));
+              void fetchReviews(1, l);
+            }}
+          />
         </div>
       ) : (
         /* ── Tab 2: Doctor Summaries ── */

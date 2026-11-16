@@ -485,10 +485,10 @@ export default function DoctorTodayAppointments() {
         }
         .dta-filters-card {
           background: #ffffff;
-          border: 1px solid #e2e8f0;
-          border-radius: 16px;
+          border: 1px solid rgba(226, 232, 240, 0.9);
+          border-radius: 8px;
           padding: 14px 16px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
           display: flex;
           flex-direction: column;
           gap: 12px;
@@ -1095,15 +1095,15 @@ export default function DoctorTodayAppointments() {
           <div
             style={{
               background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: 14,
+              border: '1px solid rgba(226, 232, 240, 0.9)',
+              borderRadius: 8,
               padding: '8px 14px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
               gap: 8,
-              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -1148,14 +1148,15 @@ export default function DoctorTodayAppointments() {
             <div
               style={{
                 background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: 14,
+                border: '1px solid rgba(226, 232, 240, 0.9)',
+                borderRadius: 8,
                 padding: '40px 20px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 10,
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
               }}
             >
               <Loader2 size={24} className="is-spinning" style={{ color: '#2563eb' }} />
@@ -1171,10 +1172,11 @@ export default function DoctorTodayAppointments() {
               style={{
                 background: '#fef2f2',
                 border: '1px solid #fecaca',
-                borderRadius: 14,
+                borderRadius: 8,
                 padding: '24px 20px',
                 textAlign: 'center',
                 color: '#b91c1c',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
               }}
             >
               <div style={{ fontWeight: 600, fontSize: 14 }}>Failed to load schedules</div>
@@ -1192,14 +1194,15 @@ export default function DoctorTodayAppointments() {
             <div
               style={{
                 background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: 14,
+                border: '1px solid rgba(226, 232, 240, 0.9)',
+                borderRadius: 8,
                 padding: '44px 20px',
                 textAlign: 'center',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: 8,
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
               }}
             >
               <div
@@ -1255,9 +1258,9 @@ export default function DoctorTodayAppointments() {
                     key={doc.id}
                     style={{
                       background: '#ffffff',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: 14,
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                      border: '1px solid rgba(226, 232, 240, 0.9)',
+                      borderRadius: 8,
+                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
                       overflow: 'hidden',
                     }}
                   >
@@ -1451,13 +1454,13 @@ export default function DoctorTodayAppointments() {
                           }}
                         >
                           <thead>
-                            <tr style={{ background: '#f8fafc', color: '#64748b', fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                              <th style={{ padding: '8px 14px', borderBottom: '1px solid #e2e8f0', width: 140 }}>Time & Token</th>
-                              <th style={{ padding: '8px 14px', borderBottom: '1px solid #e2e8f0', width: 200 }}>Patient</th>
-                              <th style={{ padding: '8px 14px', borderBottom: '1px solid #e2e8f0', width: 150 }}>Contact</th>
-                              <th style={{ padding: '8px 14px', borderBottom: '1px solid #e2e8f0' }}>Purpose / Remarks</th>
-                              <th style={{ padding: '8px 14px', borderBottom: '1px solid #e2e8f0', width: 130 }}>Status</th>
-                              <th style={{ padding: '8px 14px', borderBottom: '1px solid #e2e8f0', textAlign: 'right', width: 110 }}>Actions</th>
+                            <tr style={{ background: '#f8fafc', color: '#475569', fontSize: 11, fontWeight: 600, borderBottom: '1px solid rgba(226, 232, 240, 0.9)' }}>
+                              <th style={{ padding: '8px 14px', borderBottom: '1px solid rgba(226, 232, 240, 0.9)', width: 140 }}>Time & Token</th>
+                              <th style={{ padding: '8px 14px', borderBottom: '1px solid rgba(226, 232, 240, 0.9)', width: 200 }}>Patient</th>
+                              <th style={{ padding: '8px 14px', borderBottom: '1px solid rgba(226, 232, 240, 0.9)', width: 150 }}>Contact</th>
+                              <th style={{ padding: '8px 14px', borderBottom: '1px solid rgba(226, 232, 240, 0.9)' }}>Purpose / Remarks</th>
+                              <th style={{ padding: '8px 14px', borderBottom: '1px solid rgba(226, 232, 240, 0.9)', width: 130 }}>Status</th>
+                              <th style={{ padding: '8px 14px', borderBottom: '1px solid rgba(226, 232, 240, 0.9)', textAlign: 'right', width: 110 }}>Actions</th>
                             </tr>
                           </thead>
                           <tbody>

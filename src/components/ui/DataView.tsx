@@ -3,8 +3,6 @@ import {
   ArrowDown,
   ArrowRight,
   ArrowUp,
-  ChevronLeft,
-  ChevronRight,
   FileSpreadsheet,
   type LucideIcon,
   Pencil,
@@ -21,7 +19,7 @@ import type { Resource } from '../../hooks/useResource';
 import { timeAgo } from '../../lib/format';
 import { getErrorMessage } from '../../utils/errors';
 import { usePermission } from '../../context/PermissionContext';
-import { exportToCSV, PrimaryAvatarCell } from './CommonTable';
+import { CommonPagination, exportToCSV, PrimaryAvatarCell } from './CommonTable';
 import { ConfirmDialog } from './Modal';
 import { Alert, cx } from './primitives';
 import { SearchableSelect } from './SearchableSelect';
@@ -112,7 +110,6 @@ const TIME_PRESETS: { value: TimePreset; label: string }[] = [
   { value: 'year', label: 'This year' },
   { value: 'custom', label: 'Custom range…' },
 ];
-const PAGE_SIZES = [10, 25, 50, 100];
 const SKELETON_ROWS = Array.from({ length: 7 }, (_, i) => i);
 
 function presetStart(preset: TimePreset): number | null {
@@ -869,98 +866,21 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
           </div>
         )}
 
-        {/* ── Footer / Pagination (Responsive Across All Devices) ── */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 sm:px-5 py-3 sm:py-3.5 border-t border-slate-100 bg-white text-xs text-slate-500 w-full">
-          <div className="text-center sm:text-left w-full sm:w-auto">
-            {filtered.length === 0 ? (
-              'No results'
-            ) : (
-              <>
-                Showing{' '}
-                <span className="font-semibold text-slate-700">
-                  {startIdx + 1}–{startIdx + pageRows.length}
-                </span>{' '}
-                of <span className="font-semibold text-slate-700">{filtered.length}</span>{' '}
-                {nounPlural}
-                {filtered.length !== items.length && (
-                  <span className="text-slate-400"> (filtered from {items.length})</span>
-                )}
-              </>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto">
-            <div className="flex items-center gap-1.5 mr-1 sm:mr-2 shrink-0">
-              <span className="text-slate-500">Per page</span>
-              <select
-                value={perPage}
-                onChange={(e) => {
-                  setPerPage(Number(e.target.value));
-                  setPage(1);
-                }}
-                className="h-7 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
-                aria-label="Rows per page"
-              >
-                {PAGE_SIZES.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setPage(page - 1)}
-                disabled={current <= 1}
-                aria-label="Previous page"
-                className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
-              >
-                <ChevronLeft size={14} />
-              </button>
-
-              {Array.from({ length: pageCount }, (_, i) => i + 1)
-                .filter((p) => p === 1 || p === pageCount || Math.abs(p - current) <= 1)
-                .reduce<(number | string)[]>((acc, p, idx, arr) => {
-                  if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...');
-                  acc.push(p);
-                  return acc;
-                }, [])
-                .map((p, idx) =>
-                  typeof p === 'number' ? (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => setPage(p)}
-                      className={cx(
-                        'w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer shadow-2xs',
-                        current === p
-                          ? 'border border-slate-200 bg-slate-50 text-slate-900 font-bold'
-                          : 'border border-transparent bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-200',
-                      )}
-                    >
-                      {p}
-                    </button>
-                  ) : (
-                    <span key={`dots-${idx}`} className="px-1 text-slate-400 select-none">
-                      ...
-                    </span>
-                  ),
-                )}
-
-              <button
-                type="button"
-                onClick={() => setPage(page + 1)}
-                disabled={current >= pageCount}
-                aria-label="Next page"
-                className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* ── Footer / Pagination (Matching SupportCenterPage & CommonTable) ── */}
+        <CommonPagination
+          total={filtered.length}
+          startIdx={filtered.length === 0 ? 0 : startIdx + 1}
+          endIdx={startIdx + pageRows.length}
+          nounPlural={nounPlural}
+          page={current}
+          pageCount={pageCount}
+          perPage={perPage}
+          onPageChange={(p) => setPage(p)}
+          onPerPageChange={(n) => {
+            setPerPage(n);
+            setPage(1);
+          }}
+        />
       </div>
 
       {onDelete && (

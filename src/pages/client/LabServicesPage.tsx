@@ -262,7 +262,7 @@ export default function LabServicesPage() {
       </div>
 
       {/* ── Services Table ── */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+      <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col">
         {loading ? (
           <div className="py-20 flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-sky-600 border-t-transparent" />
@@ -295,7 +295,7 @@ export default function LabServicesPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500">
+                <tr className="bg-[#f8fafc] border-b border-slate-200/90 text-[11px] font-semibold text-slate-600">
                   <th className="py-3.5 px-6">Investigation / Service Name</th>
                   <th className="py-3.5 px-6">Description</th>
                   <th className="py-3.5 px-6 text-right">Standard Rate</th>

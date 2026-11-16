@@ -692,17 +692,18 @@ export function CommonPagination({
   onPerPageChange,
 }: CommonPaginationProps) {
   // Generate page numbers to display
+  const effectivePageCount = Math.max(1, pageCount || 1);
   const pages: (number | string)[] = [];
-  if (pageCount <= 5) {
-    for (let i = 1; i <= pageCount; i++) pages.push(i);
+  if (effectivePageCount <= 5) {
+    for (let i = 1; i <= effectivePageCount; i++) pages.push(i);
   } else {
     pages.push(1);
     if (page > 3) pages.push('...');
     const start = Math.max(2, page - 1);
-    const end = Math.min(pageCount - 1, page + 1);
+    const end = Math.min(effectivePageCount - 1, page + 1);
     for (let i = start; i <= end; i++) pages.push(i);
-    if (page < pageCount - 2) pages.push('...');
-    pages.push(pageCount);
+    if (page < effectivePageCount - 2) pages.push('...');
+    pages.push(effectivePageCount);
   }
 
   return (
@@ -777,7 +778,7 @@ export function CommonPagination({
           <button
             type="button"
             onClick={() => onPageChange(page + 1)}
-            disabled={page >= pageCount}
+            disabled={page >= effectivePageCount}
             aria-label="Next page"
             className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
           >

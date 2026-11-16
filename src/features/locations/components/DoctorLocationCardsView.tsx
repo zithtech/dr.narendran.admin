@@ -2,8 +2,6 @@ import { App } from 'antd';
 import {
   ArrowLeft,
   Building2,
-  ChevronLeft,
-  ChevronRight,
   ExternalLink,
   MapPin,
   Pencil,
@@ -18,9 +16,11 @@ import {
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 
+import { CommonPagination } from '../../../components/ui/CommonTable';
 import { ConfirmDialog } from '../../../components/ui/Modal';
 import { cx, StatusDot } from '../../../components/ui/primitives';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
+import { usePermission } from '../../../context/PermissionContext';
 import { timeAgo } from '../../../lib/format';
 import { locationsApi } from '../services/locationsApi';
 import type {
@@ -30,7 +30,6 @@ import type {
 import { LocationModal } from './LocationModal';
 
 const SKELETON_ROWS = Array.from({ length: 4 }, (_, i) => i);
-const PAGE_SIZES = [10, 20, 50];
 
 interface DoctorLocationCardsViewProps {
   doctorId?: string; // If in Admin mode, doctor's specific ID
@@ -45,6 +44,11 @@ export const DoctorLocationCardsView: React.FC<DoctorLocationCardsViewProps> = (
 }) => {
   const navigate = useNavigate();
   const { message } = App.useApp();
+  const { canCreate, canUpdate, canDelete, canManage } = usePermission();
+  const isLocCreatable = canCreate('LOCATIONS', ['DOCTORS']) || canManage('LOCATIONS', ['DOCTORS']);
+  const isLocUpdatable = canUpdate('LOCATIONS', ['DOCTORS']) || canManage('LOCATIONS', ['DOCTORS']);
+  const isLocDeletable = canDelete('LOCATIONS', ['DOCTORS']) || canManage('LOCATIONS', ['DOCTORS']);
+
   const [locations, setLocations] = useState<DoctorLocation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -196,14 +200,6 @@ export const DoctorLocationCardsView: React.FC<DoctorLocationCardsViewProps> = (
     ? `Last synced ${timeAgo(new Date(syncedAt).toISOString(), now)}`
     : null;
 
-  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1)
-    .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-    .reduce<(number | string)[]>((acc, p, idx, arr) => {
-      if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...');
-      acc.push(p);
-      return acc;
-    }, []);
-
   return (
     <div className="ui-page space-y-3">
       {/* ── Compact Page Header Matching Patients Page ── */}
@@ -259,14 +255,16 @@ export const DoctorLocationCardsView: React.FC<DoctorLocationCardsViewProps> = (
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
           </button>
 
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 h-7.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-            onClick={openAddModal}
-          >
-            <Plus size={13} strokeWidth={2.4} />
-            <span>Add New Location</span>
-          </button>
+          {isLocCreatable && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 h-7.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              onClick={openAddModal}
+            >
+              <Plus size={13} strokeWidth={2.4} />
+              <span>Add New Location</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -387,7 +385,7 @@ export const DoctorLocationCardsView: React.FC<DoctorLocationCardsViewProps> = (
                           >
                             Clear filters
                           </button>
-                        ) : (
+                        ) : isLocCreatable ? (
                           <button
                             type="button"
                             className="inline-flex items-center gap-1.5 h-7 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium cursor-pointer shadow-2xs"
@@ -395,7 +393,7 @@ export const DoctorLocationCardsView: React.FC<DoctorLocationCardsViewProps> = (
                           >
                             <Plus size={13} /> Add First Location
                           </button>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </td>
@@ -457,7 +455,7 @@ export const DoctorLocationCardsView: React.FC<DoctorLocationCardsViewProps> = (
                       {/* Actions */}
                       <td className="px-3.5 py-2 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
-                          {!isCurrentPrimary && (
+                          {isLocUpdatable && !isCurrentPrimary && (
                             <button
                               type="button"
                               className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-amber-200 bg-amber-50 text-[11px] font-semibold text-amber-800 hover:bg-amber-100/80 transition-colors shadow-2xs cursor-pointer"
@@ -470,43 +468,47 @@ export const DoctorLocationCardsView: React.FC<DoctorLocationCardsViewProps> = (
                             </button>
                           )}
 
-                          <button
-                            type="button"
-                            className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                            onClick={() => openEditModal(loc)}
-                            title="Edit practice location"
-                            aria-label="Edit Location"
-                          >
-                            <Pencil size={13} />
-                          </button>
+                          {isLocUpdatable && (
+                            <button
+                              type="button"
+                              className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                              onClick={() => openEditModal(loc)}
+                              title="Edit practice location"
+                              aria-label="Edit Location"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                          )}
 
-                          <button
-                            type="button"
-                            className={cx(
-                              'p-1 rounded-md transition-colors',
-                              isCurrentPrimary
-                                ? 'text-slate-300 cursor-not-allowed opacity-50'
-                                : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer',
-                            )}
-                            onClick={() => {
-                              if (isCurrentPrimary) {
-                                message.error(
-                                  'Cannot delete primary location. Set another location as primary first.',
-                                );
-                                return;
+                          {isLocDeletable && (
+                            <button
+                              type="button"
+                              className={cx(
+                                'p-1 rounded-md transition-colors',
+                                isCurrentPrimary
+                                  ? 'text-slate-300 cursor-not-allowed opacity-50'
+                                  : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer',
+                              )}
+                              onClick={() => {
+                                if (isCurrentPrimary) {
+                                  message.error(
+                                    'Cannot delete primary location. Set another location as primary first.',
+                                  );
+                                  return;
+                                }
+                                setLocationToDelete(loc);
+                              }}
+                              disabled={isCurrentPrimary}
+                              title={
+                                isCurrentPrimary
+                                  ? 'Cannot delete primary location'
+                                  : 'Delete practice location'
                               }
-                              setLocationToDelete(loc);
-                            }}
-                            disabled={isCurrentPrimary}
-                            title={
-                              isCurrentPrimary
-                                ? 'Cannot delete primary location'
-                                : 'Delete practice location'
-                            }
-                            aria-label="Delete Location"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                              aria-label="Delete Location"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -517,88 +519,21 @@ export const DoctorLocationCardsView: React.FC<DoctorLocationCardsViewProps> = (
           </table>
         </div>
 
-        {/* ── Footer / Pagination (Matching Patients Page DataView) ── */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 sm:px-5 py-3 sm:py-3.5 border-t border-slate-100 bg-white text-xs text-slate-500 w-full">
-          <div className="text-center sm:text-left w-full sm:w-auto">
-            {filteredLocations.length === 0 ? (
-              'No practice locations'
-            ) : (
-              <>
-                Showing{' '}
-                <span className="font-semibold text-slate-700">
-                  {startIdx + 1}–{endIdx}
-                </span>{' '}
-                of <span className="font-semibold text-slate-700">{filteredLocations.length}</span>{' '}
-                locations
-              </>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto">
-            <div className="flex items-center gap-1.5 mr-1 sm:mr-2 shrink-0">
-              <span className="text-slate-500">Per page</span>
-              <select
-                value={limit}
-                onChange={(e) => {
-                  setLimit(Number(e.target.value));
-                  setPage(1);
-                }}
-                className="h-7 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
-                aria-label="Rows per page"
-              >
-                {PAGE_SIZES.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1 || loading}
-                aria-label="Previous page"
-                className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
-              >
-                <ChevronLeft size={14} />
-              </button>
-
-              {pageNumbers.map((p, idx) =>
-                typeof p === 'number' ? (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setPage(p)}
-                    className={cx(
-                      'w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer shadow-2xs',
-                      page === p
-                        ? 'border-blue-600 bg-blue-600 text-white'
-                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
-                    )}
-                  >
-                    {p}
-                  </button>
-                ) : (
-                  <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 select-none">
-                    …
-                  </span>
-                ),
-              )}
-
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages || loading}
-                aria-label="Next page"
-                className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* ── Footer / Pagination (Matching SupportCenterPage & CommonTable) ── */}
+        <CommonPagination
+          total={filteredLocations.length}
+          startIdx={filteredLocations.length === 0 ? 0 : startIdx + 1}
+          endIdx={endIdx}
+          nounPlural="locations"
+          page={page}
+          pageCount={totalPages}
+          perPage={limit}
+          onPageChange={(p) => setPage(p)}
+          onPerPageChange={(n) => {
+            setLimit(n);
+            setPage(1);
+          }}
+        />
       </div>
 
       {/* Add / Edit Location Drawer */}

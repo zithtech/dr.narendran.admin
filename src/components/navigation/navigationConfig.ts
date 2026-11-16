@@ -102,7 +102,8 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         name: 'Patient Timelines',
         path: '/patient-timelines',
         icon: History,
-        slug: 'PATIENTS',
+        slug: 'PATIENT_TIMELINES',
+        fallbackSlugs: ['PATIENTS'],
         description: 'Patient timelines, medical history & health records',
       },
       {
@@ -110,13 +111,15 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         path: '/medical-records',
         icon: HeartPulse,
         slug: 'MEDICAL_RECORDS',
+        fallbackSlugs: ['PATIENTS'],
         description: 'Patient health records, medical history & health records',
       },
       {
         name: 'Location Management',
         path: '/locations',
         icon: MapPin,
-        slug: 'DOCTORS',
+        slug: 'LOCATIONS',
+        fallbackSlugs: ['DOCTORS'],
         description: 'Location management, clinics & facilities',
       },
       {

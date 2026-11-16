@@ -13,6 +13,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import { Avatar } from '../../../components/ui/primitives';
+import { usePermission } from '../../../context/PermissionContext';
 import { patientTimelinesApi } from '../services/patientTimelinesApi';
 import type { PatientTimelineHeader } from '../types/patientTimelines';
 
@@ -27,6 +28,8 @@ export const TimelineHeaderCard: React.FC<TimelineHeaderCardProps> = ({
   patient,
 }) => {
   const navigate = useNavigate();
+  const { canView } = usePermission();
+  const canReadTimeline = canView('PATIENT_TIMELINES', ['PATIENTS']);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const handleDownloadPdf = async () => {
@@ -56,17 +59,19 @@ export const TimelineHeaderCard: React.FC<TimelineHeaderCardProps> = ({
             Back to Patient Timelines
           </Button>
 
-          <Button
-            type="primary"
-            icon={<Download className={`w-4 h-4 ${downloadingPdf ? 'animate-bounce' : ''}`} />}
-            className="bg-teal-700 hover:bg-teal-800 border-none shadow-xs text-xs font-semibold"
-            loading={downloadingPdf}
-            onClick={() => {
-              void handleDownloadPdf();
-            }}
-          >
-            Download PDF Summary
-          </Button>
+          {canReadTimeline && (
+            <Button
+              type="primary"
+              icon={<Download className={`w-4 h-4 ${downloadingPdf ? 'animate-bounce' : ''}`} />}
+              className="bg-teal-700 hover:bg-teal-800 border-none shadow-xs text-xs font-semibold"
+              loading={downloadingPdf}
+              onClick={() => {
+                void handleDownloadPdf();
+              }}
+            >
+              Download PDF Summary
+            </Button>
+          )}
         </div>
       </div>
 
