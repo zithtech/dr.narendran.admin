@@ -6,6 +6,7 @@ import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui
 import { addedFacet, statusFacet } from '../components/ui/facets';
 import { ActivityCell, Badge, type BadgeTone, StatusDot } from '../components/ui/primitives';
 import UserModal, { type UserAccount } from '../components/UserModal';
+import { usePermission } from '../context/PermissionContext';
 import { useResource } from '../hooks/useResource';
 import { formatDate, timeAgo, titleCase } from '../lib/format';
 import api from '../utils/api';
@@ -32,10 +33,14 @@ const FACETS: Facet<UserAccount>[] = [
 export default function Users() {
   const resource = useResource<UserAccount>('user-accounts', 'user accounts');
   const { message } = App.useApp();
+  const { canCreate, canUpdate } = usePermission();
+  const isCreatable = canCreate('USERS');
+  const isUpdatable = canUpdate('USERS');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
 
   const openEditor = (user: UserAccount | null) => {
+    if (user ? !isUpdatable : !isCreatable) return;
     setEditingUser(user);
     setIsModalOpen(true);
   };
@@ -49,7 +54,7 @@ export default function Users() {
         <PrimaryCell
           name={u.username}
           sub={`${titleCase(u.role)} login`}
-          onOpen={() => openEditor(u)}
+          {...(isUpdatable ? { onOpen: () => openEditor(u) } : {})}
         />
       ),
     },
@@ -87,6 +92,7 @@ export default function Users() {
   return (
     <>
       <DataView
+        moduleSlug="USERS"
         title="User Accounts"
         subtitle="Login credentials and roles for the apps."
         icon={UserCog}

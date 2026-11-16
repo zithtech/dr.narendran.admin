@@ -1,6 +1,7 @@
-import { CalendarX2, Pencil, Plus, X } from 'lucide-react';
+import { CalendarClock, CalendarX2, Pencil, Plus, X } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 
+import { usePermission } from '../context/PermissionContext';
 import { titleCase } from '../lib/format';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
@@ -17,6 +18,7 @@ interface AvailabilitySlot {
   day_of_week: string;
   start_time: string;
   end_time: string;
+  slot_length?: number;
   status: string;
 }
 
@@ -41,6 +43,11 @@ export default function DoctorAvailabilityModal({
   onClose,
   doctor,
 }: DoctorAvailabilityModalProps) {
+  const { canCreate, canUpdate, canDelete } = usePermission();
+  const isCreatable = canCreate('AVAILABILITY');
+  const isUpdatable = canUpdate('AVAILABILITY');
+  const isDeletable = canDelete('AVAILABILITY');
+
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(false);
@@ -53,6 +60,7 @@ export default function DoctorAvailabilityModal({
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('17:00');
   const [branchId, setBranchId] = useState<string>('');
+  const [slotLength, setSlotLength] = useState<number>(30);
 
   const fetchAvailability = useCallback(async () => {
     if (!doctor) return;
@@ -82,6 +90,7 @@ export default function DoctorAvailabilityModal({
     setStartTime('09:00');
     setEndTime('17:00');
     setBranchId(doctor?.branch_id || '');
+    setSlotLength(30);
     setError('');
   }, [doctor]);
 
@@ -100,6 +109,7 @@ export default function DoctorAvailabilityModal({
 
   const handleSubmitSlot = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (editingSlotId ? !isUpdatable : !isCreatable) return;
     if (branchId === '') {
       setError('Please select a branch for this schedule.');
       return;
@@ -124,6 +134,7 @@ export default function DoctorAvailabilityModal({
           day_of_week: day,
           start_time: startTime,
           end_time: endTime,
+          slot_length: slotLength,
           status: 'ACTIVE',
         },
       });
@@ -138,15 +149,18 @@ export default function DoctorAvailabilityModal({
   };
 
   const handleEditSlot = (slot: AvailabilitySlot) => {
+    if (!isUpdatable) return;
     setEditingSlotId(slot.id);
     setDay(slot.day_of_week);
     setStartTime(slot.start_time.slice(0, 5));
     setEndTime(slot.end_time.slice(0, 5));
     setBranchId(slot.branch_id);
+    setSlotLength(slot.slot_length || 30);
     setError('');
   };
 
   const handleDeleteSlot = async (id: string) => {
+    if (!isDeletable) return;
     try {
       await api.delete(`doctor-availability/${id}`);
       if (editingSlotId === id) resetForm();
@@ -172,91 +186,144 @@ export default function DoctorAvailabilityModal({
         onClose={onClose}
         size="xl"
         variant="drawer"
-        title="Weekly schedule"
-        description={`${doctor.name}${doctor.hospital_name ? ` · ${doctor.hospital_name}` : ''}`}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 8,
+                background: '#eff6ff',
+                border: '1px solid #dbeafe',
+                color: '#2563eb',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <CalendarClock size={18} />
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>
+                Weekly schedule
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b', fontWeight: 400 }}>
+                {doctor.name}
+                {doctor.hospital_name ? ` · ${doctor.hospital_name}` : ''}
+              </div>
+            </div>
+          </div>
+        }
       >
         <div className="ui-modal-body">
           {error && <Alert>{error}</Alert>}
 
-          <div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 8,
-              }}
-            >
-              <span className="ui-section-title">
-                {editingSlotId ? 'Edit time slot' : 'Add time slot'}
-              </span>
-              {editingSlotId && (
-                <button type="button" onClick={resetForm} className="ui-btn ui-btn-sm ui-btn-ghost">
-                  Cancel edit
-                </button>
-              )}
-            </div>
-            <form
-              onSubmit={(e) => {
-                void handleSubmitSlot(e);
-              }}
-              className={cx('ui-slot-form', editingSlotId && 'is-editing')}
-            >
-              <Field label="Day">
-                <select className="ui-select" value={day} onChange={(e) => setDay(e.target.value)}>
-                  {DAYS.map((d) => (
-                    <option key={d} value={d}>
-                      {titleCase(d)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Start">
-                <input
-                  className="ui-input"
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  required
-                />
-              </Field>
-              <Field label="End">
-                <input
-                  className="ui-input"
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  required
-                />
-              </Field>
-              <Field label="Branch">
-                <select
-                  className="ui-select"
-                  value={branchId}
-                  onChange={(e) => setBranchId(e.target.value)}
-                  required
-                >
-                  <option value="" disabled>
-                    Select…
-                  </option>
-                  {availableBranches.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <button type="submit" disabled={loading} className="ui-btn ui-btn-primary">
-                {editingSlotId ? (
-                  'Update'
-                ) : (
-                  <>
-                    <Plus size={15} /> Add
-                  </>
+          {(editingSlotId ? isUpdatable : isCreatable) && (
+            <div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 8,
+                }}
+              >
+                <span className="ui-section-title">
+                  {editingSlotId ? 'Edit time slot' : 'Add time slot'}
+                </span>
+                {editingSlotId && (
+                  <button type="button" onClick={resetForm} className="ui-btn ui-btn-sm ui-btn-ghost">
+                    Cancel edit
+                  </button>
                 )}
-              </button>
-            </form>
-          </div>
+              </div>
+              <form
+                onSubmit={(e) => {
+                  void handleSubmitSlot(e);
+                }}
+                className={cx('ui-slot-form', editingSlotId && 'is-editing')}
+              >
+                <Field label="Day">
+                  <select className="ui-select" value={day} onChange={(e) => setDay(e.target.value)}>
+                    {DAYS.map((d) => (
+                      <option key={d} value={d}>
+                        {titleCase(d)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Start">
+                  <input
+                    className="ui-input"
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    required
+                  />
+                </Field>
+                <Field label="End">
+                  <input
+                    className="ui-input"
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    required
+                  />
+                </Field>
+                <Field label="Branch">
+                  <select
+                    className="ui-select"
+                    value={branchId}
+                    onChange={(e) => setBranchId(e.target.value)}
+                    required
+                  >
+                    <option value="" disabled>
+                      Select…
+                    </option>
+                    {availableBranches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Slot Duration">
+                  <select
+                    className="ui-select"
+                    value={slotLength}
+                    onChange={(e) => setSlotLength(Number(e.target.value) || 30)}
+                  >
+                    <option value={10}>10 Mins</option>
+                    <option value={15}>15 Mins</option>
+                    <option value={20}>20 Mins</option>
+                    <option value={30}>30 Mins (Default)</option>
+                    <option value={45}>45 Mins</option>
+                    <option value={60}>60 Mins (1 Hour)</option>
+                  </select>
+                </Field>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="ui-btn ui-btn-primary"
+                  style={{
+                    background: '#2563eb',
+                    borderColor: '#2563eb',
+                    color: '#ffffff',
+                    fontWeight: 600,
+                  }}
+                >
+                  {editingSlotId ? (
+                    'Update'
+                  ) : (
+                    <>
+                      <Plus size={15} /> Add
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          )}
 
           <div>
             <div className="ui-section-title" style={{ marginBottom: 8 }}>
@@ -288,7 +355,7 @@ export default function DoctorAvailabilityModal({
                   <CalendarX2 size={20} />
                 </div>
                 <strong>No availability scheduled</strong>
-                <span>Add the first time slot above.</span>
+                <span>{isCreatable ? 'Add the first time slot above.' : 'No consultation hours configured yet.'}</span>
               </div>
             ) : (
               <div className="ui-week">
@@ -304,25 +371,31 @@ export default function DoctorAvailabilityModal({
                           <span className="ui-slot-chip-time">
                             {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}
                           </span>
-                          <span className="ui-slot-chip-branch">{slot.branch_name}</span>
-                          <button
-                            type="button"
-                            className="ui-icon-btn"
-                            onClick={() => handleEditSlot(slot)}
-                            aria-label="Edit slot"
-                            title="Edit slot"
-                          >
-                            <Pencil size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            className="ui-icon-btn is-danger"
-                            onClick={() => setPendingDelete(slot)}
-                            aria-label="Remove slot"
-                            title="Remove slot"
-                          >
-                            <X size={14} />
-                          </button>
+                          <span className="ui-slot-chip-branch">
+                            {slot.branch_name} · {slot.slot_length || 30}m slots
+                          </span>
+                          {isUpdatable && (
+                            <button
+                              type="button"
+                              className="ui-icon-btn"
+                              onClick={() => handleEditSlot(slot)}
+                              aria-label="Edit slot"
+                              title="Edit slot"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                          )}
+                          {isDeletable && (
+                            <button
+                              type="button"
+                              className="ui-icon-btn is-danger"
+                              onClick={() => setPendingDelete(slot)}
+                              aria-label="Remove slot"
+                              title="Remove slot"
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
                         </span>
                       ))}
                     </div>

@@ -6,6 +6,7 @@ import BranchModal, { type Branch } from '../components/BranchModal';
 import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
 import { addedFacet, statusFacet } from '../components/ui/facets';
 import { ActivityCell, Badge, StatusDot } from '../components/ui/primitives';
+import { usePermission } from '../context/PermissionContext';
 import { useResource } from '../hooks/useResource';
 import { tenure, timeAgo } from '../lib/format';
 import api from '../utils/api';
@@ -24,10 +25,14 @@ const FACETS: Facet<Branch>[] = [
 export default function Branches() {
   const resource = useResource<Branch>('branches', 'branches');
   const { message } = App.useApp();
+  const { canCreate, canUpdate } = usePermission();
+  const isCreatable = canCreate('BRANCHES');
+  const isUpdatable = canUpdate('BRANCHES');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
 
   const openEditor = (branch: Branch | null) => {
+    if (branch ? !isUpdatable : !isCreatable) return;
     setEditingBranch(branch);
     setIsModalOpen(true);
   };
@@ -41,7 +46,7 @@ export default function Branches() {
         <PrimaryCell
           name={b.name}
           sub={b.phone || <span className="ui-muted">No phone</span>}
-          onOpen={() => openEditor(b)}
+          {...(isUpdatable ? { onOpen: () => openEditor(b) } : {})}
         />
       ),
     },
@@ -93,6 +98,7 @@ export default function Branches() {
   return (
     <>
       <DataView
+        moduleSlug="BRANCHES"
         title="Branches"
         subtitle="Hospital branches and their locations."
         icon={GitBranch}

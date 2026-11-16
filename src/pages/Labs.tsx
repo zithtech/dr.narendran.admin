@@ -7,6 +7,7 @@ import LabModal, { type Lab } from '../components/LabModal';
 import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
 import { addedFacet, statusFacet } from '../components/ui/facets';
 import { ActivityCell, StatusDot } from '../components/ui/primitives';
+import { usePermission } from '../context/PermissionContext';
 import { useResource } from '../hooks/useResource';
 import { tenure, timeAgo } from '../lib/format';
 import api from '../utils/api';
@@ -19,6 +20,12 @@ const FACETS: Facet<Lab>[] = [
 export default function Labs() {
   const resource = useResource<Lab>('labs', 'labs');
   const { message } = App.useApp();
+  const { canCreate, canUpdate } = usePermission();
+  const isCreatable = canCreate('LABS');
+  const isUpdatable = canUpdate('LABS');
+  const canCreatePortal = canCreate('CLIENT_PORTALS');
+  const canUpdatePortal = canUpdate('CLIENT_PORTALS');
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLab, setEditingLab] = useState<Lab | null>(null);
 
@@ -26,6 +33,7 @@ export default function Labs() {
   const [isPortalModalOpen, setIsPortalModalOpen] = useState(false);
 
   const openEditor = (lab: Lab | null) => {
+    if (lab ? !isUpdatable : !isCreatable) return;
     setEditingLab(lab);
     setIsModalOpen(true);
   };
@@ -39,7 +47,7 @@ export default function Labs() {
         <PrimaryCell
           name={l.name}
           sub={l.phone || <span className="ui-muted">No phone</span>}
-          onOpen={() => openEditor(l)}
+          {...(isUpdatable ? { onOpen: () => openEditor(l) } : {})}
         />
       ),
     },
@@ -98,21 +106,23 @@ export default function Labs() {
               <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                 Portal Active
               </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setPortalLab(l);
-                  setIsPortalModalOpen(true);
-                }}
-                className="ui-btn ui-btn-sm text-xs py-0.5 px-2 h-6"
-                title="Manage Portal Details"
-              >
-                Manage
-              </button>
+              {canUpdatePortal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPortalLab(l);
+                    setIsPortalModalOpen(true);
+                  }}
+                  className="ui-btn ui-btn-sm text-xs py-0.5 px-2 h-6"
+                  title="Manage Portal Details"
+                >
+                  Manage
+                </button>
+              )}
             </div>
           );
         }
-        return (
+        return canCreatePortal ? (
           <button
             type="button"
             onClick={() => {
@@ -123,6 +133,8 @@ export default function Labs() {
           >
             Create Client Portal
           </button>
+        ) : (
+          <span className="ui-muted">—</span>
         );
       },
     },
@@ -142,6 +154,7 @@ export default function Labs() {
   return (
     <>
       <DataView
+        moduleSlug="LABS"
         title="Linked Labs"
         subtitle="Recommended laboratories for patients."
         icon={FlaskConical}

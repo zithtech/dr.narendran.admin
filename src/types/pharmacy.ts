@@ -214,3 +214,28 @@ export interface AIMedicineSuggestion {
 export interface AISearchMedicineResponse {
   medicines: AIMedicineSuggestion[];
 }
+
+export interface MedicinePackage {
+  id: string;
+  name: string;
+  description?: string | null;
+  doctor_id?: string | null;
+  doctor_name?: string | null;
+  created_at: string;
+  updated_at: string;
+  medicines: Medicine[];
+}
+
+export interface CreatePackagePayload {
+  name: string;
+  description?: string | null;
+  doctorId?: string | null;
+  medicineIds: string[];
+}
+
+export interface UpdatePackagePayload {
+  name: string;
+  description?: string | null;
+  doctorId?: string | null;
+  medicineIds: string[];
+}

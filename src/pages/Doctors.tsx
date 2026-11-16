@@ -1,6 +1,7 @@
 import { App } from 'antd';
 import { CalendarClock, Stethoscope } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 
 import DoctorAvailabilityModal from '../components/DoctorAvailabilityModal';
 import DoctorDrawer from '../components/DoctorDrawer';
@@ -9,6 +10,7 @@ import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui
 import { addedFacet, statusFacet } from '../components/ui/facets';
 import { ActivityCell, Badge, StatusDot } from '../components/ui/primitives';
 import { useResource } from '../hooks/useResource';
+import { usePermission } from '../context/PermissionContext';
 import { timeAgo } from '../lib/format';
 import api from '../utils/api';
 
@@ -45,8 +47,10 @@ const FACETS: Facet<Doctor>[] = [
 ];
 
 export default function Doctors() {
+  const navigate = useNavigate();
   const resource = useResource<Doctor>('doctors', 'doctors');
   const { message } = App.useApp();
+  const { canView, canCreate, canUpdate } = usePermission();
 
   const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
@@ -60,11 +64,13 @@ export default function Doctors() {
   const openDetails = (doctor: Doctor) => setViewingId(doctor.id);
 
   const openEditor = (doctor: Doctor | null) => {
+    if (doctor ? !canUpdate('DOCTORS') : !canCreate('DOCTORS')) return;
     setEditingDoctor(doctor);
     setIsDoctorModalOpen(true);
   };
 
   const openAvailability = (doctor: Doctor) => {
+    if (!canUpdate('AVAILABILITY')) return;
     setAvailabilityDoctor(doctor);
     setIsAvailabilityModalOpen(true);
   };
@@ -139,6 +145,7 @@ export default function Doctors() {
   return (
     <>
       <DataView
+        moduleSlug="DOCTORS"
         title="Doctors"
         subtitle="Doctors, specializations and weekly schedules."
         icon={Stethoscope}
@@ -166,14 +173,45 @@ export default function Doctors() {
         nameOf={(d) => d.name}
         onRowClick={openDetails}
         activeId={viewingId}
+        extraActions={
+          canView('AVAILABILITY') ? (
+            <button
+              type="button"
+              className="ui-btn ui-btn-pill ui-btn-soft"
+              onClick={() => void navigate('/availability')}
+              title="Manage Doctor Availability & Appointment Slots"
+            >
+              <CalendarClock size={15} /> Availability &amp; Slots
+            </button>
+          ) : null
+        }
         rowActions={(d) => (
-          <button
-            type="button"
-            className="ui-btn ui-btn-sm ui-btn-soft"
-            onClick={() => openAvailability(d)}
-          >
-            <CalendarClock size={13} /> Schedule
-          </button>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            {canUpdate('AVAILABILITY') && (
+              <button
+                type="button"
+                className="ui-btn ui-btn-sm ui-btn-soft"
+                onClick={() => openAvailability(d)}
+                title="Quick Schedule"
+              >
+                <CalendarClock size={13} /> Schedule
+              </button>
+            )}
+            {canView('AVAILABILITY') && (
+              <button
+                type="button"
+                className="ui-btn ui-btn-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void navigate(`/availability?doctorId=${d.id}`);
+                }}
+                title="Open full Availability & Slots page"
+                style={{ padding: '0 8px', fontSize: 11 }}
+              >
+                Slots
+              </button>
+            )}
+          </div>
         )}
       />
 

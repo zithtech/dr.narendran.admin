@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 
-import api from '../utils/api';
+import { usePermission } from '../context/PermissionContext';
 import { MobileNavDrawer } from './navigation/MobileNavDrawer';
 import {
   filterNavigationByPermissions,
@@ -20,8 +20,9 @@ export default function SidebarLayout() {
   const currentUsername =
     localStorage.getItem('adminUsername') ||
     localStorage.getItem('adminEmail') ||
-    'adminweb123@gmail.com';
-  const currentRole = localStorage.getItem('adminRole') ?? 'System Administrator';
+    'Super Admin';
+  const { canView, isSystemAdmin, permissions, roleName } = usePermission();
+  const currentRole = roleName || localStorage.getItem('adminRole') || 'System Administrator';
 
   const userInitials = useMemo(() => {
     const parts = (currentUsername || 'SA')
@@ -36,28 +37,13 @@ export default function SidebarLayout() {
     return (first ? first.slice(0, 2) : 'SA').toUpperCase();
   }, [currentUsername]);
 
-  const [roleData, setRoleData] = useState<any>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (currentRole) {
-      api
-        .get(`rbac/roles/${encodeURIComponent(currentRole)}`)
-        .then((res) => setRoleData(res.data))
-        .catch(console.error);
-    }
-  }, [currentRole]);
-
-  const allowedSlugs =
-    roleData?.permissions?.filter((p: any) => p.can_read).map((p: any) => p.module_slug) || [];
-
-  const isSystemAdmin =
-    !currentRole ||
-    ['ADMIN', 'SUPER_ADMIN', 'SUPER ADMIN', 'ADMINISTRATOR', 'SYSTEM ADMINISTRATOR'].includes(
-      currentRole.toUpperCase(),
-    ) ||
-    Boolean(roleData?.is_system_role);
+  const allowedSlugs = useMemo(
+    () => Object.keys(permissions).filter((slug) => canView(slug)),
+    [permissions, canView],
+  );
 
   // Filtered categories based on RBAC permissions
   const visibleCategories = useMemo(
@@ -115,6 +101,9 @@ export default function SidebarLayout() {
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUsername');
     localStorage.removeItem('adminRole');
+    localStorage.removeItem('adminUserId');
+    localStorage.removeItem('adminCachedPermissions');
+    window.dispatchEvent(new Event('admin-auth-changed'));
     void navigate('/login');
   };
 

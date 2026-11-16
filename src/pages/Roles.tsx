@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import RoleModal, { type Role } from '../components/RoleModal';
 import { type Column, DataView, PrimaryCell } from '../components/ui/DataView';
+import { usePermission } from '../context/PermissionContext';
 import { useResource } from '../hooks/useResource';
 import api from '../utils/api';
 
@@ -15,11 +16,15 @@ export default function Roles() {
   };
 
   const { message, modal } = App.useApp();
+  const { canCreate, canUpdate } = usePermission();
+  const isCreatable = canCreate('ROLES');
+  const isUpdatable = canUpdate('ROLES');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
 
   const openEditor = (r: Role | null) => {
+    if (r ? !isUpdatable : !isCreatable) return;
     setEditingRole(r);
     setIsModalOpen(true);
   };
@@ -56,7 +61,7 @@ export default function Roles() {
         <PrimaryCell
           name={r.name}
           sub={r.description}
-          onOpen={() => openEditor(r)}
+          {...(isUpdatable ? { onOpen: () => openEditor(r) } : {})}
         />
       ),
     },
@@ -73,17 +78,32 @@ export default function Roles() {
     {
       id: 'permissions',
       header: 'Permissions',
-      cell: (r) => (
-        <span className="text-sm text-muted-foreground">
-          {r.permissions.length} modules accessible
-        </span>
-      ),
+      cell: (r) => {
+        if (r.is_system_role && (!r.permissions || r.permissions.length === 0)) {
+          return (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-md bg-purple-50 text-purple-700 border border-purple-200">
+              Full System Access (All Modules)
+            </span>
+          );
+        }
+        const accessibleCount =
+          r.permissions?.filter(
+            (p) =>
+              p.can_manage || p.can_read || p.can_create || p.can_update || p.can_delete || p.can_write,
+          ).length || 0;
+        return (
+          <span className="text-xs text-slate-600 font-medium">
+            {accessibleCount} module{accessibleCount === 1 ? '' : 's'} accessible
+          </span>
+        );
+      },
     },
   ];
 
   return (
     <>
       <DataView
+        moduleSlug="ROLES"
         title="Roles & Permissions"
         subtitle="Manage dynamic roles and access control across modules."
         icon={Shield}

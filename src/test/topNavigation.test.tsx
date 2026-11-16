@@ -28,11 +28,12 @@ describe('Top Navigation Restructuring', () => {
     expect(dashboardCat.name).toBe('Dashboard');
     expect(dashboardCat.modules.map((m) => m.name)).toEqual(['Dashboard']);
 
-    // 2. Clinical: Doctors, Patients, Appointments, Today's Schedule, Ratings & Reviews
+    // 2. Clinical: Doctors, Availability & Slots, Patients, Appointments, Today's Schedule, Ratings & Reviews
     const clinicalCat = NAVIGATION_CATEGORIES.find((c) => c.key === 'clinical')!;
     expect(clinicalCat.name).toBe('Clinical');
     expect(clinicalCat.modules.map((m) => m.name)).toEqual([
       'Doctors',
+      'Availability & Slots',
       'Patients',
       'Patient Timelines',
       'Medical Records',
@@ -52,21 +53,23 @@ describe('Top Navigation Restructuring', () => {
       'Linked Medicals',
     ]);
 
-    // 4. Operations: Pharmacy, Medicine Inventory, Medicine Package, Orders, Lab Services
+    // 4. Operations: Pharmacy, Medicine Inventory, Medicine Package, Prescription, Orders, Lab Services
     const operationsCat = NAVIGATION_CATEGORIES.find((c) => c.key === 'operations')!;
     expect(operationsCat.name).toBe('Operations');
     expect(operationsCat.modules.map((m) => m.name)).toEqual([
       'Pharmacy',
       'Medicine Inventory',
       'Medicine Package',
+      'Prescription',
       'Orders',
       'Lab Services',
     ]);
 
-    // 5. Administration: User Accounts, Staff Management, Roles & Permissions
+    // 5. Administration: Client Portals, User Accounts, Staff Management, Roles & Permissions
     const adminCat = NAVIGATION_CATEGORIES.find((c) => c.key === 'administration')!;
     expect(adminCat.name).toBe('Administration');
     expect(adminCat.modules.map((m) => m.name)).toEqual([
+      'Client Portals',
       'User Accounts',
       'Staff Management',
       'Roles & Permissions',
@@ -97,10 +100,25 @@ describe('Top Navigation Restructuring', () => {
     expect(resInv.activeCategory?.name).toBe('Operations');
     expect(resInv.activeModule?.name).toBe('Medicine Inventory');
 
-    // Operations: /prescriptions (Medicine Package)
-    const resMedPkg = findActiveNavigation('/prescriptions', NAVIGATION_CATEGORIES);
+    // Operations: /medicine-packages (Medicine Package)
+    const resMedPkg = findActiveNavigation('/medicine-packages', NAVIGATION_CATEGORIES);
     expect(resMedPkg.activeCategory?.name).toBe('Operations');
     expect(resMedPkg.activeModule?.name).toBe('Medicine Package');
+
+    // Operations: /prescriptions (Prescription)
+    const resRx = findActiveNavigation('/prescriptions', NAVIGATION_CATEGORIES);
+    expect(resRx.activeCategory?.name).toBe('Operations');
+    expect(resRx.activeModule?.name).toBe('Prescription');
+
+    // Clinical: /availability (Availability & Slots)
+    const resAvail = findActiveNavigation('/availability', NAVIGATION_CATEGORIES);
+    expect(resAvail.activeCategory?.name).toBe('Clinical');
+    expect(resAvail.activeModule?.name).toBe('Availability & Slots');
+
+    // Administration: /client-portals (Client Portals)
+    const resPortals = findActiveNavigation('/client-portals', NAVIGATION_CATEGORIES);
+    expect(resPortals.activeCategory?.name).toBe('Administration');
+    expect(resPortals.activeModule?.name).toBe('Client Portals');
 
     // Administration: /roles
     const resRoles = findActiveNavigation('/roles', NAVIGATION_CATEGORIES);
@@ -231,6 +249,7 @@ describe('Top Navigation Restructuring', () => {
     expect(screen.getByRole('button', { name: /Pharmacy/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Medicine Inventory/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Medicine Package/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Prescription/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Orders/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Lab Services/i })).toBeInTheDocument();
 
@@ -244,15 +263,14 @@ describe('Top Navigation Restructuring', () => {
   });
 
   it('filters navigation by RBAC permissions', () => {
-    // Only DOCTORS and USERS permissions
     const filtered = filterNavigationByPermissions(
       NAVIGATION_CATEGORIES,
-      ['DOCTORS', 'USERS'],
+      ['DOCTORS', 'APPOINTMENTS', 'USERS', 'CLIENT_PORTALS'],
       false,
     );
 
     const keys = filtered.map((c) => c.key);
-    // Dashboard (always), Clinical (Doctors, Appointments), Administration (Users, Staff, Roles)
+    // Dashboard (always), Clinical (Doctors, Appointments), Administration (Client Portals, User Accounts)
     expect(keys).toContain('dashboard');
     expect(keys).toContain('clinical');
     expect(keys).toContain('administration');
@@ -264,6 +282,13 @@ describe('Top Navigation Restructuring', () => {
     expect(modNames).toContain('Doctors');
     expect(modNames).toContain('Appointments');
     expect(modNames).not.toContain('Patients');
+    expect(modNames).not.toContain('Availability & Slots');
+
+    const admin = filtered.find((c) => c.key === 'administration')!;
+    const adminModNames = admin.modules.map((m) => m.name);
+    expect(adminModNames).toContain('Client Portals');
+    expect(adminModNames).toContain('User Accounts');
+    expect(adminModNames).not.toContain('Roles & Permissions');
   });
 });
 

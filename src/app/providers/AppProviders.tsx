@@ -4,6 +4,7 @@ import { type ReactNode, useState } from 'react';
 
 import { createQueryClient } from '@/shared/api/queryClient';
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
+import { PermissionProvider } from '@/context/PermissionContext';
 
 interface Props {
   children: ReactNode;
@@ -36,7 +37,9 @@ export function AppProviders({ children }: Props) {
             },
           }}
         >
-          <AntApp>{children}</AntApp>
+          <AntApp>
+            <PermissionProvider>{children}</PermissionProvider>
+          </AntApp>
         </ConfigProvider>
       </QueryClientProvider>
     </ErrorBoundary>

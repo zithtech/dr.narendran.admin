@@ -6,6 +6,7 @@ import LabServiceModal, { type LabService } from '../components/LabServiceModal'
 import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
 import { addedFacet, statusFacet } from '../components/ui/facets';
 import { ActivityCell, StatusDot } from '../components/ui/primitives';
+import { usePermission } from '../context/PermissionContext';
 import { useResource } from '../hooks/useResource';
 import { tenure, timeAgo } from '../lib/format';
 import api from '../utils/api';
@@ -18,11 +19,15 @@ const FACETS: Facet<LabService>[] = [
 export default function LabServices() {
   const resource = useResource<LabService>('lab-services', 'lab-services');
   const { message } = App.useApp();
+  const { canCreate, canUpdate } = usePermission();
+  const isCreatable = canCreate('LAB_SERVICES');
+  const isUpdatable = canUpdate('LAB_SERVICES');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<LabService | null>(null);
 
   const openEditor = (s: LabService | null) => {
+    if (s ? !isUpdatable : !isCreatable) return;
     setEditingService(s);
     setIsModalOpen(true);
   };
@@ -35,7 +40,7 @@ export default function LabServices() {
       cell: (s) => (
         <PrimaryCell
           name={s.name}
-          onOpen={() => openEditor(s)}
+          {...(isUpdatable ? { onOpen: () => openEditor(s) } : {})}
         />
       ),
     },
@@ -67,6 +72,7 @@ export default function LabServices() {
   return (
     <>
       <DataView
+        moduleSlug="LAB_SERVICES"
         title="Lab Services"
         subtitle="Master list of all services/tests offered by linked labs."
         icon={FlaskConical}

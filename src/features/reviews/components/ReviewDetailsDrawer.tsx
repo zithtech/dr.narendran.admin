@@ -15,6 +15,7 @@ import { Drawer } from '../../../components/ui/Drawer';
 import { Badge } from '../../../components/ui/primitives';
 import { formatDate, timeAgo } from '../../../lib/format';
 import { getErrorMessage } from '../../../utils/errors';
+import { usePermission } from '../../../context/PermissionContext';
 import { reviewsApi } from '../services/reviewsApi';
 import type {
   DoctorReviewItem,
@@ -36,6 +37,8 @@ export const ReviewDetailsDrawer: React.FC<ReviewDetailsDrawerProps> = ({
   onReviewUpdated,
 }) => {
   const { message } = App.useApp();
+  const { canUpdate } = usePermission();
+  const canModerate = canUpdate('REVIEWS');
   const [review, setReview] = useState<DoctorReviewItem | null>(null);
   const [logs, setLogs] = useState<ReviewModerationLog[]>([]);
   const [loading, setLoading] = useState(false);
@@ -359,115 +362,117 @@ export const ReviewDetailsDrawer: React.FC<ReviewDetailsDrawerProps> = ({
           </div>
 
           {/* Moderation Controls Card */}
-          <div className="rounded-lg border border-slate-200/90 p-4 bg-slate-50/40 shadow-2xs space-y-3">
-            <div>
-              <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5 uppercase tracking-wider">
-                <Shield size={14} className="text-blue-600" />
-                <span>Moderation Controls</span>
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Update review visibility on doctor public profiles. Changes are audited with mandatory reasons.
-              </p>
-            </div>
-
-            {!pendingAction ? (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {review.status !== 'FLAGGED' && (
-                  <button
-                    type="button"
-                    onClick={() => handleStartModeration('FLAG')}
-                    className="inline-flex items-center gap-1.5 h-7.5 px-3 text-xs font-semibold rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
-                  >
-                    <Flag size={12} />
-                    <span>Flag for Review</span>
-                  </button>
-                )}
-
-                {review.status !== 'HIDDEN' && (
-                  <button
-                    type="button"
-                    onClick={() => handleStartModeration('HIDE')}
-                    className="inline-flex items-center gap-1.5 h-7.5 px-3 text-xs font-semibold rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
-                  >
-                    <ShieldAlert size={12} />
-                    <span>Hide from Public Profile</span>
-                  </button>
-                )}
-
-                {review.status !== 'ACTIVE' && (
-                  <button
-                    type="button"
-                    onClick={() => handleStartModeration('RESTORE')}
-                    className="inline-flex items-center gap-1.5 h-7.5 px-3 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
-                  >
-                    <CheckCircle2 size={12} />
-                    <span>Restore to Active</span>
-                  </button>
-                )}
+          {canModerate && (
+            <div className="rounded-lg border border-slate-200/90 p-4 bg-slate-50/40 shadow-2xs space-y-3">
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5 uppercase tracking-wider">
+                  <Shield size={14} className="text-blue-600" />
+                  <span>Moderation Controls</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Update review visibility on doctor public profiles. Changes are audited with mandatory reasons.
+                </p>
               </div>
-            ) : (
-              <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3.5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-blue-900 uppercase tracking-wider">
-                    Confirm Action: {pendingAction}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleCancelModeration}
-                    className="text-xs text-slate-500 hover:text-slate-700 cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                </div>
 
-                <div>
-                  <label htmlFor="moderation-reason-input" className="block text-xs font-semibold text-slate-700 mb-1">
-                    Reason for Moderation (Required for audit log) *
-                  </label>
-                  <textarea
-                    id="moderation-reason-input"
-                    rows={2}
-                    value={reason}
-                    onChange={(e) => {
-                      setReason(e.target.value);
-                      if (reasonError) setReasonError(null);
-                    }}
-                    placeholder="State why this review is being moderated (e.g. Clinical review required, Off-topic content, Verified resolved)…"
-                    className="w-full rounded-lg border border-slate-300 p-2 text-xs text-slate-900 bg-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  />
-                  {reasonError && (
-                    <p className="text-xs text-rose-600 mt-1 font-medium">{reasonError}</p>
+              {!pendingAction ? (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {review.status !== 'FLAGGED' && (
+                    <button
+                      type="button"
+                      onClick={() => handleStartModeration('FLAG')}
+                      className="inline-flex items-center gap-1.5 h-7.5 px-3 text-xs font-semibold rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
+                    >
+                      <Flag size={12} />
+                      <span>Flag for Review</span>
+                    </button>
+                  )}
+
+                  {review.status !== 'HIDDEN' && (
+                    <button
+                      type="button"
+                      onClick={() => handleStartModeration('HIDE')}
+                      className="inline-flex items-center gap-1.5 h-7.5 px-3 text-xs font-semibold rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
+                    >
+                      <ShieldAlert size={12} />
+                      <span>Hide from Public Profile</span>
+                    </button>
+                  )}
+
+                  {review.status !== 'ACTIVE' && (
+                    <button
+                      type="button"
+                      onClick={() => handleStartModeration('RESTORE')}
+                      className="inline-flex items-center gap-1.5 h-7.5 px-3 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
+                    >
+                      <CheckCircle2 size={12} />
+                      <span>Restore to Active</span>
+                    </button>
                   )}
                 </div>
+              ) : (
+                <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3.5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-blue-900 uppercase tracking-wider">
+                      Confirm Action: {pendingAction}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCancelModeration}
+                      className="text-xs text-slate-500 hover:text-slate-700 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
 
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={handleCancelModeration}
-                    className="h-7.5 px-3 text-xs font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    disabled={moderating}
-                    onClick={() => {
-                      void handleConfirmModeration();
-                    }}
-                    className={`inline-flex items-center gap-1.5 h-7.5 px-3.5 text-xs font-bold rounded-lg text-white shadow-2xs cursor-pointer ${
-                      pendingAction === 'HIDE'
-                        ? 'bg-rose-600 hover:bg-rose-700'
-                        : pendingAction === 'FLAG'
-                          ? 'bg-amber-600 hover:bg-amber-700'
-                          : 'bg-emerald-600 hover:bg-emerald-700'
-                    }`}
-                  >
-                    {moderating ? 'Updating…' : `Confirm ${pendingAction}`}
-                  </button>
+                  <div>
+                    <label htmlFor="moderation-reason-input" className="block text-xs font-semibold text-slate-700 mb-1">
+                      Reason for Moderation (Required for audit log) *
+                    </label>
+                    <textarea
+                      id="moderation-reason-input"
+                      rows={2}
+                      value={reason}
+                      onChange={(e) => {
+                        setReason(e.target.value);
+                        if (reasonError) setReasonError(null);
+                      }}
+                      placeholder="State why this review is being moderated (e.g. Clinical review required, Off-topic content, Verified resolved)…"
+                      className="w-full rounded-lg border border-slate-300 p-2 text-xs text-slate-900 bg-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                    {reasonError && (
+                      <p className="text-xs text-rose-600 mt-1 font-medium">{reasonError}</p>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCancelModeration}
+                      className="h-7.5 px-3 text-xs font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={moderating}
+                      onClick={() => {
+                        void handleConfirmModeration();
+                      }}
+                      className={`inline-flex items-center gap-1.5 h-7.5 px-3.5 text-xs font-bold rounded-lg text-white shadow-2xs cursor-pointer ${
+                        pendingAction === 'HIDE'
+                          ? 'bg-rose-600 hover:bg-rose-700'
+                          : pendingAction === 'FLAG'
+                            ? 'bg-amber-600 hover:bg-amber-700'
+                            : 'bg-emerald-600 hover:bg-emerald-700'
+                      }`}
+                    >
+                      {moderating ? 'Updating…' : `Confirm ${pendingAction}`}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Moderation History Audit Timeline */}
           <div className="rounded-lg border border-slate-200/90 p-4 bg-white shadow-2xs space-y-3">

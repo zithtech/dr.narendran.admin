@@ -6,12 +6,14 @@ import {
   FileText,
   FlaskConical,
   GitBranch,
+  Globe,
   HeartPulse,
   History,
   LayoutDashboard,
   LifeBuoy,
   type LucideIcon,
   MapPin,
+  Package,
   Pill,
   Shield,
   ShoppingBag,
@@ -26,6 +28,7 @@ export interface NavModule {
   path: string;
   icon: LucideIcon;
   slug: string;
+  fallbackSlugs?: string[];
   description?: string;
   aliases?: string[];
 }
@@ -42,10 +45,10 @@ export interface NavCategory {
 /**
  * Top Navigation Restructuring:
  * 1. Dashboard: Dashboard
- * 2. Clinical: Doctors, Patients, Appointments, Today's Schedule, Ratings & Reviews
+ * 2. Clinical: Doctors, Availability & Slots, Patients, Appointments, Today's Schedule, Ratings & Reviews
  * 3. Network: Hospitals, Branches, Linked Labs, Linked Medicals
- * 4. Operations: Pharmacy, Medicine Inventory, Medicine Package, Orders, Lab Services
- * 5. Administration: User Accounts, Staff Management, Roles & Permissions
+ * 4. Operations: Pharmacy, Medicine Inventory, Medicine Package, Prescription, Orders, Lab Services
+ * 5. Administration: Client Portals, User Accounts, Staff Management, Roles & Permissions
  * 6. Support: Patient Support, Doctor Support
  */
 export const NAVIGATION_CATEGORIES: NavCategory[] = [
@@ -81,6 +84,14 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         description: 'Specialists, profiles, timings & availability',
       },
       {
+        name: 'Availability & Slots',
+        path: '/availability',
+        icon: CalendarClock,
+        slug: 'AVAILABILITY',
+        description: 'Consultation hours, slot durations & blocked dates',
+        aliases: ['/doctor-availability'],
+      },
+      {
         name: 'Patients',
         path: '/patients',
         icon: HeartPulse,
@@ -91,7 +102,8 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         name: 'Patient Timelines',
         path: '/patient-timelines',
         icon: History,
-        slug: 'PATIENTS',
+        slug: 'PATIENT_TIMELINES',
+        fallbackSlugs: ['PATIENTS'],
         description: 'Patient timelines, medical history & health records',
       },
       {
@@ -99,27 +111,29 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         path: '/medical-records',
         icon: HeartPulse,
         slug: 'MEDICAL_RECORDS',
+        fallbackSlugs: ['PATIENTS'],
         description: 'Patient health records, medical history & health records',
       },
       {
         name: 'Location Management',
         path: '/locations',
         icon: MapPin,
-        slug: 'DOCTORS',
+        slug: 'LOCATIONS',
+        fallbackSlugs: ['DOCTORS'],
         description: 'Location management, clinics & facilities',
       },
       {
         name: 'Appointments',
         path: '/appointments',
         icon: CalendarDays,
-        slug: 'DOCTORS',
+        slug: 'APPOINTMENTS',
         description: 'All patient appointments, bookings & rescheduling',
       },
       {
         name: "Today's Schedule",
         path: '/appointments/today',
         icon: CalendarClock,
-        slug: 'DOCTORS',
+        slug: 'TODAYS_SCHEDULE',
         description: 'Doctor day-sheet, live consultation queues & status',
       },
       {
@@ -163,7 +177,7 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         name: 'Linked Medicals',
         path: '/linked-medicals',
         icon: Stethoscope,
-        slug: 'LABS',
+        slug: 'LINKED_MEDICALS',
         description: 'Affiliated clinics, dispensaries & healthcare hubs',
       },
     ],
@@ -179,23 +193,30 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         name: 'Pharmacy',
         path: '/pharmacy',
         icon: Pill,
-        slug: 'PRESCRIPTIONS',
+        slug: 'PHARMACY',
         description: 'Medicine formulations catalog, dosage & pricing',
       },
       {
         name: 'Medicine Inventory',
         path: '/inventory',
         icon: Boxes,
-        slug: 'PRESCRIPTIONS',
+        slug: 'INVENTORY',
         description: 'Physical stock levels, batch tracking & stock adjustments',
       },
       {
         name: 'Medicine Package',
+        path: '/medicine-packages',
+        icon: Package,
+        slug: 'MEDICINE_PACKAGES',
+        description: 'Pre-configured medicine kits & treatment bundles',
+        aliases: ['/medicine-package', '/packages'],
+      },
+      {
+        name: 'Prescription',
         path: '/prescriptions',
         icon: FileText,
         slug: 'PRESCRIPTIONS',
-        description: 'Prescription packages, templates & dispensed medications',
-        aliases: ['/medicine-package', '/medicine-packages'],
+        description: 'Doctor prescriptions, clinical templates & PDF exports',
       },
       {
         name: 'Orders',
@@ -221,6 +242,13 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
     defaultPath: '/users',
     modules: [
       {
+        name: 'Client Portals',
+        path: '/client-portals',
+        icon: Globe,
+        slug: 'CLIENT_PORTALS',
+        description: 'External partner portals, credentials & invitations',
+      },
+      {
         name: 'User Accounts',
         path: '/users',
         icon: UserCog,
@@ -231,14 +259,14 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         name: 'Staff Management',
         path: '/staff',
         icon: Users,
-        slug: 'USERS',
+        slug: 'STAFF',
         description: 'Hospital staff roster, duties, documents & shift timings',
       },
       {
         name: 'Roles & Permissions',
         path: '/roles',
         icon: Shield,
-        slug: 'USERS',
+        slug: 'ROLES',
         description: 'RBAC role definitions, module permissions & access matrices',
       },
     ],
@@ -254,14 +282,16 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         name: 'Patient Support',
         path: '/support',
         icon: LifeBuoy,
-        slug: 'SUPPORT',
+        slug: 'PATIENT_SUPPORT',
+        fallbackSlugs: ['SUPPORT'],
         description: 'Patient helpdesk, ticketing, chat & issue resolution',
       },
       {
         name: 'Doctor Support',
         path: '/doctor-support',
         icon: Stethoscope,
-        slug: 'SUPPORT',
+        slug: 'DOCTOR_SUPPORT',
+        fallbackSlugs: ['SUPPORT'],
         description: 'Physician assistance, technical queries & escalation tickets',
       },
     ],
@@ -351,7 +381,7 @@ export function filterNavigationByPermissions(
       const filteredModules = cat.modules.filter((mod) => {
         if (mod.slug === 'DASHBOARD') return true;
         if (allowedSlugs.includes(mod.slug)) return true;
-        if (mod.slug === 'REVIEWS' && allowedSlugs.includes('DOCTORS')) return true;
+        if (mod.fallbackSlugs?.some((fb) => allowedSlugs.includes(fb))) return true;
         return false;
       });
 

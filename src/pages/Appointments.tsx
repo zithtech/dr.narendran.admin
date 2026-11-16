@@ -1,4 +1,4 @@
-import { Dropdown, type MenuProps } from 'antd';
+import { App, Dropdown, type MenuProps } from 'antd';
 import {
   CalendarClock,
   CalendarDays,
@@ -22,10 +22,14 @@ import ScheduleAppointmentModal from '../components/ScheduleAppointmentModal';
 import { type Column, DataView, type Facet } from '../components/ui/DataView';
 import { addedFacet } from '../components/ui/facets';
 import { useResource } from '../hooks/useResource';
+import { usePermission } from '../context/PermissionContext';
 import { initials, titleCase } from '../lib/format';
 import type { Appointment } from '../types/appointment';
 import DoctorTodayAppointments from './DoctorTodayAppointments';
 import CreatePrescriptionModal from '../features/prescriptions/components/CreatePrescriptionModal';
+import ViewPrescriptionModal from '../features/prescriptions/components/ViewPrescriptionModal';
+import { type Prescription, prescriptionsApi } from '../features/prescriptions/api/prescriptionsApi';
+import api from '../utils/api';
 
 const FACETS: Facet<Appointment>[] = [
   {
@@ -53,10 +57,18 @@ const FACETS: Facet<Appointment>[] = [
 ];
 
 export default function Appointments() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const currentTab = searchParams.get('tab') === 'today' ? 'today' : 'all';
 
   const resource = useResource<Appointment>('appointments', 'appointments');
+  const { canCreate, canView, canUpdate, canDelete } = usePermission();
+
+  const isApptCreatable = canCreate('APPOINTMENTS', ['TODAYS_SCHEDULE']);
+  const isApptUpdatable = canUpdate('APPOINTMENTS', ['TODAYS_SCHEDULE']);
+  const isApptDeletable = canDelete('APPOINTMENTS', ['TODAYS_SCHEDULE']);
+  const isRxViewable = canView('PRESCRIPTIONS');
+  const isRxCreatable = canCreate('PRESCRIPTIONS');
+  const isRxUpdatable = canUpdate('PRESCRIPTIONS');
 
   // Modal / Drawer state
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
@@ -65,17 +77,45 @@ export default function Appointments() {
   const [reschedulingAppointment, setReschedulingAppointment] = useState<Appointment | null>(null);
   const [cancellingAppointment, setCancellingAppointment] = useState<Appointment | null>(null);
   const [prescriptionAppt, setPrescriptionAppt] = useState<Appointment | null>(null);
+  const [viewingPrescription, setViewingPrescription] = useState<Prescription | null>(null);
+  const [isViewRxOpen, setIsViewRxOpen] = useState(false);
+  const [editingPrescription, setEditingPrescription] = useState<Prescription | null>(null);
 
-  const handleTabChange = (tab: 'all' | 'today') => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (tab === 'today') {
-        next.set('tab', 'today');
-      } else {
-        next.delete('tab');
+  const { message, modal } = App.useApp();
+
+  const handleViewPrescription = async (appt: Appointment) => {
+    const hideLoading = message.loading(`Fetching prescription for ${appt.patientName}...`, 0);
+    try {
+      let rxList = await prescriptionsApi.getByAppointment(appt.id);
+      if ((!rxList || rxList.length === 0) && appt.patientId) {
+        const patientRx = await prescriptionsApi.getByPatient(appt.patientId);
+        if (patientRx && patientRx.length > 0) {
+          rxList = patientRx;
+        }
       }
-      return next;
-    });
+      hideLoading();
+
+      if (rxList && rxList.length > 0 && rxList[0]) {
+        setViewingPrescription(rxList[0]);
+        setIsViewRxOpen(true);
+      } else if (isRxCreatable) {
+        modal.confirm({
+          title: 'No Prescription Found',
+          content: `No prescription has been recorded yet for ${appt.patientName || 'this consultation'}. Would you like to create one now?`,
+          okText: 'Create Prescription',
+          cancelText: 'Cancel',
+          okButtonProps: { style: { background: '#7c3aed' } },
+          onOk: () => {
+            setPrescriptionAppt(appt);
+          },
+        });
+      } else {
+        message.info(`No prescription has been recorded yet for ${appt.patientName || 'this consultation'}.`);
+      }
+    } catch {
+      hideLoading();
+      message.error('Failed to load prescription.');
+    }
   };
 
   const renderStatus = (status: string) => {
@@ -141,8 +181,23 @@ export default function Appointments() {
     const isActive =
       a.status === 'scheduled' || a.status === 'confirmed' || a.status === 'rescheduled';
 
-    const items: NonNullable<MenuProps['items']> = [
-      {
+    const items: NonNullable<MenuProps['items']> = [];
+
+    if (isRxViewable) {
+      items.push({
+        key: 'view-prescription',
+        label: (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#16a34a' }}>
+            <FileText size={14} style={{ color: '#16a34a' }} />
+            <span>View Prescription</span>
+          </span>
+        ),
+        onClick: () => void handleViewPrescription(a),
+      });
+    }
+
+    if (isRxCreatable) {
+      items.push({
         key: 'prescription',
         label: (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#1e293b' }}>
@@ -151,8 +206,11 @@ export default function Appointments() {
           </span>
         ),
         onClick: () => setPrescriptionAppt(a),
-      },
-      {
+      });
+    }
+
+    if (isApptUpdatable) {
+      items.push({
         key: 'edit',
         label: (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#1e293b' }}>
@@ -161,25 +219,24 @@ export default function Appointments() {
           </span>
         ),
         onClick: () => openEdit(a),
-      },
-      {
-        key: 'view',
-        label: (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#475569' }}>
-            <Eye size={14} style={{ color: '#64748b' }} />
-            <span>View Details</span>
-          </span>
-        ),
-        onClick: () => openDetails(a),
-      },
-    ];
+      });
+    }
 
-    if (isActive) {
-      items.push(
-        {
-          type: 'divider',
-        },
-        {
+    items.push({
+      key: 'view',
+      label: (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#475569' }}>
+          <Eye size={14} style={{ color: '#64748b' }} />
+          <span>View Details</span>
+        </span>
+      ),
+      onClick: () => openDetails(a),
+    });
+
+    if (isActive && (isApptUpdatable || isApptDeletable)) {
+      items.push({ type: 'divider' });
+      if (isApptUpdatable) {
+        items.push({
           key: 'reschedule',
           label: (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#1e293b' }}>
@@ -188,8 +245,10 @@ export default function Appointments() {
             </span>
           ),
           onClick: () => openReschedule(a),
-        },
-        {
+        });
+      }
+      if (isApptDeletable) {
+        items.push({
           key: 'cancel',
           label: (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#dc2626' }}>
@@ -199,8 +258,8 @@ export default function Appointments() {
           ),
           danger: true,
           onClick: () => openCancel(a),
-        },
-      );
+        });
+      }
     }
 
     return items;
@@ -211,14 +270,17 @@ export default function Appointments() {
   };
 
   const openEdit = (appt: Appointment) => {
+    if (!isApptUpdatable) return;
     setEditingAppointment(appt);
   };
 
   const openReschedule = (appt: Appointment) => {
+    if (!isApptUpdatable) return;
     setReschedulingAppointment(appt);
   };
 
   const openCancel = (appt: Appointment) => {
+    if (!isApptDeletable) return;
     setCancellingAppointment(appt);
   };
 
@@ -478,103 +540,16 @@ export default function Appointments() {
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* Navigation Tab Switcher */}
-      <div
-        style={{
-          padding: '8px 16px 4px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          flexShrink: 0,
-          maxWidth: '100%',
-          overflowX: 'auto',
-          WebkitOverflowScrolling: 'touch',
-        }}
-      >
-        <div
-          role="tablist"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            background: '#f1f5f9',
-            padding: 3,
-            borderRadius: 9,
-            border: '1px solid #e2e8f0',
-            gap: 2,
-            flexShrink: 0,
-          }}
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={currentTab === 'all'}
-            onClick={() => handleTabChange('all')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 7,
-              padding: '6px 14px',
-              borderRadius: 7,
-              border: currentTab === 'all' ? '1px solid #e2e8f0' : '1px solid transparent',
-              fontSize: 12.5,
-              fontWeight: currentTab === 'all' ? 600 : 500,
-              background: currentTab === 'all' ? '#ffffff' : 'transparent',
-              color: currentTab === 'all' ? '#0f172a' : '#64748b',
-              boxShadow: currentTab === 'all' ? '0 1px 3px rgba(15, 23, 42, 0.08)' : 'none',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <CalendarDays size={14} style={{ color: currentTab === 'all' ? '#0f172a' : '#94a3b8' }} />
-            <span>All Appointments</span>
-            {resource.items && resource.items.length > 0 && (
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  padding: '1px 6.5px',
-                  borderRadius: 10,
-                  background: currentTab === 'all' ? '#f1f5f9' : 'rgba(226, 232, 240, 0.7)',
-                  color: currentTab === 'all' ? '#334155' : '#64748b',
-                  lineHeight: '14px',
-                }}
-              >
-                {resource.items.length}
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={currentTab === 'today'}
-            onClick={() => handleTabChange('today')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 7,
-              padding: '6px 14px',
-              borderRadius: 7,
-              border: currentTab === 'today' ? '1px solid #e2e8f0' : '1px solid transparent',
-              fontSize: 12.5,
-              fontWeight: currentTab === 'today' ? 600 : 500,
-              background: currentTab === 'today' ? '#ffffff' : 'transparent',
-              color: currentTab === 'today' ? '#0f172a' : '#64748b',
-              boxShadow: currentTab === 'today' ? '0 1px 3px rgba(15, 23, 42, 0.08)' : 'none',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <Stethoscope size={14} style={{ color: currentTab === 'today' ? '#0f172a' : '#94a3b8' }} />
-            <span>Doctors Today Appointments</span>
-          </button>
-        </div>
-      </div>
-
       {currentTab === 'today' ? (
         <DoctorTodayAppointments />
       ) : (
         <div className="appointments-all-view">
           <DataView
+            moduleSlug="APPOINTMENTS"
+            fallbackSlugs={['TODAYS_SCHEDULE']}
+            canCreate={isApptCreatable}
+            canUpdate={isApptUpdatable}
+            canDelete={isApptDeletable}
             title="Appointments"
             subtitle="Schedule and track patient consultations, check doctor availability, and manage appointments."
             icon={CalendarDays}
@@ -589,6 +564,7 @@ export default function Appointments() {
             columns={columns}
             createLabel="Schedule Appointment"
             onCreate={() => setIsScheduleOpen(true)}
+            onDelete={(a) => api.delete(`appointments/${a.id}`)}
             nameOf={(a) => `${a.patientName} (${a.tokenNumber})`}
             onRowClick={(a) => openDetails(a)}
             activeId={viewingAppointment?.id ?? null}
@@ -665,19 +641,27 @@ export default function Appointments() {
           <AppointmentDrawer
             appointment={viewingAppointment}
             onClose={() => setViewingAppointment(null)}
-            onEdit={(appt) => {
-              setViewingAppointment(null);
-              openEdit(appt);
-            }}
+            {...(isApptUpdatable
+              ? {
+                onEdit: (appt: Appointment) => {
+                  setViewingAppointment(null);
+                  openEdit(appt);
+                },
+              }
+              : {})}
             onReschedule={(appt) => {
               openReschedule(appt);
             }}
             onCancel={(appt) => {
               openCancel(appt);
             }}
-            onCreatePrescription={(appt) => {
-              setPrescriptionAppt(appt);
-            }}
+            {...(isRxCreatable
+              ? {
+                onCreatePrescription: (appt: Appointment) => {
+                  setPrescriptionAppt(appt);
+                },
+              }
+              : {})}
           />
 
           {/* Create Prescription Modal */}
@@ -693,9 +677,45 @@ export default function Appointments() {
                 phone: prescriptionAppt.patientPhone ?? undefined,
               }}
               onClose={() => setPrescriptionAppt(null)}
-              onSuccess={() => {
+              onSuccess={(createdRx) => {
                 setPrescriptionAppt(null);
                 void resource.refresh();
+                if (createdRx) {
+                  setViewingPrescription(createdRx);
+                  setIsViewRxOpen(true);
+                }
+              }}
+            />
+          )}
+
+          {/* View Prescription Modal */}
+          <ViewPrescriptionModal
+            prescription={viewingPrescription}
+            open={isViewRxOpen}
+            onClose={() => {
+              setIsViewRxOpen(false);
+              setViewingPrescription(null);
+            }}
+            {...(isRxUpdatable
+              ? {
+                onEdit: (rx: Prescription) => {
+                  setIsViewRxOpen(false);
+                  setEditingPrescription(rx);
+                },
+              }
+              : {})}
+          />
+
+          {/* Edit Prescription Modal */}
+          {editingPrescription && (
+            <CreatePrescriptionModal
+              open={Boolean(editingPrescription)}
+              editingPrescription={editingPrescription}
+              onClose={() => setEditingPrescription(null)}
+              onSuccess={() => {
+                setEditingPrescription(null);
+                void resource.refresh();
+                message.success('Prescription updated successfully!');
               }}
             />
           )}

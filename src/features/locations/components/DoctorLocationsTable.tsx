@@ -1,8 +1,6 @@
 import { App } from 'antd';
 import {
   Building2,
-  ChevronLeft,
-  ChevronRight,
   MapPin,
   RefreshCw,
   Search,
@@ -13,18 +11,21 @@ import {
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 
-import { Badge, cx, StatusDot } from '../../../components/ui/primitives';
+import { CommonPagination } from '../../../components/ui/CommonTable';
+import { Badge, StatusDot } from '../../../components/ui/primitives';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
+import { usePermission } from '../../../context/PermissionContext';
 import { timeAgo } from '../../../lib/format';
 import { locationsApi } from '../services/locationsApi';
 import type { DoctorSummaryWithLocations } from '../types/locations';
 
 const SKELETON_ROWS = Array.from({ length: 6 }, (_, i) => i);
-const PAGE_SIZES = [10, 20, 50, 100];
 
 export const DoctorLocationsTable: React.FC = () => {
   const navigate = useNavigate();
   const { message } = App.useApp();
+  const { canUpdate, canManage } = usePermission();
+  const isLocManageable = canUpdate('LOCATIONS', ['DOCTORS']) || canManage('LOCATIONS', ['DOCTORS']);
   const [doctors, setDoctors] = useState<DoctorSummaryWithLocations[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
@@ -133,14 +134,6 @@ export const DoctorLocationsTable: React.FC = () => {
   const syncedLabel = syncedAt
     ? `Last synced ${timeAgo(new Date(syncedAt).toISOString(), now)}`
     : null;
-
-  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1)
-    .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-    .reduce<(number | string)[]>((acc, p, idx, arr) => {
-      if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...');
-      acc.push(p);
-      return acc;
-    }, []);
 
   return (
     <div className="ui-page space-y-3">
@@ -405,7 +398,7 @@ export const DoctorLocationsTable: React.FC = () => {
                           onClick={() => navigate(`/locations/${doc.id}`)}
                         >
                           <MapPin size={12} className="text-blue-600" />
-                          <span>Manage Locations</span>
+                          <span>{isLocManageable ? 'Manage Locations' : 'View Locations'}</span>
                         </button>
                       </td>
                     </tr>
@@ -416,91 +409,21 @@ export const DoctorLocationsTable: React.FC = () => {
           </table>
         </div>
 
-        {/* ── Footer / Pagination (Matching Patients Page DataView) ── */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 sm:px-5 py-3 sm:py-3.5 border-t border-slate-100 bg-white text-xs text-slate-500 w-full">
-          <div className="text-center sm:text-left w-full sm:w-auto">
-            {filteredDoctors.length === 0 ? (
-              'No doctors found'
-            ) : (
-              <>
-                Showing{' '}
-                <span className="font-semibold text-slate-700">
-                  {startIdx + 1}–{endIdx}
-                </span>{' '}
-                of <span className="font-semibold text-slate-700">{filteredDoctors.length}</span>{' '}
-                doctors
-                {filteredDoctors.length !== doctors.length && (
-                  <span className="text-slate-400"> (filtered from {doctors.length})</span>
-                )}
-              </>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto">
-            <div className="flex items-center gap-1.5 mr-1 sm:mr-2 shrink-0">
-              <span className="text-slate-500">Per page</span>
-              <select
-                value={limit}
-                onChange={(e) => {
-                  setLimit(Number(e.target.value));
-                  setPage(1);
-                }}
-                className="h-7 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
-                aria-label="Rows per page"
-              >
-                {PAGE_SIZES.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1 || loading}
-                aria-label="Previous page"
-                className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
-              >
-                <ChevronLeft size={14} />
-              </button>
-
-              {pageNumbers.map((p, idx) =>
-                typeof p === 'number' ? (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setPage(p)}
-                    className={cx(
-                      'w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer shadow-2xs',
-                      page === p
-                        ? 'border-blue-600 bg-blue-600 text-white'
-                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
-                    )}
-                  >
-                    {p}
-                  </button>
-                ) : (
-                  <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 select-none">
-                    …
-                  </span>
-                ),
-              )}
-
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages || loading}
-                aria-label="Next page"
-                className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* ── Footer / Pagination (Matching SupportCenterPage & CommonTable) ── */}
+        <CommonPagination
+          total={filteredDoctors.length}
+          startIdx={filteredDoctors.length === 0 ? 0 : startIdx + 1}
+          endIdx={endIdx}
+          nounPlural="doctors"
+          page={page}
+          pageCount={totalPages}
+          perPage={limit}
+          onPageChange={(p) => setPage(p)}
+          onPerPageChange={(n) => {
+            setLimit(n);
+            setPage(1);
+          }}
+        />
       </div>
     </div>
   );

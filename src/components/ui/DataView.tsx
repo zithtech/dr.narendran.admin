@@ -3,8 +3,6 @@ import {
   ArrowDown,
   ArrowRight,
   ArrowUp,
-  ChevronLeft,
-  ChevronRight,
   FileSpreadsheet,
   type LucideIcon,
   Pencil,
@@ -20,7 +18,8 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { Resource } from '../../hooks/useResource';
 import { timeAgo } from '../../lib/format';
 import { getErrorMessage } from '../../utils/errors';
-import { exportToCSV, PrimaryAvatarCell } from './CommonTable';
+import { usePermission } from '../../context/PermissionContext';
+import { CommonPagination, exportToCSV, PrimaryAvatarCell } from './CommonTable';
 import { ConfirmDialog } from './Modal';
 import { Alert, cx } from './primitives';
 import { SearchableSelect } from './SearchableSelect';
@@ -89,6 +88,13 @@ export interface DataViewProps<T extends { id: string }> {
   activeId?: string | null;
   /** Optional extra action buttons (e.g. Import Excel, Export Template) */
   extraActions?: ReactNode;
+  /** RBAC module slug */
+  moduleSlug?: string;
+  fallbackSlugs?: string[];
+  /** Explicit RBAC permission overrides */
+  canCreate?: boolean;
+  canUpdate?: boolean;
+  canDelete?: boolean;
   /** Optional custom export action or label */
   onExport?: () => void;
   exportLabel?: string;
@@ -104,7 +110,6 @@ const TIME_PRESETS: { value: TimePreset; label: string }[] = [
   { value: 'year', label: 'This year' },
   { value: 'custom', label: 'Custom range…' },
 ];
-const PAGE_SIZES = [10, 25, 50, 100];
 const SKELETON_ROWS = Array.from({ length: 7 }, (_, i) => i);
 
 function presetStart(preset: TimePreset): number | null {
@@ -151,11 +156,39 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
     onRowClick,
     activeId,
     extraActions,
+    moduleSlug,
+    fallbackSlugs,
+    canCreate: propCanCreate,
+    canUpdate: propCanUpdate,
+    canDelete: propCanDelete,
     onExport,
     exportLabel = 'Export',
   } = props;
   const { items, loading, error, syncedAt, refresh } = resource;
   const { message } = App.useApp();
+
+  const { canCreate: permCanCreate, canUpdate: permCanUpdate, canDelete: permCanDelete } = usePermission();
+
+  const isCreateAllowed =
+    propCanCreate !== undefined
+      ? propCanCreate
+      : moduleSlug
+        ? permCanCreate(moduleSlug, fallbackSlugs)
+        : true;
+
+  const isUpdateAllowed =
+    propCanUpdate !== undefined
+      ? propCanUpdate
+      : moduleSlug
+        ? permCanUpdate(moduleSlug, fallbackSlugs)
+        : true;
+
+  const isDeleteAllowed =
+    propCanDelete !== undefined
+      ? propCanDelete
+      : moduleSlug
+        ? permCanDelete(moduleSlug, fallbackSlugs)
+        : true;
 
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<Record<string, string>>({});
@@ -358,7 +391,12 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
     ? `Last synced ${timeAgo(new Date(syncedAt).toISOString(), now)}`
     : 'Syncing…';
   const hasData = items.length > 0;
-  const colSpan = columns.length + 2;
+  const showCheckCol = isDeleteAllowed && Boolean(onDelete);
+  const showActionsCol =
+    Boolean(rowActions) ||
+    (Boolean(onEdit) && isUpdateAllowed) ||
+    (Boolean(onDelete) && isDeleteAllowed);
+  const colSpan = columns.length + (showCheckCol ? 1 : 0) + (showActionsCol ? 1 : 0);
 
   return (
     <div className="ui-page space-y-3">
@@ -409,7 +447,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
             <span>{exportLabel}</span>
           </button>
 
-          {onCreate && (
+          {onCreate && isCreateAllowed && (
             <button
               type="button"
               className="inline-flex items-center gap-1.5 h-7.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
@@ -584,19 +622,21 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200/90 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
-                <th className="w-9 px-3.5 py-2 select-none">
-                  <input
-                    type="checkbox"
-                    className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                    checked={pageAllSelected}
-                    ref={(el) => {
-                      if (el) el.indeterminate = !pageAllSelected && pageSomeSelected;
-                    }}
-                    onChange={togglePage}
-                    aria-label="Select all on this page"
-                    disabled={pageRows.length === 0}
-                  />
-                </th>
+                {showCheckCol && (
+                  <th className="w-9 px-3.5 py-2 select-none">
+                    <input
+                      type="checkbox"
+                      className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      checked={pageAllSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = !pageAllSelected && pageSomeSelected;
+                      }}
+                      onChange={togglePage}
+                      aria-label="Select all on this page"
+                      disabled={pageRows.length === 0}
+                    />
+                  </th>
+                )}
                 {columns.map((c) => {
                   const sorted = sort?.id === c.id ? sort.dir : null;
                   return (
@@ -624,16 +664,20 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                     </th>
                   );
                 })}
-                <th className="px-3.5 py-2 text-right whitespace-nowrap font-semibold">Actions</th>
+                {showActionsCol && (
+                  <th className="px-3.5 py-2 text-right whitespace-nowrap font-semibold">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs sm:text-xs text-slate-600">
               {loading && !hasData ? (
                 SKELETON_ROWS.map((i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="px-3.5 py-2">
-                      <div className="w-3.5 h-3.5 bg-slate-100 rounded" />
-                    </td>
+                    {showCheckCol && (
+                      <td className="px-3.5 py-2">
+                        <div className="w-3.5 h-3.5 bg-slate-100 rounded" />
+                      </td>
+                    )}
                     {columns.map((c, ci) => (
                       <td key={c.id} className="px-3.5 py-2">
                         {ci === 0 ? (
@@ -652,9 +696,11 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                         )}
                       </td>
                     ))}
-                    <td className="px-3.5 py-2 text-right">
-                      <div className="w-4 h-4 bg-slate-100 rounded ml-auto" />
-                    </td>
+                    {showActionsCol && (
+                      <td className="px-3.5 py-2 text-right">
+                        <div className="w-4 h-4 bg-slate-100 rounded ml-auto" />
+                      </td>
+                    )}
                   </tr>
                 ))
               ) : pageRows.length === 0 ? (
@@ -670,7 +716,9 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                       <span className="text-[11px] text-slate-500 max-w-sm">
                         {hasData
                           ? 'Try a different search term or remove filters.'
-                          : `Create your first ${noun} to get started.`}
+                          : isCreateAllowed
+                            ? `Create your first ${noun} to get started.`
+                            : `No ${nounPlural} available.`}
                       </span>
                       <div className="mt-1.5">
                         {hasData ? (
@@ -681,7 +729,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                           >
                             Clear filters
                           </button>
-                        ) : onCreate ? (
+                        ) : onCreate && isCreateAllowed ? (
                           <button
                             type="button"
                             className="inline-flex items-center gap-1.5 h-7 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium cursor-pointer"
@@ -703,7 +751,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                       className={cx(
                         'group transition-colors duration-100 hover:bg-slate-50/70',
                         isSel && 'bg-blue-50/40',
-                        (onRowClick || onEdit) && 'cursor-pointer',
+                        (onRowClick || (onEdit && isUpdateAllowed)) && 'cursor-pointer',
                         activeId === item.id && 'bg-blue-50/60',
                       )}
                       onClick={(e) => {
@@ -712,21 +760,23 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                           return;
                         if (onRowClick) {
                           onRowClick(item);
-                        } else if (onEdit) {
+                        } else if (onEdit && isUpdateAllowed) {
                           onEdit(item);
                         }
                       }}
                     >
                       {/* Checkbox */}
-                      <td className="w-9 px-3.5 py-2">
-                        <input
-                          type="checkbox"
-                          className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                          checked={isSel}
-                          onChange={() => toggleRow(item.id)}
-                          aria-label={`Select ${nameOf ? nameOf(item) : noun}`}
-                        />
-                      </td>
+                      {showCheckCol && (
+                        <td className="w-9 px-3.5 py-2">
+                          <input
+                            type="checkbox"
+                            className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                            checked={isSel}
+                            onChange={() => toggleRow(item.id)}
+                            aria-label={`Select ${nameOf ? nameOf(item) : noun}`}
+                          />
+                        </td>
+                      )}
 
                       {/* Data Columns */}
                       {columns.map((c) => (
@@ -735,40 +785,42 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                         </td>
                       ))}
 
-                      {/* Action Buttons (Removed Arrow, Kept Actions) */}
-                      <td className="px-3.5 py-2 text-right whitespace-nowrap align-middle">
-                        <div className="flex items-center justify-end gap-1">
-                          {rowActions?.(item)}
-                          {!rowActions && onEdit && (
-                            <button
-                              type="button"
-                              className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEdit(item);
-                              }}
-                              aria-label={`Edit ${nameOf ? nameOf(item) : noun}`}
-                              title="Edit"
-                            >
-                              <Pencil size={13} />
-                            </button>
-                          )}
-                          {!rowActions && onDelete && (
-                            <button
-                              type="button"
-                              className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPendingDelete([item]);
-                              }}
-                              aria-label={`Delete ${nameOf ? nameOf(item) : noun}`}
-                              title="Delete"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
+                      {/* Action Buttons */}
+                      {showActionsCol && (
+                        <td className="px-3.5 py-2 text-right whitespace-nowrap align-middle">
+                          <div className="flex items-center justify-end gap-1">
+                            {rowActions?.(item)}
+                            {!rowActions && onEdit && isUpdateAllowed && (
+                              <button
+                                type="button"
+                                className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEdit(item);
+                                }}
+                                aria-label={`Edit ${nameOf ? nameOf(item) : noun}`}
+                                title="Edit"
+                              >
+                                <Pencil size={13} />
+                              </button>
+                            )}
+                            {!rowActions && onDelete && isDeleteAllowed && (
+                              <button
+                                type="button"
+                                className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPendingDelete([item]);
+                                }}
+                                aria-label={`Delete ${nameOf ? nameOf(item) : noun}`}
+                                title="Delete"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })
@@ -778,7 +830,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
         </div>
 
         {/* Bulk Action Bar */}
-        {selectedItems.length > 0 && (
+        {selectedItems.length > 0 && showCheckCol && (
           <div
             className="flex items-center justify-between px-4 py-2 bg-blue-50/80 border-t border-blue-100 text-xs text-blue-900"
             role="toolbar"
@@ -801,7 +853,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
               >
                 Clear selection
               </button>
-              {onDelete && (
+              {onDelete && isDeleteAllowed && (
                 <button
                   type="button"
                   className="px-2.5 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 font-semibold inline-flex items-center gap-1 cursor-pointer"
@@ -814,98 +866,21 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
           </div>
         )}
 
-        {/* ── Footer / Pagination (Responsive Across All Devices) ── */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 sm:px-5 py-3 sm:py-3.5 border-t border-slate-100 bg-white text-xs text-slate-500 w-full">
-          <div className="text-center sm:text-left w-full sm:w-auto">
-            {filtered.length === 0 ? (
-              'No results'
-            ) : (
-              <>
-                Showing{' '}
-                <span className="font-semibold text-slate-700">
-                  {startIdx + 1}–{startIdx + pageRows.length}
-                </span>{' '}
-                of <span className="font-semibold text-slate-700">{filtered.length}</span>{' '}
-                {nounPlural}
-                {filtered.length !== items.length && (
-                  <span className="text-slate-400"> (filtered from {items.length})</span>
-                )}
-              </>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto">
-            <div className="flex items-center gap-1.5 mr-1 sm:mr-2 shrink-0">
-              <span className="text-slate-500">Per page</span>
-              <select
-                value={perPage}
-                onChange={(e) => {
-                  setPerPage(Number(e.target.value));
-                  setPage(1);
-                }}
-                className="h-7 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
-                aria-label="Rows per page"
-              >
-                {PAGE_SIZES.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setPage(page - 1)}
-                disabled={current <= 1}
-                aria-label="Previous page"
-                className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
-              >
-                <ChevronLeft size={14} />
-              </button>
-
-              {Array.from({ length: pageCount }, (_, i) => i + 1)
-                .filter((p) => p === 1 || p === pageCount || Math.abs(p - current) <= 1)
-                .reduce<(number | string)[]>((acc, p, idx, arr) => {
-                  if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...');
-                  acc.push(p);
-                  return acc;
-                }, [])
-                .map((p, idx) =>
-                  typeof p === 'number' ? (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => setPage(p)}
-                      className={cx(
-                        'w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer shadow-2xs',
-                        current === p
-                          ? 'border border-slate-200 bg-slate-50 text-slate-900 font-bold'
-                          : 'border border-transparent bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-200',
-                      )}
-                    >
-                      {p}
-                    </button>
-                  ) : (
-                    <span key={`dots-${idx}`} className="px-1 text-slate-400 select-none">
-                      ...
-                    </span>
-                  ),
-                )}
-
-              <button
-                type="button"
-                onClick={() => setPage(page + 1)}
-                disabled={current >= pageCount}
-                aria-label="Next page"
-                className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* ── Footer / Pagination (Matching SupportCenterPage & CommonTable) ── */}
+        <CommonPagination
+          total={filtered.length}
+          startIdx={filtered.length === 0 ? 0 : startIdx + 1}
+          endIdx={startIdx + pageRows.length}
+          nounPlural={nounPlural}
+          page={current}
+          pageCount={pageCount}
+          perPage={perPage}
+          onPageChange={(p) => setPage(p)}
+          onPerPageChange={(n) => {
+            setPerPage(n);
+            setPage(1);
+          }}
+        />
       </div>
 
       {onDelete && (
@@ -946,9 +921,16 @@ export function PrimaryCell({
   name: string;
   sub?: ReactNode;
   avatarSrc?: string | null | undefined;
-  onOpen: () => void;
+  onOpen?: (() => void) | undefined;
 }) {
-  return <PrimaryAvatarCell name={name} sub={sub} avatarSrc={avatarSrc} onOpen={onOpen} />;
+  return (
+    <PrimaryAvatarCell
+      name={name}
+      {...(sub !== undefined ? { sub } : {})}
+      {...(avatarSrc !== undefined ? { avatarSrc } : {})}
+      {...(onOpen !== undefined ? { onOpen } : {})}
+    />
+  );
 }
 
 function capitalize(s: string) {

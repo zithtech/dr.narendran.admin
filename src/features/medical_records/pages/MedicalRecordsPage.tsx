@@ -2,8 +2,6 @@ import { App } from 'antd';
 import {
   ArrowRight,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
   Download,
   Eye,
   FileSpreadsheet,
@@ -19,10 +17,11 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 
-import { exportToCSV } from '../../../components/ui/CommonTable';
+import { CommonPagination, exportToCSV } from '../../../components/ui/CommonTable';
 import { ConfirmDialog } from '../../../components/ui/Modal';
-import { Badge, cx } from '../../../components/ui/primitives';
+import { Badge } from '../../../components/ui/primitives';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
+import { usePermission } from '../../../context/PermissionContext';
 import { timeAgo } from '../../../lib/format';
 import { EditMedicalRecordModal } from '../components/EditMedicalRecordModal';
 import { MedicalRecordPreviewModal } from '../components/MedicalRecordPreviewModal';
@@ -36,10 +35,14 @@ import type {
 } from '../types/medicalRecords';
 
 const SKELETON_ROWS = Array.from({ length: 6 }, (_, i) => i);
-const PAGE_SIZES = [10, 20, 50, 100];
 
 export default function MedicalRecordsPage() {
   const { message } = App.useApp();
+  const { canCreate, canUpdate, canDelete } = usePermission();
+  const isRecordCreatable = canCreate('MEDICAL_RECORDS', ['PATIENTS']);
+  const isRecordUpdatable = canUpdate('MEDICAL_RECORDS', ['PATIENTS']);
+  const isRecordDeletable = canDelete('MEDICAL_RECORDS', ['PATIENTS']);
+
   const [searchParams, setSearchParams] = useSearchParams();
   const { patientId: routePatientId } = useParams<{ patientId?: string }>();
 
@@ -279,14 +282,6 @@ export default function MedicalRecordsPage() {
     message.success(`Exported ${records.length} medical records to CSV`);
   };
 
-  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1)
-    .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-    .reduce<(number | string)[]>((acc, p, idx, arr) => {
-      if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...');
-      acc.push(p);
-      return acc;
-    }, []);
-
   return (
     <div className="ui-page space-y-3">
       {/* ── Compact Page Header Matching Patients Page ── */}
@@ -348,17 +343,19 @@ export default function MedicalRecordsPage() {
             <span>Export</span>
           </button>
 
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 h-7.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-            onClick={() => {
-              setActivePrescribedTest(null);
-              setIsUploadOpen(true);
-            }}
-          >
-            <Plus size={13} strokeWidth={2.4} />
-            <span>Upload Medical Record</span>
-          </button>
+          {isRecordCreatable && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 h-7.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              onClick={() => {
+                setActivePrescribedTest(null);
+                setIsUploadOpen(true);
+              }}
+            >
+              <Plus size={13} strokeWidth={2.4} />
+              <span>Upload Medical Record</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -555,7 +552,7 @@ export default function MedicalRecordsPage() {
                             >
                               Clear filters
                             </button>
-                          ) : (
+                          ) : isRecordCreatable ? (
                             <button
                               type="button"
                               className="inline-flex items-center gap-1.5 h-7 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium cursor-pointer shadow-2xs"
@@ -566,7 +563,7 @@ export default function MedicalRecordsPage() {
                             >
                               <Plus size={13} /> Upload Medical Record
                             </button>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     </td>
@@ -655,24 +652,28 @@ export default function MedicalRecordsPage() {
                           >
                             <Download size={13} />
                           </button>
-                          <button
-                            type="button"
-                            className="p-1 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
-                            onClick={() => setEditingRecord(rec)}
-                            title="Edit metadata"
-                            aria-label="Edit"
-                          >
-                            <Pencil size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                            onClick={() => setRecordToDelete(rec)}
-                            title="Delete record"
-                            aria-label="Delete"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          {isRecordUpdatable && (
+                            <button
+                              type="button"
+                              className="p-1 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                              onClick={() => setEditingRecord(rec)}
+                              title="Edit metadata"
+                              aria-label="Edit"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                          )}
+                          {isRecordDeletable && (
+                            <button
+                              type="button"
+                              className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                              onClick={() => setRecordToDelete(rec)}
+                              title="Delete record"
+                              aria-label="Delete"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -682,87 +683,21 @@ export default function MedicalRecordsPage() {
             </table>
           </div>
 
-          {/* ── Footer / Pagination (Matching Patients Page DataView) ── */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 sm:px-5 py-3 sm:py-3.5 border-t border-slate-100 bg-white text-xs text-slate-500 w-full">
-            <div className="text-center sm:text-left w-full sm:w-auto">
-              {records.length === 0 ? (
-                'No records found'
-              ) : (
-                <>
-                  Showing{' '}
-                  <span className="font-semibold text-slate-700">
-                    {startIdx + 1}–{endIdx}
-                  </span>{' '}
-                  of <span className="font-semibold text-slate-700">{totalCount}</span> records
-                </>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto">
-              <div className="flex items-center gap-1.5 mr-1 sm:mr-2 shrink-0">
-                <span className="text-slate-500">Per page</span>
-                <select
-                  value={limit}
-                  onChange={(e) => {
-                    setLimit(Number(e.target.value));
-                    setPage(1);
-                  }}
-                  className="h-7 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
-                  aria-label="Rows per page"
-                >
-                  {PAGE_SIZES.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1 || loading}
-                  aria-label="Previous page"
-                  className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-
-                {pageNumbers.map((p, idx) =>
-                  typeof p === 'number' ? (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => setPage(p)}
-                      className={cx(
-                        'w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer shadow-2xs',
-                        page === p
-                          ? 'border-blue-600 bg-blue-600 text-white'
-                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
-                      )}
-                    >
-                      {p}
-                    </button>
-                  ) : (
-                    <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 select-none">
-                      …
-                    </span>
-                  ),
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page >= totalPages || loading}
-                  aria-label="Next page"
-                  className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
+          {/* ── Footer / Pagination (Matching SupportCenterPage & CommonTable) ── */}
+          <CommonPagination
+            total={totalCount}
+            startIdx={records.length === 0 ? 0 : startIdx + 1}
+            endIdx={endIdx}
+            nounPlural="records"
+            page={page}
+            pageCount={totalPages}
+            perPage={limit}
+            onPageChange={(p) => setPage(p)}
+            onPerPageChange={(n) => {
+              setLimit(n);
+              setPage(1);
+            }}
+          />
         </div>
       )}
 

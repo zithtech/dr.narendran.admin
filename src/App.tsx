@@ -8,6 +8,7 @@ import DashboardOverviewPage from './pages/DashboardOverviewPage';
 import ClientDashboard from './pages/ClientDashboard';
 import Branches from './pages/Branches';
 import Doctors from './pages/Doctors';
+import DoctorAvailabilityPage from './pages/DoctorAvailabilityPage';
 import Users from './pages/Users';
 import Patients from './pages/Patients';
 import PatientTimelinesPage from './pages/PatientTimelinesPage';
@@ -17,6 +18,7 @@ import Appointments from './pages/Appointments';
 import DoctorTodayAppointments from './pages/DoctorTodayAppointments';
 import Pharmacy from './pages/Pharmacy';
 import MedicineInventory from './pages/MedicineInventory';
+import MedicinePackages from './pages/MedicinePackages';
 import OrdersPage from './features/orders/pages/OrdersPage';
 import PrescriptionsPage from './features/prescriptions/pages/PrescriptionsPage';
 import Labs from './pages/Labs';
@@ -38,6 +40,7 @@ import LabReportsPage from './pages/client/LabReportsPage';
 
 import SupportCenterPage from './features/support/pages/SupportCenterPage';
 import { ReviewsManagementPage } from './features/reviews/pages/ReviewsManagementPage';
+import { ModuleRouteGuard } from './context/PermissionContext';
 import { LocationManagementPage } from './features/locations/pages/LocationManagementPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -85,6 +88,8 @@ function App() {
       <Routes>
         {/* Admin Portal Authentication */}
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<Login defaultForgot={true} />} />
+        <Route path="/reset-password" element={<Login defaultForgot={true} />} />
 
         {/* Client Portal Authentication (Unique Dedicated URLs) */}
         <Route path="/client/login" element={<ClientLogin />} />
@@ -122,42 +127,248 @@ function App() {
           <Route path="/dashboard" element={<DashboardOverviewPage />} />
 
           {/* Network Modules */}
-          <Route path="/hospitals" element={<Dashboard />} />
-          <Route path="/branches" element={<Branches />} />
-          <Route path="/labs" element={<Labs />} />
-          <Route path="/linked-medicals" element={<LinkedMedicals />} />
+          <Route
+            path="/hospitals"
+            element={
+              <ModuleRouteGuard module="HOSPITALS" title="Hospitals">
+                <Dashboard />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/branches"
+            element={
+              <ModuleRouteGuard module="BRANCHES" title="Hospital Branches">
+                <Branches />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/labs"
+            element={
+              <ModuleRouteGuard module="LABS" title="Linked Labs">
+                <Labs />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/linked-medicals"
+            element={
+              <ModuleRouteGuard module="LINKED_MEDICALS" title="Linked Medicals">
+                <LinkedMedicals />
+              </ModuleRouteGuard>
+            }
+          />
 
           {/* Clinical Modules */}
-          <Route path="/doctors" element={<Doctors />} />
-          <Route path="/locations" element={<LocationManagementPage />} />
-          <Route path="/locations/:doctorId" element={<LocationManagementPage />} />
-          <Route path="/patients" element={<Patients />} />
-          <Route path="/patient-timelines" element={<PatientTimelinesPage />} />
-          <Route path="/patient-timelines/:patientId" element={<PatientTimelineDetailPage />} />
-          <Route path="/medical-records" element={<MedicalRecordsPage />} />
-          <Route path="/medical-records/:patientId" element={<MedicalRecordsPage />} />
-          <Route path="/appointments" element={<Appointments />} />
-          <Route path="/appointments/today" element={<DoctorTodayAppointments />} />
-          <Route path="/reviews" element={<ReviewsManagementPage />} />
+          <Route
+            path="/doctors"
+            element={
+              <ModuleRouteGuard module="DOCTORS" title="Doctors">
+                <Doctors />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/availability"
+            element={
+              <ModuleRouteGuard module="AVAILABILITY" title="Availability & Slots">
+                <DoctorAvailabilityPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route path="/doctor-availability" element={<Navigate to="/availability" replace />} />
+          <Route
+            path="/locations"
+            element={
+              <ModuleRouteGuard module="LOCATIONS" title="Location Management" fallbackSlugs={['DOCTORS']}>
+                <LocationManagementPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/locations/:doctorId"
+            element={
+              <ModuleRouteGuard module="LOCATIONS" title="Location Management" fallbackSlugs={['DOCTORS']}>
+                <LocationManagementPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/patients"
+            element={
+              <ModuleRouteGuard module="PATIENTS" title="Patients">
+                <Patients />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/patient-timelines"
+            element={
+              <ModuleRouteGuard module="PATIENT_TIMELINES" title="Patient Timelines" fallbackSlugs={['PATIENTS']}>
+                <PatientTimelinesPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/patient-timelines/:patientId"
+            element={
+              <ModuleRouteGuard module="PATIENT_TIMELINES" title="Patient Timelines" fallbackSlugs={['PATIENTS']}>
+                <PatientTimelineDetailPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/medical-records"
+            element={
+              <ModuleRouteGuard module="MEDICAL_RECORDS" title="Medical Records" fallbackSlugs={['PATIENTS']}>
+                <MedicalRecordsPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/medical-records/:patientId"
+            element={
+              <ModuleRouteGuard module="MEDICAL_RECORDS" title="Medical Records" fallbackSlugs={['PATIENTS']}>
+                <MedicalRecordsPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/appointments"
+            element={
+              <ModuleRouteGuard module="APPOINTMENTS" title="Appointments">
+                <Appointments />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/appointments/today"
+            element={
+              <ModuleRouteGuard module="TODAYS_SCHEDULE" title="Today's Schedule">
+                <DoctorTodayAppointments />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/reviews"
+            element={
+              <ModuleRouteGuard module="REVIEWS" title="Ratings & Reviews">
+                <ReviewsManagementPage />
+              </ModuleRouteGuard>
+            }
+          />
 
           {/* Operations Modules */}
-          <Route path="/pharmacy" element={<Pharmacy />} />
-          <Route path="/inventory" element={<MedicineInventory />} />
-          <Route path="/prescriptions" element={<PrescriptionsPage />} />
-          <Route path="/medicine-package" element={<PrescriptionsPage />} />
-          <Route path="/medicine-packages" element={<PrescriptionsPage />} />
-          <Route path="/orders" element={<OrdersPage />} />
-          <Route path="/lab-services" element={<LabServices />} />
+          <Route
+            path="/pharmacy"
+            element={
+              <ModuleRouteGuard module="PHARMACY" title="Pharmacy">
+                <Pharmacy />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/inventory"
+            element={
+              <ModuleRouteGuard module="INVENTORY" title="Medicine Inventory">
+                <MedicineInventory />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/prescriptions"
+            element={
+              <ModuleRouteGuard module="PRESCRIPTIONS" title="Prescriptions">
+                <PrescriptionsPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route path="/medicine-package" element={<Navigate to="/medicine-packages" replace />} />
+          <Route
+            path="/medicine-packages"
+            element={
+              <ModuleRouteGuard module="MEDICINE_PACKAGES" title="Medicine Packages">
+                <MedicinePackages />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/packages"
+            element={
+              <ModuleRouteGuard module="MEDICINE_PACKAGES" title="Medicine Packages">
+                <MedicinePackages />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/orders"
+            element={
+              <ModuleRouteGuard module="ORDERS" title="Pharmacy Orders">
+                <OrdersPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/lab-services"
+            element={
+              <ModuleRouteGuard module="LAB_SERVICES" title="Lab Services">
+                <LabServices />
+              </ModuleRouteGuard>
+            }
+          />
 
           {/* Administration Modules */}
-          <Route path="/users" element={<Users />} />
-          <Route path="/staff" element={<StaffManagement />} />
-          <Route path="/roles" element={<Roles />} />
-          <Route path="/client-portals" element={<ClientPortals />} />
+          <Route
+            path="/users"
+            element={
+              <ModuleRouteGuard module="USERS" title="User Accounts">
+                <Users />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/staff"
+            element={
+              <ModuleRouteGuard module="STAFF" title="Staff Management">
+                <StaffManagement />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/roles"
+            element={
+              <ModuleRouteGuard module="ROLES" title="Roles & Permissions">
+                <Roles />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/client-portals"
+            element={
+              <ModuleRouteGuard module="CLIENT_PORTALS" title="Client Portals">
+                <ClientPortals />
+              </ModuleRouteGuard>
+            }
+          />
 
           {/* Support Modules */}
-          <Route path="/support" element={<SupportCenterPage defaultUserType="PATIENT" />} />
-          <Route path="/doctor-support" element={<SupportCenterPage defaultUserType="DOCTOR" />} />
+          <Route
+            path="/support"
+            element={
+              <ModuleRouteGuard module="PATIENT_SUPPORT" title="Patient Support" fallbackSlugs={['SUPPORT']}>
+                <SupportCenterPage defaultUserType="PATIENT" />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/doctor-support"
+            element={
+              <ModuleRouteGuard module="DOCTOR_SUPPORT" title="Doctor Support" fallbackSlugs={['SUPPORT']}>
+                <SupportCenterPage defaultUserType="DOCTOR" />
+              </ModuleRouteGuard>
+            }
+          />
         </Route>
 
         {/* Legacy /portal fallback */}
