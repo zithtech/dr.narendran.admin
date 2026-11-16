@@ -34,6 +34,9 @@ describe('Top Navigation Restructuring', () => {
     expect(clinicalCat.modules.map((m) => m.name)).toEqual([
       'Doctors',
       'Patients',
+      'Patient Timelines',
+      'Medical Records',
+      'Location Management',
       'Appointments',
       "Today's Schedule",
       'Ratings & Reviews',

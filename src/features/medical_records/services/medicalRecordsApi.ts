@@ -75,6 +75,18 @@ export const medicalRecordsApi = {
 
   async getAllPatients(): Promise<Array<{ id: string; name: string; phone?: string | null; email?: string | null }>> {
     try {
+      const timelineRes = await api.get('admin/patient-timelines/patients', {
+        params: { limit: 100 },
+      });
+      const timelineList = timelineRes.data?.data || timelineRes.data?.patients || [];
+      if (Array.isArray(timelineList) && timelineList.length > 0) {
+        return timelineList;
+      }
+    } catch {
+      // Fallback
+    }
+
+    try {
       const res = await api.get('patients');
       const rawList = Array.isArray(res.data) ? res.data : (res.data?.data || res.data?.patients || []);
       return Array.isArray(rawList) ? rawList : [];

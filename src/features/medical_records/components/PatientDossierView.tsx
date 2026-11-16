@@ -1,15 +1,4 @@
 import {
-  Button,
-  Card,
-  Popconfirm,
-  Space,
-  Table,
-  Tabs,
-  Tag,
-  Typography,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import {
   Calendar,
   CheckCircle2,
   Clock,
@@ -17,22 +6,24 @@ import {
   Eye,
   FileText,
   History,
+  Mail,
+  MapPin,
   Pencil,
+  Phone,
   Plus,
   Trash2,
   Upload,
   X,
 } from 'lucide-react';
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Avatar } from '../../../components/ui/primitives';
+
+import { Avatar, Badge, cx } from '../../../components/ui/primitives';
 import type {
   MedicalRecord,
   PatientDossier,
   PrescribedPendingTest,
 } from '../types/medicalRecords';
-
-const { Text, Title } = Typography;
 
 interface PatientDossierViewProps {
   dossier: PatientDossier;
@@ -53,6 +44,7 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
 }) => {
   const navigate = useNavigate();
   const { patient, pendingPrescribedTests, records } = dossier;
+  const [activeTab, setActiveTab] = useState<'records' | 'prescribed'>('records');
 
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return '-';
@@ -61,300 +53,387 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
-  // Prescribed Lab Tests Table Columns
-  const prescribedColumns: ColumnsType<PrescribedPendingTest> = [
-    {
-      title: 'Prescribed Test',
-      key: 'testName',
-      render: (_, item) => (
-        <div>
-          <Text strong>{item.testName}</Text>
-          {item.instructions && (
-            <div>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                Instructions: {item.instructions}
-              </Text>
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: 'Prescription Date',
-      dataIndex: 'prescriptionDate',
-      key: 'prescriptionDate',
-      width: 150,
-      render: (date) => (
-        <Space size={4}>
-          <Calendar size={14} className="text-slate-400" />
-          <span>{date || 'Not specified'}</span>
-        </Space>
-      ),
-    },
-    {
-      title: 'Doctor',
-      key: 'doctor',
-      width: 180,
-      render: (_, item) => (
-        <div>
-          <Text>{item.doctorName || 'Dr. Narendran'}</Text>
-          {item.doctorSpecialization && (
-            <div>
-              <Text type="secondary" style={{ fontSize: 11 }}>
-                {item.doctorSpecialization}
-              </Text>
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: 'Status',
-      key: 'status',
-      width: 140,
-      render: (_, item) =>
-        item.status === 'Uploaded' ? (
-          <Tag color="success" icon={<CheckCircle2 size={12} style={{ marginRight: 4 }} />}>
-            Uploaded ({item.reportsCount})
-          </Tag>
-        ) : (
-          <Tag color="warning" icon={<Clock size={12} style={{ marginRight: 4 }} />}>
-            Pending Upload
-          </Tag>
-        ),
-    },
-    {
-      title: 'Action',
-      key: 'action',
-      width: 140,
-      align: 'right',
-      render: (_, item) => (
-        <Button
-          type="primary"
-          size="small"
-          icon={<Upload size={13} />}
-          onClick={() => onUploadClick(item)}
-        >
-          Upload Report
-        </Button>
-      ),
-    },
-  ];
-
-  // Uploaded Records Table Columns
-  const recordsColumns: ColumnsType<MedicalRecord> = [
-    {
-      title: 'Report Date',
-      dataIndex: 'reportDate',
-      key: 'reportDate',
-      width: 120,
-      render: (val) => val || '-',
-    },
-    {
-      title: 'Record / Test Name',
-      key: 'testName',
-      render: (_, record) => (
-        <div>
-          <Text strong style={{ cursor: 'pointer', color: '#0284c7' }} onClick={() => onPreviewClick(record)}>
-            {record.testName}
-          </Text>
-          <div>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              {record.fileName} • {formatFileSize(record.fileSize)}
-            </Text>
-          </div>
-          {record.notes && (
-            <div style={{ marginTop: 2 }}>
-              <Text type="secondary" italic style={{ fontSize: 12 }}>
-                Notes: {record.notes}
-              </Text>
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: 'Category',
-      key: 'category',
-      width: 160,
-      render: (_, record) => (
-        <Tag color={record.isExternal ? 'purple' : 'blue'}>
-          {record.isExternal ? 'External Record' : 'Prescribed Lab Test'}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Uploaded By',
-      key: 'uploadedBy',
-      width: 160,
-      render: (_, record) => (
-        <div>
-          <Tag color="cyan">{record.uploadedBy}</Tag>
-          <div>
-            <Text type="secondary" style={{ fontSize: 11 }}>
-              {record.uploaderName}
-            </Text>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      width: 180,
-      align: 'right',
-      render: (_, record) => (
-        <Space orientation="horizontal" size={4}>
-          <Button
-            size="small"
-            type="text"
-            icon={<Eye size={15} className="text-primary-600" />}
-            title="Preview Document"
-            onClick={() => onPreviewClick(record)}
-          />
-          <Button
-            size="small"
-            type="text"
-            icon={<Download size={15} className="text-slate-600" />}
-            title="Download Document"
-            onClick={() => window.open(record.documentUrl, '_blank')}
-          />
-          <Button
-            size="small"
-            type="text"
-            icon={<Pencil size={15} className="text-amber-600" />}
-            title="Edit Metadata"
-            onClick={() => onEditClick(record)}
-          />
-          <Popconfirm
-            title="Delete Medical Record"
-            description="Are you sure you want to permanently delete this medical record?"
-            okText="Delete"
-            okType="danger"
-            onConfirm={() => onDeleteClick(record)}
-          >
-            <Button
-              size="small"
-              type="text"
-              danger
-              icon={<Trash2 size={15} />}
-              title="Delete Record"
-            />
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
+  const getUploaderBadgeTone = (uploadedBy?: string) => {
+    switch (uploadedBy?.toUpperCase()) {
+      case 'ADMIN':
+        return 'violet';
+      case 'DOCTOR':
+        return 'blue';
+      case 'LAB':
+        return 'amber';
+      case 'PATIENT':
+        return 'green';
+      default:
+        return 'neutral';
+    }
+  };
 
   return (
-    <div>
-      {/* Patient Header Card */}
-      <Card
-        style={{
-          marginBottom: 20,
-          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-          borderColor: '#e2e8f0',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <Avatar src={patient.profileImageUrl} name={patient.name} size={56} />
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Title level={4} style={{ margin: 0 }}>
-                  {patient.name}
-                </Title>
-                {patient.gender && <Tag color="geekblue">{patient.gender}</Tag>}
-                {patient.bloodGroup && <Tag color="volcano">{patient.bloodGroup}</Tag>}
-              </div>
-              <div style={{ marginTop: 4, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                {patient.phone && (
-                  <Text type="secondary" style={{ fontSize: 13 }}>
-                    📞 {patient.phone}
-                  </Text>
-                )}
-                {patient.email && (
-                  <Text type="secondary" style={{ fontSize: 13 }}>
-                    ✉️ {patient.email}
-                  </Text>
-                )}
-                {patient.dateOfBirth && (
-                  <Text type="secondary" style={{ fontSize: 13 }}>
-                    🎂 DOB: {patient.dateOfBirth}
-                  </Text>
-                )}
-                {patient.address && (
-                  <Text type="secondary" style={{ fontSize: 13 }}>
-                    📍 {patient.address}
-                  </Text>
-                )}
-              </div>
+    <div className="space-y-3">
+      {/* ── Patient Profile Header Card (Matching Patients Page Design) ── */}
+      <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <Avatar
+            src={patient.profileImageUrl}
+            name={patient.name}
+            size={52}
+          />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-tight">
+                {patient.name}
+              </h2>
+              {patient.gender && (
+                <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
+                  {patient.gender}
+                </span>
+              )}
+              {patient.bloodGroup && (
+                <Badge tone="red">{patient.bloodGroup}</Badge>
+              )}
+            </div>
+
+            <div className="mt-1 flex items-center gap-3.5 text-xs text-slate-500 flex-wrap">
+              {patient.phone && (
+                <span className="flex items-center gap-1">
+                  <Phone size={12} className="text-slate-400" />
+                  <span>{patient.phone}</span>
+                </span>
+              )}
+              {patient.email && (
+                <span className="flex items-center gap-1">
+                  <Mail size={12} className="text-slate-400" />
+                  <span>{patient.email}</span>
+                </span>
+              )}
+              {patient.dateOfBirth && (
+                <span className="flex items-center gap-1">
+                  <Calendar size={12} className="text-slate-400" />
+                  <span>DOB: {patient.dateOfBirth}</span>
+                </span>
+              )}
+              {patient.address && (
+                <span className="flex items-center gap-1 max-w-xs truncate" title={patient.address}>
+                  <MapPin size={12} className="text-slate-400 shrink-0" />
+                  <span className="truncate">{patient.address}</span>
+                </span>
+              )}
             </div>
           </div>
-
-          <Space wrap>
-            <Button
-              type="primary"
-              icon={<Plus size={16} />}
-              onClick={() => onUploadClick()}
-            >
-              Upload Medical Record
-            </Button>
-            <Button
-              icon={<History size={16} />}
-              onClick={() => navigate(`/patient-timelines/${patient.id}`)}
-            >
-              Patient Timeline
-            </Button>
-            <Button icon={<X size={16} />} onClick={onClose}>
-              Close Patient Dossier
-            </Button>
-          </Space>
         </div>
-      </Card>
 
-      {/* Tabs: Prescribed Tests & Uploaded Records */}
-      <Tabs
-        defaultActiveKey="records"
-        items={[
-          {
-            key: 'records',
-            label: (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <FileText size={16} />
-                <span>Uploaded Medical Records ({records.length})</span>
-              </span>
-            ),
-            children: (
-              <Table
-                rowKey="id"
-                dataSource={records}
-                columns={recordsColumns}
-                pagination={{ pageSize: 10 }}
-                locale={{ emptyText: 'No medical records uploaded for this patient yet.' }}
-              />
-            ),
-          },
-          {
-            key: 'prescribed',
-            label: (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CheckCircle2 size={16} />
-                <span>Doctor Prescribed Tests ({pendingPrescribedTests.length})</span>
-              </span>
-            ),
-            children: (
-              <Table
-                rowKey="id"
-                dataSource={pendingPrescribedTests}
-                columns={prescribedColumns}
-                pagination={{ pageSize: 10 }}
-                locale={{ emptyText: 'No lab tests prescribed by doctors for this patient.' }}
-              />
-            ),
-          },
-        ]}
-      />
+        {/* Action Controls */}
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+            onClick={() => navigate(`/patient-timelines/${patient.id}`)}
+            title="View complete longitudinal timeline"
+          >
+            <History size={13} className="text-blue-600" />
+            <span>Patient Timeline</span>
+          </button>
+
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 h-7.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+            onClick={() => onUploadClick()}
+          >
+            <Plus size={13} strokeWidth={2.4} />
+            <span>Upload Record</span>
+          </button>
+
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 h-7.5 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 text-xs font-medium shadow-2xs transition-colors cursor-pointer"
+            onClick={onClose}
+            title="Close patient records dossier"
+          >
+            <X size={13} />
+            <span>Close Dossier</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── Main Unified Container: Dossier Tabs + Table ── */}
+      <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col">
+        {/* Tabs Row matching DataView Tabs */}
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none px-3.5 py-1.5 border-b border-slate-100 bg-slate-50/60 flex-nowrap">
+          <button
+            type="button"
+            onClick={() => setActiveTab('records')}
+            className={cx(
+              'inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer',
+              activeTab === 'records'
+                ? 'bg-white text-blue-700 font-semibold shadow-2xs border border-slate-200/80'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60',
+            )}
+          >
+            <FileText size={13} />
+            <span>Uploaded Medical Records</span>
+            <span
+              className={cx(
+                'px-1.5 py-0.5 rounded text-[10.5px] font-semibold transition-colors',
+                activeTab === 'records' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600',
+              )}
+            >
+              {records.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('prescribed')}
+            className={cx(
+              'inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer',
+              activeTab === 'prescribed'
+                ? 'bg-white text-blue-700 font-semibold shadow-2xs border border-slate-200/80'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60',
+            )}
+          >
+            <CheckCircle2 size={13} />
+            <span>Doctor Prescribed Tests</span>
+            <span
+              className={cx(
+                'px-1.5 py-0.5 rounded text-[10.5px] font-semibold transition-colors',
+                activeTab === 'prescribed' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600',
+              )}
+            >
+              {pendingPrescribedTests.length}
+            </span>
+          </button>
+        </div>
+
+        {/* Tab 1: Uploaded Medical Records Table */}
+        {activeTab === 'records' && (
+          <div className="overflow-x-auto min-h-[260px]">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200/90 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
+                  <th className="px-3.5 py-2 whitespace-nowrap w-28">Report Date</th>
+                  <th className="px-3.5 py-2 whitespace-nowrap">Record / Test Name</th>
+                  <th className="px-3.5 py-2 text-center whitespace-nowrap w-36">Category</th>
+                  <th className="px-3.5 py-2 whitespace-nowrap w-32">Uploaded By</th>
+                  <th className="px-3.5 py-2 text-right whitespace-nowrap font-semibold w-28">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs text-slate-600">
+                {records.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
+                        <div className="p-2.5 rounded-full bg-slate-50 text-slate-400">
+                          <FileText size={22} />
+                        </div>
+                        <strong className="text-xs font-semibold text-slate-700">
+                          No medical records uploaded for this patient yet
+                        </strong>
+                        <span className="text-[11px] text-slate-500 max-w-sm">
+                          Upload patient lab reports, discharge summaries, or diagnostic documents directly.
+                        </span>
+                        <button
+                          type="button"
+                          className="mt-1.5 inline-flex items-center gap-1.5 h-7 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium cursor-pointer shadow-2xs"
+                          onClick={() => onUploadClick()}
+                        >
+                          <Plus size={13} /> Upload First Record
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  records.map((rec) => (
+                    <tr key={rec.id} className="hover:bg-slate-50/70 transition-colors">
+                      {/* Report Date */}
+                      <td className="px-3.5 py-2 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 text-slate-700 font-medium">
+                          <Calendar size={13} className="text-slate-400" />
+                          <span>{rec.reportDate || '—'}</span>
+                        </div>
+                      </td>
+
+                      {/* Test Name & File Info */}
+                      <td className="px-3.5 py-2">
+                        <div
+                          className="font-semibold text-slate-900 hover:text-blue-600 cursor-pointer"
+                          onClick={() => onPreviewClick(rec)}
+                          title="Click to preview document"
+                        >
+                          {rec.testName}
+                        </div>
+                        <div className="text-[11px] text-slate-400">
+                          {rec.fileName} • {formatFileSize(rec.fileSize)}
+                        </div>
+                        {rec.notes && (
+                          <div className="text-[11px] text-slate-500 italic mt-0.5" title={rec.notes}>
+                            Notes: {rec.notes}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Category */}
+                      <td className="px-3.5 py-2 text-center whitespace-nowrap">
+                        <Badge tone={rec.isExternal ? 'violet' : 'blue'}>
+                          {rec.isExternal ? 'External Record' : 'Prescribed Lab Test'}
+                        </Badge>
+                      </td>
+
+                      {/* Uploaded By */}
+                      <td className="px-3.5 py-2 whitespace-nowrap">
+                        <Badge tone={getUploaderBadgeTone(rec.uploadedBy)}>
+                          {rec.uploadedBy}
+                        </Badge>
+                        {rec.uploaderName && (
+                          <div className="text-[10.5px] text-slate-400 mt-0.5 truncate max-w-[120px]">
+                            {rec.uploaderName}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-3.5 py-2 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                            onClick={() => onPreviewClick(rec)}
+                            title="Preview document"
+                            aria-label="Preview"
+                          >
+                            <Eye size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                            onClick={() => window.open(rec.documentUrl, '_blank')}
+                            title="Download document"
+                            aria-label="Download"
+                          >
+                            <Download size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            className="p-1 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                            onClick={() => onEditClick(rec)}
+                            title="Edit metadata"
+                            aria-label="Edit"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            onClick={() => onDeleteClick(rec)}
+                            title="Delete record"
+                            aria-label="Delete"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Tab 2: Doctor Prescribed Tests Table */}
+        {activeTab === 'prescribed' && (
+          <div className="overflow-x-auto min-h-[260px]">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200/90 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
+                  <th className="px-3.5 py-2 whitespace-nowrap">Prescribed Test</th>
+                  <th className="px-3.5 py-2 whitespace-nowrap w-36">Prescription Date</th>
+                  <th className="px-3.5 py-2 whitespace-nowrap w-44">Prescribing Doctor</th>
+                  <th className="px-3.5 py-2 text-center whitespace-nowrap w-36">Status</th>
+                  <th className="px-3.5 py-2 text-right whitespace-nowrap font-semibold w-32">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs text-slate-600">
+                {pendingPrescribedTests.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
+                        <div className="p-2.5 rounded-full bg-slate-50 text-slate-400">
+                          <CheckCircle2 size={22} />
+                        </div>
+                        <strong className="text-xs font-semibold text-slate-700">
+                          No lab tests prescribed by doctors for this patient
+                        </strong>
+                        <span className="text-[11px] text-slate-500 max-w-sm">
+                          Prescribed lab investigations created during consultations will appear here automatically.
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  pendingPrescribedTests.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                      {/* Test Name & Instructions */}
+                      <td className="px-3.5 py-2">
+                        <div className="font-semibold text-slate-900">{item.testName}</div>
+                        {item.instructions && (
+                          <div className="text-[11px] text-slate-400 mt-0.5">
+                            Instructions: {item.instructions}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Prescription Date */}
+                      <td className="px-3.5 py-2 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 text-slate-700 font-medium">
+                          <Calendar size={13} className="text-slate-400" />
+                          <span>{item.prescriptionDate || 'Not specified'}</span>
+                        </div>
+                      </td>
+
+                      {/* Doctor Info */}
+                      <td className="px-3.5 py-2 whitespace-nowrap">
+                        <div className="font-medium text-slate-800">
+                          {item.doctorName || 'Dr. Narendran'}
+                        </div>
+                        {item.doctorSpecialization && (
+                          <div className="text-[11px] text-slate-400">{item.doctorSpecialization}</div>
+                        )}
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-3.5 py-2 text-center whitespace-nowrap">
+                        {item.status === 'Uploaded' ? (
+                          <Badge tone="green">
+                            <CheckCircle2 size={11} className="mr-1 inline" />
+                            <span>Uploaded ({item.reportsCount})</span>
+                          </Badge>
+                        ) : (
+                          <Badge tone="amber">
+                            <Clock size={11} className="mr-1 inline" />
+                            <span>Pending Upload</span>
+                          </Badge>
+                        )}
+                      </td>
+
+                      {/* Action */}
+                      <td className="px-3.5 py-2 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 h-6 px-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold transition-colors shadow-2xs cursor-pointer"
+                          onClick={() => onUploadClick(item)}
+                        >
+                          <Upload size={11} />
+                          <span>Upload Report</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

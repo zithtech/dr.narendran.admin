@@ -7,9 +7,11 @@ import {
   FlaskConical,
   GitBranch,
   HeartPulse,
+  History,
   LayoutDashboard,
   LifeBuoy,
   type LucideIcon,
+  MapPin,
   Pill,
   Shield,
   ShoppingBag,
@@ -17,8 +19,6 @@ import {
   Stethoscope,
   UserCog,
   Users,
-  MapPin,
-  History
 } from 'lucide-react';
 
 export interface NavModule {
@@ -105,7 +105,7 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         name: 'Location Management',
         path: '/locations',
         icon: MapPin,
-        slug: 'LOCATIONS',
+        slug: 'DOCTORS',
         description: 'Location management, clinics & facilities',
       },
       {

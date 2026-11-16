@@ -8,7 +8,7 @@ import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui
 import { addedFacet, statusFacet } from '../components/ui/facets';
 import { ActivityCell, Badge, StatusDot } from '../components/ui/primitives';
 import { useResource } from '../hooks/useResource';
-import { ageFrom, formatDate, timeAgo, titleCase } from '../lib/format';
+import { ageFrom, formatDate, formatPatientAge, timeAgo, titleCase } from '../lib/format';
 import api from '../utils/api';
 
 const FACETS: Facet<Patient>[] = [
@@ -94,11 +94,11 @@ export default function Patients() {
       header: 'Age & gender',
       sort: (p) => ageFrom(p.date_of_birth) ?? -1,
       cell: (p) => {
-        const age = ageFrom(p.date_of_birth);
+        const ageDisplay = formatPatientAge(p.date_of_birth);
         return (
           <div>
             <div style={{ fontWeight: 500, color: 'var(--ui-text)' }}>
-              {age !== null ? `${age} yrs` : <span className="ui-muted">—</span>}
+              {ageDisplay}
               {p.gender && (
                 <span style={{ color: 'var(--ui-muted)', fontWeight: 400 }}>
                   {' '}

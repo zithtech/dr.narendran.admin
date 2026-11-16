@@ -1,6 +1,9 @@
-import { DatePicker, Form, Input, Modal, message } from 'antd';
-import dayjs from 'dayjs';
+import { App } from 'antd';
+import { FileText, Loader2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+
+import { Field, Modal, Section } from '../../../components/ui/Modal';
+import { Alert } from '../../../components/ui/primitives';
 import { medicalRecordsApi } from '../services/medicalRecordsApi';
 import type { MedicalRecord } from '../types/medicalRecords';
 
@@ -17,37 +20,55 @@ export const EditMedicalRecordModal: React.FC<EditMedicalRecordModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const [form] = Form.useForm();
+  const { message } = App.useApp();
+  const [testName, setTestName] = useState('');
+  const [reportDate, setReportDate] = useState('');
+  const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (record && open) {
-      form.setFieldsValue({
-        testName: record.testName,
-        reportDate: record.reportDate ? dayjs(record.reportDate) : dayjs(),
-        notes: record.notes || '',
-      });
+      setTestName(record.testName || '');
+      setReportDate(
+        record.reportDate
+          ? record.reportDate.split('T')[0] || ''
+          : new Date().toISOString().split('T')[0] || '',
+      );
+      setNotes(record.notes || '');
+      setError(null);
     }
-  }, [record, open, form]);
+  }, [record, open]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!record) return;
+    if (!testName.trim()) {
+      setError('Test / Document name is required.');
+      return;
+    }
+
     try {
-      const values = await form.validateFields();
-      if (!record) return;
-
       setSaving(true);
-      const updated = await medicalRecordsApi.updateMedicalRecord(record.id, {
-        testName: values.testName.trim(),
-        reportDate: values.reportDate ? values.reportDate.format('YYYY-MM-DD') : undefined,
-        notes: values.notes ? values.notes.trim() : '',
-      });
+      setError(null);
 
-      message.success('Medical record updated successfully');
+      const payload: { testName?: string; reportDate?: string; notes?: string } = {
+        testName: testName.trim(),
+        notes: notes ? notes.trim() : '',
+      };
+      if (reportDate) {
+        payload.reportDate = reportDate;
+      }
+
+      const updated = await medicalRecordsApi.updateMedicalRecord(record.id, payload);
+
+      void message.success('Medical record updated successfully');
       onSuccess(updated);
       onClose();
     } catch (err: any) {
-      if (err?.errorFields) return; // Antd validation error
-      message.error(err?.response?.data?.message || 'Failed to update medical record');
+      const msg = err?.response?.data?.message || err?.message || 'Failed to update medical record';
+      setError(msg);
+      void message.error(msg);
     } finally {
       setSaving(false);
     }
@@ -56,37 +77,98 @@ export const EditMedicalRecordModal: React.FC<EditMedicalRecordModalProps> = ({
   return (
     <Modal
       open={open}
-      onCancel={onClose}
-      onOk={handleSubmit}
-      confirmLoading={saving}
-      title="Edit Medical Record Metadata"
-      destroyOnClose
+      onClose={saving ? () => undefined : onClose}
+      variant="drawer"
+      size="md"
+      title={
+        <div className="flex items-center gap-2">
+          <FileText size={18} className="text-blue-600" />
+          <span>Edit Medical Record Metadata</span>
+        </div>
+      }
+      description={
+        record
+          ? `Patient: ${record.patientName} • File: ${record.fileName}`
+          : 'Update record identification, date, and doctor notes.'
+      }
     >
-      <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-        <Form.Item
-          name="testName"
-          label="Test / Document Name"
-          rules={[{ required: true, message: 'Please enter a test or document name' }]}
-        >
-          <Input placeholder="e.g. Complete Blood Count (CBC) or Chest X-Ray" />
-        </Form.Item>
+      <form onSubmit={handleSubmit} className="ui-modal-form">
+        <div className="ui-modal-body space-y-4">
+          {error && <Alert>{error}</Alert>}
 
-        <Form.Item
-          name="reportDate"
-          label="Report / Clinical Date"
-          rules={[{ required: true, message: 'Please select report date' }]}
-        >
-          <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
-        </Form.Item>
+          <Section title="Document Information">
+            <div className="space-y-3">
+              <Field
+                label="Test / Document Name"
+                required
+                hint="e.g. Complete Blood Count (CBC), Chest X-Ray, Discharge Summary"
+              >
+                <input
+                  type="text"
+                  className="ui-input"
+                  placeholder="Enter record or test name..."
+                  value={testName}
+                  onChange={(e) => setTestName(e.target.value)}
+                  maxLength={255}
+                  required
+                />
+              </Field>
 
-        <Form.Item name="notes" label="Clinical Notes / Remarks">
-          <Input.TextArea
-            rows={3}
-            placeholder="Enter any doctor impressions or administrative notes..."
-          />
-        </Form.Item>
-      </Form>
+              <Field
+                label="Clinical / Report Date"
+                required
+                hint="Date when the diagnostic test or examination was conducted"
+              >
+                <input
+                  type="date"
+                  className="ui-input"
+                  value={reportDate}
+                  onChange={(e) => setReportDate(e.target.value)}
+                  required
+                />
+              </Field>
+
+              <Field
+                label="Clinical Notes / Observations"
+                hint="Doctor remarks, abnormal findings, or administrative observations"
+              >
+                <textarea
+                  rows={3}
+                  className="ui-textarea"
+                  placeholder="Enter clinical notes or remarks..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </Field>
+            </div>
+          </Section>
+        </div>
+
+        <div className="ui-modal-foot">
+          <button
+            type="button"
+            className="ui-btn"
+            onClick={onClose}
+            disabled={saving}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="ui-btn ui-btn-primary"
+            disabled={saving}
+          >
+            {saving ? (
+              <>
+                <Loader2 size={13} className="animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <span>Save Changes</span>
+            )}
+          </button>
+        </div>
+      </form>
     </Modal>
   );
 };
-
