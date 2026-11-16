@@ -20,6 +20,17 @@ export interface LabService {
   updated_at: string;
 }
 
+export function validateLabServiceName(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return 'Diagnostic service name is required.';
+  if (trimmed.length < 2) return 'Diagnostic service name must be at least 2 characters.';
+  if (trimmed.length > 150) return 'Diagnostic service name cannot exceed 150 characters.';
+  if (/[^a-zA-Z0-9\s.,/+\-&()'%]/i.test(trimmed)) {
+    return 'Diagnostic service name contains invalid characters.';
+  }
+  return undefined;
+}
+
 interface LabServiceModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -35,6 +46,7 @@ export default function LabServiceModal({
 }: LabServiceModalProps) {
   const [name, setName] = useState('');
   const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -46,14 +58,28 @@ export default function LabServiceModal({
       setName('');
       setStatus('ACTIVE');
     }
+    setTouched({});
     setError('');
   }, [service, isOpen]);
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^a-zA-Z0-9\s.,/+\-&()'%]/g, '');
+    setName(sanitized);
+    if (touched['name']) {
+      setTouched((prev) => ({ ...prev, name: true }));
+    }
+  };
+
+  const nameError = touched['name'] ? validateLabServiceName(name) : undefined;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim()) {
-      setError('Service name is required.');
+    const nameValidation = validateLabServiceName(name);
+    if (nameValidation) {
+      setTouched((prev) => ({ ...prev, name: true }));
+      document.getElementById('service-name-input')?.focus();
       return;
     }
 
@@ -129,6 +155,7 @@ export default function LabServiceModal({
       }
     >
       <form
+        noValidate
         onSubmit={(e) => {
           void handleSubmit(e);
         }}
@@ -216,6 +243,10 @@ export default function LabServiceModal({
             border-color: #2563eb !important;
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
             outline: none;
+          }
+          .service-drawer-modal .ui-input.has-error {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
           }
           .service-status-btn {
             flex: 1;
@@ -305,16 +336,19 @@ export default function LabServiceModal({
                 </label>
                 <input
                   id="service-name-input"
-                  className="ui-input w-full"
+                  className={`ui-input w-full ${nameError ? 'has-error' : ''}`}
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
+                  onChange={handleNameChange}
+                  onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
                   placeholder="e.g. Complete Blood Count (CBC), Lipid Profile, Thyroid Panel"
                 />
-                <span className="mt-1 block text-[11px] text-slate-500">
-                  Official clinical name displayed on doctor prescription orders and patient referrals
-                </span>
+                {nameError && (
+                  <div className="mt-1.5 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                    <AlertCircle size={13} className="shrink-0 text-rose-600" />
+                    <span>{nameError}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

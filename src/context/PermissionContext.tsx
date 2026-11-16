@@ -378,17 +378,18 @@ export function usePermission(): PermissionContextValue {
     // Graceful fallback if called outside provider (e.g. unit tests or early mount)
     const role = localStorage.getItem(ROLE_KEY);
     const isSys = isSystemAdminRole(role);
+    const allowDefault = role === null || isSys;
     return {
       roleName: role,
       isSystemAdmin: isSys,
       permissions: {},
       isLoading: false,
-      canView: () => isSys,
-      canCreate: () => isSys,
-      canUpdate: () => isSys,
-      canDelete: () => isSys,
-      canManage: () => isSys,
-      hasPermission: () => isSys,
+      canView: () => allowDefault,
+      canCreate: () => allowDefault,
+      canUpdate: () => allowDefault,
+      canDelete: () => allowDefault,
+      canManage: () => allowDefault,
+      hasPermission: () => allowDefault,
       hasRole: (...roles: string[]) => Boolean(role && roles.some(r => r.toUpperCase() === role.toUpperCase())),
       refreshPermissions: async () => {},
     };

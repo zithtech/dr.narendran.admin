@@ -746,7 +746,17 @@ export default function PatientDrawer({ patient, onClose, onEdit }: PatientDrawe
                 </div>
               )}
 
-              {patient.address && (
+              {Boolean(
+                [
+                  patient.address_line_1,
+                  patient.address_line_2,
+                  patient.city,
+                  patient.state,
+                  patient.pincode,
+                ]
+                  .filter(Boolean)
+                  .join(', ') || patient.address,
+              ) && (
                 <div
                   style={{
                     display: 'flex',
@@ -760,7 +770,15 @@ export default function PatientDrawer({ patient, onClose, onEdit }: PatientDrawe
                 >
                   <MapPin size={14} style={{ color: '#2563eb', marginTop: 2, flexShrink: 0 }} />
                   <span style={{ fontSize: 12.5, color: '#334155', lineHeight: 1.4 }}>
-                    {patient.address}
+                    {[
+                      patient.address_line_1,
+                      patient.address_line_2,
+                      patient.city,
+                      patient.state,
+                      patient.pincode,
+                    ]
+                      .filter(Boolean)
+                      .join(', ') || patient.address}
                   </span>
                 </div>
               )}

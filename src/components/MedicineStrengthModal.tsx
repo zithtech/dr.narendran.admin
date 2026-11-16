@@ -19,8 +19,54 @@ import {
   normalizeDiscountType as normalizePricingDiscountType,
   validateDiscount,
 } from '../utils/pricing';
+import {
+  validateBarcode,
+  validateDiscountValue,
+  validateMedicineCode,
+  validateMrp,
+} from './MedicineModal';
 import { Modal } from './ui/Modal';
 import SearchableSelect, { type SearchableSelectOption } from './ui/SearchableSelect';
+
+export function validateStrengthVariantStrength(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return 'Strength value is required.';
+  if (trimmed.length > 50) return 'Strength cannot exceed 50 characters.';
+  if (/[^0-9a-zA-Z\s.,/+\-]/.test(trimmed)) return 'Strength contains invalid characters.';
+  return undefined;
+}
+
+export function validateTabletsPerStrip(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return 'Tablets per strip is required.';
+  if (/[^0-9]/.test(trimmed)) return 'Must contain only numbers.';
+  const n = parseInt(trimmed, 10);
+  if (isNaN(n) || n <= 0) return 'Must be greater than 0.';
+  if (n > 1000) return 'Cannot exceed 1,000.';
+  return undefined;
+}
+
+export function validateReorderLevel(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return 'Reorder threshold is required.';
+  if (/[^0-9]/.test(trimmed)) return 'Must contain only numbers.';
+  const n = parseInt(trimmed, 10);
+  if (isNaN(n) || n < 0) return 'Cannot be negative.';
+  if (n > 100000) return 'Cannot exceed 100,000.';
+  return undefined;
+}
+
+export function validatePurchasePrice(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  const n = parseFloat(trimmed);
+  if (isNaN(n) || (trimmed.match(/\./g) || []).length > 1 || /[^0-9.-]/.test(trimmed)) {
+    return 'Purchase cost must be a valid number.';
+  }
+  if (n < 0) return 'Purchase cost cannot be negative.';
+  if (n > 999999.99) return 'Purchase cost cannot exceed 999,999.99.';
+  return undefined;
+}
 
 interface MedicineStrengthModalProps {
   isOpen: boolean;
@@ -86,6 +132,9 @@ export default function MedicineStrengthModal({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
   const [internalMedicines, setInternalMedicines] = useState<Medicine[]>([]);
   const effectiveMedicinesList = medicinesList.length > 0 ? medicinesList : internalMedicines;
 
@@ -163,6 +212,8 @@ export default function MedicineStrengthModal({
       setNotes('');
     }
     setError('');
+    setErrors({});
+    setTouched({});
   }, [variant, medicine, effectiveMedicinesList, isOpen]);
 
   const handleMedicineChange = (medId: string) => {
@@ -218,31 +269,159 @@ export default function MedicineStrengthModal({
 
   const isTabletOrCapsule = ['Tablet', 'Capsule'].includes(dosageForm);
 
+  const handleStrengthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^0-9a-zA-Z\s.,/+\-]/g, '').slice(0, 50);
+    setStrength(sanitized);
+    if (touched.strength) {
+      setErrors((prev) => ({ ...prev, strength: validateStrengthVariantStrength(sanitized) }));
+    }
+  };
+
+  const handleTabletsPerStripChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^0-9]/g, '').slice(0, 5);
+    setTabletsPerStrip(sanitized);
+    if (touched.tabletsPerStrip) {
+      setErrors((prev) => ({ ...prev, tabletsPerStrip: validateTabletsPerStrip(sanitized) }));
+    }
+  };
+
+  const handleReorderLevelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^0-9]/g, '').slice(0, 6);
+    setReorderLevel(sanitized);
+    if (touched.reorderLevel) {
+      setErrors((prev) => ({ ...prev, reorderLevel: validateReorderLevel(sanitized) }));
+    }
+  };
+
+  const handleMrpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let sanitized = e.target.value.replace(/[^0-9.]/g, '');
+    const parts = sanitized.split('.');
+    if (parts.length > 2) sanitized = parts[0] + '.' + parts.slice(1).join('');
+    if (parts[1] && parts[1].length > 2) sanitized = parts[0] + '.' + parts[1].slice(0, 2);
+    setMrp(sanitized);
+    if (touched.mrp) {
+      setErrors((prev) => ({ ...prev, mrp: validateMrp(sanitized) }));
+    }
+    if (touched.discountValue) {
+      setErrors((prev) => ({
+        ...prev,
+        discountValue: validateDiscountValue(discountValue, discountType, sanitized),
+      }));
+    }
+  };
+
+  const handleDiscountValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let sanitized = e.target.value.replace(/[^0-9.]/g, '');
+    const parts = sanitized.split('.');
+    if (parts.length > 2) sanitized = parts[0] + '.' + parts.slice(1).join('');
+    if (parts[1] && parts[1].length > 2) sanitized = parts[0] + '.' + parts[1].slice(0, 2);
+    setDiscountValue(sanitized);
+    if (touched.discountValue) {
+      setErrors((prev) => ({
+        ...prev,
+        discountValue: validateDiscountValue(sanitized, discountType, mrp),
+      }));
+    }
+  };
+
+  const handlePurchasePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let sanitized = e.target.value.replace(/[^0-9.]/g, '');
+    const parts = sanitized.split('.');
+    if (parts.length > 2) sanitized = parts[0] + '.' + parts.slice(1).join('');
+    if (parts[1] && parts[1].length > 2) sanitized = parts[0] + '.' + parts[1].slice(0, 2);
+    setPurchasePrice(sanitized);
+    if (touched.purchasePrice) {
+      setErrors((prev) => ({ ...prev, purchasePrice: validatePurchasePrice(sanitized) }));
+    }
+  };
+
+  const handleVariantCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^a-zA-Z0-9-_]/g, '').slice(0, 50);
+    setVariantCode(sanitized);
+    if (touched.variantCode) {
+      setErrors((prev) => ({ ...prev, variantCode: validateMedicineCode(sanitized) }));
+    }
+  };
+
+  const handleBarcodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = raw.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 50);
+    setBarcode(sanitized);
+    if (touched.barcode) {
+      setErrors((prev) => ({ ...prev, barcode: validateBarcode(sanitized) }));
+    }
+  };
+
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    let err: string | undefined;
+    if (field === 'strength') err = validateStrengthVariantStrength(strength);
+    else if (field === 'tabletsPerStrip' && isTabletOrCapsule)
+      err = validateTabletsPerStrip(tabletsPerStrip);
+    else if (field === 'reorderLevel') err = validateReorderLevel(reorderLevel);
+    else if (field === 'mrp') err = validateMrp(mrp);
+    else if (field === 'discountValue')
+      err = validateDiscountValue(discountValue, discountType, mrp);
+    else if (field === 'purchasePrice') err = validatePurchasePrice(purchasePrice);
+    else if (field === 'variantCode') err = validateMedicineCode(variantCode);
+    else if (field === 'barcode') err = validateBarcode(barcode);
+    setErrors((prev) => ({ ...prev, [field]: err }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const effectiveMedicineId = variant?.medicine_id || medicine?.id || selectedMedicineId;
 
-    if (!effectiveMedicineId) {
-      setError('Please select a master medicine.');
-      return;
-    }
-    if (!strength.trim()) {
-      setError('Strength value is required (e.g. 500, 650, 120/5).');
-      return;
-    }
+    const strengthErr = validateStrengthVariantStrength(strength);
+    const stripErr = isTabletOrCapsule ? validateTabletsPerStrip(tabletsPerStrip) : undefined;
+    const reorderErr = validateReorderLevel(reorderLevel);
+    const mrpErr = validateMrp(mrp);
+    const discErr = validateDiscountValue(discountValue, discountType, mrp);
+    const purchaseErr = validatePurchasePrice(purchasePrice);
+    const codeErr = validateMedicineCode(variantCode);
+    const barcodeErr = validateBarcode(barcode);
 
     const discountValidationError = validateDiscount(
       !isNaN(numMrp) ? numMrp : null,
       discountType || null,
       !isNaN(numDisc) ? numDisc : null,
     );
-    if (discountValidationError) {
-      setError(discountValidationError);
+
+    const newErrors: Record<string, string | undefined> = {
+      strength: strengthErr,
+      tabletsPerStrip: stripErr,
+      reorderLevel: reorderErr,
+      mrp: mrpErr,
+      discountValue: discErr || discountValidationError || undefined,
+      purchasePrice: purchaseErr,
+      variantCode: codeErr,
+      barcode: barcodeErr,
+    };
+
+    setErrors(newErrors);
+    setTouched({
+      strength: true,
+      tabletsPerStrip: true,
+      reorderLevel: true,
+      mrp: true,
+      discountValue: true,
+      purchasePrice: true,
+      variantCode: true,
+      barcode: true,
+    });
+
+    if (!effectiveMedicineId) {
+      setError('Please select a master medicine.');
       return;
     }
 
-    if (purchasePrice && parseFloat(purchasePrice) < 0) {
-      setError('Purchase price cannot be negative.');
+    const hasErrors = Object.values(newErrors).some(Boolean);
+    if (hasErrors) {
+      setError('Please correct the highlighted fields before saving.');
       return;
     }
 
@@ -338,6 +517,7 @@ export default function MedicineStrengthModal({
         onSubmit={(e) => {
           void handleSubmit(e);
         }}
+        noValidate
         className="ui-modal-form"
         style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
       >
@@ -520,11 +700,7 @@ export default function MedicineStrengthModal({
                     options={parentMedicineOptions}
                     placeholder="Search and select master medicine..."
                     searchPlaceholder="Search by name, generic name, or code..."
-                    required
                   />
-                  <span className="mt-1 block text-[11px] text-slate-500">
-                    Select the master clinical record to link this strength variant under
-                  </span>
                 </div>
               )}
 
@@ -595,20 +771,31 @@ export default function MedicineStrengthModal({
 
             <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                <label
+                  htmlFor="variant-strength-input"
+                  className="mb-1.5 block text-xs font-semibold text-slate-800"
+                >
                   Strength Value <span className="font-bold text-rose-500">*</span>
                 </label>
                 <input
+                  id="variant-strength-input"
                   type="text"
                   className="ui-input w-full"
                   placeholder="e.g. 500, 650, 120/5"
                   value={strength}
-                  onChange={(e) => setStrength(e.target.value)}
-                  required
+                  onChange={handleStrengthChange}
+                  onBlur={() => handleBlur('strength')}
+                  style={{
+                    borderColor: errors.strength ? '#ef4444' : undefined,
+                    boxShadow: errors.strength ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
                 />
-                <span className="mt-1 block text-[11px] text-slate-500">
-                  Potency amount of active ingredient
-                </span>
+                {errors.strength && (
+                  <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                    <AlertCircle size={12} className="shrink-0" />
+                    {errors.strength}
+                  </span>
+                )}
               </div>
 
               <div>
@@ -627,20 +814,32 @@ export default function MedicineStrengthModal({
               <div>
                 {isTabletOrCapsule ? (
                   <>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                    <label
+                      htmlFor="variant-tablets-input"
+                      className="mb-1.5 block text-xs font-semibold text-slate-800"
+                    >
                       Tablets / Units per Strip <span className="font-bold text-rose-500">*</span>
                     </label>
                     <input
-                      type="number"
-                      min="1"
+                      id="variant-tablets-input"
+                      type="text"
                       className="ui-input w-full"
                       value={tabletsPerStrip}
-                      onChange={(e) => setTabletsPerStrip(e.target.value)}
-                      required
+                      onChange={handleTabletsPerStripChange}
+                      onBlur={() => handleBlur('tabletsPerStrip')}
+                      style={{
+                        borderColor: errors.tabletsPerStrip ? '#ef4444' : undefined,
+                        boxShadow: errors.tabletsPerStrip
+                          ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                          : undefined,
+                      }}
                     />
-                    <span className="mt-1 block text-[11px] text-slate-500">
-                      Standard blister or strip packaging quantity
-                    </span>
+                    {errors.tabletsPerStrip && (
+                      <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                        <AlertCircle size={12} className="shrink-0" />
+                        {errors.tabletsPerStrip}
+                      </span>
+                    )}
                   </>
                 ) : (
                   <>
@@ -653,28 +852,37 @@ export default function MedicineStrengthModal({
                       value={dosageForm}
                       disabled
                     />
-                    <span className="mt-1 block text-[11px] text-slate-500">
-                      Dispensed by single unit package
-                    </span>
                   </>
                 )}
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                <label
+                  htmlFor="variant-reorder-input"
+                  className="mb-1.5 block text-xs font-semibold text-slate-800"
+                >
                   Reorder Threshold <span className="font-bold text-rose-500">*</span>
                 </label>
                 <input
-                  type="number"
-                  min="0"
+                  id="variant-reorder-input"
+                  type="text"
                   className="ui-input w-full font-bold"
                   value={reorderLevel}
-                  onChange={(e) => setReorderLevel(e.target.value)}
-                  required
+                  onChange={handleReorderLevelChange}
+                  onBlur={() => handleBlur('reorderLevel')}
+                  style={{
+                    borderColor: errors.reorderLevel ? '#ef4444' : undefined,
+                    boxShadow: errors.reorderLevel
+                      ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                      : undefined,
+                  }}
                 />
-                <span className="mt-1 block text-[11px] text-slate-500">
-                  Triggers low stock alert when inventory falls below this count
-                </span>
+                {errors.reorderLevel && (
+                  <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                    <AlertCircle size={12} className="shrink-0" />
+                    {errors.reorderLevel}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -694,18 +902,31 @@ export default function MedicineStrengthModal({
             <div className="space-y-3.5">
               <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
-                    MRP (₹) <span className="text-[11px] font-normal text-slate-500">(Max Retail Price)</span>
+                  <label
+                    htmlFor="variant-mrp-input"
+                    className="mb-1.5 block text-xs font-semibold text-slate-800"
+                  >
+                    MRP (₹)
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    id="variant-mrp-input"
+                    type="text"
                     className="ui-input w-full font-medium"
                     placeholder="0.00"
                     value={mrp}
-                    onChange={(e) => setMrp(e.target.value)}
+                    onChange={handleMrpChange}
+                    onBlur={() => handleBlur('mrp')}
+                    style={{
+                      borderColor: errors.mrp ? '#ef4444' : undefined,
+                      boxShadow: errors.mrp ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                    }}
                   />
+                  {errors.mrp && (
+                    <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                      <AlertCircle size={12} className="shrink-0" />
+                      {errors.mrp}
+                    </span>
+                  )}
                 </div>
 
                 <div>
@@ -714,26 +935,50 @@ export default function MedicineStrengthModal({
                   </label>
                   <SearchableSelect
                     value={discountType}
-                    onChange={(val) => setDiscountType(val as '' | 'PERCENTAGE' | 'FLAT')}
+                    onChange={(val) => {
+                      const newType = val as '' | 'PERCENTAGE' | 'FLAT';
+                      setDiscountType(newType);
+                      if (touched.discountValue) {
+                        setErrors((prev) => ({
+                          ...prev,
+                          discountValue: validateDiscountValue(discountValue, newType, mrp),
+                        }));
+                      }
+                    }}
                     options={DISCOUNT_TYPE_OPTIONS}
                     placeholder="Select discount..."
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label
+                    htmlFor="variant-discount-value-input"
+                    className="mb-1.5 block text-xs font-semibold text-slate-800"
+                  >
                     Discount Value
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    id="variant-discount-value-input"
+                    type="text"
                     className="ui-input w-full"
                     placeholder={discountType === 'PERCENTAGE' ? 'e.g. 10%' : 'e.g. 5.00'}
                     disabled={!discountType}
                     value={discountValue}
-                    onChange={(e) => setDiscountValue(e.target.value)}
+                    onChange={handleDiscountValueChange}
+                    onBlur={() => handleBlur('discountValue')}
+                    style={{
+                      borderColor: errors.discountValue ? '#ef4444' : undefined,
+                      boxShadow: errors.discountValue
+                        ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                        : undefined,
+                    }}
                   />
+                  {errors.discountValue && (
+                    <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                      <AlertCircle size={12} className="shrink-0" />
+                      {errors.discountValue}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -747,55 +992,98 @@ export default function MedicineStrengthModal({
                       ? `₹ ${calculatedFinalPrice.toFixed(2)}`
                       : '— (Set MRP)'}
                   </div>
-                  <span className="mt-1 block text-[11px] text-slate-500">
-                    Effective billing price after applying discount
-                  </span>
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label
+                    htmlFor="variant-purchase-price-input"
+                    className="mb-1.5 block text-xs font-semibold text-slate-800"
+                  >
                     Default Purchase Cost (₹)
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    id="variant-purchase-price-input"
+                    type="text"
                     className="ui-input w-full"
                     placeholder="0.00"
                     value={purchasePrice}
-                    onChange={(e) => setPurchasePrice(e.target.value)}
+                    onChange={handlePurchasePriceChange}
+                    onBlur={() => handleBlur('purchasePrice')}
+                    style={{
+                      borderColor: errors.purchasePrice ? '#ef4444' : undefined,
+                      boxShadow: errors.purchasePrice
+                        ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                        : undefined,
+                    }}
                   />
-                  <span className="mt-1 block text-[11px] text-slate-500">
-                    Estimated distributor procurement cost per unit
-                  </span>
+                  {errors.purchasePrice && (
+                    <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                      <AlertCircle size={12} className="shrink-0" />
+                      {errors.purchasePrice}
+                    </span>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label
+                    htmlFor="variant-code-input"
+                    className="mb-1.5 block text-xs font-semibold text-slate-800"
+                  >
                     SKU / Variant Code
                   </label>
                   <input
+                    id="variant-code-input"
                     type="text"
                     className="ui-input w-full"
                     placeholder="e.g. MED-PARA-650-T15"
                     value={variantCode}
-                    onChange={(e) => setVariantCode(e.target.value)}
+                    onChange={handleVariantCodeChange}
+                    onBlur={() => handleBlur('variantCode')}
+                    style={{
+                      borderColor: errors.variantCode ? '#ef4444' : undefined,
+                      boxShadow: errors.variantCode
+                        ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                        : undefined,
+                    }}
                   />
+                  {errors.variantCode && (
+                    <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                      <AlertCircle size={12} className="shrink-0" />
+                      {errors.variantCode}
+                    </span>
+                  )}
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label
+                    htmlFor="variant-barcode-input"
+                    className="mb-1.5 block text-xs font-semibold text-slate-800"
+                  >
                     Barcode / EAN
                   </label>
                   <input
+                    id="variant-barcode-input"
                     type="text"
                     className="ui-input w-full"
                     placeholder="Scan or enter barcode"
                     value={barcode}
-                    onChange={(e) => setBarcode(e.target.value)}
+                    onChange={handleBarcodeChange}
+                    onBlur={() => handleBlur('barcode')}
+                    style={{
+                      borderColor: errors.barcode ? '#ef4444' : undefined,
+                      boxShadow: errors.barcode
+                        ? '0 0 0 2px rgba(239, 68, 68, 0.15)'
+                        : undefined,
+                    }}
                   />
+                  {errors.barcode && (
+                    <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                      <AlertCircle size={12} className="shrink-0" />
+                      {errors.barcode}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -864,14 +1152,18 @@ export default function MedicineStrengthModal({
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                <label
+                  htmlFor="variant-notes-input"
+                  className="mb-1.5 block text-xs font-semibold text-slate-800"
+                >
                   Dispensing & Packaging Notes
                 </label>
                 <textarea
+                  id="variant-notes-input"
                   className="ui-textarea w-full"
                   rows={2}
                   value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                  onChange={(e) => setNotes(e.target.value.slice(0, 1000))}
                   placeholder="e.g. Blister pack of 10 tablets. Keep away from direct heat."
                 />
               </div>

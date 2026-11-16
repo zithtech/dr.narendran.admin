@@ -34,6 +34,102 @@ export interface Lab {
   updated_at: string;
 }
 
+export function validateLabName(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return 'Laboratory name is required.';
+  if (trimmed.length < 2) return 'Laboratory name must be at least 2 characters.';
+  if (trimmed.length > 150) return 'Laboratory name cannot exceed 150 characters.';
+  if (/[^a-zA-Z0-9\s.,'&-]/i.test(trimmed)) {
+    return 'Laboratory name contains invalid characters.';
+  }
+  return undefined;
+}
+
+export function validateLabPhone(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (/[a-zA-Z]/.test(val)) {
+    return 'Letters are not allowed in phone number.';
+  }
+  if (/[^0-9+\s-]/.test(val)) {
+    return 'Special characters are not allowed in phone number.';
+  }
+  const digits = val.replace(/\D/g, '');
+  if (digits.length < 7) {
+    return 'Phone number must be at least 7 digits.';
+  }
+  if (digits.length > 15) {
+    return 'Phone number cannot exceed 15 digits.';
+  }
+  return undefined;
+}
+
+export function validateLabEmail(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(trimmed)) {
+    return 'Please enter a valid email address.';
+  }
+  if (trimmed.length > 150) {
+    return 'Email address cannot exceed 150 characters.';
+  }
+  return undefined;
+}
+
+export function validateLabAddressLine(val: string, label = 'Address line'): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 255) {
+    return `${label} cannot exceed 255 characters.`;
+  }
+  if (/[^a-zA-Z0-9\s,./#&-]/.test(val)) {
+    return `${label} contains invalid characters.`;
+  }
+  return undefined;
+}
+
+export function validateLabCity(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) {
+    return 'City cannot exceed 100 characters.';
+  }
+  if (/[0-9]/.test(val)) {
+    return 'Numbers are not allowed in city.';
+  }
+  if (/[^a-zA-Z\s-]/.test(val)) {
+    return 'City can only contain letters, spaces, and hyphens.';
+  }
+  return undefined;
+}
+
+export function validateLabState(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) {
+    return 'State cannot exceed 100 characters.';
+  }
+  if (/[0-9]/.test(val)) {
+    return 'Numbers are not allowed in state.';
+  }
+  if (/[^a-zA-Z\s-]/.test(val)) {
+    return 'State can only contain letters, spaces, and hyphens.';
+  }
+  return undefined;
+}
+
+export function validateLabPincode(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (/[^0-9]/.test(trimmed)) {
+    return 'Pincode must contain only numbers.';
+  }
+  if (trimmed.length < 5 || trimmed.length > 10) {
+    return 'Pincode must be between 5 and 10 digits.';
+  }
+  return undefined;
+}
+
 interface LabModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -60,6 +156,10 @@ export default function LabModal({ isOpen, onClose, lab, onSave }: LabModalProps
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Form validation state
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
   useEffect(() => {
     if (lab) {
@@ -92,6 +192,8 @@ export default function LabModal({ isOpen, onClose, lab, onSave }: LabModalProps
       setStatus('ACTIVE');
     }
     setError('');
+    setTouched({});
+    setErrors({});
 
     // Fetch available diagnostic services
     void (async () => {
@@ -109,11 +211,107 @@ export default function LabModal({ isOpen, onClose, lab, onSave }: LabModalProps
     })();
   }, [lab, isOpen]);
 
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^a-zA-Z0-9\s.,'&-]/g, '').slice(0, 150);
+    setName(val);
+    if (touched.name) {
+      setErrors((prev) => ({ ...prev, name: validateLabName(val) }));
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^0-9+\s-]/g, '').slice(0, 16);
+    setPhone(val);
+    if (touched.phone) {
+      setErrors((prev) => ({ ...prev, phone: validateLabPhone(val) }));
+    }
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.slice(0, 150);
+    setEmail(val);
+    if (touched.email) {
+      setErrors((prev) => ({ ...prev, email: validateLabEmail(val) }));
+    }
+  };
+
+  const handleAddressLine1Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^a-zA-Z0-9\s,./#&-]/g, '').slice(0, 255);
+    setAddressLine1(val);
+    if (touched.addressLine1) {
+      setErrors((prev) => ({ ...prev, addressLine1: validateLabAddressLine(val, 'Address line 1') }));
+    }
+  };
+
+  const handleAddressLine2Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^a-zA-Z0-9\s,./#&-]/g, '').slice(0, 255);
+    setAddressLine2(val);
+    if (touched.addressLine2) {
+      setErrors((prev) => ({ ...prev, addressLine2: validateLabAddressLine(val, 'Address line 2') }));
+    }
+  };
+
+  const handleCityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^a-zA-Z\s-]/g, '').slice(0, 100);
+    setCity(val);
+    if (touched.city) {
+      setErrors((prev) => ({ ...prev, city: validateLabCity(val) }));
+    }
+  };
+
+  const handleStateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^a-zA-Z\s-]/g, '').slice(0, 100);
+    setState(val);
+    if (touched.state) {
+      setErrors((prev) => ({ ...prev, state: validateLabState(val) }));
+    }
+  };
+
+  const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+    setPincode(val);
+    if (touched.pincode) {
+      setErrors((prev) => ({ ...prev, pincode: validateLabPincode(val) }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim()) {
-      setError('Laboratory name is required.');
+    const nameErr = validateLabName(name);
+    const phoneErr = validateLabPhone(phone);
+    const emailErr = validateLabEmail(email);
+    const addr1Err = validateLabAddressLine(addressLine1, 'Address line 1');
+    const addr2Err = validateLabAddressLine(addressLine2, 'Address line 2');
+    const cityErr = validateLabCity(city);
+    const stateErr = validateLabState(state);
+    const pincodeErr = validateLabPincode(pincode);
+
+    const newErrors: Record<string, string | undefined> = {
+      name: nameErr,
+      phone: phoneErr,
+      email: emailErr,
+      addressLine1: addr1Err,
+      addressLine2: addr2Err,
+      city: cityErr,
+      state: stateErr,
+      pincode: pincodeErr,
+    };
+
+    setTouched({
+      name: true,
+      phone: true,
+      email: true,
+      addressLine1: true,
+      addressLine2: true,
+      city: true,
+      state: true,
+      pincode: true,
+    });
+    setErrors(newErrors);
+
+    if (nameErr || phoneErr || emailErr || addr1Err || addr2Err || cityErr || stateErr || pincodeErr) {
+      setError('Please correct the highlighted fields before saving.');
       return;
     }
 
@@ -200,6 +398,7 @@ export default function LabModal({ isOpen, onClose, lab, onSave }: LabModalProps
       }
     >
       <form
+        noValidate
         onSubmit={(e) => {
           void handleSubmit(e);
         }}
@@ -380,18 +579,15 @@ export default function LabModal({ isOpen, onClose, lab, onSave }: LabModalProps
                 <FlaskConical size={14} />
               </div>
               <span className="lab-section-tag">Laboratory Information</span>
-              <span className="lab-section-subtitle hidden sm:inline">
-                Primary center name and contact lines
-              </span>
             </div>
 
             <div className="space-y-3.5">
               <div>
                 <label
                   htmlFor="lab-name-input"
-                  className="mb-1.5 block text-xs font-semibold text-slate-800 cursor-pointer"
+                  className="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-800 cursor-pointer"
                 >
-                  Laboratory / Diagnostic Center Name{' '}
+                  <span>Laboratory / Diagnostic Center Name</span>
                   <span className="font-bold text-rose-500">*</span>
                 </label>
                 <input
@@ -399,46 +595,80 @@ export default function LabModal({ isOpen, onClose, lab, onSave }: LabModalProps
                   className="ui-input w-full"
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
+                  onChange={handleNameChange}
+                  onBlur={() => {
+                    setTouched((prev) => ({ ...prev, name: true }));
+                    setErrors((prev) => ({ ...prev, name: validateLabName(name) }));
+                  }}
                   placeholder="e.g. Metropolis Healthcare, SRL Diagnostic Center"
+                  style={{
+                    borderColor: errors.name ? '#ef4444' : undefined,
+                    boxShadow: errors.name ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
                 />
-                <span className="mt-1 block text-[11px] text-slate-500">
-                  Official name displayed on patient referrals and lab requisitions
-                </span>
+                {errors.name && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                    <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                    <span>{errors.name}</span>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label htmlFor="lab-phone-input" className="mb-1.5 block text-xs font-semibold text-slate-800">
                     Contact Phone Number
                   </label>
                   <input
+                    id="lab-phone-input"
                     className="ui-input w-full"
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={handlePhoneChange}
+                    onBlur={() => {
+                      setTouched((prev) => ({ ...prev, phone: true }));
+                      setErrors((prev) => ({ ...prev, phone: validateLabPhone(phone) }));
+                    }}
                     placeholder="e.g. +91 44 2829 0250"
+                    style={{
+                      borderColor: errors.phone ? '#ef4444' : undefined,
+                      boxShadow: errors.phone ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                    }}
                   />
-                  <span className="mt-1 block text-[11px] text-slate-500">
-                    Direct helpline or reception desk
-                  </span>
+                  {errors.phone && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.phone}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label htmlFor="lab-email-input" className="mb-1.5 block text-xs font-semibold text-slate-800">
                     Email Address
                   </label>
                   <input
+                    id="lab-email-input"
                     className="ui-input w-full"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={handleEmailChange}
+                    onBlur={() => {
+                      setTouched((prev) => ({ ...prev, email: true }));
+                      setErrors((prev) => ({ ...prev, email: validateLabEmail(email) }));
+                    }}
                     placeholder="e.g. reports@metropolislab.com"
+                    style={{
+                      borderColor: errors.email ? '#ef4444' : undefined,
+                      boxShadow: errors.email ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                    }}
                   />
-                  <span className="mt-1 block text-[11px] text-slate-500">
-                    For automated digital test requisitions and report receipt
-                  </span>
+                  {errors.email && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.email}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -451,78 +681,150 @@ export default function LabModal({ isOpen, onClose, lab, onSave }: LabModalProps
                 <MapPin size={14} />
               </div>
               <span className="lab-section-tag">Location & Physical Address</span>
-              <span className="lab-section-subtitle hidden sm:inline">
-                Center address for patient sample collection
-              </span>
             </div>
 
             <div className="space-y-3.5">
               <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label htmlFor="lab-address-line-1" className="mb-1.5 block text-xs font-semibold text-slate-800">
                     Address Line 1
                   </label>
                   <input
+                    id="lab-address-line-1"
                     className="ui-input w-full"
                     type="text"
                     value={addressLine1}
-                    onChange={(e) => setAddressLine1(e.target.value)}
+                    onChange={handleAddressLine1Change}
+                    onBlur={() => {
+                      setTouched((prev) => ({ ...prev, addressLine1: true }));
+                      setErrors((prev) => ({ ...prev, addressLine1: validateLabAddressLine(addressLine1, 'Address line 1') }));
+                    }}
                     placeholder="e.g. Plot No. 42, 1st Floor, Medical Plaza"
+                    style={{
+                      borderColor: errors.addressLine1 ? '#ef4444' : undefined,
+                      boxShadow: errors.addressLine1 ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                    }}
                   />
+                  {errors.addressLine1 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.addressLine1}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label htmlFor="lab-address-line-2" className="mb-1.5 block text-xs font-semibold text-slate-800">
                     Address Line 2 (Optional)
                   </label>
                   <input
+                    id="lab-address-line-2"
                     className="ui-input w-full"
                     type="text"
                     value={addressLine2}
-                    onChange={(e) => setAddressLine2(e.target.value)}
+                    onChange={handleAddressLine2Change}
+                    onBlur={() => {
+                      setTouched((prev) => ({ ...prev, addressLine2: true }));
+                      setErrors((prev) => ({ ...prev, addressLine2: validateLabAddressLine(addressLine2, 'Address line 2') }));
+                    }}
                     placeholder="e.g. Near Apollo Hospital, Anna Nagar"
+                    style={{
+                      borderColor: errors.addressLine2 ? '#ef4444' : undefined,
+                      boxShadow: errors.addressLine2 ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                    }}
                   />
+                  {errors.addressLine2 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.addressLine2}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label htmlFor="lab-city-input" className="mb-1.5 block text-xs font-semibold text-slate-800">
                     City / Town
                   </label>
                   <input
+                    id="lab-city-input"
                     className="ui-input w-full"
                     type="text"
                     value={city}
-                    onChange={(e) => setCity(e.target.value)}
+                    onChange={handleCityChange}
+                    onBlur={() => {
+                      setTouched((prev) => ({ ...prev, city: true }));
+                      setErrors((prev) => ({ ...prev, city: validateLabCity(city) }));
+                    }}
                     placeholder="e.g. Chennai"
+                    style={{
+                      borderColor: errors.city ? '#ef4444' : undefined,
+                      boxShadow: errors.city ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                    }}
                   />
+                  {errors.city && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.city}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label htmlFor="lab-state-input" className="mb-1.5 block text-xs font-semibold text-slate-800">
                     State / Province
                   </label>
                   <input
+                    id="lab-state-input"
                     className="ui-input w-full"
                     type="text"
                     value={state}
-                    onChange={(e) => setState(e.target.value)}
+                    onChange={handleStateChange}
+                    onBlur={() => {
+                      setTouched((prev) => ({ ...prev, state: true }));
+                      setErrors((prev) => ({ ...prev, state: validateLabState(state) }));
+                    }}
                     placeholder="e.g. Tamil Nadu"
+                    style={{
+                      borderColor: errors.state ? '#ef4444' : undefined,
+                      boxShadow: errors.state ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                    }}
                   />
+                  {errors.state && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.state}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  <label htmlFor="lab-pincode-input" className="mb-1.5 block text-xs font-semibold text-slate-800">
                     Pincode / Postal Code
                   </label>
                   <input
+                    id="lab-pincode-input"
                     className="ui-input w-full"
                     type="text"
                     value={pincode}
-                    onChange={(e) => setPincode(e.target.value)}
+                    onChange={handlePincodeChange}
+                    onBlur={() => {
+                      setTouched((prev) => ({ ...prev, pincode: true }));
+                      setErrors((prev) => ({ ...prev, pincode: validateLabPincode(pincode) }));
+                    }}
                     placeholder="e.g. 600040"
+                    style={{
+                      borderColor: errors.pincode ? '#ef4444' : undefined,
+                      boxShadow: errors.pincode ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                    }}
                   />
+                  {errors.pincode && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.pincode}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

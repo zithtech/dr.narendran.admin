@@ -149,16 +149,16 @@ export default function StockHistoryModal({ isOpen, onClose, variant }: StockHis
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+          <div className="overflow-auto max-h-[400px] rounded-xl border border-slate-200 dark:border-slate-800 no-scrollbar">
             <table className="min-w-full divide-y divide-slate-200 text-left text-xs dark:divide-slate-800">
-              <thead className="bg-slate-50 font-semibold text-slate-600 dark:bg-slate-900/60 dark:text-slate-300">
+              <thead className="sticky top-0 z-10 bg-slate-50 font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300 shadow-xs">
                 <tr>
-                  <th className="px-3.5 py-2.5">Date & Time</th>
-                  <th className="px-3.5 py-2.5">Transaction</th>
-                  <th className="px-3.5 py-2.5 text-right">Change</th>
-                  <th className="px-3.5 py-2.5 text-right">Balance</th>
-                  <th className="px-3.5 py-2.5">Reference / Reason</th>
-                  <th className="px-3.5 py-2.5">Performed By</th>
+                  <th className="px-3.5 py-2.5 sticky top-0 z-10 bg-slate-50 dark:bg-slate-900">Date & Time</th>
+                  <th className="px-3.5 py-2.5 sticky top-0 z-10 bg-slate-50 dark:bg-slate-900">Transaction</th>
+                  <th className="px-3.5 py-2.5 text-right sticky top-0 z-10 bg-slate-50 dark:bg-slate-900">Change</th>
+                  <th className="px-3.5 py-2.5 text-right sticky top-0 z-10 bg-slate-50 dark:bg-slate-900">Balance</th>
+                  <th className="px-3.5 py-2.5 sticky top-0 z-10 bg-slate-50 dark:bg-slate-900">Reference / Reason</th>
+                  <th className="px-3.5 py-2.5 sticky top-0 z-10 bg-slate-50 dark:bg-slate-900">Performed By</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white dark:divide-slate-800/60 dark:bg-slate-950">

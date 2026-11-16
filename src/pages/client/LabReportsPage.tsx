@@ -462,26 +462,26 @@ export default function LabReportsPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-auto max-h-[calc(100vh-270px)] no-scrollbar">
               <table className="w-full min-w-[1080px] text-left border-collapse">
-                <thead>
-                  <tr className="bg-[#f8fafc] border-b border-slate-200/90 text-[11px] font-semibold text-slate-600">
-                    <th className="py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-[23%] min-w-[210px] whitespace-nowrap">
+                <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200">
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-[23%] min-w-[210px] whitespace-nowrap sticky top-0 z-20 bg-slate-50">
                       Prescribed Lab Test
                     </th>
-                    <th className="py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-[18%] min-w-[180px] whitespace-nowrap">
+                    <th className="py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-[18%] min-w-[180px] whitespace-nowrap sticky top-0 z-20 bg-slate-50">
                       Prescribed By
                     </th>
-                    <th className="py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-[20%] min-w-[190px] whitespace-nowrap">
+                    <th className="py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-[20%] min-w-[190px] whitespace-nowrap sticky top-0 z-20 bg-slate-50">
                       Instructions
                     </th>
-                    <th className="py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-[14%] min-w-[140px] whitespace-nowrap">
+                    <th className="py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-[14%] min-w-[140px] whitespace-nowrap sticky top-0 z-20 bg-slate-50">
                       Status
                     </th>
-                    <th className="py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-[25%] min-w-[230px] whitespace-nowrap">
+                    <th className="py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-[25%] min-w-[230px] whitespace-nowrap sticky top-0 z-20 bg-slate-50">
                       Uploaded Report File
                     </th>
-                    <th className="py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 text-right whitespace-nowrap w-[160px] min-w-[160px]">
+                    <th className="py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 text-right whitespace-nowrap w-[160px] min-w-[160px] sticky top-0 right-0 z-30 bg-slate-50 border-b border-slate-200 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
                       Action
                     </th>
                   </tr>
@@ -492,7 +492,7 @@ export default function LabReportsPage() {
                     const uploadedReport = t.reports && t.reports.length > 0 ? t.reports[0] : null;
 
                     return (
-                      <tr key={t.id} className="hover:bg-slate-50/60 transition-colors">
+                      <tr key={t.id} className="group hover:bg-slate-50/60 transition-colors">
                         {/* Prescribed Lab Test */}
                         <td className="py-4.5 px-6 align-middle">
                           <div className="font-semibold text-slate-900 text-sm leading-snug">
@@ -592,7 +592,7 @@ export default function LabReportsPage() {
                         </td>
 
                         {/* Action: Upload Report */}
-                        <td className="py-4.5 px-6 align-middle text-right whitespace-nowrap">
+                        <td className="py-4.5 px-6 align-middle text-right whitespace-nowrap sticky right-0 z-10 bg-white group-hover:bg-slate-50/80 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] transition-colors">
                           <button
                             type="button"
                             onClick={() => openUploadModal(t)}

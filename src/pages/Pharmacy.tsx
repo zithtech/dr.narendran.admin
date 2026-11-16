@@ -227,22 +227,25 @@ export default function Pharmacy() {
         nameOf={(m) => m.medicine_name}
         activeId={viewingId}
         extraActions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               type="button"
-              className="ui-btn"
+              className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0"
               onClick={downloadSampleTemplate}
               title="Download standard Excel import template"
             >
-              <Download size={14} /> Download Template
+              <Download size={13} className="text-slate-500" />
+              <span>Download Template</span>
             </button>
             {isPharmCreatable && (
               <button
                 type="button"
-                className="ui-btn ui-btn-primary"
+                className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0"
                 onClick={() => setIsImportModalOpen(true)}
+                title="Import medicine records from Excel"
               >
-                <FileSpreadsheet size={15} /> Upload Excel
+                <FileSpreadsheet size={13} />
+                <span>Upload Excel</span>
               </button>
             )}
           </div>

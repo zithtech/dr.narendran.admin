@@ -145,6 +145,11 @@ export interface FormErrors {
   email?: string | undefined;
   joiningDate?: string | undefined;
   address?: string | undefined;
+  addressLine1?: string | undefined;
+  addressLine2?: string | undefined;
+  city?: string | undefined;
+  state?: string | undefined;
+  pincode?: string | undefined;
   customRole?: string | undefined;
   customShiftDetails?: string | undefined;
   documentTitle?: string | undefined;
@@ -234,6 +239,60 @@ export function validateAddress(val: string): string | undefined {
   return undefined;
 }
 
+export function validateStaffAddressLine(val: string, label = 'Address line'): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 255) {
+    return `${label} cannot exceed 255 characters.`;
+  }
+  if (/[^a-zA-Z0-9\s,./#&-]/.test(val)) {
+    return `${label} contains invalid characters.`;
+  }
+  return undefined;
+}
+
+export function validateStaffCity(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) {
+    return 'City cannot exceed 100 characters.';
+  }
+  if (/[0-9]/.test(val)) {
+    return 'Numbers are not allowed in city.';
+  }
+  if (/[^a-zA-Z\s-]/.test(val)) {
+    return 'City can only contain letters, spaces, and hyphens.';
+  }
+  return undefined;
+}
+
+export function validateStaffState(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 100) {
+    return 'State cannot exceed 100 characters.';
+  }
+  if (/[0-9]/.test(val)) {
+    return 'Numbers are not allowed in state.';
+  }
+  if (/[^a-zA-Z\s-]/.test(val)) {
+    return 'State can only contain letters, spaces, and hyphens.';
+  }
+  return undefined;
+}
+
+export function validateStaffPincode(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (/[^0-9]/.test(trimmed)) {
+    return 'Pincode must contain only numbers.';
+  }
+  if (trimmed.length < 5 || trimmed.length > 10) {
+    return 'Pincode must be between 5 and 10 digits.';
+  }
+  return undefined;
+}
+
 export function validateCustomRole(isCustom: boolean, val: string): string | undefined {
   if (!isCustom) return undefined;
   const trimmed = val.trim();
@@ -311,7 +370,11 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [address, setAddress] = useState('');
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [pincode, setPincode] = useState('');
 
   // Role & Hospital Assignment
   const [role, setRole] = useState<string>('Senior Nurse');
@@ -372,7 +435,11 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
       setName(staff.name);
       setPhone(staff.phone);
       setEmail(staff.email || '');
-      setAddress(staff.address || '');
+      setAddressLine1(staff.address_line_1 || staff.addressLine1 || staff.address || '');
+      setAddressLine2(staff.address_line_2 || staff.addressLine2 || '');
+      setCity(staff.city || '');
+      setState(staff.state || '');
+      setPincode(staff.pincode || '');
 
       const isStandardRole = STAFF_ROLES.includes(staff.role as any);
       if (isStandardRole) {
@@ -409,7 +476,11 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
       setName('');
       setPhone('');
       setEmail('');
-      setAddress('');
+      setAddressLine1('');
+      setAddressLine2('');
+      setCity('');
+      setState('');
+      setPincode('');
       setRole('Senior Nurse');
       setIsCustomRole(false);
       setCustomRole('');
@@ -528,14 +599,6 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
     }
   };
 
-  // Handlers for address
-  const handleAddressChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
-    setAddress(val);
-    if (touched.address) {
-      setErrors((prev) => ({ ...prev, address: validateAddress(val) }));
-    }
-  };
 
   // Handlers for custom role
   const handleCustomRoleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -819,7 +882,21 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
     const phoneErr = validateStaffPhone(phone);
     const emailErr = validateStaffEmail(email);
     const dateErr = validateJoiningDate(joiningDate);
-    const addressErr = validateAddress(address);
+    const addr1Err = validateStaffAddressLine(addressLine1, 'Address line 1');
+    const addr2Err = validateStaffAddressLine(addressLine2, 'Address line 2');
+    const cityErr = validateStaffCity(city);
+    const stateErr = validateStaffState(state);
+    const pinErr = validateStaffPincode(pincode);
+    const address = [
+      addressLine1.trim(),
+      addressLine2.trim(),
+      city.trim(),
+      state.trim(),
+      pincode.trim(),
+    ]
+      .filter(Boolean)
+      .join(', ');
+    const addressErr = address ? validateAddress(address) : undefined;
     const roleErr = isCustomRole ? validateCustomRole(true, customRole) : undefined;
     const shiftErr = shiftTiming === 'Custom Shift' ? validateCustomShift(shiftTiming, customShiftDetails) : undefined;
     const docTitleErr = selectedFile
@@ -832,6 +909,11 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
       email: emailErr,
       joiningDate: dateErr,
       address: addressErr,
+      addressLine1: addr1Err,
+      addressLine2: addr2Err,
+      city: cityErr,
+      state: stateErr,
+      pincode: pinErr,
       customRole: roleErr,
       customShiftDetails: shiftErr,
       documentTitle: docTitleErr,
@@ -846,11 +928,29 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
         email: true,
         joiningDate: true,
         address: true,
+        addressLine1: true,
+        addressLine2: true,
+        city: true,
+        state: true,
+        pincode: true,
         customRole: true,
         customShiftDetails: true,
         documentTitle: Boolean(selectedFile),
       });
-      const firstMsg = nameErr || phoneErr || emailErr || dateErr || addressErr || roleErr || shiftErr || docTitleErr;
+      const firstMsg =
+        nameErr ||
+        phoneErr ||
+        emailErr ||
+        dateErr ||
+        addr1Err ||
+        addr2Err ||
+        cityErr ||
+        stateErr ||
+        pinErr ||
+        addressErr ||
+        roleErr ||
+        shiftErr ||
+        docTitleErr;
       setError(firstMsg || 'Please correct the highlighted validation errors.');
       return;
     }
@@ -869,7 +969,12 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
         name: name.trim(),
         phone: phone.trim(),
         email: email.trim() || undefined,
-        address: address.trim() || undefined,
+        address: address || undefined,
+        address_line_1: addressLine1.trim() || undefined,
+        address_line_2: addressLine2.trim() || undefined,
+        city: city.trim() || undefined,
+        state: state.trim() || undefined,
+        pincode: pincode.trim() || undefined,
         role: finalRole,
         hospitalId: hospitalId || undefined,
         branchId: branchId || undefined,
@@ -1181,19 +1286,17 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
                 <div>
-                  <label htmlFor="staff-full-name" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <label htmlFor="staff-full-name" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', marginBottom: 5 }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span>Staff Full Name</span>
                       <span style={{ color: '#ef4444' }}>*</span>
-                    </span>
-                    <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>Letters & spaces only</span>
-                  </label>
+                    </span>                  </label>
                   <div style={{ position: 'relative' }}>
                     <User size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: errors.name ? '#ef4444' : '#94a3b8' }} />
                     <input
                       id="staff-full-name"
                       type="text"
-                      className="ui-input"
+                      className={`ui-input${errors.name ? ' has-error' : ''}`}
                       placeholder="e.g. Sister Mary Joseph"
                       value={name}
                       onChange={handleNameChange}
@@ -1220,19 +1323,17 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                 </div>
 
                 <div>
-                  <label htmlFor="staff-phone" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <label htmlFor="staff-phone" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', marginBottom: 5 }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span>Phone Number</span>
                       <span style={{ color: '#ef4444' }}>*</span>
-                    </span>
-                    <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>10-15 digits</span>
-                  </label>
+                    </span>                  </label>
                   <div style={{ position: 'relative' }}>
                     <Phone size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: errors.phone ? '#ef4444' : '#94a3b8' }} />
                     <input
                       id="staff-phone"
                       type="tel"
-                      className="ui-input"
+                      className={`ui-input${errors.phone ? ' has-error' : ''}`}
                       placeholder="e.g. +91 98765 43210"
                       value={phone}
                       onChange={handlePhoneChange}
@@ -1260,16 +1361,14 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
                 <div>
-                  <label htmlFor="staff-email" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-                    <span>Email Address</span>
-                    <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>Optional</span>
-                  </label>
+                  <label htmlFor="staff-email" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', marginBottom: 5 }}>
+                    <span>Email Address</span>                  </label>
                   <div style={{ position: 'relative' }}>
                     <Mail size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: errors.email ? '#ef4444' : '#94a3b8' }} />
                     <input
                       id="staff-email"
                       type="email"
-                      className="ui-input"
+                      className={`ui-input${errors.email ? ' has-error' : ''}`}
                       placeholder="e.g. staff@hospital.com"
                       value={email}
                       onChange={handleEmailChange}
@@ -1293,19 +1392,17 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                 </div>
 
                 <div>
-                  <label htmlFor="staff-joining-date" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <label htmlFor="staff-joining-date" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', marginBottom: 5 }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span>Joining Date</span>
                       <span style={{ color: '#ef4444' }}>*</span>
-                    </span>
-                    <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>YYYY-MM-DD</span>
-                  </label>
+                    </span>                  </label>
                   <div style={{ position: 'relative' }}>
                     <Calendar size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: errors.joiningDate ? '#ef4444' : '#94a3b8' }} />
                     <input
                       id="staff-joining-date"
                       type="date"
-                      className="ui-input"
+                      className={`ui-input${errors.joiningDate ? ' has-error' : ''}`}
                       value={joiningDate}
                       onChange={handleJoiningDateChange}
                       onBlur={() => {
@@ -1330,32 +1427,245 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
               </div>
 
               <div>
-                <label htmlFor="staff-address" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <MapPin size={13} style={{ color: '#94a3b8' }} />
-                    <span>Residential / Postal Address</span>
-                  </span>
-                  <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>Optional · min 5 chars</span>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+                  <MapPin size={13} style={{ color: '#64748b' }} />
+                  <span>Residential / Postal Address</span>
                 </label>
-                <textarea
-                  id="staff-address"
-                  className="ui-input"
-                  rows={2}
-                  placeholder="e.g. 12/B Health Colony, Opp. Apollo Hospital, Chennai"
-                  value={address}
-                  onChange={handleAddressChange}
-                  onBlur={() => {
-                    setTouched((prev) => ({ ...prev, address: true }));
-                    setErrors((prev) => ({ ...prev, address: validateAddress(address) }));
-                  }}
-                  style={{
-                    minHeight: 58,
-                    lineHeight: 1.4,
-                    padding: '8px 12px',
-                    borderColor: errors.address ? '#ef4444' : undefined,
-                    boxShadow: errors.address ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                  }}
-                />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                      gap: 12,
+                    }}
+                  >
+                    <div>
+                      <label
+                        htmlFor="staff-address-line-1"
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: '#334155',
+                          display: 'block',
+                          marginBottom: 5,
+                        }}
+                      >
+                        Address Line 1
+                      </label>
+                      <input
+                        id="staff-address-line-1"
+                        className={`ui-input${errors.addressLine1 ? ' has-error' : ''}`}
+                        type="text"
+                        value={addressLine1}
+                        onChange={(e) => {
+                          const val = e.target.value.slice(0, 255);
+                          setAddressLine1(val);
+                          if (touched.addressLine1) {
+                            setErrors((prev) => ({ ...prev, addressLine1: validateStaffAddressLine(val, 'Address line 1') }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setTouched((prev) => ({ ...prev, addressLine1: true }));
+                          setErrors((prev) => ({ ...prev, addressLine1: validateStaffAddressLine(addressLine1, 'Address line 1') }));
+                        }}
+                        placeholder="e.g. 12/B Health Colony"
+                        style={{
+                          borderColor: errors.addressLine1 ? '#ef4444' : undefined,
+                          boxShadow: errors.addressLine1 ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                        }}
+                      />
+                      {errors.addressLine1 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                          <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                          <span>{errors.addressLine1}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="staff-address-line-2"
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: '#334155',
+                          display: 'block',
+                          marginBottom: 5,
+                        }}
+                      >
+                        Address Line 2 (Optional)
+                      </label>
+                      <input
+                        id="staff-address-line-2"
+                        className={`ui-input${errors.addressLine2 ? ' has-error' : ''}`}
+                        type="text"
+                        value={addressLine2}
+                        onChange={(e) => {
+                          const val = e.target.value.slice(0, 255);
+                          setAddressLine2(val);
+                          if (touched.addressLine2) {
+                            setErrors((prev) => ({ ...prev, addressLine2: validateStaffAddressLine(val, 'Address line 2') }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setTouched((prev) => ({ ...prev, addressLine2: true }));
+                          setErrors((prev) => ({ ...prev, addressLine2: validateStaffAddressLine(addressLine2, 'Address line 2') }));
+                        }}
+                        placeholder="e.g. Opp. Apollo Hospital"
+                        style={{
+                          borderColor: errors.addressLine2 ? '#ef4444' : undefined,
+                          boxShadow: errors.addressLine2 ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                        }}
+                      />
+                      {errors.addressLine2 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                          <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                          <span>{errors.addressLine2}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                      gap: 12,
+                    }}
+                  >
+                    <div>
+                      <label
+                        htmlFor="staff-city"
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: '#334155',
+                          display: 'block',
+                          marginBottom: 5,
+                        }}
+                      >
+                        City / Town
+                      </label>
+                      <input
+                        id="staff-city"
+                        className={`ui-input${errors.city ? ' has-error' : ''}`}
+                        type="text"
+                        value={city}
+                        onChange={(e) => {
+                          const sanitized = e.target.value.replace(/[^a-zA-Z\s-]/g, '').slice(0, 100);
+                          setCity(sanitized);
+                          if (touched.city) {
+                            setErrors((prev) => ({ ...prev, city: validateStaffCity(sanitized) }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setTouched((prev) => ({ ...prev, city: true }));
+                          setErrors((prev) => ({ ...prev, city: validateStaffCity(city) }));
+                        }}
+                        placeholder="e.g. Chennai"
+                        style={{
+                          borderColor: errors.city ? '#ef4444' : undefined,
+                          boxShadow: errors.city ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                        }}
+                      />
+                      {errors.city && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                          <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                          <span>{errors.city}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="staff-state"
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: '#334155',
+                          display: 'block',
+                          marginBottom: 5,
+                        }}
+                      >
+                        State / Province
+                      </label>
+                      <input
+                        id="staff-state"
+                        className={`ui-input${errors.state ? ' has-error' : ''}`}
+                        type="text"
+                        value={state}
+                        onChange={(e) => {
+                          const sanitized = e.target.value.replace(/[^a-zA-Z\s-]/g, '').slice(0, 100);
+                          setState(sanitized);
+                          if (touched.state) {
+                            setErrors((prev) => ({ ...prev, state: validateStaffState(sanitized) }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setTouched((prev) => ({ ...prev, state: true }));
+                          setErrors((prev) => ({ ...prev, state: validateStaffState(state) }));
+                        }}
+                        placeholder="e.g. Tamil Nadu"
+                        style={{
+                          borderColor: errors.state ? '#ef4444' : undefined,
+                          boxShadow: errors.state ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                        }}
+                      />
+                      {errors.state && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                          <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                          <span>{errors.state}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="staff-pincode"
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: '#334155',
+                          display: 'block',
+                          marginBottom: 5,
+                        }}
+                      >
+                        Pincode / Postal Code
+                      </label>
+                      <input
+                        id="staff-pincode"
+                        className={`ui-input${errors.pincode ? ' has-error' : ''}`}
+                        type="text"
+                        inputMode="numeric"
+                        value={pincode}
+                        onChange={(e) => {
+                          const sanitized = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                          setPincode(sanitized);
+                          if (touched.pincode) {
+                            setErrors((prev) => ({ ...prev, pincode: validateStaffPincode(sanitized) }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setTouched((prev) => ({ ...prev, pincode: true }));
+                          setErrors((prev) => ({ ...prev, pincode: validateStaffPincode(pincode) }));
+                        }}
+                        placeholder="e.g. 600006"
+                        style={{
+                          borderColor: errors.pincode ? '#ef4444' : undefined,
+                          boxShadow: errors.pincode ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                        }}
+                      />
+                      {errors.pincode && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                          <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                          <span>{errors.pincode}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {errors.address && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
                     <AlertCircle size={12} style={{ flexShrink: 0 }} />
@@ -1403,17 +1713,16 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
 
               {isCustomRole && (
                 <div>
-                  <label htmlFor="staff-custom-role" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <label htmlFor="staff-custom-role" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', marginBottom: 5 }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span>Custom Role Title</span>
                       <span style={{ color: '#ef4444' }}>*</span>
                     </span>
-                    <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>Letters only</span>
                   </label>
                   <input
                     id="staff-custom-role"
                     type="text"
-                    className="ui-input"
+                    className={`ui-input${errors.customRole ? ' has-error' : ''}`}
                     placeholder="Specify custom role title"
                     value={customRole}
                     onChange={handleCustomRoleChange}
@@ -1679,7 +1988,7 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
                       <input
                         id="staff-custom-shift-details"
                         type="text"
-                        className="ui-input"
+                        className={`ui-input${errors.customShiftDetails ? ' has-error' : ''}`}
                         placeholder="e.g. 06:00 AM - 02:00 PM or 12hr Rotating Roster"
                         value={customShiftDetails}
                         readOnly={true}
@@ -2016,14 +2325,13 @@ export default function StaffModal({ isOpen, onClose, staff, onSave }: StaffModa
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
                   <div>
-                    <label htmlFor="staff-document-title" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <label htmlFor="staff-document-title" style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', marginBottom: 5 }}>
                       <span>Document Title</span>
-                      <span style={{ fontSize: 10.5, fontWeight: 400, color: '#64748b' }}>Letters & numbers</span>
                     </label>
                     <input
                       id="staff-document-title"
                       type="text"
-                      className="ui-input"
+                      className={`ui-input${errors.documentTitle ? ' has-error' : ''}`}
                       placeholder="e.g. Nursing Registration Certificate"
                       value={documentName}
                       onChange={handleDocumentNameChange}

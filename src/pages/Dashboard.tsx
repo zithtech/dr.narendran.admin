@@ -67,8 +67,12 @@ export default function Dashboard() {
     {
       id: 'address',
       header: 'Address',
-      cell: (h) =>
-        h.address ? (
+      cell: (h) => {
+        const fullAddr =
+          [h.address_line_1, h.address_line_2, h.city, h.state, h.pincode]
+            .filter(Boolean)
+            .join(', ') || h.address;
+        return fullAddr ? (
           <span
             style={{
               display: 'block',
@@ -77,13 +81,14 @@ export default function Dashboard() {
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
             }}
-            title={h.address}
+            title={fullAddr}
           >
-            {h.address}
+            {fullAddr}
           </span>
         ) : (
           <span className="ui-muted">—</span>
-        ),
+        );
+      },
     },
     {
       id: 'tenure',
@@ -121,7 +126,17 @@ export default function Dashboard() {
         nounPlural="hospitals"
         resource={resource}
         searchPlaceholder="Search name, code, email, phone…"
-        searchFields={(h) => [h.name, h.hospital_code, h.email, h.phone, h.address]}
+        searchFields={(h) => [
+          h.name,
+          h.hospital_code,
+          h.email,
+          h.phone,
+          h.address_line_1,
+          h.city,
+          h.state,
+          h.pincode,
+          h.address,
+        ]}
         facets={FACETS}
         dateOf={(h) => h.created_at}
         columns={columns}

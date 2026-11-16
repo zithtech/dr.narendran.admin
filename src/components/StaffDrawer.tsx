@@ -597,11 +597,22 @@ export default function StaffDrawer({
               )}
             </div>
 
-            {staff.address && (
+            {(staff.address_line_1 || staff.address) && (
               <div className="staff-view-item" style={{ gridColumn: '1 / -1' }}>
                 <span className="staff-view-label">Residential Address</span>
                 <span className="staff-view-val" style={{ lineHeight: 1.5 }}>
-                  {staff.address}
+                  {staff.address_line_1 ? (
+                    <div>
+                      <div>{[staff.address_line_1, staff.address_line_2].filter(Boolean).join(', ')}</div>
+                      {Boolean(staff.city || staff.state || staff.pincode) && (
+                        <div style={{ color: '#64748b', fontSize: 12, marginTop: 2 }}>
+                          {[staff.city, staff.state, staff.pincode].filter(Boolean).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    staff.address
+                  )}
                 </span>
               </div>
             )}

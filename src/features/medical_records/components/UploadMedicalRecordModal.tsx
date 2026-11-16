@@ -36,7 +36,7 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
   const [form] = Form.useForm();
   const [uploading, setUploading] = useState(false);
   const [recordType, setRecordType] = useState<'PRESCRIBED' | 'EXTERNAL'>('EXTERNAL');
-  const [patientOptions, setPatientOptions] = useState<{ value: string; label: string }[]>([]);
+  const [patientOptions, setPatientOptions] = useState<Array<{ value: string; label: string; name?: string | undefined; phone?: string | undefined }>>([]);
   const [searchingPatients, setSearchingPatients] = useState(false);
   const [prescribedTests, setPrescribedTests] = useState<PrescribedPendingTest[]>([]);
   const [loadingTests, setLoadingTests] = useState(false);
@@ -66,7 +66,9 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
       setPatientOptions(
         results.map((p) => ({
           value: p.id,
-          label: `${p.name} ${p.phone ? `(${p.phone})` : ''}`,
+          label: p.name,
+          name: p.name,
+          phone: p.phone || undefined,
         }))
       );
     } catch {
@@ -125,15 +127,17 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
     }
     setSearchingPatients(true);
     try {
-      const results = await medicalRecordsApi.searchPatients(val);
+      const results = await medicalRecordsApi.searchPatients(val.trim());
       if (results && results.length > 0) {
         setPatientOptions((prev) => {
-          const map = new Map<string, { value: string; label: string }>();
+          const map = new Map<string, { value: string; label: string; name?: string | undefined; phone?: string | undefined }>();
           for (const opt of prev) map.set(opt.value, opt);
           for (const p of results) {
             map.set(p.id, {
               value: p.id,
-              label: `${p.name} ${p.phone ? `(${p.phone})` : ''}`,
+              label: p.name,
+              name: p.name,
+              phone: p.phone || undefined,
             });
           }
           return Array.from(map.values());
@@ -228,7 +232,7 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
       if (isConflict) {
         setDuplicateWarning(
           response?.data?.message ??
-            'Duplicate record detected: A document with the same file or test name already exists for this patient.'
+          'Duplicate record detected: A document with the same file or test name already exists for this patient.'
         );
         return;
       }
@@ -318,13 +322,47 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
             onChange={handlePatientChange}
             filterOption={(input, option) =>
               String(option?.label ?? '')
-                .toLowerCase()
-                .includes(input.toLowerCase().trim())
+          .toLowerCase()
+          .includes(input.toLowerCase().trim()) ||
+          String((option as {phone ?: string})?.phone ?? '')
+          .toLowerCase()
+          .includes(input.toLowerCase().trim())
             }
-            loading={searchingPatients}
-            disabled={Boolean(defaultPatient)}
-            notFoundContent={searchingPatients ? 'Loading patients...' : 'No patients found'}
-            className="w-full"
+          loading={searchingPatients}
+          disabled={Boolean(defaultPatient)}
+          notFoundContent={searchingPatients ? 'Loading patients...' : 'No patients found'}
+          className="w-full"
+          optionRender={(option) => {
+            const data = option.data as { label?: string; phone?: string };
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: '50%',
+                      background: '#eff6ff',
+                      color: '#2563eb',
+                      display: 'grid',
+                      placeItems: 'center',
+                      fontWeight: 700,
+                      fontSize: 11,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {String(data.label || 'P').charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, color: '#0f172a', fontSize: 13 }}>{data.label}</div>
+                    {data.phone && (
+                      <div style={{ fontSize: 11, color: '#64748b' }}>{data.phone}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          }}
           />
         </Form.Item>
 

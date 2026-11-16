@@ -241,7 +241,19 @@ export default function DoctorDrawer({
         items={[
           { label: 'Hospital', value: doctor.hospital_name },
           { label: 'Branch', value: doctor.branch_name || 'No specific branch' },
-          { label: 'Clinic address', value: doctor.clinic_address },
+          {
+            label: 'Clinic address',
+            value:
+              [
+                doctor.address_line_1,
+                doctor.address_line_2,
+                doctor.city,
+                doctor.state,
+                doctor.pincode,
+              ]
+                .filter(Boolean)
+                .join(', ') || doctor.clinic_address,
+          },
         ]}
       />
 

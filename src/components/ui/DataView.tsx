@@ -82,6 +82,8 @@ export interface DataViewProps<T extends { id: string }> {
   nameOf?: (item: T) => string;
   deleteWarning?: string;
   rowActions?: (item: T) => ReactNode;
+  /** Keep default edit and delete actions visible even when rowActions is provided. */
+  keepDefaultActions?: boolean;
   /** Makes the whole row clickable (e.g. to open a details drawer). */
   onRowClick?: (item: T) => void;
   /** Highlights the row whose details are currently open. */
@@ -153,6 +155,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
     nameOf,
     deleteWarning,
     rowActions,
+    keepDefaultActions,
     onRowClick,
     activeId,
     extraActions,
@@ -426,7 +429,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
 
           <button
             type="button"
-            className="w-7.5 h-7.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+            className="inline-flex items-center justify-center w-7.5 h-7.5 shrink-0 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
             onClick={() => {
               void refresh();
             }}
@@ -618,12 +621,12 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
         </div>
 
         {/* ── Table Section ── */}
-        <div className="overflow-x-auto min-h-[300px]">
+        <div className="overflow-auto min-h-[300px] max-h-[calc(100vh-270px)] no-scrollbar">
           <table className="w-full text-left border-collapse">
-            <thead>
+            <thead className="sticky top-0 z-20 bg-[#f8fafc]">
               <tr className="border-b border-slate-200/90 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
                 {showCheckCol && (
-                  <th className="w-9 px-3.5 py-2 select-none">
+                  <th className="w-9 px-3.5 py-2 select-none sticky top-0 z-20 bg-[#f8fafc]">
                     <input
                       type="checkbox"
                       className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
@@ -643,7 +646,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                     <th
                       key={c.id}
                       style={c.width !== undefined ? { width: c.width } : undefined}
-                      className="px-3.5 py-2 whitespace-nowrap"
+                      className="px-3.5 py-2 whitespace-nowrap sticky top-0 z-20 bg-[#f8fafc]"
                     >
                       {c.sort ? (
                         <button
@@ -665,7 +668,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                   );
                 })}
                 {showActionsCol && (
-                  <th className="px-3.5 py-2 text-right whitespace-nowrap font-semibold">Actions</th>
+                  <th className="px-3.5 py-2 text-right whitespace-nowrap font-semibold sticky top-0 right-0 z-30 bg-[#f8fafc] shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Actions</th>
                 )}
               </tr>
             </thead>
@@ -697,7 +700,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                       </td>
                     ))}
                     {showActionsCol && (
-                      <td className="px-3.5 py-2 text-right">
+                      <td className="px-3.5 py-2 text-right sticky right-0 z-10 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
                         <div className="w-4 h-4 bg-slate-100 rounded ml-auto" />
                       </td>
                     )}
@@ -787,10 +790,19 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
 
                       {/* Action Buttons */}
                       {showActionsCol && (
-                        <td className="px-3.5 py-2 text-right whitespace-nowrap align-middle">
+                        <td
+                          className={cx(
+                            'px-3.5 py-2 text-right whitespace-nowrap align-middle sticky right-0 z-10 transition-colors duration-100 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]',
+                            isSel
+                              ? 'bg-blue-50/90 group-hover:bg-blue-100/70'
+                              : activeId === item.id
+                              ? 'bg-blue-50/90 group-hover:bg-blue-100/70'
+                              : 'bg-white group-hover:bg-slate-50',
+                          )}
+                        >
                           <div className="flex items-center justify-end gap-1">
                             {rowActions?.(item)}
-                            {!rowActions && onEdit && isUpdateAllowed && (
+                            {(!rowActions || keepDefaultActions) && onEdit && isUpdateAllowed && (
                               <button
                                 type="button"
                                 className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
@@ -804,7 +816,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                                 <Pencil size={13} />
                               </button>
                             )}
-                            {!rowActions && onDelete && isDeleteAllowed && (
+                            {(!rowActions || keepDefaultActions) && onDelete && isDeleteAllowed && (
                               <button
                                 type="button"
                                 className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
