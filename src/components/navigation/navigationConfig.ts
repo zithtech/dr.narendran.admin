@@ -83,6 +83,7 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         icon: Stethoscope,
         slug: 'DOCTORS',
         description: 'Specialists, profiles, timings & availability',
+        aliases: ['/doctor/profile', '/profile'],
       },
       {
         name: 'Availability & Slots',

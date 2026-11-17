@@ -1,4 +1,5 @@
 import { Menu } from 'lucide-react';
+import { useNavigate } from 'react-router';
 
 import { cx } from '../ui/primitives';
 import type { NavCategory, NavModule } from './navigationConfig';
@@ -28,6 +29,13 @@ export function TopNavbar({
   isMobileMenuOpen,
   onToggleMobileMenu,
 }: TopNavbarProps) {
+  let navigate: ReturnType<typeof useNavigate> | null = null;
+  try {
+    navigate = useNavigate();
+  } catch {
+    navigate = null;
+  }
+
   return (
     <header className="ui-top-navbar" aria-label="Main navigation header">
       {/* Brand accessible element for tests and screen readers */}
@@ -79,6 +87,12 @@ export function TopNavbar({
           <div
             className="ui-top-user-card"
             title={`${currentUsername}${currentRole ? ` (${currentRole})` : ''}`}
+            onClick={() => {
+              if (currentRole?.toUpperCase() === 'DOCTOR' && navigate) {
+                void navigate('/doctor/profile');
+              }
+            }}
+            style={{ cursor: currentRole?.toUpperCase() === 'DOCTOR' ? 'pointer' : undefined }}
           >
             <div className="ui-top-user-avatar">{userInitials || 'SA'}</div>
             <div className="ui-top-user-info">

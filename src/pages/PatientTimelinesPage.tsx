@@ -113,9 +113,9 @@ export default function PatientTimelinesPage() {
 
   const hasActiveFilters = Boolean(
     search.trim() ||
-      genderFilter !== 'ALL' ||
-      statusFilter !== 'ALL' ||
-      (dateRange && (dateRange[0] || dateRange[1])),
+    genderFilter !== 'ALL' ||
+    statusFilter !== 'ALL' ||
+    (dateRange && (dateRange[0] || dateRange[1])),
   );
 
   const totalPages = Math.max(1, Math.ceil(totalCount / limit));

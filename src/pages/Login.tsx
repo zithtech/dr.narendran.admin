@@ -85,7 +85,12 @@ export default function Login({ defaultForgot = false }: { defaultForgot?: boole
       window.dispatchEvent(new Event('admin-auth-changed'));
       window.dispatchEvent(new Event('admin-settings-changed'));
 
-      void navigate('/');
+      const roleUpper = (data.role || '').toUpperCase();
+      if (roleUpper === 'DOCTOR') {
+        void navigate('/doctor/profile');
+      } else {
+        void navigate('/');
+      }
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Login failed. Please try again.'));
     } finally {
@@ -520,9 +525,9 @@ export default function Login({ defaultForgot = false }: { defaultForgot?: boole
             <span className="block text-xs sm:text-sm font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
               Healthcare Administration &amp; Clinical Operations
             </span>
-            <h4 className="text-2xl sm:text-4xl xl:text-5xl font-extrabold text-[#5d45db] tracking-tight">
-              Manage. Monitor. Care.
-            </h4>
+            <h2 className="text-3xl sm:text-4xl xl:text-5xl font-extrabold text-[#5d45db] tracking-tight">
+              Hospital Management System
+            </h2>
           </div>
 
           {/* Centered Doctor Consultation Illustration */}

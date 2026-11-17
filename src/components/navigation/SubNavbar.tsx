@@ -1,4 +1,4 @@
-import { HeartPulse, LogOut } from 'lucide-react';
+import { HeartPulse, LogOut,User } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -24,6 +24,7 @@ export function SubNavbar({
   activeCategory,
   activeModule,
   onSelectModule,
+  currentRole,
   onLogout,
   brandFirstName,
   brandLastName,
@@ -133,8 +134,26 @@ export function SubNavbar({
         })}
       </nav>
 
-      {/* 4. Footer at the end of sidenav: Sign Out only */}
+      {/* 4. Footer at the end of sidenav */}
       <div className="ui-sidebar-footer">
+        {currentRole?.toUpperCase() === 'DOCTOR' && (
+          <button
+            type="button"
+            className="ui-sidebar-logout-btn"
+            style={{ marginBottom: 6, color: '#2563eb' }}
+            onClick={() => {
+              if (navigate) {
+                void navigate('/doctor/profile');
+              }
+            }}
+            title="View Doctor Profile"
+            aria-label="Doctor Profile"
+          >
+            <User size={15} />
+            <span>My Profile</span>
+          </button>
+        )}
+
         {onLogout && (
           <button
             type="button"

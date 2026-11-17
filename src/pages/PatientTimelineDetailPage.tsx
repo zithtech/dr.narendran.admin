@@ -255,7 +255,7 @@ export default function PatientTimelineDetailPage() {
     <div className="patient-timeline-detail-page w-full min-h-full block relative">
       {/* Loading Skeleton */}
       {loading && !patientHeader ? (
-        <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 pt-6 pb-10">
+        <div className="w-full px-4 sm:px-6 pt-6 pb-10">
           <div className="p-12 text-center bg-white rounded-xl border border-gray-200 space-y-4 shadow-2xs">
             <Spin size="large" />
             <div className="text-sm text-gray-500 font-medium">
@@ -265,7 +265,7 @@ export default function PatientTimelineDetailPage() {
         </div>
       ) : error && !patientHeader ? (
         /* Error State */
-        <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 pt-6 pb-10">
+        <div className="w-full px-4 sm:px-6 pt-6 pb-10">
           <div className="bg-white rounded-xl border border-gray-200 p-8 text-center space-y-4 shadow-2xs">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
             <Title level={4} className="!mb-1 text-gray-900">
@@ -309,7 +309,7 @@ export default function PatientTimelineDetailPage() {
           )}
 
           {/* 2. Main Page Body: Content aligned directly with sticky header inner elements */}
-          <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 space-y-3.5 sm:space-y-4 pt-4 pb-10">
+          <div className="w-full px-4 sm:px-6 space-y-2.5 sm:space-y-3 pt-2 pb-10">
             {/* Health Summary Card */}
             {healthSummary && (
               <TimelineHealthSummary summary={healthSummary} />
@@ -317,7 +317,7 @@ export default function PatientTimelineDetailPage() {
 
             {/* Event Category & Period Filter Bar (Sticky directly beneath Patient Profile Header) */}
             <div
-              className="sticky z-20 bg-[#f8fafc] pt-2 pb-3.5 -mt-2"
+              className="sticky z-20 bg-[#f8fafc] pt-1 pb-2.5 -mt-1"
               style={{ position: 'sticky', top: headerHeight, zIndex: 20 }}
             >
               <TimelineFilterBar
@@ -341,7 +341,7 @@ export default function PatientTimelineDetailPage() {
             </div>
 
             {/* Chronological Timeline Feed */}
-            <div className="pt-2 sm:pt-3">
+            <div className="pt-2 sm:pt-3 max-w-5xl mx-auto px-4 sm:px-8 md:px-12">
               <div className="mb-2.5 flex items-center justify-between">
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
                   <History className="w-4 h-4 text-teal-700" />

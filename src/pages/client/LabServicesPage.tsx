@@ -7,23 +7,42 @@ import {
   IndianRupee,
   Plus,
   Search,
+  Tag,
+  TestTube2,
   Trash2,
   X,
 } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { validateLabServiceName } from '../../components/LabServiceModal';
+import {
+  COMMON_SAMPLE_TYPES,
+  COMMON_SERVICE_CATEGORIES,
+  validateLabServiceName,
+  validateServiceCode,
+  validateServicePrice,
+} from '../../components/LabServiceModal';
+import SearchableSelect, { type SearchableSelectOption } from '../../components/ui/SearchableSelect';
 import api from '../../utils/api';
 import { getErrorMessage } from '../../utils/errors';
 
 interface LabService {
   id: string;
   name: string;
+  service_code?: string | null;
+  category?: string | null;
+  service_category?: string | null;
+  sample_type?: string | null;
   description?: string | null;
   price?: number | string | null;
+  service_price?: number | string | null;
   status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
 }
+
+const STATUS_OPTIONS: SearchableSelectOption[] = [
+  { value: 'ACTIVE', label: 'Active', sublabel: 'Available for doctor prescriptions & orders', badge: 'Live', badgeTone: 'green' },
+  { value: 'INACTIVE', label: 'Inactive', sublabel: 'Temporarily suspended or hidden', badge: 'Disabled', badgeTone: 'neutral' },
+];
 
 export default function LabServicesPage() {
   const { message } = App.useApp();
@@ -35,9 +54,14 @@ export default function LabServicesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<LabService | null>(null);
   const [serviceName, setServiceName] = useState('');
+  const [serviceCode, setServiceCode] = useState('');
+  const [serviceCategory, setServiceCategory] = useState('');
+  const [sampleType, setSampleType] = useState('');
   const [serviceDesc, setServiceDesc] = useState('');
   const [servicePrice, setServicePrice] = useState<string>('0');
   const [serviceStatus, setServiceStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
+  const [customCategoryMode, setCustomCategoryMode] = useState(false);
+  const [customSampleMode, setCustomSampleMode] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
 
@@ -64,9 +88,14 @@ export default function LabServicesPage() {
   const openAddModal = () => {
     setEditingService(null);
     setServiceName('');
+    setServiceCode('');
+    setServiceCategory('');
+    setSampleType('');
     setServiceDesc('');
     setServicePrice('0');
     setServiceStatus('ACTIVE');
+    setCustomCategoryMode(false);
+    setCustomSampleMode(false);
     setTouched({});
     setIsModalOpen(true);
   };
@@ -74,12 +103,49 @@ export default function LabServicesPage() {
   const openEditModal = (service: LabService) => {
     setEditingService(service);
     setServiceName(service.name);
+    setServiceCode(service.service_code || '');
+    setServiceCategory(service.category || service.service_category || '');
+    setSampleType(service.sample_type || '');
     setServiceDesc(service.description || '');
-    setServicePrice(service.price !== null && service.price !== undefined ? String(service.price) : '0');
+    const priceVal =
+      service.price !== null && service.price !== undefined
+        ? String(service.price)
+        : service.service_price !== null && service.service_price !== undefined
+          ? String(service.service_price)
+          : '0';
+    setServicePrice(priceVal);
     setServiceStatus(service.status || 'ACTIVE');
+    setCustomCategoryMode(false);
+    setCustomSampleMode(false);
     setTouched({});
     setIsModalOpen(true);
   };
+
+  const categoryOptions = useMemo<SearchableSelectOption[]>(() => {
+    const opts = [...COMMON_SERVICE_CATEGORIES];
+    if (serviceCategory && !opts.some((o) => o.value.toLowerCase() === serviceCategory.toLowerCase())) {
+      opts.unshift({
+        value: serviceCategory,
+        label: serviceCategory,
+        sublabel: 'Custom category',
+        badge: 'Custom',
+      });
+    }
+    return opts;
+  }, [serviceCategory]);
+
+  const sampleTypeOptions = useMemo<SearchableSelectOption[]>(() => {
+    const opts = [...COMMON_SAMPLE_TYPES];
+    if (sampleType && !opts.some((o) => o.value.toLowerCase() === sampleType.toLowerCase())) {
+      opts.unshift({
+        value: sampleType,
+        label: sampleType,
+        sublabel: 'Custom specimen',
+        badge: 'Custom',
+      });
+    }
+    return opts;
+  }, [sampleType]);
 
   const handleServiceNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
@@ -87,6 +153,15 @@ export default function LabServicesPage() {
     setServiceName(sanitized);
     if (touched['name']) {
       setTouched((prev) => ({ ...prev, name: true }));
+    }
+  };
+
+  const handleServiceCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.toUpperCase();
+    const sanitized = raw.replace(/[^A-Z0-9\-_/]/g, '');
+    setServiceCode(sanitized);
+    if (touched['service_code']) {
+      setTouched((prev) => ({ ...prev, service_code: true }));
     }
   };
 
@@ -101,33 +176,36 @@ export default function LabServicesPage() {
   };
 
   const nameError = touched['name'] ? validateLabServiceName(serviceName) : undefined;
-  const priceError = touched['price']
-    ? servicePrice !== '' && (isNaN(Number(servicePrice)) || Number(servicePrice) < 0)
-      ? 'Please enter a valid non-negative price.'
-      : Number(servicePrice) > 999999.99
-        ? 'Price cannot exceed ₹999,999.99'
-        : undefined
-    : undefined;
+  const serviceCodeError = touched['service_code'] ? validateServiceCode(serviceCode) : undefined;
+  const priceError = touched['price'] ? validateServicePrice(servicePrice) : undefined;
 
   const handleSaveService = async (e: React.FormEvent) => {
     e.preventDefault();
     const nameErr = validateLabServiceName(serviceName);
-    const parsedPrice = parseFloat(servicePrice);
-    const isPriceInvalid = isNaN(parsedPrice) || parsedPrice < 0 || parsedPrice > 999999.99;
+    const codeErr = validateServiceCode(serviceCode);
+    const prErr = validateServicePrice(servicePrice);
 
-    if (nameErr || isPriceInvalid) {
-      setTouched({ name: true, price: true });
+    if (nameErr || codeErr || prErr) {
+      setTouched({ name: true, service_code: true, price: true });
       if (nameErr) void message.error(nameErr);
-      else if (isPriceInvalid) void message.error('Please enter a valid non-negative price.');
+      else if (codeErr) void message.error(codeErr);
+      else if (prErr) void message.error(prErr);
       return;
     }
+
+    const parsedPrice = servicePrice === '' ? 0 : parseFloat(servicePrice);
 
     setSaving(true);
     try {
       const payload = {
         name: serviceName.trim(),
+        service_code: serviceCode.trim().toUpperCase() || null,
+        category: serviceCategory.trim() || null,
+        service_category: serviceCategory.trim() || null,
+        sample_type: sampleType.trim() || null,
         description: serviceDesc.trim() || null,
-        price: parsedPrice,
+        price: isNaN(parsedPrice) ? 0 : parsedPrice,
+        service_price: isNaN(parsedPrice) ? 0 : parsedPrice,
         status: serviceStatus,
       };
 
@@ -170,15 +248,19 @@ export default function LabServicesPage() {
     return services.filter(
       (s) =>
         s.name.toLowerCase().includes(term) ||
+        (s.service_code && s.service_code.toLowerCase().includes(term)) ||
+        (s.category && s.category.toLowerCase().includes(term)) ||
+        (s.service_category && s.service_category.toLowerCase().includes(term)) ||
+        (s.sample_type && s.sample_type.toLowerCase().includes(term)) ||
         (s.description && s.description.toLowerCase().includes(term)),
     );
   }, [services, searchTerm]);
 
   const activeCount = useMemo(() => services.filter((s) => s.status === 'ACTIVE').length, [services]);
   const averagePrice = useMemo(() => {
-    const priced = services.filter((s) => Number(s.price) > 0);
+    const priced = services.filter((s) => Number(s.price ?? s.service_price ?? 0) > 0);
     if (priced.length === 0) return 0;
-    const sum = priced.reduce((acc, s) => acc + Number(s.price), 0);
+    const sum = priced.reduce((acc, s) => acc + Number(s.price ?? s.service_price ?? 0), 0);
     return Math.round(sum / priced.length);
   }, [services]);
 
@@ -202,7 +284,7 @@ export default function LabServicesPage() {
                 </span>
               </div>
               <p className="text-slate-500 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
-                Configure clinical investigations, standard test rates, and active testing procedures provided by your diagnostic facility.
+                Configure clinical investigations, standard test rates, specimen requirements, and active testing procedures provided by your diagnostic facility.
               </p>
             </div>
           </div>
@@ -274,7 +356,7 @@ export default function LabServicesPage() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search test by name or description..."
+            placeholder="Search test by name, code, category, sample..."
             className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white placeholder:text-slate-400"
           />
           {searchTerm && (
@@ -329,10 +411,13 @@ export default function LabServicesPage() {
             <table className="w-full text-left border-collapse text-sm">
               <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200">
                 <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500">
-                  <th className="py-3.5 px-6 sticky top-0 z-20 bg-slate-50">Investigation / Service Name</th>
+                  <th className="py-3.5 px-6 sticky top-0 z-20 bg-slate-50">Diagnostic Service / Test Name</th>
+                  <th className="py-3.5 px-6 sticky top-0 z-20 bg-slate-50">Service Code</th>
+                  <th className="py-3.5 px-6 sticky top-0 z-20 bg-slate-50">Service Category</th>
+                  <th className="py-3.5 px-6 sticky top-0 z-20 bg-slate-50">Sample Type</th>
+                  <th className="py-3.5 px-6 text-right sticky top-0 z-20 bg-slate-50">Service Price</th>
+                  <th className="py-3.5 px-6 text-center sticky top-0 z-20 bg-slate-50">Catalog Status</th>
                   <th className="py-3.5 px-6 sticky top-0 z-20 bg-slate-50">Description</th>
-                  <th className="py-3.5 px-6 text-right sticky top-0 z-20 bg-slate-50">Standard Rate</th>
-                  <th className="py-3.5 px-6 text-center sticky top-0 z-20 bg-slate-50">Status</th>
                   <th className="py-3.5 px-6 text-right sticky top-0 right-0 z-30 bg-slate-50 border-b border-slate-200 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Actions</th>
                 </tr>
               </thead>
@@ -347,14 +432,41 @@ export default function LabServicesPage() {
                         <span className="font-bold text-slate-900 text-sm">{service.name}</span>
                       </div>
                     </td>
-                    <td className="py-4 px-6 text-slate-500 max-w-sm truncate align-middle text-xs" title={service.description || ''}>
-                      {service.description || <span className="text-slate-300 italic">No description provided</span>}
+                    <td className="py-4 px-6 align-middle">
+                      {service.service_code ? (
+                        <span className="inline-flex items-center rounded border border-slate-200 bg-slate-100 px-2 py-0.5 font-mono text-xs font-semibold text-slate-700">
+                          {service.service_code}
+                        </span>
+                      ) : (
+                        <span className="text-xs italic text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-6 align-middle">
+                      {service.category || service.service_category ? (
+                        <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-700">
+                          {service.category || service.service_category}
+                        </span>
+                      ) : (
+                        <span className="text-xs italic text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-6 align-middle">
+                      {service.sample_type ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700">
+                          <TestTube2 size={12} className="shrink-0 text-sky-500" />
+                          {service.sample_type}
+                        </span>
+                      ) : (
+                        <span className="text-xs italic text-slate-400">—</span>
+                      )}
                     </td>
                     <td className="py-4 px-6 text-right font-medium text-slate-900 align-middle whitespace-nowrap">
                       <span className="font-extrabold text-slate-900 text-xs bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
                         {service.price !== null && service.price !== undefined
                           ? `₹${Number(service.price).toFixed(2)}`
-                          : 'Standard'}
+                          : service.service_price !== null && service.service_price !== undefined
+                            ? `₹${Number(service.service_price).toFixed(2)}`
+                            : 'Standard'}
                       </span>
                     </td>
                     <td className="py-4 px-6 text-center align-middle whitespace-nowrap">
@@ -372,6 +484,9 @@ export default function LabServicesPage() {
                         />
                         {service.status}
                       </span>
+                    </td>
+                    <td className="py-4 px-6 text-slate-500 max-w-sm truncate align-middle text-xs" title={service.description || ''}>
+                      {service.description || <span className="text-slate-300 italic">No description provided</span>}
                     </td>
                     <td className="py-4 px-6 text-right align-middle whitespace-nowrap sticky right-0 z-10 bg-white group-hover:bg-slate-50 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] transition-colors">
                       <div className="inline-flex items-center gap-2 justify-end">
@@ -404,7 +519,7 @@ export default function LabServicesPage() {
       {/* Add / Edit Service Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
+          <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden">
             <div className="flex items-center justify-between p-5 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-lg bg-sky-50 text-sky-600">
@@ -423,10 +538,11 @@ export default function LabServicesPage() {
               </button>
             </div>
 
-            <form noValidate onSubmit={handleSaveService} className="p-5 space-y-4">
+            <form noValidate onSubmit={handleSaveService} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+              {/* Field 1: Diagnostic Service / Test Name */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Service / Test Name <span className="text-rose-500">*</span>
+                  Diagnostic Service / Test Name <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -449,26 +565,126 @@ export default function LabServicesPage() {
                 )}
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Description
-                </label>
-                <textarea
-                  rows={3}
-                  value={serviceDesc}
-                  onChange={(e) => setServiceDesc(e.target.value)}
-                  placeholder="Clinical purpose, specimen type, fasting requirements, etc."
-                  className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              {/* Field 2 & 3: Service Code & Service Category */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Price (₹)
+                    Service Code
                   </label>
                   <div className="relative">
-                    <IndianRupee size={14} className="absolute left-3.5 top-3 text-slate-400" />
+                    <Tag size={14} className="absolute right-3.5 top-3 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={serviceCode}
+                      onChange={handleServiceCodeChange}
+                      onBlur={() => setTouched((prev) => ({ ...prev, service_code: true }))}
+                      placeholder="e.g. CBC-001"
+                      className={`w-full px-3.5 py-2 rounded-lg border text-sm uppercase font-mono focus:outline-none transition-all ${
+                        serviceCodeError
+                          ? 'border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+                          : 'border-slate-300 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500'
+                      }`}
+                    />
+                  </div>
+                  {serviceCodeError && (
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                      <AlertCircle size={13} className="shrink-0 text-rose-600" />
+                      <span>{serviceCodeError}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label
+                      htmlFor="client-service-cat-select"
+                      className="block text-xs font-semibold text-slate-700 uppercase tracking-wider cursor-pointer"
+                    >
+                      Service Category
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setCustomCategoryMode((prev) => !prev)}
+                      className="text-[11px] font-semibold text-sky-600 hover:text-sky-700 cursor-pointer"
+                    >
+                      {customCategoryMode ? 'Select from list' : '+ Custom Category'}
+                    </button>
+                  </div>
+                  {customCategoryMode ? (
+                    <input
+                      id="client-service-cat-select"
+                      aria-label="Service Category"
+                      type="text"
+                      value={serviceCategory}
+                      onChange={(e) => setServiceCategory(e.target.value)}
+                      placeholder="Type custom category..."
+                      className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                    />
+                  ) : (
+                    <SearchableSelect
+                      id="client-service-cat-select"
+                      aria-label="Service Category"
+                      value={serviceCategory}
+                      onChange={(val) => setServiceCategory(val)}
+                      options={categoryOptions}
+                      placeholder="Select category..."
+                      searchPlaceholder="Search category..."
+                      clearable
+                      onClear={() => setServiceCategory('')}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Field 5 & 6: Sample Type & Service Price */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label
+                      htmlFor="client-sample-type-select"
+                      className="block text-xs font-semibold text-slate-700 uppercase tracking-wider cursor-pointer"
+                    >
+                      Sample Type
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setCustomSampleMode((prev) => !prev)}
+                      className="text-[11px] font-semibold text-sky-600 hover:text-sky-700 cursor-pointer"
+                    >
+                      {customSampleMode ? 'Select from list' : '+ Custom Specimen'}
+                    </button>
+                  </div>
+                  {customSampleMode ? (
+                    <input
+                      id="client-sample-type-select"
+                      aria-label="Sample Type"
+                      type="text"
+                      value={sampleType}
+                      onChange={(e) => setSampleType(e.target.value)}
+                      placeholder="Type custom specimen..."
+                      className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                    />
+                  ) : (
+                    <SearchableSelect
+                      id="client-sample-type-select"
+                      aria-label="Sample Type"
+                      value={sampleType}
+                      onChange={(val) => setSampleType(val)}
+                      options={sampleTypeOptions}
+                      placeholder="Select sample type..."
+                      searchPlaceholder="Search specimen..."
+                      clearable
+                      onClear={() => setSampleType('')}
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Service Price (₹)
+                  </label>
+                  <div className="relative flex items-center">
+                    <IndianRupee size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
                     <input
                       type="text"
                       inputMode="decimal"
@@ -476,7 +692,8 @@ export default function LabServicesPage() {
                       onChange={handlePriceChange}
                       onBlur={() => setTouched((prev) => ({ ...prev, price: true }))}
                       placeholder="0.00"
-                      className={`w-full pl-9 pr-3.5 py-2 rounded-lg border text-sm focus:outline-none transition-all ${
+                      style={{ paddingLeft: '36px' }}
+                      className={`w-full pr-3.5 py-2 rounded-lg border text-sm focus:outline-none transition-all ${
                         priceError
                           ? 'border-rose-500 focus:ring-2 focus:ring-rose-500/20'
                           : 'border-slate-300 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500'
@@ -490,20 +707,39 @@ export default function LabServicesPage() {
                     </div>
                   )}
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Status
-                  </label>
-                  <select
-                    value={serviceStatus}
-                    onChange={(e) => setServiceStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
-                    className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white"
-                  >
-                    <option value="ACTIVE">Active (Offered)</option>
-                    <option value="INACTIVE">Inactive (Temporarily Suspended)</option>
-                  </select>
-                </div>
+              {/* Field 4: Description */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Description
+                </label>
+                <textarea
+                  rows={3}
+                  value={serviceDesc}
+                  onChange={(e) => setServiceDesc(e.target.value.slice(0, 2000))}
+                  placeholder="Clinical indications, methodology, preparation instructions..."
+                  className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                />
+              </div>
+
+              {/* Field 7: Service Catalog Status (SearchableSelect) */}
+              <div>
+                <label
+                  htmlFor="client-service-status-select"
+                  className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5 cursor-pointer"
+                >
+                  Service Catalog Status <span className="text-rose-500">*</span>
+                </label>
+                <SearchableSelect
+                  id="client-service-status-select"
+                  aria-label="Service Catalog Status"
+                  value={serviceStatus}
+                  onChange={(val) => setServiceStatus(val as 'ACTIVE' | 'INACTIVE')}
+                  options={STATUS_OPTIONS}
+                  placeholder="Select status..."
+                  searchable={false}
+                />
               </div>
 
               <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">

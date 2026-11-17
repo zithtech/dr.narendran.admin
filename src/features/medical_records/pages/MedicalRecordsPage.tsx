@@ -24,10 +24,11 @@ import { SearchableSelect } from '../../../components/ui/SearchableSelect';
 import { usePermission } from '../../../context/PermissionContext';
 import { timeAgo } from '../../../lib/format';
 import { EditMedicalRecordModal } from '../components/EditMedicalRecordModal';
-import { MedicalRecordPreviewModal } from '../components/MedicalRecordPreviewModal';
+import { MedicalRecordPreviewDrawer } from '../components/MedicalRecordPreviewDrawer';
 import { PatientDossierView } from '../components/PatientDossierView';
 import { UploadMedicalRecordModal } from '../components/UploadMedicalRecordModal';
 import { medicalRecordsApi } from '../services/medicalRecordsApi';
+import { getAuthenticatedFileUrl } from '@/utils/fileUrl';
 import type {
   MedicalRecord,
   PatientDossier,
@@ -646,7 +647,7 @@ export default function MedicalRecordsPage() {
                           <button
                             type="button"
                             className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                            onClick={() => window.open(rec.documentUrl, '_blank')}
+                            onClick={() => window.open(getAuthenticatedFileUrl(rec.documentUrl, true), '_blank', 'noopener,noreferrer')}
                             title="Download document"
                             aria-label="Download"
                           >
@@ -719,8 +720,8 @@ export default function MedicalRecordsPage() {
         defaultPrescribedTest={activePrescribedTest}
       />
 
-      {/* Preview Modal */}
-      <MedicalRecordPreviewModal
+      {/* Preview Drawer */}
+      <MedicalRecordPreviewDrawer
         record={previewRecord}
         open={Boolean(previewRecord)}
         onClose={() => setPreviewRecord(null)}

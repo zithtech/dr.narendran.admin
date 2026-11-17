@@ -1,17 +1,20 @@
 import { App } from 'antd';
-import { CalendarClock, Stethoscope } from 'lucide-react';
+import { CalendarClock, Clock, Stethoscope } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import DoctorAvailabilityModal from '../components/DoctorAvailabilityModal';
 import DoctorDrawer from '../components/DoctorDrawer';
 import DoctorModal, { type Doctor } from '../components/DoctorModal';
+import { DoctorQualificationTable } from '../components/DoctorQualificationBadge';
 import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
+import { Drawer } from '../components/ui/Drawer';
 import { addedFacet, statusFacet } from '../components/ui/facets';
 import { ActivityCell, Badge, StatusDot } from '../components/ui/primitives';
 import { useResource } from '../hooks/useResource';
 import { isDoctorRole, usePermission } from '../context/PermissionContext';
 import { timeAgo } from '../lib/format';
+import { ErrorBoundary } from '../shared/components/ErrorBoundary';
 import api from '../utils/api';
 
 const FACETS: Facet<Doctor>[] = [
@@ -58,11 +61,17 @@ export default function Doctors() {
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
   const [availabilityDoctor, setAvailabilityDoctor] = useState<Doctor | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [scheduleVersion, setScheduleVersion] = useState(0);
 
   // Looked up from the live list so the drawer reflects edits and closes on delete.
-  const viewingDoctor = viewingId ? (resource.items.find((d) => d.id === viewingId) ?? null) : null;
-  const openDetails = (doctor: Doctor) => setViewingId(doctor.id);
+  const viewingDoctor = viewingId
+    ? (resource.items.find((d) => String(d.id) === String(viewingId)) ?? selectedDoctor)
+    : null;
+  const openDetails = (doctor: Doctor) => {
+    setSelectedDoctor(doctor);
+    setViewingId(doctor.id);
+  };
 
   const openEditor = (doctor: Doctor | null) => {
     if (doctor ? !canUpdate('DOCTORS') : !canCreate('DOCTORS')) return;
@@ -88,11 +97,13 @@ export default function Doctors() {
         <PrimaryCell
           name={d.name}
           sub={
-            [d.qualification, d.email || d.phone].filter(Boolean).join(' · ') || (
-              <span className="ui-muted">No contact info</span>
-            )
+            <DoctorQualificationTable
+              qualification={d.qualification}
+              maxVisible={2}
+              contact={d.email || d.phone}
+            />
           }
-          avatarSrc={d.profile_image_url}
+          avatarSrc={d.profile_image_url || (d as any).profileImageUrl}
           onOpen={() => openDetails(d)}
         />
       ),
@@ -212,15 +223,15 @@ export default function Doctors() {
             {canView('AVAILABILITY') && (
               <button
                 type="button"
-                className="ui-btn ui-btn-sm"
+                className="p-1 rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
                   void navigate(`/availability?doctorId=${d.id}`);
                 }}
-                title="Open full Availability & Slots page"
-                style={{ padding: '0 8px', fontSize: 11 }}
+                title="Availability & Slots"
+                aria-label={`Slots for ${d.name}`}
               >
-                Slots
+                <Clock size={13} />
               </button>
             )}
           </div>
@@ -247,13 +258,45 @@ export default function Doctors() {
         doctor={availabilityDoctor}
       />
 
-      <DoctorDrawer
-        doctor={viewingDoctor}
-        onClose={() => setViewingId(null)}
-        onEdit={openEditor}
-        onSchedule={openAvailability}
-        scheduleVersion={scheduleVersion}
-      />
+      <ErrorBoundary
+        fallback={(error, reset) => (
+          <Drawer
+            open={Boolean(viewingDoctor)}
+            onClose={() => {
+              setViewingId(null);
+              setSelectedDoctor(null);
+            }}
+            label="Doctor Profile Error"
+          >
+            <div style={{ padding: 24, textAlign: 'center' }}>
+              <h3 style={{ color: '#ef4444', fontWeight: 700, marginBottom: 8 }}>
+                Failed to render doctor profile
+              </h3>
+              <p style={{ color: '#64748b', fontSize: 13, marginBottom: 16 }}>
+                {error?.message || 'An unexpected error occurred while loading this doctor profile.'}
+              </p>
+              <button
+                type="button"
+                className="ui-btn ui-btn-primary"
+                onClick={reset}
+              >
+                Try Again
+              </button>
+            </div>
+          </Drawer>
+        )}
+      >
+        <DoctorDrawer
+          doctor={viewingDoctor}
+          onClose={() => {
+            setViewingId(null);
+            setSelectedDoctor(null);
+          }}
+          onEdit={openEditor}
+          onSchedule={openAvailability}
+          scheduleVersion={scheduleVersion}
+        />
+      </ErrorBoundary>
     </>
   );
 }

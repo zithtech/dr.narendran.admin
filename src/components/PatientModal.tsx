@@ -26,7 +26,8 @@ import { getErrorMessage } from '../utils/errors';
 import { type Branch } from './BranchModal';
 import { type Hospital } from './HospitalModal';
 import { Modal, SwitchRow } from './ui/Modal';
-import { Alert, Avatar } from './ui/primitives';
+import { Alert } from './ui/primitives';
+import { ImageUploadField } from './ui/ImageUploadField';
 import { SearchableSelect, type SearchableSelectOption } from './ui/SearchableSelect';
 import { type UserAccount } from './UserModal';
 
@@ -1109,53 +1110,22 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
               </div>
             </div>
 
-            <div>
-              <label
-                htmlFor="patient-image-url"
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: '#334155',
-                  display: 'block',
-                  marginBottom: 5,
-                }}
-              >
-                Profile Image URL
-              </label>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <Avatar name={name || 'Patient'} src={profileImageUrl} size={40} />
-                <input
-                  id="patient-image-url"
-                  className="ui-input"
-                  style={{
-                    flex: 1,
-                    borderColor: errors.profileImageUrl ? '#ef4444' : undefined,
-                    boxShadow: errors.profileImageUrl ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                  }}
-                  type="text"
-                  inputMode="url"
-                  value={profileImageUrl}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setProfileImageUrl(val);
-                    setErrors((prev) => ({ ...prev, profileImageUrl: validatePatientImageUrl(val) }));
-                  }}
-                  onBlur={() => {
-                    const trimmed = profileImageUrl.trim();
-                    if (trimmed && !/^https?:\/\//i.test(trimmed) && !trimmed.startsWith('/')) {
-                      setProfileImageUrl(`https://${trimmed}`);
-                    }
-                  }}
-                  placeholder="https://… (Direct avatar or photo URL)"
-                />
-              </div>
-              {errors.profileImageUrl && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
-                  <AlertCircle size={12} style={{ flexShrink: 0 }} />
-                  <span>{errors.profileImageUrl}</span>
-                </div>
-              )}
-            </div>
+            <ImageUploadField
+              id="patient-image-upload"
+              label="Profile Photo"
+              value={profileImageUrl}
+              onChange={(url) => {
+                setProfileImageUrl(url);
+                setErrors((prev) => ({
+                  ...prev,
+                  profileImageUrl: validatePatientImageUrl(url),
+                }));
+              }}
+              name={name || 'Patient'}
+              folder="patient-profiles"
+              error={errors.profileImageUrl}
+              helperText="Upload patient photo (JPG, PNG, WEBP up to 10MB)"
+            />
           </div>
 
           {/* Section 2: Hospital & Branch Assignment */}

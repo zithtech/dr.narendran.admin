@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { getAuthenticatedFileUrl } from '@/utils/fileUrl';
 
 import { Avatar, Badge, cx } from '../../../components/ui/primitives';
 import { usePermission } from '../../../context/PermissionContext';
@@ -315,7 +316,7 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
                           <button
                             type="button"
                             className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                            onClick={() => window.open(rec.documentUrl, '_blank')}
+                            onClick={() => window.open(getAuthenticatedFileUrl(rec.documentUrl, true), '_blank', 'noopener,noreferrer')}
                             title="Download document"
                             aria-label="Download"
                           >
