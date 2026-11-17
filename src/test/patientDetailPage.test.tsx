@@ -104,6 +104,26 @@ describe('PatientDetailPage View', () => {
           ],
         });
       }
+      if (url.includes('patient-timelines')) {
+        return Promise.resolve({
+          data: {
+            data: {
+              patient: { id: 'pat-100', name: 'Kavitha Ramachandran' },
+              summary: { primary_condition: 'Hypertension', active_medications: ['Amlodipine'] },
+              timeline: [
+                {
+                  id: 'evt-1',
+                  type: 'CONSULTATION',
+                  occurred_at: '2026-06-01T10:00:00Z',
+                  title: 'Patient Profile Registered',
+                  summary: 'Patient registered at Apollo Hospital.',
+                },
+              ],
+              pagination: { page: 1, limit: 20, total: 1, has_next: false },
+            },
+          },
+        });
+      }
       return Promise.resolve({ data: [] });
     });
   });

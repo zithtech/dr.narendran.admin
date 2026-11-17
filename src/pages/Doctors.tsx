@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router';
 import DoctorAvailabilityModal from '../components/DoctorAvailabilityModal';
 import DoctorDrawer from '../components/DoctorDrawer';
 import DoctorModal, { type Doctor } from '../components/DoctorModal';
+import { DoctorQualificationTable } from '../components/DoctorQualificationBadge';
 import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
 import { Drawer } from '../components/ui/Drawer';
 import { addedFacet, statusFacet } from '../components/ui/facets';
@@ -92,9 +93,11 @@ export default function Doctors() {
         <PrimaryCell
           name={d.name}
           sub={
-            [d.qualification, d.email || d.phone].filter(Boolean).join(' · ') || (
-              <span className="ui-muted">No contact info</span>
-            )
+            <DoctorQualificationTable
+              qualification={d.qualification}
+              maxVisible={2}
+              contact={d.email || d.phone}
+            />
           }
           avatarSrc={d.profile_image_url || (d as any).profileImageUrl}
           onOpen={() => openDetails(d)}

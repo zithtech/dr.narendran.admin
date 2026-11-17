@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router';
 import { CommonPagination } from '../../../components/ui/CommonTable';
 import { Badge, StatusDot } from '../../../components/ui/primitives';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
+import { DoctorQualificationTable } from '../../../components/DoctorQualificationBadge';
 import { usePermission } from '../../../context/PermissionContext';
 import { timeAgo } from '../../../lib/format';
 import { locationsApi } from '../services/locationsApi';
@@ -371,8 +372,8 @@ export const DoctorLocationsTable: React.FC = () => {
                       </td>
 
                       {/* Qualification */}
-                      <td className="px-3.5 py-2 whitespace-nowrap text-slate-600">
-                        {doc.qualification || 'MBBS'}
+                      <td className="px-3.5 py-2 text-slate-600">
+                        <DoctorQualificationTable qualification={doc.qualification} maxVisible={2} />
                       </td>
 
                       {/* Registered Locations Count */}

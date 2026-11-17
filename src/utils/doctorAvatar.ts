@@ -24,7 +24,7 @@ export function isFemaleDoctor(
 
   // 3. Common female first names / components in healthcare
   const femalePattern =
-    /\b(kavitha|priya|shanti|lakshmi|meera|revathi|deepa|swathi|divya|pooja|sneha|malathi|gayathri|anitha|sunita|geetha|radhika|preethi|nisha|rekha|anita|ananya|aarthi|shilpa|mary|sarah|emily|jessica|jennifer|laura|lisa|rachel|maria|aishwarya|anuradha|bhavani|chitra|durga|harini|indira|jaya|kamala|kalyani|lalitha|madhavi|nandini|padma|pavithra|radha|sandhya|sarada|saranya|shobha|sowmya|sudha|sumathi|tara|uma|usha|vanitha|varalakshmi|vasantha|vidya|vijaya|yamuna)\b/i;
+    /\b(bharathi|kavitha|priya|shanti|lakshmi|meera|revathi|deepa|swathi|divya|pooja|sneha|malathi|gayathri|anitha|sunita|geetha|radhika|preethi|nisha|rekha|anita|ananya|aarthi|shilpa|mary|sarah|emily|jessica|jennifer|laura|lisa|rachel|maria|aishwarya|anuradha|bhavani|chitra|durga|harini|indira|jaya|kamala|kalyani|lalitha|madhavi|nandini|padma|pavithra|radha|sandhya|sarada|saranya|shobha|sowmya|sudha|sumathi|tara|uma|usha|vanitha|varalakshmi|vasantha|vidya|vijaya|yamuna)\b/i;
 
   return femalePattern.test(name);
 }

@@ -1,5 +1,6 @@
+import { Button, Spin } from 'antd';
+import type { Dayjs } from 'dayjs';
 import {
-  Activity,
   AlertCircle,
   ArrowLeft,
   Building2,
@@ -8,8 +9,10 @@ import {
   Download,
   Droplet,
   Eye,
+  FileClock,
   FileText,
   HeartPulse,
+  History,
   Mail,
   MapPin,
   Pencil,
@@ -29,9 +32,19 @@ import { usePermission } from '../context/PermissionContext';
 import { type Prescription, prescriptionsApi } from '../features/prescriptions/api/prescriptionsApi';
 import CreatePrescriptionModal from '../features/prescriptions/components/CreatePrescriptionModal';
 import ViewPrescriptionModal from '../features/prescriptions/components/ViewPrescriptionModal';
+import { MedicalRecordPreviewDrawer } from '../features/medical_records/components/MedicalRecordPreviewDrawer';
+import type { MedicalRecord } from '../features/medical_records/types/medicalRecords';
+import { TimelineEventItem } from '../features/timelines/components/TimelineEventItem';
+import { TimelineFilterBar } from '../features/timelines/components/TimelineFilterBar';
+import { patientTimelinesApi } from '../features/timelines/services/patientTimelinesApi';
+import type {
+  TimelineEvent,
+  TimelineFilterType,
+} from '../features/timelines/types/patientTimelines';
 import { formatDate, formatPatientAge, timeAgo, titleCase } from '../lib/format';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
+import { getAuthenticatedFileUrl } from '../utils/fileUrl';
 
 interface EmergencyContact {
   name?: string;
@@ -88,6 +101,7 @@ export default function PatientDetailPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateRxOpen, setIsCreateRxOpen] = useState(false);
   const [viewingRx, setViewingRx] = useState<Prescription | null>(null);
+  const [previewRecord, setPreviewRecord] = useState<MedicalRecord | null>(null);
 
   // Reset img error on patient change
   useEffect(() => {
@@ -101,6 +115,17 @@ export default function PatientDetailPage() {
   const [loadingAppts, setLoadingAppts] = useState(false);
   const [medicalRecords, setMedicalRecords] = useState<any[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
+  const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
+  const [loadingTimeline, setLoadingTimeline] = useState<boolean>(false);
+  const [loadingMoreTimeline, setLoadingMoreTimeline] = useState<boolean>(false);
+  const [timelineError, setTimelineError] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<TimelineFilterType>('All');
+  const [selectedYear, setSelectedYear] = useState<string>('All');
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [timelinePage, setTimelinePage] = useState<number>(1);
+  const [hasNextPage, setHasNextPage] = useState<boolean>(false);
+  const [totalTimelineEvents, setTotalTimelineEvents] = useState<number>(0);
+  const [downloadingPdf, setDownloadingPdf] = useState<boolean>(false);
 
   // Load Patient Profile
   const loadPatient = useCallback(async () => {
@@ -173,12 +198,88 @@ export default function PatientDetailPage() {
     }
   }, [patientId]);
 
+  // Load Medical Timeline
+  const loadTimeline = useCallback(
+    async (isAppend = false, targetPage = 1) => {
+      if (!patientId) return;
+
+      if (isAppend) {
+        setLoadingMoreTimeline(true);
+      } else {
+        setLoadingTimeline(true);
+      }
+      setTimelineError(null);
+
+      try {
+        const params: Record<string, string | number> = {
+          page: targetPage,
+          limit: 20,
+          type: selectedType,
+        };
+
+        if (dateRange?.[0] && dateRange?.[1]) {
+          params.from_date = dateRange[0].format('YYYY-MM-DD');
+          params.to_date = dateRange[1].format('YYYY-MM-DD');
+        } else if (selectedYear !== 'All') {
+          params.year = selectedYear;
+        }
+
+        const data = await patientTimelinesApi.getPatientTimeline(patientId, params);
+
+        if (data) {
+          if (data.timeline) {
+            if (isAppend) {
+              setTimelineEvents((prev) => [...prev, ...data.timeline]);
+            } else {
+              setTimelineEvents(data.timeline);
+            }
+          }
+          if (data.pagination) {
+            setTimelinePage(data.pagination.page);
+            setHasNextPage(Boolean(data.pagination.has_next));
+            setTotalTimelineEvents(
+              data.pagination.total ?? (data.timeline ? data.timeline.length : 0),
+            );
+          }
+        }
+      } catch (err: unknown) {
+        setTimelineError(getErrorMessage(err, 'Failed to load medical timeline events.'));
+      } finally {
+        if (isAppend) {
+          setLoadingMoreTimeline(false);
+        } else {
+          setLoadingTimeline(false);
+        }
+      }
+    },
+    [patientId, selectedType, selectedYear, dateRange],
+  );
+
+  const handleLoadMore = () => {
+    if (!hasNextPage || loadingMoreTimeline) return;
+    const nextPage = timelinePage + 1;
+    void loadTimeline(true, nextPage);
+  };
+
+  const handleExportTimelinePdf = async () => {
+    if (!patientId || !patient) return;
+    setDownloadingPdf(true);
+    try {
+      await patientTimelinesApi.downloadPatientHistoryPdf(patient.id, patient.name);
+    } catch (err) {
+      console.error('Failed to export timeline PDF:', err);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   useEffect(() => {
     void loadPatient();
     void loadPrescriptions();
     void loadAppointments();
     void loadMedicalRecords();
-  }, [loadPatient, loadPrescriptions, loadAppointments, loadMedicalRecords]);
+    void loadTimeline(false, 1);
+  }, [loadPatient, loadPrescriptions, loadAppointments, loadMedicalRecords, loadTimeline]);
 
   const bmi = useMemo(() => {
     return patient ? bmiOf(patient.height_cm, patient.weight_kg) : null;
@@ -214,12 +315,14 @@ export default function PatientDetailPage() {
 
   if (loading && !patient) {
     return (
-      <div className="patient-page-container">
-        <div className="patient-loading-box">
-          <Activity size={28} className="animate-spin text-blue-600" />
-          <span style={{ fontSize: 13.5, color: '#64748b', fontWeight: 500 }}>
-            Loading patient profile & clinical records…
-          </span>
+      <div className="patient-page-container w-full min-h-full block relative">
+        <div className="w-full px-4 sm:px-6 pt-6 pb-10">
+          <div className="p-12 text-center bg-white rounded-xl border border-gray-200 space-y-4 shadow-2xs">
+            <Spin size="large" />
+            <div className="text-sm text-gray-500 font-medium">
+              Loading patient profile & clinical records...
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -537,6 +640,9 @@ export default function PatientDetailPage() {
             >
               <Clock size={14} />
               <span>Timeline History</span>
+              {totalTimelineEvents > 0 && (
+                <span className="patient-tab-count">{totalTimelineEvents}</span>
+              )}
             </button>
           </div>
 
@@ -762,9 +868,9 @@ export default function PatientDetailPage() {
                 </div>
 
                 {loadingRx ? (
-                  <div style={{ padding: '30px 0', textAlign: 'center', color: '#64748b', fontSize: 13 }}>
-                    <Activity size={20} className="animate-spin text-blue-600 mx-auto mb-2" />
-                    Loading prescriptions…
+                  <div className="p-8 text-center bg-white rounded-xl border border-gray-100 space-y-3 my-2">
+                    <Spin />
+                    <div className="text-xs text-gray-500 font-medium">Loading prescriptions…</div>
                   </div>
                 ) : prescriptions.length === 0 ? (
                   <div className="patient-empty-box">
@@ -855,9 +961,9 @@ export default function PatientDetailPage() {
                 </div>
 
                 {loadingAppts ? (
-                  <div style={{ padding: '30px 0', textAlign: 'center', color: '#64748b', fontSize: 13 }}>
-                    <Activity size={20} className="animate-spin text-blue-600 mx-auto mb-2" />
-                    Loading appointments…
+                  <div className="p-8 text-center bg-white rounded-xl border border-gray-100 space-y-3 my-2">
+                    <Spin />
+                    <div className="text-xs text-gray-500 font-medium">Loading appointments…</div>
                   </div>
                 ) : appointments.length === 0 ? (
                   <div className="patient-empty-box">
@@ -929,9 +1035,9 @@ export default function PatientDetailPage() {
                 </div>
 
                 {loadingRecords ? (
-                  <div style={{ padding: '30px 0', textAlign: 'center', color: '#64748b', fontSize: 13 }}>
-                    <Activity size={20} className="animate-spin text-blue-600 mx-auto mb-2" />
-                    Loading medical records…
+                  <div className="p-8 text-center bg-white rounded-xl border border-gray-100 space-y-3 my-2">
+                    <Spin />
+                    <div className="text-xs text-gray-500 font-medium">Loading medical records…</div>
                   </div>
                 ) : medicalRecords.length === 0 ? (
                   <div className="patient-empty-box">
@@ -941,92 +1047,189 @@ export default function PatientDetailPage() {
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                    {medicalRecords.map((rec) => (
-                      <div key={rec.id} className="patient-rx-card">
-                        <div className="patient-rx-card-top">
-                          <div>
-                            <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
-                              {rec.title || rec.document_name || 'Medical Document'}
+                    {medicalRecords.map((rec) => {
+                      const docUrl = rec.documentUrl || rec.file_url || (rec.id ? `/api/medical-records/${rec.id}/file` : '');
+                      const downloadUrl = getAuthenticatedFileUrl(docUrl, true);
+                      const title = rec.testName || rec.fileName || rec.title || rec.document_name || 'Medical Document';
+                      const recordType = rec.isExternal ? 'External Record' : (rec.record_type || rec.type || 'Prescribed Lab Test');
+                      const uploadDate = rec.createdAt || rec.created_at || rec.reportDate;
+
+                      return (
+                        <div key={rec.id} className="patient-rx-card">
+                          <div className="patient-rx-card-top">
+                            <div>
+                              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
+                                {title}
+                              </div>
+                              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                                Type: {titleCase(recordType)} · Uploaded {uploadDate ? formatDate(uploadDate) : 'Recently'}
+                                {rec.uploadedBy ? ` by ${rec.uploadedBy}` : ''}
+                              </div>
                             </div>
-                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                              Type: {titleCase(rec.record_type || rec.type || 'Clinical Document')} · Uploaded{' '}
-                              {rec.created_at ? formatDate(rec.created_at) : 'Recently'}
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              {docUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewRecord(rec)}
+                                  className="patient-action-pill-btn is-primary"
+                                  style={{ cursor: 'pointer' }}
+                                >
+                                  <Eye size={12} /> Preview
+                                </button>
+                              )}
+                              {docUrl && (
+                                <a
+                                  href={downloadUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="patient-action-pill-btn"
+                                  style={{ textDecoration: 'none' }}
+                                >
+                                  <Download size={12} /> Download
+                                </a>
+                              )}
                             </div>
                           </div>
-
-                          {rec.file_url || rec.documentUrl ? (
-                            <a
-                              href={rec.file_url || rec.documentUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="patient-action-pill-btn is-primary"
-                            >
-                              <Download size={12} /> View File
-                            </a>
-                          ) : null}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
             )}
 
-            {/* ── TAB 5: TIMELINE HISTORY ── */}
+            {/* ── TAB 5: TIMELINE HISTORY (Unified with Patient Timelines Module) ── */}
             {activeTab === 'timeline' && (
-              <div className="patient-tab-content">
+              <div className="patient-tab-content space-y-3.5">
+                {/* Header row with Title and Export PDF Action */}
                 <div className="patient-tab-header-row">
                   <div>
                     <h3 className="patient-tab-heading">Clinical Timeline & History</h3>
                     <p className="patient-tab-subheading">
-                      Chronological activity log of consultations, prescriptions, and health events.
+                      Chronological activity log of consultations, prescriptions, lab reports, and clinical events.
                     </p>
                   </div>
+                  {patient && (
+                    <button
+                      type="button"
+                      onClick={handleExportTimelinePdf}
+                      disabled={downloadingPdf}
+                      className="patient-action-pill-btn"
+                      style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <Download size={12} />
+                      <span>{downloadingPdf ? 'Exporting PDF…' : 'Export Timeline PDF'}</span>
+                    </button>
+                  )}
                 </div>
 
-                <div className="patient-timeline-box">
-                  <div className="patient-timeline-item">
-                    <div className="patient-timeline-dot is-active" />
-                    <div className="patient-timeline-content">
-                      <div className="patient-timeline-title">Patient Profile Registered</div>
-                      <div className="patient-timeline-desc">
-                        Patient registered at {patient.hospital_name || 'Hospital'}{' '}
-                        {patient.branch_name ? `(${patient.branch_name})` : ''} on{' '}
-                        {formatDate(patient.created_at)}.
-                      </div>
+                {/* Event Category & Period Filter Bar */}
+                <TimelineFilterBar
+                  selectedType={selectedType}
+                  onSelectType={(type) => {
+                    setSelectedType(type);
+                    setTimelinePage(1);
+                  }}
+                  selectedYear={selectedYear}
+                  onSelectYear={(yr) => {
+                    setSelectedYear(yr);
+                    setTimelinePage(1);
+                  }}
+                  dateRange={dateRange}
+                  onDateRangeChange={(dates) => {
+                    setDateRange(dates);
+                    setTimelinePage(1);
+                  }}
+                  totalEvents={totalTimelineEvents}
+                />
+
+                {/* 3. Chronological Medical Events Feed */}
+                {loadingTimeline && timelineEvents.length === 0 ? (
+                  <div className="p-12 text-center bg-white rounded-xl border border-gray-200 space-y-4 shadow-2xs my-4">
+                    <Spin size="large" />
+                    <div className="text-sm text-gray-500 font-medium">
+                      Loading chronological medical timeline...
                     </div>
                   </div>
-
-                  {prescriptions.map((rx) => (
-                    <div key={rx.id} className="patient-timeline-item">
-                      <div className="patient-timeline-dot" />
-                      <div className="patient-timeline-content">
-                        <div className="patient-timeline-title">
-                          Prescription Issued · {rx.diagnosis || 'Consultation'}
-                        </div>
-                        <div className="patient-timeline-desc">
-                          Prescribed on {rx.prescription_date} by {rx.doctor?.name || 'Doctor'} (
-                          {rx.medicines?.length || rx.medicines_count || 0} medications).
-                        </div>
-                      </div>
+                ) : timelineError ? (
+                  <div className="bg-white rounded-xl border border-gray-200 p-8 text-center space-y-3 shadow-2xs">
+                    <AlertCircle className="w-10 h-10 text-red-500 mx-auto" />
+                    <h4 className="text-base font-semibold text-gray-900">
+                      Unable to Load Medical Timeline
+                    </h4>
+                    <p className="text-xs text-gray-500 max-w-md mx-auto">{timelineError}</p>
+                    <Button
+                      type="primary"
+                      className="bg-teal-700 hover:bg-teal-800"
+                      icon={<RefreshCw size={13} />}
+                      onClick={() => void loadTimeline(false, 1)}
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                ) : timelineEvents.length > 0 ? (
+                  <div className="pt-1 max-w-5xl mx-auto px-4 sm:px-8">
+                    <div className="mb-2.5 flex items-center justify-between">
+                      <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <History className="w-4 h-4 text-teal-700" />
+                        Chronological Medical Events (Newest First)
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        Displaying {timelineEvents.length} of {totalTimelineEvents} records
+                      </span>
                     </div>
-                  ))}
 
-                  {appointments.map((appt) => (
-                    <div key={appt.id} className="patient-timeline-item">
-                      <div className="patient-timeline-dot" />
-                      <div className="patient-timeline-content">
-                        <div className="patient-timeline-title">
-                          Consultation Appointment · {appt.purpose || 'Doctor Visit'}
+                    <div className="space-y-0">
+                      {timelineEvents.map((evt, idx) => (
+                        <TimelineEventItem
+                          key={evt.id || idx}
+                          event={evt}
+                          isLast={idx === timelineEvents.length - 1}
+                        />
+                      ))}
+
+                      {/* Load More Button */}
+                      {hasNextPage && (
+                        <div className="pt-4 text-center">
+                          <Button
+                            size="middle"
+                            loading={loadingMoreTimeline}
+                            onClick={handleLoadMore}
+                            className="border-teal-700 text-teal-800 hover:bg-teal-50 font-semibold"
+                          >
+                            Load Older Medical Events
+                          </Button>
                         </div>
-                        <div className="patient-timeline-desc">
-                          Scheduled for {appt.scheduled_start ? formatDate(appt.scheduled_start) : '—'}{' '}
-                          with {appt.doctor_name || 'Doctor'} · Status: {appt.status || 'Scheduled'}.
-                        </div>
-                      </div>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  /* Empty Timeline State */
+                  <div className="bg-white rounded-xl border border-dashed border-gray-300 p-10 text-center space-y-3">
+                    <FileClock className="w-10 h-10 text-gray-400 mx-auto" />
+                    <div className="text-base font-bold text-gray-800">
+                      No Clinical Events Found
+                    </div>
+                    <div className="text-xs text-gray-500 max-w-md mx-auto">
+                      {selectedType !== 'All' || selectedYear !== 'All' || dateRange
+                        ? `No medical events match the selected category ("${selectedType}") or date filter. Try selecting "All Events" or resetting filters.`
+                        : 'This patient has no recorded consultations, prescriptions, lab reports, or medical history yet.'}
+                    </div>
+                    {(selectedType !== 'All' || selectedYear !== 'All' || dateRange) && (
+                      <Button
+                        size="small"
+                        onClick={() => {
+                          setSelectedType('All');
+                          setSelectedYear('All');
+                          setDateRange(null);
+                        }}
+                      >
+                        Clear Filter Selection
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1069,6 +1272,13 @@ export default function PatientDetailPage() {
           prescription={viewingRx}
         />
       )}
+
+      {/* Medical Record Document Preview Drawer */}
+      <MedicalRecordPreviewDrawer
+        record={previewRecord}
+        open={Boolean(previewRecord)}
+        onClose={() => setPreviewRecord(null)}
+      />
 
       {/* ── Scoped Styling Matching Doctor View Reference Layout ── */}
       <style>{`

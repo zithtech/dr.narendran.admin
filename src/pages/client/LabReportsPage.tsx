@@ -22,6 +22,7 @@ import { useSearchParams } from 'react-router';
 import { Avatar, cx } from '../../components/ui/primitives';
 import api from '../../utils/api';
 import { getErrorMessage } from '../../utils/errors';
+import { getAuthenticatedFileUrl } from '../../utils/fileUrl';
 
 interface PatientSummary {
   id: string;
@@ -558,7 +559,7 @@ export default function LabReportsPage() {
                               </div>
                               <div className="min-w-0 flex-1">
                                 <a
-                                  href={uploadedReport.documentUrl}
+                                  href={getAuthenticatedFileUrl(uploadedReport.documentUrl)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="font-medium text-xs text-sky-700 hover:text-sky-900 hover:underline truncate max-w-[190px] inline-flex items-center gap-1"

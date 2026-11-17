@@ -35,6 +35,7 @@ import { useNavigate } from 'react-router';
 
 import SearchableSelect, { type SearchableSelectOption } from '../components/ui/SearchableSelect';
 import { getDoctorDefaultAvatar, resolveImageUrl } from '../utils/doctorAvatar';
+import { DoctorQualificationView } from '../components/DoctorQualificationBadge';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
 import type { Doctor } from '../components/DoctorModal';
@@ -171,8 +172,8 @@ export default function DoctorProfilePage() {
       const list = Array.isArray(data)
         ? data
         : Array.isArray(data?.data)
-        ? data.data
-        : [];
+          ? data.data
+          : [];
       setSlots(list);
     } catch (err) {
       console.warn('Could not load doctor slots:', err);
@@ -188,8 +189,8 @@ export default function DoctorProfilePage() {
       const list = Array.isArray(res.data)
         ? res.data
         : Array.isArray(res.data?.data)
-        ? res.data.data
-        : [];
+          ? res.data.data
+          : [];
       setBranches(list);
     } catch (err) {
       console.warn('Could not load branches:', err);
@@ -204,8 +205,8 @@ export default function DoctorProfilePage() {
       const appointmentsList: any[] = Array.isArray(raw)
         ? raw
         : Array.isArray(raw?.data)
-        ? raw.data
-        : [];
+          ? raw.data
+          : [];
 
       const todayStr = new Date().toISOString().split('T')[0];
       const patientIdSet = new Set<string>();
@@ -705,11 +706,9 @@ export default function DoctorProfilePage() {
                     </span>
                   </div>
 
-                  <div className="doctor-card-cred-row">
-                    <span className="doctor-card-cred-label">Qualification</span>
-                    <span className="doctor-card-cred-val" style={{ fontWeight: 650 }}>
-                      {doctor.qualification || 'MBBS'}
-                    </span>
+                  <div className="doctor-card-cred-row" style={{ alignItems: 'flex-start' }}>
+                    <span className="doctor-card-cred-label" style={{ paddingTop: 3 }}>Qualification</span>
+                    <DoctorQualificationView qualification={doctor.qualification} maxVisible={3} />
                   </div>
 
                   <div className="doctor-card-cred-row">
@@ -1471,27 +1470,38 @@ export default function DoctorProfilePage() {
         }
         .doctor-card-photo-hero {
           width: 100%;
-          height: 175px;
-          min-height: 155px;
+          height: 230px;
+          min-height: 210px;
           position: relative;
-          background: radial-gradient(circle at 50% 40%, #ffffff 0%, #f8fafc 100%);
+          background: #ffffff;
           overflow: hidden;
-          border-bottom: 1px solid #f1f5f9;
+          border-bottom: none;
           display: flex;
+          flex-direction: column;
           align-items: center;
-          justify-content: center;
+          justify-content: flex-end;
+          padding: 14px 16px 36px;
         }
         .doctor-card-photo {
-          width: 100%;
+          max-width: 100%;
+          width: auto;
           height: 100%;
-          object-fit: cover;
-          object-position: top center;
+          max-height: 180px;
+          object-fit: contain;
+          object-position: bottom center;
           display: block;
+          margin: 0 auto;
+          filter: drop-shadow(0 4px 10px rgba(15, 23, 42, 0.08));
         }
         .doctor-card-photo.doctor-card-photo-default {
+          max-width: 100%;
+          width: auto;
+          height: 100%;
+          max-height: 180px;
           object-fit: contain;
-          max-height: 140px;
-          padding: 8px 14px 26px;
+          object-position: bottom center;
+          padding: 0;
+          margin: 0 auto;
         }
         .doctor-photo-actions-overlay {
           position: absolute;
@@ -1777,6 +1787,66 @@ export default function DoctorProfilePage() {
           color: #0f172a;
           text-align: right;
           word-break: break-word;
+        }
+        .doctor-qual-tags-container,
+        .doctor-qual-val-container {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+          justify-content: flex-end;
+          max-width: 220px;
+          background: transparent;
+          border: none;
+        }
+        .doctor-qual-pill,
+        .doctor-qual-text {
+          font-size: 12px;
+          font-weight: 600;
+          color: #1d4ed8;
+          background: transparent;
+          border: none;
+          line-height: 1.35;
+          word-break: break-word;
+        }
+        .doctor-qual-more-btn {
+          display: inline-flex;
+          align-items: center;
+          padding: 0;
+          border-radius: 0;
+          font-size: 11.5px;
+          font-weight: 600;
+          color: #2563eb;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          white-space: nowrap;
+          line-height: 1.35;
+          text-decoration: underline;
+          text-underline-offset: 2px;
+          transition: color 0.15s ease;
+        }
+        .doctor-qual-more-btn:hover {
+          color: #1d4ed8;
+          background: transparent;
+        }
+        .doctor-qual-less-btn {
+          display: inline-flex;
+          align-items: center;
+          padding: 0;
+          border-radius: 0;
+          font-size: 11px;
+          font-weight: 500;
+          color: #64748b;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          line-height: 1.35;
+          text-decoration: underline;
+          text-underline-offset: 2px;
+        }
+        .doctor-qual-less-btn:hover {
+          color: #334155;
+          background: transparent;
         }
         .doctor-card-reg-pill {
           font-size: 11px;

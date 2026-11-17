@@ -27,6 +27,7 @@ import { getErrorMessage } from '../utils/errors';
 import { type Doctor } from './DoctorModal';
 import { Drawer } from './ui/Drawer';
 import { getDoctorDefaultAvatar, resolveImageUrl } from '../utils/doctorAvatar';
+import { DoctorQualificationView } from './DoctorQualificationBadge';
 
 interface Slot {
   id: string;
@@ -359,11 +360,9 @@ export default function DoctorDrawer({
                       </span>
                     </div>
 
-                    <div className="doctor-card-cred-row">
-                      <span className="doctor-card-cred-label">Qualification</span>
-                      <span className="doctor-card-cred-val" style={{ fontWeight: 650 }}>
-                        {doctor.qualification || 'MBBS'}
-                      </span>
+                    <div className="doctor-card-cred-row" style={{ alignItems: 'flex-start' }}>
+                      <span className="doctor-card-cred-label" style={{ paddingTop: 3 }}>Qualification</span>
+                      <DoctorQualificationView qualification={doctor.qualification} maxVisible={3} />
                     </div>
 
                     <div className="doctor-card-cred-row">
@@ -909,27 +908,38 @@ export default function DoctorDrawer({
         }
         .doctor-card-photo-hero {
           width: 100%;
-          height: 165px;
-          min-height: 145px;
+          height: 230px;
+          min-height: 210px;
           position: relative;
           background: #ffffff;
           overflow: hidden;
-          border-bottom: 1px solid #f1f5f9;
+          border-bottom: none;
           display: flex;
+          flex-direction: column;
           align-items: center;
-          justify-content: center;
+          justify-content: flex-end;
+          padding: 14px 16px 36px;
         }
         .doctor-card-photo {
-          width: 100%;
+          max-width: 100%;
+          width: auto;
           height: 100%;
-          object-fit: cover;
-          object-position: top center;
+          max-height: 180px;
+          object-fit: contain;
+          object-position: bottom center;
           display: block;
+          margin: 0 auto;
+          filter: drop-shadow(0 4px 10px rgba(15, 23, 42, 0.08));
         }
         .doctor-card-photo.doctor-card-photo-default {
+          max-width: 100%;
+          width: auto;
+          height: 100%;
+          max-height: 180px;
           object-fit: contain;
-          max-height: 130px;
-          padding: 6px 12px 24px;
+          object-position: bottom center;
+          padding: 0;
+          margin: 0 auto;
         }
         .doctor-card-photo-badge {
           position: absolute;
@@ -1033,6 +1043,66 @@ export default function DoctorDrawer({
           color: #0f172a;
           text-align: right;
           word-break: break-word;
+        }
+        .doctor-qual-tags-container,
+        .doctor-qual-val-container {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+          justify-content: flex-end;
+          max-width: 220px;
+          background: transparent;
+          border: none;
+        }
+        .doctor-qual-pill,
+        .doctor-qual-text {
+          font-size: 12px;
+          font-weight: 600;
+          color: #1d4ed8;
+          background: transparent;
+          border: none;
+          line-height: 1.35;
+          word-break: break-word;
+        }
+        .doctor-qual-more-btn {
+          display: inline-flex;
+          align-items: center;
+          padding: 0;
+          border-radius: 0;
+          font-size: 11.5px;
+          font-weight: 600;
+          color: #2563eb;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          white-space: nowrap;
+          line-height: 1.35;
+          text-decoration: underline;
+          text-underline-offset: 2px;
+          transition: color 0.15s ease;
+        }
+        .doctor-qual-more-btn:hover {
+          color: #1d4ed8;
+          background: transparent;
+        }
+        .doctor-qual-less-btn {
+          display: inline-flex;
+          align-items: center;
+          padding: 0;
+          border-radius: 0;
+          font-size: 11px;
+          font-weight: 500;
+          color: #64748b;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          line-height: 1.35;
+          text-decoration: underline;
+          text-underline-offset: 2px;
+        }
+        .doctor-qual-less-btn:hover {
+          color: #334155;
+          background: transparent;
         }
         .doctor-card-reg-pill {
           font-size: 11px;
