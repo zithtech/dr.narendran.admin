@@ -2719,9 +2719,9 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 14px;
-  height: 52px;
-  min-height: 52px;
+  padding: 4px 12px;
+  height: 56px;
+  min-height: 56px;
   box-sizing: border-box;
   cursor: pointer;
   user-select: none;

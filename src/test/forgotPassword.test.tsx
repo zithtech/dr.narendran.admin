@@ -23,10 +23,10 @@ describe('Login & Forgot Password Feature', () => {
   it('renders Login page with username, password, sign in button, and Forgot password option', () => {
     renderWithProviders(<Login />);
 
-    expect(screen.getByText('Welcome back')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('you@hospital.com')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Enter your password')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Sign in/i })).toBeInTheDocument();
+    expect(screen.getByText('Hospital Management System')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/name@example\.com|you@hospital\.com/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/atleast 8 characters|Enter your password/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Log in$/i })).toBeInTheDocument();
 
     // Check Forgot password option is clearly present on Login page
     const forgotBtn = screen.getByRole('button', { name: /Forgot password\?/i });
@@ -36,7 +36,7 @@ describe('Login & Forgot Password Feature', () => {
   it('clicking Forgot password switches to the Reset Password view with reset fields and Back to Sign in', async () => {
     renderWithProviders(<Login />);
 
-    const usernameInput = screen.getByPlaceholderText('you@hospital.com');
+    const usernameInput = screen.getByPlaceholderText(/name@example\.com|you@hospital\.com/i);
     fireEvent.change(usernameInput, { target: { value: 'admin' } });
 
     const forgotBtn = screen.getByRole('button', { name: /Forgot password\?/i });
@@ -102,8 +102,8 @@ describe('Login & Forgot Password Feature', () => {
 
     // Clicking "Sign in with New Password" navigates back to Login
     fireEvent.click(screen.getByRole('button', { name: /Sign in with New Password/i }));
-    expect(screen.getByRole('heading', { name: /Welcome back/i })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('you@hospital.com')).toHaveValue('dr_narendran');
+    expect(screen.getByRole('heading', { name: /^Log in\.$/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/name@example\.com|you@hospital\.com/i)).toHaveValue('dr_narendran');
   });
 
   it('supports requesting reset assistance via forgot-password API', async () => {
@@ -135,7 +135,7 @@ describe('Login & Forgot Password Feature', () => {
     const backBtn = screen.getByRole('button', { name: /Back to Sign in/i });
     fireEvent.click(backBtn);
 
-    expect(screen.getByRole('heading', { name: /Welcome back/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Log in\.$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Forgot password\?/i })).toBeInTheDocument();
   });
 });

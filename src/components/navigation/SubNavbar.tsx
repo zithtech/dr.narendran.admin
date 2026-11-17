@@ -2,6 +2,7 @@ import { HeartPulse, LogOut } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 
+import brandLogoImg from '../../assets/brand-logo.png';
 import { cx } from '../ui/primitives';
 import { getMediaProxyUrl } from '../../utils/mediaProxy';
 import type { NavCategory, NavModule } from './navigationConfig';
@@ -28,12 +29,7 @@ export function SubNavbar({
   brandLastName,
   brandLogoUrl,
 }: SubNavbarProps) {
-  let navigate: ReturnType<typeof useNavigate> | null = null;
-  try {
-    navigate = useNavigate();
-  } catch {
-    navigate = null;
-  }
+  const navigate = useNavigate();
 
   const [logoError, setLogoError] = useState<boolean>(false);
 
@@ -58,6 +54,11 @@ export function SubNavbar({
 
   const proxiedLogo = useMemo(() => getMediaProxyUrl(logoUrl), [logoUrl]);
 
+  const activeDisplayLogo =
+    proxiedLogo && !logoError && !proxiedLogo.includes('logo-1794840935856-hms.jpg')
+      ? proxiedLogo
+      : brandLogoImg;
+
   const handleBrandClick = () => {
     if (navigate) {
       void navigate('/');
@@ -79,24 +80,18 @@ export function SubNavbar({
         }}
         title={`${firstName} - ${lastName}`}
       >
-        <div
-          className={cx(
-            'ui-sidebar-brand-icon',
-            proxiedLogo && !logoError && 'has-custom-logo',
-          )}
-          style={proxiedLogo && !logoError ? { background: '#ffffff' } : undefined}
-        >
-          {proxiedLogo && !logoError ? (
-            <img
-              src={proxiedLogo}
-              alt="Hospital Logo"
-              className="w-full h-full object-contain rounded-md"
-              onError={() => setLogoError(true)}
-            />
-          ) : (
+        {activeDisplayLogo ? (
+          <img
+            src={activeDisplayLogo}
+            alt="Hospital Logo"
+            className="w-12 h-12 object-contain shrink-0"
+            onError={() => setLogoError(true)}
+          />
+        ) : (
+          <div className="ui-sidebar-brand-icon">
             <HeartPulse size={20} strokeWidth={2.4} />
-          )}
-        </div>
+          </div>
+        )}
         <div className="ui-sidebar-brand-text">
           <span className="ui-sidebar-brand-name" title={firstName}>
             {firstName}

@@ -1,7 +1,7 @@
 import { CalendarClock, CalendarX2, Pencil, Plus, X } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { usePermission } from '../context/PermissionContext';
+import { isDoctorRole, usePermission } from '../context/PermissionContext';
 import { titleCase } from '../lib/format';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
@@ -43,9 +43,10 @@ export default function DoctorAvailabilityModal({
   onClose,
   doctor,
 }: DoctorAvailabilityModalProps) {
-  const { canCreate, canUpdate, canDelete } = usePermission();
-  const isCreatable = canCreate('AVAILABILITY');
-  const isUpdatable = canUpdate('AVAILABILITY');
+  const { canCreate, canUpdate, canDelete, roleName, hasRole } = usePermission();
+  const isDoctorUser = isDoctorRole(roleName) || hasRole('DOCTOR', 'Doctor');
+  const isCreatable = canCreate('AVAILABILITY') || isDoctorUser;
+  const isUpdatable = canUpdate('AVAILABILITY') || isDoctorUser;
   const isDeletable = canDelete('AVAILABILITY');
 
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);

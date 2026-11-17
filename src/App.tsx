@@ -415,42 +415,6 @@ function App() {
             }
           />
         </Route>
-
-        {/* Legacy /portal fallback */}
-        <Route
-          path="/portal"
-          element={
-            <ClientProtectedRoute>
-              <ClientPortalLayout />
-            </ClientProtectedRoute>
-          }
-        >
-          <Route index element={<ClientDashboard />} />
-          <Route
-            path="labs"
-            element={
-              <ClientPermissionGate slug="LABS">
-                <Labs />
-              </ClientPermissionGate>
-            }
-          />
-          <Route
-            path="lab-services"
-            element={
-              <ClientPermissionGate slug="LAB_SERVICES">
-                <LabServices />
-              </ClientPermissionGate>
-            }
-          />
-          <Route
-            path="linked-medicals"
-            element={
-              <ClientPermissionGate slug="LABS">
-                <LinkedMedicals />
-              </ClientPermissionGate>
-            }
-          />
-        </Route>
       </Routes>
     </BrowserRouter>
   );

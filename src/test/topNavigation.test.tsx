@@ -195,11 +195,13 @@ describe('Top Navigation Restructuring', () => {
     const onSelectModule = vi.fn();
 
     render(
-      <SubNavbar
-        activeCategory={clinicalCat}
-        activeModule={appointmentsMod}
-        onSelectModule={onSelectModule}
-      />,
+      <MemoryRouter>
+        <SubNavbar
+          activeCategory={clinicalCat}
+          activeModule={appointmentsMod}
+          onSelectModule={onSelectModule}
+        />
+      </MemoryRouter>,
     );
 
     // Category header in sidebar

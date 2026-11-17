@@ -9,7 +9,7 @@ import { type Doctor } from './DoctorModal';
 import { DetailList, Drawer } from './ui/Drawer';
 import { Section } from './ui/Modal';
 import { Avatar, Badge, cx, StatusDot } from './ui/primitives';
-import { usePermission } from '../context/PermissionContext';
+import { isDoctorRole, usePermission } from '../context/PermissionContext';
 
 interface Slot {
   id: string;
@@ -46,10 +46,11 @@ export default function DoctorDrawer({
   scheduleVersion,
 }: DoctorDrawerProps) {
   const navigate = useNavigate();
-  const { canView, canUpdate } = usePermission();
+  const { canView, canUpdate, roleName, hasRole } = usePermission();
+  const isDoctorUser = isDoctorRole(roleName) || hasRole('DOCTOR', 'Doctor');
   const isDoctorEditable = canUpdate('DOCTORS');
-  const isScheduleViewable = canView('AVAILABILITY');
-  const isScheduleEditable = canUpdate('AVAILABILITY');
+  const isScheduleViewable = canView('AVAILABILITY') || isDoctorUser;
+  const isScheduleEditable = canUpdate('AVAILABILITY') || isDoctorUser;
   // Keyed by doctor + version so a stale response never shows under another doctor.
   const [schedule, setSchedule] = useState<{ key: string; slots: Slot[]; error: string } | null>(
     null,

@@ -1,6 +1,7 @@
-import { HeartPulse, LogOut, X } from 'lucide-react';
+import { LogOut, X } from 'lucide-react';
 import React from 'react';
 
+import brandLogoImg from '../../assets/brand-logo.png';
 import { cx } from '../ui/primitives';
 import { getMediaProxyUrl } from '../../utils/mediaProxy';
 import type { NavCategory, NavModule } from './navigationConfig';
@@ -91,24 +92,20 @@ export function MobileNavDrawer({
         {/* Drawer Header */}
         <div className="ui-mobile-drawer-header">
           <div className="ui-sidebar-brand" style={{ padding: 0, height: 'auto', minHeight: 'unset' }}>
-            <div
-              className={cx(
-                'ui-sidebar-brand-icon',
-                proxiedLogo && !logoError && 'has-custom-logo',
-              )}
-              style={proxiedLogo && !logoError ? { background: '#ffffff' } : undefined}
-            >
-              {proxiedLogo && !logoError ? (
-                <img
-                  src={proxiedLogo}
-                  alt="Hospital Logo"
-                  className="w-full h-full object-contain rounded-md"
-                  onError={() => setLogoError(true)}
-                />
-              ) : (
-                <HeartPulse size={18} strokeWidth={2.4} />
-              )}
-            </div>
+            {proxiedLogo && !logoError && !proxiedLogo.includes('logo-1794840935856-hms.jpg') ? (
+              <img
+                src={proxiedLogo}
+                alt="Hospital Logo"
+                className="w-12 h-12 object-contain shrink-0"
+                onError={() => setLogoError(true)}
+              />
+            ) : (
+              <img
+                src={brandLogoImg}
+                alt="Hospital Logo"
+                className="w-12 h-12 object-contain shrink-0"
+              />
+            )}
             <div className="ui-sidebar-brand-text">
               <span className="ui-sidebar-brand-name" title={firstName}>
                 {firstName}

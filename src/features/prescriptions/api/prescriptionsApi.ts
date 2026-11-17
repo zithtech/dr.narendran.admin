@@ -66,6 +66,23 @@ export interface Prescription {
   follow_up_days?: number | null | undefined;
   follow_up_date?: string | null | undefined;
   follow_up_status?: string | null | undefined;
+  patient_blood_pressure?: string | null | undefined;
+  patient_blood_sugar?: string | null | undefined;
+  patient_body_temperature?: string | null | undefined;
+  patient_height_cm?: number | null | undefined;
+  patient_weight_kg?: number | null | undefined;
+  patient_blood_group?: string | null | undefined;
+  patient_custom_vitals?: any;
+  vitals?: {
+    blood_pressure?: string | null | undefined;
+    blood_sugar?: string | null | undefined;
+    body_temperature?: string | null | undefined;
+    height_cm?: number | null | undefined;
+    weight_kg?: number | null | undefined;
+    blood_group?: string | null | undefined;
+    bmi?: string | null | undefined;
+    custom_vitals?: any;
+  } | undefined;
 }
 
 export interface CreatePrescriptionPayload {
@@ -79,6 +96,15 @@ export interface CreatePrescriptionPayload {
   imageUrl?: string | undefined;
   followUpDays?: number | string | undefined;
   followUpDate?: string | undefined;
+  vitals?: {
+    blood_pressure?: string | null | undefined;
+    blood_sugar?: string | null | undefined;
+    body_temperature?: string | null | undefined;
+    height_cm?: number | string | null | undefined;
+    weight_kg?: number | string | null | undefined;
+    blood_group?: string | null | undefined;
+    custom_vitals?: any;
+  } | undefined;
   medicines?: {
     medicineId?: string | undefined;
     name: string;
