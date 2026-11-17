@@ -5,7 +5,10 @@ import {
   Calendar,
   ChevronDown,
   Clock,
+  Droplet,
+  Eye,
   FlaskConical,
+  HeartPulse,
   MapPin,
   Package,
   Phone,
@@ -14,6 +17,7 @@ import {
   RefreshCw,
   ShieldCheck,
   Stethoscope,
+  Thermometer,
   Trash2,
   User,
 } from 'lucide-react';
@@ -31,6 +35,8 @@ import {
   type Prescription,
   prescriptionsApi,
 } from '../api/prescriptionsApi';
+import type { LetterPadDataContext } from '../types/template';
+import { PrescriptionPreviewModal } from './PrescriptionPreviewModal';
 
 interface PatientOption {
   id: string;
@@ -38,6 +44,13 @@ interface PatientOption {
   phone?: string | undefined;
   gender?: string | undefined;
   date_of_birth?: string | undefined;
+  blood_group?: string | null | undefined;
+  height_cm?: number | null | undefined;
+  weight_kg?: number | null | undefined;
+  blood_pressure?: string | null | undefined;
+  blood_sugar?: string | null | undefined;
+  body_temperature?: string | null | undefined;
+  custom_vitals?: any;
 }
 
 interface DoctorOption {
@@ -218,6 +231,57 @@ export default function CreatePrescriptionModal({
   const [followUpDays, setFollowUpDays] = useState<number | undefined>(undefined);
   const [markCompleted, setMarkCompleted] = useState(true);
 
+  // Physical Vitals & Metrics state
+  const [patientVitals, setPatientVitals] = useState<{
+    bloodPressure: string;
+    bloodSugar: string;
+    bodyTemperature: string;
+    heightCm: string;
+    weightKg: string;
+    bloodGroup: string;
+    customVitals: Array<{ id: string; label: string; value: string }>;
+  }>({
+    bloodPressure: '',
+    bloodSugar: '',
+    bodyTemperature: '',
+    heightCm: '',
+    weightKg: '',
+    bloodGroup: '',
+    customVitals: [],
+  });
+  const [vitalsLoading, setVitalsLoading] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  const handleAddCustomVital = () => {
+    setPatientVitals((prev) => ({
+      ...prev,
+      customVitals: [
+        ...prev.customVitals,
+        {
+          id: `vital_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          label: '',
+          value: '',
+        },
+      ],
+    }));
+  };
+
+  const handleUpdateCustomVital = (id: string, field: 'label' | 'value', text: string) => {
+    setPatientVitals((prev) => ({
+      ...prev,
+      customVitals: prev.customVitals.map((item) =>
+        item.id === id ? { ...item, [field]: text } : item
+      ),
+    }));
+  };
+
+  const handleRemoveCustomVital = (id: string) => {
+    setPatientVitals((prev) => ({
+      ...prev,
+      customVitals: prev.customVitals.filter((item) => item.id !== id),
+    }));
+  };
+
   // Pharmacy catalog options for autocomplete
   const [medicineOptions, setMedicineOptions] = useState<
     { key: string; value: string; label: React.ReactNode; raw: any; searchKey: string }[]
@@ -269,6 +333,13 @@ export default function CreatePrescriptionModal({
         phone: p.phone ?? undefined,
         gender: p.gender ?? undefined,
         date_of_birth: p.date_of_birth ?? undefined,
+        blood_group: p.blood_group ?? undefined,
+        height_cm: p.height_cm ?? undefined,
+        weight_kg: p.weight_kg ?? undefined,
+        blood_pressure: p.blood_pressure ?? undefined,
+        blood_sugar: p.blood_sugar ?? undefined,
+        body_temperature: p.body_temperature ?? undefined,
+        custom_vitals: p.custom_vitals ?? undefined,
       }));
       setPatients(patientsList);
       return patientsList;
@@ -376,6 +447,162 @@ export default function CreatePrescriptionModal({
       });
     }
   }, [preselectedPatient, editingPrescription]);
+
+  // Automatically fetch and populate Physical Vitals & Metrics when a patient is selected
+  useEffect(() => {
+    if (!selectedPatientId) {
+      setPatientVitals({
+        bloodPressure: '',
+        bloodSugar: '',
+        bodyTemperature: '',
+        heightCm: '',
+        weightKg: '',
+        bloodGroup: '',
+        customVitals: [],
+      });
+      return;
+    }
+
+    let active = true;
+    setVitalsLoading(true);
+
+    // Immediate sync from local state / preselected patient if available
+    const initialMatch =
+      patients.find((p) => p.id === selectedPatientId) ||
+      (selectedPatient?.id === selectedPatientId ? selectedPatient : null);
+
+    if (initialMatch) {
+      const rawCustom = initialMatch.custom_vitals;
+      let initCustom: Array<{ id: string; label: string; value: string }> = [];
+      if (Array.isArray(rawCustom)) {
+        initCustom = rawCustom.map((item, idx) => ({
+          id: item.id || `vital_${idx}_${Date.now()}`,
+          label: item.label || '',
+          value: item.value || '',
+        }));
+      }
+      setPatientVitals({
+        bloodPressure: initialMatch.blood_pressure || '',
+        bloodSugar: initialMatch.blood_sugar || '',
+        bodyTemperature: initialMatch.body_temperature || '',
+        heightCm: initialMatch.height_cm ? String(initialMatch.height_cm) : '',
+        weightKg: initialMatch.weight_kg ? String(initialMatch.weight_kg) : '',
+        bloodGroup: initialMatch.blood_group || '',
+        customVitals: initCustom,
+      });
+    }
+
+    // Always fetch fresh full patient profile to get up-to-date vitals & custom metrics
+    api
+      .get<any>(`patients/${selectedPatientId}`)
+      .then((res) => {
+        if (!active) return;
+        const p = res?.data?.data || res?.data;
+        if (p) {
+          const rawCustom = p.custom_vitals;
+          let loadedCustom: Array<{ id: string; label: string; value: string }> = [];
+          if (Array.isArray(rawCustom)) {
+            loadedCustom = rawCustom.map((item, idx) => ({
+              id: item.id || `vital_${idx}_${Date.now()}`,
+              label: item.label || '',
+              value: item.value || '',
+            }));
+          } else if (rawCustom && typeof rawCustom === 'object') {
+            loadedCustom = Object.entries(rawCustom).map(([key, val], idx) => ({
+              id: `vital_${idx}_${Date.now()}`,
+              label: key.replace(/_/g, ' '),
+              value: String(val || ''),
+            }));
+          }
+
+          setPatientVitals({
+            bloodPressure: p.blood_pressure || '',
+            bloodSugar: p.blood_sugar || '',
+            bodyTemperature: p.body_temperature || '',
+            heightCm: p.height_cm ? String(p.height_cm) : '',
+            weightKg: p.weight_kg ? String(p.weight_kg) : '',
+            bloodGroup: p.blood_group || '',
+            customVitals: loadedCustom,
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not fetch patient vitals:', err);
+      })
+      .finally(() => {
+        if (active) setVitalsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedPatientId, patients, selectedPatient]);
+
+  const previewDataContext = useMemo<LetterPadDataContext>(() => {
+    const doc = doctors.find((d) => d.id === selectedDoctorId);
+    const h = parseFloat(patientVitals.heightCm);
+    const w = parseFloat(patientVitals.weightKg);
+    const bmi = h > 0 && w > 0 ? (w / ((h / 100) * (h / 100))).toFixed(1) : undefined;
+
+    return {
+      doctor: {
+        name: doc?.name || 'Dr. S. Narendran',
+        specialization: doc?.specialization || 'Consultant Oncologist.',
+      },
+      patient: {
+        id: selectedPatient?.id || selectedPatientId,
+        name: selectedPatient?.name || 'Patient',
+        patient_id: selectedPatient?.id ? String(selectedPatient.id).slice(0, 8).toUpperCase() : 'HMS-2026-0456',
+        phone: selectedPatient?.phone || '',
+        gender: selectedPatient?.gender || '',
+        date_of_birth: selectedPatient?.date_of_birth || '',
+        blood_pressure: patientVitals.bloodPressure || null,
+        blood_sugar: patientVitals.bloodSugar || null,
+        body_temperature: patientVitals.bodyTemperature || null,
+        height_cm: patientVitals.heightCm ? parseFloat(patientVitals.heightCm) : null,
+        weight_kg: patientVitals.weightKg ? parseFloat(patientVitals.weightKg) : null,
+        blood_group: patientVitals.bloodGroup || null,
+        bmi: bmi || null,
+        custom_vitals: patientVitals.customVitals.filter((v) => v.label.trim() && v.value.trim()),
+      },
+      prescription: {
+        prescription_date: new Date().toISOString(),
+        appointment_id: appointmentId ? String(appointmentId).slice(0, 8).toUpperCase() : undefined,
+        diagnosis: diagnosis.trim() || 'General Consultation',
+        additional_notes: generalInstructions.trim() || '',
+        follow_up_date: followUpDate || '',
+        medicines: medicines
+          .filter((m) => m.name.trim())
+          .map((m) => ({
+            name: m.name.trim(),
+            dosage: m.dosage.trim(),
+            strength: m.strength.trim(),
+            frequency: m.frequency.trim(),
+            duration: m.duration.trim(),
+            mealTiming: m.mealTiming,
+            instructions: m.instructions.trim(),
+          })),
+        lab_tests: labTests
+          .filter((l) => l.testName.trim())
+          .map((l) => ({
+            testName: l.testName.trim(),
+            instructions: l.instructions.trim(),
+          })),
+      },
+    };
+  }, [
+    doctors,
+    selectedDoctorId,
+    selectedPatient,
+    selectedPatientId,
+    patientVitals,
+    appointmentId,
+    diagnosis,
+    generalInstructions,
+    followUpDate,
+    medicines,
+    labTests,
+  ]);
 
   // Populate fields if in edit mode
   useEffect(() => {
@@ -956,6 +1183,18 @@ export default function CreatePrescriptionModal({
 
     setLoading(true);
     try {
+      const vitalsPayload = {
+        blood_pressure: patientVitals.bloodPressure.trim() || undefined,
+        blood_sugar: patientVitals.bloodSugar.trim() || undefined,
+        body_temperature: patientVitals.bodyTemperature.trim() || undefined,
+        height_cm: patientVitals.heightCm ? parseFloat(patientVitals.heightCm) : undefined,
+        weight_kg: patientVitals.weightKg ? parseFloat(patientVitals.weightKg) : undefined,
+        blood_group: patientVitals.bloodGroup.trim() || undefined,
+        custom_vitals: patientVitals.customVitals.filter(
+          (v) => v.label.trim() && v.value.trim()
+        ),
+      };
+
       if (editingPrescription) {
         const payload = {
           diagnosis: diagnosis.trim() || 'General Consultation',
@@ -964,6 +1203,7 @@ export default function CreatePrescriptionModal({
           followUpDate: followUpDate || undefined,
           medicines: validMedicines,
           labTests: validLabs,
+          vitals: vitalsPayload,
         };
         const updated = await prescriptionsApi.update(editingPrescription.id, payload);
         message.success('Prescription updated successfully!');
@@ -982,6 +1222,7 @@ export default function CreatePrescriptionModal({
           followUpDate: followUpDate || undefined,
           medicines: validMedicines,
           labTests: validLabs,
+          vitals: vitalsPayload,
         };
         const created = await prescriptionsApi.create(payload);
         message.success('Prescription created and saved successfully!');
@@ -1064,6 +1305,25 @@ export default function CreatePrescriptionModal({
             investigation(s)
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              type="button"
+              className="ui-btn ui-btn-neutral"
+              onClick={() => setIsPreviewOpen(true)}
+              disabled={!selectedPatientId || loading}
+              style={{
+                height: 38,
+                padding: '0 16px',
+                fontSize: 13,
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+              title="Preview prescription letterhead with patient vitals"
+            >
+              <Eye size={15} />
+              <span>Preview</span>
+            </button>
             <button
               type="button"
               className="ui-btn ui-btn-neutral"
@@ -1443,6 +1703,281 @@ export default function CreatePrescriptionModal({
             </div>
           )}
         </div>
+
+        {/* Section 1.5: Physical Vitals & Metrics (Auto-fetched upon Patient Selection) */}
+        {selectedPatientId && (
+          <div
+            className="rx-section-card"
+            style={{
+              border: '1px solid #e0e7ff',
+              background: '#fcfdff',
+              borderRadius: 12,
+              padding: '16px 18px',
+              marginBottom: 16,
+            }}
+          >
+            <div
+              className="rx-section-header"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 14,
+              }}
+            >
+              <div className="rx-section-title-wrap" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div
+                  className="rx-section-badge"
+                  style={{
+                    background: '#ede9fe',
+                    color: '#6d28d9',
+                    border: '1px solid #ddd6fe',
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    display: 'grid',
+                    placeItems: 'center',
+                  }}
+                >
+                  <HeartPulse size={16} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
+                      Physical Vitals &amp; Metrics
+                    </div>
+                    {vitalsLoading ? (
+                      <span style={{ fontSize: 11, color: '#6366f1', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <RefreshCw size={11} className="animate-spin" /> Fetching vitals...
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: 10.5,
+                          fontWeight: 600,
+                          background: '#ecfdf5',
+                          border: '1px solid #a7f3d0',
+                          color: '#047857',
+                          padding: '1px 8px',
+                          borderRadius: 6,
+                        }}
+                      >
+                        Auto-fetched from Patient Record
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>
+                    Metrics are automatically embedded into the prescription preview and downloaded PDF
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {patientVitals.heightCm && patientVitals.weightKg && (
+                  (() => {
+                    const h = parseFloat(patientVitals.heightCm);
+                    const w = parseFloat(patientVitals.weightKg);
+                    if (h > 0 && w > 0) {
+                      const bmi = (w / ((h / 100) * (h / 100))).toFixed(1);
+                      return (
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: '#4338ca',
+                            background: '#e0e7ff',
+                            padding: '3px 9px',
+                            borderRadius: 6,
+                          }}
+                        >
+                          BMI: {bmi}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleAddCustomVital}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    height: 30,
+                    padding: '0 10px',
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    borderRadius: 6,
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    color: '#0f172a',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <Plus size={13} />
+                  <span>Add Custom Vital</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Standard Vitals Inputs */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                gap: 12,
+              }}
+            >
+              {/* BP */}
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 650, color: '#334155', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                  <HeartPulse size={12} style={{ color: '#dc2626' }} /> Blood Pressure (BP)
+                </label>
+                <input
+                  type="text"
+                  className="ui-input"
+                  placeholder="e.g. 120/80 mmHg"
+                  value={patientVitals.bloodPressure}
+                  onChange={(e) => setPatientVitals((prev) => ({ ...prev, bloodPressure: e.target.value }))}
+                  style={{ height: 34, fontSize: 12.5 }}
+                />
+              </div>
+
+              {/* Blood Sugar */}
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 650, color: '#334155', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                  <Droplet size={12} style={{ color: '#d97706' }} /> Blood Sugar
+                </label>
+                <input
+                  type="text"
+                  className="ui-input"
+                  placeholder="e.g. 110 mg/dL"
+                  value={patientVitals.bloodSugar}
+                  onChange={(e) => setPatientVitals((prev) => ({ ...prev, bloodSugar: e.target.value }))}
+                  style={{ height: 34, fontSize: 12.5 }}
+                />
+              </div>
+
+              {/* Body Temperature */}
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 650, color: '#334155', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                  <Thermometer size={12} style={{ color: '#0284c7' }} /> Body Temp
+                </label>
+                <input
+                  type="text"
+                  className="ui-input"
+                  placeholder="e.g. 98.6 °F"
+                  value={patientVitals.bodyTemperature}
+                  onChange={(e) => setPatientVitals((prev) => ({ ...prev, bodyTemperature: e.target.value }))}
+                  style={{ height: 34, fontSize: 12.5 }}
+                />
+              </div>
+
+              {/* Blood Group */}
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 650, color: '#334155', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                  Blood Group
+                </label>
+                <input
+                  type="text"
+                  className="ui-input"
+                  placeholder="e.g. O+, A+, B+"
+                  value={patientVitals.bloodGroup}
+                  onChange={(e) => setPatientVitals((prev) => ({ ...prev, bloodGroup: e.target.value }))}
+                  style={{ height: 34, fontSize: 12.5 }}
+                />
+              </div>
+
+              {/* Height */}
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 650, color: '#334155', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                  Height (cm)
+                </label>
+                <input
+                  type="number"
+                  className="ui-input"
+                  placeholder="e.g. 172"
+                  value={patientVitals.heightCm}
+                  onChange={(e) => setPatientVitals((prev) => ({ ...prev, heightCm: e.target.value }))}
+                  style={{ height: 34, fontSize: 12.5 }}
+                />
+              </div>
+
+              {/* Weight */}
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 650, color: '#334155', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                  Weight (kg)
+                </label>
+                <input
+                  type="number"
+                  className="ui-input"
+                  placeholder="e.g. 68"
+                  value={patientVitals.weightKg}
+                  onChange={(e) => setPatientVitals((prev) => ({ ...prev, weightKg: e.target.value }))}
+                  style={{ height: 34, fontSize: 12.5 }}
+                />
+              </div>
+            </div>
+
+            {/* Custom Vitals items */}
+            {patientVitals.customVitals.length > 0 && (
+              <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #cbd5e1', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <span style={{ fontSize: 10.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                  Custom Metrics &amp; Indicators
+                </span>
+                {patientVitals.customVitals.map((item) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'minmax(140px, 1fr) minmax(140px, 1fr) auto',
+                      gap: 8,
+                      alignItems: 'center',
+                      background: '#ffffff',
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      border: '1px solid #e2e8f0',
+                    }}
+                  >
+                    <input
+                      type="text"
+                      className="ui-input"
+                      placeholder="Metric label (e.g. SpO2, Pulse)"
+                      value={item.label}
+                      onChange={(e) => handleUpdateCustomVital(item.id, 'label', e.target.value)}
+                      style={{ height: 30, fontSize: 12 }}
+                    />
+                    <input
+                      type="text"
+                      className="ui-input"
+                      placeholder="Value (e.g. 98%, 72 bpm)"
+                      value={item.value}
+                      onChange={(e) => handleUpdateCustomVital(item.id, 'value', e.target.value)}
+                      style={{ height: 30, fontSize: 12 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCustomVital(item.id)}
+                      title="Remove vital"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        padding: 4,
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Section 2: Diagnosis & Clinical Impression */}
         <div className="rx-section-card">
@@ -2509,6 +3044,12 @@ export default function CreatePrescriptionModal({
       onSave={handlePharmacyMedicineSaved}
       initialMedicineName={medicineModalInitialName}
       zIndex={1100}
+    />
+
+    <PrescriptionPreviewModal
+      isOpen={isPreviewOpen}
+      onClose={() => setIsPreviewOpen(false)}
+      customData={previewDataContext}
     />
     </>
   );

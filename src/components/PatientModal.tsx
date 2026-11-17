@@ -5,12 +5,17 @@ import {
   Calendar,
   CheckCircle2,
   Code2,
+  Droplet,
+  HeartPulse,
   Mail,
   MapPin,
   Pencil,
   Phone,
   PhoneCall,
+  Plus,
   ShieldCheck,
+  Thermometer,
+  Trash2,
   User,
   UserPlus,
 } from 'lucide-react';
@@ -25,6 +30,12 @@ import { Alert } from './ui/primitives';
 import { ImageUploadField } from './ui/ImageUploadField';
 import { SearchableSelect, type SearchableSelectOption } from './ui/SearchableSelect';
 import { type UserAccount } from './UserModal';
+
+export interface CustomVitalField {
+  id?: string;
+  label: string;
+  value: string;
+}
 
 export interface Patient {
   id: string;
@@ -48,6 +59,10 @@ export interface Patient {
   height_cm?: number | null;
   weight_kg?: number | null;
   blood_group?: string | null;
+  blood_pressure?: string | null;
+  blood_sugar?: string | null;
+  body_temperature?: string | null;
+  custom_vitals?: CustomVitalField[] | any | null;
   marital_status?: string | null;
   emergency_contacts?: any | null;
   profile_image_url?: string | null;
@@ -250,6 +265,33 @@ export function validatePatientImageUrl(val: string): string | undefined {
   return undefined;
 }
 
+export function validatePatientBloodPressure(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 50) {
+    return 'Blood pressure cannot exceed 50 characters.';
+  }
+  return undefined;
+}
+
+export function validatePatientBloodSugar(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 50) {
+    return 'Blood sugar cannot exceed 50 characters.';
+  }
+  return undefined;
+}
+
+export function validatePatientBodyTemperature(val: string): string | undefined {
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 50) {
+    return 'Body temperature cannot exceed 50 characters.';
+  }
+  return undefined;
+}
+
 function calculateBmi(heightStr: string, weightStr: string) {
   const h = parseFloat(heightStr);
   const w = parseFloat(weightStr);
@@ -308,6 +350,10 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
   const [heightCm, setHeightCm] = useState<string>('');
   const [weightKg, setWeightKg] = useState<string>('');
   const [bloodGroup, setBloodGroup] = useState('');
+  const [bloodPressure, setBloodPressure] = useState('');
+  const [bloodSugar, setBloodSugar] = useState('');
+  const [bodyTemperature, setBodyTemperature] = useState('');
+  const [customVitals, setCustomVitals] = useState<Array<{ id: string; label: string; value: string }>>([]);
   const [maritalStatus, setMaritalStatus] = useState('');
   const [emergencyContacts, setEmergencyContacts] = useState('');
   const [emergencyName, setEmergencyName] = useState('');
@@ -324,6 +370,27 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const handleAddCustomVital = () => {
+    setCustomVitals((prev) => [
+      ...prev,
+      {
+        id: `vital_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        label: '',
+        value: '',
+      },
+    ]);
+  };
+
+  const handleUpdateCustomVital = (id: string, field: 'label' | 'value', text: string) => {
+    setCustomVitals((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: text } : item)),
+    );
+  };
+
+  const handleRemoveCustomVital = (id: string) => {
+    setCustomVitals((prev) => prev.filter((item) => item.id !== id));
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -369,6 +436,35 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
       setHeightCm(patient.height_cm ? patient.height_cm.toString() : '');
       setWeightKg(patient.weight_kg ? patient.weight_kg.toString() : '');
       setBloodGroup(patient.blood_group || '');
+      setBloodPressure(patient.blood_pressure || '');
+      setBloodSugar(patient.blood_sugar || '');
+      setBodyTemperature(patient.body_temperature || '');
+
+      if (patient.custom_vitals) {
+        const raw = patient.custom_vitals;
+        if (Array.isArray(raw)) {
+          setCustomVitals(
+            raw.map((item, idx) => ({
+              id: item.id || `vital_${idx}_${Date.now()}`,
+              label: item.label || '',
+              value: item.value || '',
+            })),
+          );
+        } else if (typeof raw === 'object' && raw !== null) {
+          setCustomVitals(
+            Object.entries(raw).map(([key, val], idx) => ({
+              id: `vital_${idx}_${Date.now()}`,
+              label: key,
+              value: typeof val === 'string' ? val : JSON.stringify(val),
+            })),
+          );
+        } else {
+          setCustomVitals([]);
+        }
+      } else {
+        setCustomVitals([]);
+      }
+
       setMaritalStatus(patient.marital_status || '');
 
       // Parse emergency contact into primary fields or JSON string
@@ -415,6 +511,10 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
       setHeightCm('');
       setWeightKg('');
       setBloodGroup('');
+      setBloodPressure('');
+      setBloodSugar('');
+      setBodyTemperature('');
+      setCustomVitals([]);
       setMaritalStatus('');
       setEmergencyContacts('');
       setEmergencyName('');
@@ -506,6 +606,9 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
     const pinErr = validatePatientPincode(pincode);
     const heightErr = validatePatientHeight(heightCm);
     const weightErr = validatePatientWeight(weightKg);
+    const bpErr = validatePatientBloodPressure(bloodPressure);
+    const sugarErr = validatePatientBloodSugar(bloodSugar);
+    const tempErr = validatePatientBodyTemperature(bodyTemperature);
     const emNameErr = validatePatientEmergencyName(emergencyName);
     const emPhoneErr = validatePatientEmergencyPhone(emergencyPhone);
     const emRelErr = validatePatientEmergencyRelation(emergencyRelation);
@@ -523,6 +626,9 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
       pincode: pinErr,
       heightCm: heightErr,
       weightKg: weightErr,
+      bloodPressure: bpErr,
+      bloodSugar: sugarErr,
+      bodyTemperature: tempErr,
       emergencyName: emNameErr,
       emergencyPhone: emPhoneErr,
       emergencyRelation: emRelErr,
@@ -543,6 +649,9 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
       pinErr ||
       heightErr ||
       weightErr ||
+      bpErr ||
+      sugarErr ||
+      tempErr ||
       emNameErr ||
       emPhoneErr ||
       emRelErr ||
@@ -621,6 +730,15 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
           height_cm: heightCm ? parseFloat(heightCm) : null,
           weight_kg: weightKg ? parseFloat(weightKg) : null,
           blood_group: bloodGroup || null,
+          blood_pressure: bloodPressure.trim() || null,
+          blood_sugar: bloodSugar.trim() || null,
+          body_temperature: bodyTemperature.trim() || null,
+          custom_vitals: customVitals
+            .map((cv) => ({
+              label: cv.label.trim(),
+              value: cv.value.trim(),
+            }))
+            .filter((cv) => cv.label || cv.value),
           marital_status: maritalStatus || null,
           emergency_contacts: parsedContacts,
           profile_image_url: normalizeUrl(profileImageUrl),
@@ -1433,7 +1551,8 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
               <div className="patient-section-tag">Physical Vitals & Metrics</div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+              {/* Height */}
               <div>
                 <label
                   htmlFor="patient-height"
@@ -1473,6 +1592,7 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
                 )}
               </div>
 
+              {/* Weight */}
               <div>
                 <label
                   htmlFor="patient-weight"
@@ -1511,6 +1631,129 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
                   </div>
                 )}
               </div>
+
+              {/* Blood Pressure (BP) */}
+              <div>
+                <label
+                  htmlFor="patient-blood-pressure"
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#334155',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    marginBottom: 5,
+                  }}
+                >
+                  <HeartPulse size={13} style={{ color: '#ef4444' }} />
+                  <span>Blood Pressure (BP)</span>
+                </label>
+                <input
+                  id="patient-blood-pressure"
+                  className="ui-input"
+                  style={{
+                    borderColor: errors.bloodPressure ? '#ef4444' : undefined,
+                    boxShadow: errors.bloodPressure ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
+                  type="text"
+                  value={bloodPressure}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setBloodPressure(val);
+                    setErrors((prev) => ({ ...prev, bloodPressure: validatePatientBloodPressure(val) }));
+                  }}
+                  placeholder="e.g. 120/80 mmHg"
+                />
+                {errors.bloodPressure && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                    <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                    <span>{errors.bloodPressure}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Blood Sugar */}
+              <div>
+                <label
+                  htmlFor="patient-blood-sugar"
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#334155',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    marginBottom: 5,
+                  }}
+                >
+                  <Droplet size={13} style={{ color: '#f59e0b' }} />
+                  <span>Blood Sugar</span>
+                </label>
+                <input
+                  id="patient-blood-sugar"
+                  className="ui-input"
+                  style={{
+                    borderColor: errors.bloodSugar ? '#ef4444' : undefined,
+                    boxShadow: errors.bloodSugar ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
+                  type="text"
+                  value={bloodSugar}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setBloodSugar(val);
+                    setErrors((prev) => ({ ...prev, bloodSugar: validatePatientBloodSugar(val) }));
+                  }}
+                  placeholder="e.g. 95 mg/dL (Fasting)"
+                />
+                {errors.bloodSugar && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                    <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                    <span>{errors.bloodSugar}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Body Temperature */}
+              <div>
+                <label
+                  htmlFor="patient-body-temperature"
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#334155',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    marginBottom: 5,
+                  }}
+                >
+                  <Thermometer size={13} style={{ color: '#06b6d4' }} />
+                  <span>Body Temperature</span>
+                </label>
+                <input
+                  id="patient-body-temperature"
+                  className="ui-input"
+                  style={{
+                    borderColor: errors.bodyTemperature ? '#ef4444' : undefined,
+                    boxShadow: errors.bodyTemperature ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                  }}
+                  type="text"
+                  value={bodyTemperature}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setBodyTemperature(val);
+                    setErrors((prev) => ({ ...prev, bodyTemperature: validatePatientBodyTemperature(val) }));
+                  }}
+                  placeholder="e.g. 98.6 °F / 37 °C"
+                />
+                {errors.bodyTemperature && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                    <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                    <span>{errors.bodyTemperature}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {bmiInfo && (
@@ -1535,6 +1778,130 @@ export default function PatientModal({ isOpen, onClose, patient, onSave }: Patie
                 </span>
               </div>
             )}
+
+            {/* Dynamic Custom Fields Section */}
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px dashed #e2e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>
+                    Additional Custom Vitals & Metrics
+                  </div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                    Record custom health parameters (e.g. SpO2, Pulse, Respiratory Rate, Hemoglobin)
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAddCustomVital}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    height: 30,
+                    padding: '0 12px',
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    borderRadius: 7,
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
+                    color: '#0f172a',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = '#e2e8f0')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = '#f8fafc')}
+                >
+                  <Plus size={13} />
+                  <span>Add Custom Field</span>
+                </button>
+              </div>
+
+              {customVitals.length === 0 ? (
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    background: '#f8fafc',
+                    borderRadius: 8,
+                    border: '1px dashed #cbd5e1',
+                    textAlign: 'center',
+                    fontSize: 11.5,
+                    color: '#94a3b8',
+                  }}
+                >
+                  No custom vitals added yet. Click &ldquo;Add Custom Field&rdquo; to add any extra vital signs or clinical indicators.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {customVitals.map((item, idx) => (
+                    <div
+                      key={item.id}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'minmax(140px, 1fr) minmax(140px, 1fr) auto',
+                        gap: 8,
+                        alignItems: 'center',
+                        background: '#f8fafc',
+                        padding: '8px 10px',
+                        borderRadius: 8,
+                        border: '1px solid #e2e8f0',
+                      }}
+                    >
+                      <div>
+                        <input
+                          type="text"
+                          className="ui-input"
+                          style={{ height: 32, fontSize: 12 }}
+                          placeholder={`Metric name (e.g. SpO2, Pulse #${idx + 1})`}
+                          value={item.label}
+                          onChange={(e) => handleUpdateCustomVital(item.id, 'label', e.target.value)}
+                          list="common-vital-suggestions"
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          className="ui-input"
+                          style={{ height: 32, fontSize: 12 }}
+                          placeholder="Value (e.g. 98%, 72 bpm)"
+                          value={item.value}
+                          onChange={(e) => handleUpdateCustomVital(item.id, 'value', e.target.value)}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCustomVital(item.id)}
+                        title="Remove custom vital"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          padding: 5,
+                          borderRadius: 6,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  ))}
+
+                  <datalist id="common-vital-suggestions">
+                    <option value="Pulse Rate (bpm)" />
+                    <option value="Heart Rate (bpm)" />
+                    <option value="SpO2 / Oxygen Saturation (%)" />
+                    <option value="Respiratory Rate (breaths/min)" />
+                    <option value="Hemoglobin (g/dL)" />
+                    <option value="Total Cholesterol (mg/dL)" />
+                    <option value="Serum Creatinine (mg/dL)" />
+                    <option value="Waist Circumference (cm)" />
+                  </datalist>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Section 5: Emergency Contacts */}

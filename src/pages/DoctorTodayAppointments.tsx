@@ -34,7 +34,7 @@ import { SearchableSelect } from '../components/ui/SearchableSelect';
 import CreatePrescriptionModal from '../features/prescriptions/components/CreatePrescriptionModal';
 import ViewPrescriptionModal from '../features/prescriptions/components/ViewPrescriptionModal';
 import { type Prescription, prescriptionsApi } from '../features/prescriptions/api/prescriptionsApi';
-import { usePermission } from '../context/PermissionContext';
+import { isDoctorRole, usePermission } from '../context/PermissionContext';
 import type {
   Appointment,
   AppointmentStatus,
@@ -158,13 +158,22 @@ export default function DoctorTodayAppointments() {
   const [isViewRxOpen, setIsViewRxOpen] = useState(false);
 
   const { message } = App.useApp();
-  const { canCreate, canView, canUpdate, canDelete } = usePermission();
+  const { canCreate, canView, canUpdate, canDelete, roleName, hasRole } = usePermission();
 
-  const isApptCreatable = canCreate('APPOINTMENTS', ['TODAYS_SCHEDULE']);
-  const isApptUpdatable = canUpdate('APPOINTMENTS', ['TODAYS_SCHEDULE']);
-  const isApptDeletable = canDelete('APPOINTMENTS', ['TODAYS_SCHEDULE']);
-  const isRxViewable = canView('PRESCRIPTIONS');
-  const isRxCreatable = canCreate('PRESCRIPTIONS');
+  const isDoctorUser = isDoctorRole(roleName) || hasRole('DOCTOR', 'Doctor');
+  const isApptCreatable =
+    canCreate('APPOINTMENTS', ['TODAYS_SCHEDULE']) ||
+    canCreate('TODAYS_SCHEDULE', ['APPOINTMENTS']) ||
+    isDoctorUser;
+  const isApptUpdatable =
+    canUpdate('APPOINTMENTS', ['TODAYS_SCHEDULE']) ||
+    canUpdate('TODAYS_SCHEDULE', ['APPOINTMENTS']) ||
+    isDoctorUser;
+  const isApptDeletable =
+    canDelete('APPOINTMENTS', ['TODAYS_SCHEDULE']) ||
+    canDelete('TODAYS_SCHEDULE', ['APPOINTMENTS']);
+  const isRxViewable = canView('PRESCRIPTIONS') || isDoctorUser;
+  const isRxCreatable = canCreate('PRESCRIPTIONS') || isDoctorUser;
 
   const handleViewPrescription = async (appt: Appointment) => {
     const hideLoading = message.loading(`Fetching prescription for ${appt.patientName}...`, 0);
@@ -350,7 +359,10 @@ export default function DoctorTodayAppointments() {
   };
 
   const handleOpenBooking = (docId?: string) => {
-    if (!isApptCreatable) return;
+    if (!isApptCreatable) {
+      void message.warning('You do not have permission to schedule appointments.');
+      return;
+    }
     setPreselectedDoctorId(docId);
     setIsScheduleModalOpen(true);
   };

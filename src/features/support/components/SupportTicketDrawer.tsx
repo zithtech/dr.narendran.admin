@@ -60,6 +60,7 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
   onTicketUpdated,
   agents = [],
 }) => {
+  const { canUpdate } = usePermission();
   const [loading, setLoading] = useState(false);
   const [details, setDetails] = useState<TicketDetailsResponse | null>(null);
   const [replyText, setReplyText] = useState("");
@@ -232,7 +233,6 @@ export const SupportTicketDrawer: React.FC<SupportTicketDrawerProps> = ({
   };
 
   const isDoctor = ticket?.user_type?.toUpperCase() === "DOCTOR";
-  const { canUpdate } = usePermission();
   const canModify = isDoctor
     ? canUpdate('DOCTOR_SUPPORT', ['SUPPORT'])
     : canUpdate('PATIENT_SUPPORT', ['SUPPORT']);

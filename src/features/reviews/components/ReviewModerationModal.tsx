@@ -16,14 +16,14 @@ export const ReviewModerationModal: React.FC<Props> = ({
   onClose,
   onSuccess,
 }) => {
-  if (!isOpen || !review) return null;
-
-  const [action, setAction] = useState<ModerationAction>(
-    review.status === 'HIDDEN' ? 'RESTORE' : 'HIDE'
+  const [action, setAction] = useState<ModerationAction>(() =>
+    review?.status === 'HIDDEN' ? 'RESTORE' : 'HIDE'
   );
   const [reason, setReason] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  if (!isOpen || !review) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

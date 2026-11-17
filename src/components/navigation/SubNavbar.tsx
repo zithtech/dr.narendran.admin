@@ -1,7 +1,10 @@
-import { HeartPulse, LogOut, User } from 'lucide-react';
+import { HeartPulse, LogOut,User } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 
+import brandLogoImg from '../../assets/brand-logo.png';
 import { cx } from '../ui/primitives';
+import { getMediaProxyUrl } from '../../utils/mediaProxy';
 import type { NavCategory, NavModule } from './navigationConfig';
 
 interface SubNavbarProps {
@@ -12,6 +15,9 @@ interface SubNavbarProps {
   currentRole?: string;
   userInitials?: string;
   onLogout?: () => void;
+  brandFirstName?: string;
+  brandLastName?: string;
+  brandLogoUrl?: string;
 }
 
 export function SubNavbar({
@@ -20,13 +26,39 @@ export function SubNavbar({
   onSelectModule,
   currentRole,
   onLogout,
+  brandFirstName,
+  brandLastName,
+  brandLogoUrl,
 }: SubNavbarProps) {
-  let navigate: ReturnType<typeof useNavigate> | null = null;
-  try {
-    navigate = useNavigate();
-  } catch {
-    navigate = null;
-  }
+  const navigate = useNavigate();
+
+  const [logoError, setLogoError] = useState<boolean>(false);
+
+  const firstName =
+    brandFirstName && brandFirstName.trim()
+      ? brandFirstName.trim()
+      : localStorage.getItem('adminFirstName') || 'HMS Admin';
+
+  const lastName =
+    brandLastName && brandLastName.trim()
+      ? brandLastName.trim()
+      : localStorage.getItem('adminLastName') || 'Hospital';
+
+  const logoUrl =
+    brandLogoUrl !== undefined
+      ? brandLogoUrl
+      : localStorage.getItem('adminLogoUrl') || '';
+
+  useEffect(() => {
+    setLogoError(false);
+  }, [logoUrl]);
+
+  const proxiedLogo = useMemo(() => getMediaProxyUrl(logoUrl), [logoUrl]);
+
+  const activeDisplayLogo =
+    proxiedLogo && !logoError && !proxiedLogo.includes('logo-1794840935856-hms.jpg')
+      ? proxiedLogo
+      : brandLogoImg;
 
   const handleBrandClick = () => {
     if (navigate) {
@@ -47,14 +79,27 @@ export function SubNavbar({
             handleBrandClick();
           }
         }}
-        title="HMS Admin - Dr Narendran"
+        title={`${firstName} - ${lastName}`}
       >
-        <div className="ui-sidebar-brand-icon">
-          <HeartPulse size={20} strokeWidth={2.4} />
-        </div>
+        {activeDisplayLogo ? (
+          <img
+            src={activeDisplayLogo}
+            alt="Hospital Logo"
+            className="w-12 h-12 object-contain shrink-0"
+            onError={() => setLogoError(true)}
+          />
+        ) : (
+          <div className="ui-sidebar-brand-icon">
+            <HeartPulse size={20} strokeWidth={2.4} />
+          </div>
+        )}
         <div className="ui-sidebar-brand-text">
-          <span className="ui-sidebar-brand-name">HMS Admin</span>
-          <span className="ui-sidebar-brand-sub">Dr Narendran</span>
+          <span className="ui-sidebar-brand-name" title={firstName}>
+            {firstName}
+          </span>
+          <span className="ui-sidebar-brand-sub" title={lastName}>
+            {lastName}
+          </span>
         </div>
       </div>
 

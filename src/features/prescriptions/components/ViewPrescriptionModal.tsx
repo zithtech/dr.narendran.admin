@@ -49,6 +49,16 @@ function computeAge(dobStr?: string): string {
 function buildDataContext(rx: Prescription): LetterPadDataContext {
   const patientAge = computeAge(rx.patient_dob);
 
+  const vitals = rx.vitals || {
+    blood_pressure: rx.patient_blood_pressure,
+    blood_sugar: rx.patient_blood_sugar,
+    body_temperature: rx.patient_body_temperature,
+    height_cm: rx.patient_height_cm,
+    weight_kg: rx.patient_weight_kg,
+    blood_group: rx.patient_blood_group,
+    custom_vitals: rx.patient_custom_vitals,
+  };
+
   return {
     hospital: {
       name: 'Annaamalai Cancer Center',
@@ -79,6 +89,13 @@ function buildDataContext(rx: Prescription): LetterPadDataContext {
       gender: rx.patient_gender || '',
       date_of_birth: rx.patient_dob || '',
       age: patientAge || '—',
+      blood_group: vitals.blood_group || rx.patient_blood_group || '',
+      blood_pressure: vitals.blood_pressure || rx.patient_blood_pressure || '',
+      blood_sugar: vitals.blood_sugar || rx.patient_blood_sugar || '',
+      body_temperature: vitals.body_temperature || rx.patient_body_temperature || '',
+      height_cm: vitals.height_cm ?? rx.patient_height_cm ?? null,
+      weight_kg: vitals.weight_kg ?? rx.patient_weight_kg ?? null,
+      custom_vitals: vitals.custom_vitals ?? rx.patient_custom_vitals ?? [],
     },
     prescription: {
       prescription_id: rx.id ? String(rx.id).slice(0, 8).toUpperCase() : '',
@@ -137,6 +154,44 @@ export default function ViewPrescriptionModal({
         .then((fullRx) => {
           if (active && fullRx) {
             setRxData(fullRx);
+            const patId = fullRx.patient_id || prescription.patient_id;
+            if (
+              patId &&
+              !fullRx.patient_blood_pressure &&
+              !fullRx.patient_blood_sugar &&
+              !fullRx.vitals?.blood_pressure
+            ) {
+              api.get<any>(`patients/${patId}`)
+                .then((patRes) => {
+                  const p = patRes?.data?.data || patRes?.data;
+                  if (active && p) {
+                    setRxData((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            patient_blood_pressure: p.blood_pressure,
+                            patient_blood_sugar: p.blood_sugar,
+                            patient_body_temperature: p.body_temperature,
+                            patient_height_cm: p.height_cm,
+                            patient_weight_kg: p.weight_kg,
+                            patient_blood_group: p.blood_group,
+                            patient_custom_vitals: p.custom_vitals,
+                            vitals: {
+                              blood_pressure: p.blood_pressure,
+                              blood_sugar: p.blood_sugar,
+                              body_temperature: p.body_temperature,
+                              height_cm: p.height_cm,
+                              weight_kg: p.weight_kg,
+                              blood_group: p.blood_group,
+                              custom_vitals: p.custom_vitals,
+                            },
+                          }
+                        : prev
+                    );
+                  }
+                })
+                .catch(() => {});
+            }
           }
         })
         .catch(() => {

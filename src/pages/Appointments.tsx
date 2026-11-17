@@ -22,7 +22,7 @@ import ScheduleAppointmentModal from '../components/ScheduleAppointmentModal';
 import { type Column, DataView, type Facet } from '../components/ui/DataView';
 import { addedFacet } from '../components/ui/facets';
 import { useResource } from '../hooks/useResource';
-import { usePermission } from '../context/PermissionContext';
+import { isDoctorRole, usePermission } from '../context/PermissionContext';
 import { initials, titleCase } from '../lib/format';
 import type { Appointment } from '../types/appointment';
 import DoctorTodayAppointments from './DoctorTodayAppointments';
@@ -61,14 +61,23 @@ export default function Appointments() {
   const currentTab = searchParams.get('tab') === 'today' ? 'today' : 'all';
 
   const resource = useResource<Appointment>('appointments', 'appointments');
-  const { canCreate, canView, canUpdate, canDelete } = usePermission();
+  const { canCreate, canView, canUpdate, canDelete, roleName, hasRole } = usePermission();
+  const isDoctorUser = isDoctorRole(roleName) || hasRole('DOCTOR', 'Doctor');
 
-  const isApptCreatable = canCreate('APPOINTMENTS', ['TODAYS_SCHEDULE']);
-  const isApptUpdatable = canUpdate('APPOINTMENTS', ['TODAYS_SCHEDULE']);
-  const isApptDeletable = canDelete('APPOINTMENTS', ['TODAYS_SCHEDULE']);
-  const isRxViewable = canView('PRESCRIPTIONS');
-  const isRxCreatable = canCreate('PRESCRIPTIONS');
-  const isRxUpdatable = canUpdate('PRESCRIPTIONS');
+  const isApptCreatable =
+    canCreate('APPOINTMENTS', ['TODAYS_SCHEDULE']) ||
+    canCreate('TODAYS_SCHEDULE', ['APPOINTMENTS']) ||
+    isDoctorUser;
+  const isApptUpdatable =
+    canUpdate('APPOINTMENTS', ['TODAYS_SCHEDULE']) ||
+    canUpdate('TODAYS_SCHEDULE', ['APPOINTMENTS']) ||
+    isDoctorUser;
+  const isApptDeletable =
+    canDelete('APPOINTMENTS', ['TODAYS_SCHEDULE']) ||
+    canDelete('TODAYS_SCHEDULE', ['APPOINTMENTS']);
+  const isRxViewable = canView('PRESCRIPTIONS') || isDoctorUser;
+  const isRxCreatable = canCreate('PRESCRIPTIONS') || isDoctorUser;
+  const isRxUpdatable = canUpdate('PRESCRIPTIONS') || isDoctorUser;
 
   // Modal / Drawer state
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);

@@ -68,6 +68,17 @@ function isSystemAdminRole(roleName?: string | null): boolean {
   ].includes(upper);
 }
 
+export function isDoctorRole(roleName?: string | null): boolean {
+  if (!roleName) return false;
+  const upper = roleName.trim().toUpperCase();
+  return (
+    upper === 'DOCTOR' ||
+    upper === 'PHYSICIAN' ||
+    upper === 'CLINICIAN' ||
+    upper.includes('DOCTOR')
+  );
+}
+
 function loadCachedPermissions(): Record<string, PermissionRecord> {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
@@ -134,23 +145,26 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
                     (p.can_update !== undefined && p.can_update !== null ? p.can_update : p.can_write) &&
                     p.can_delete,
                 );
-          const canRead = canManageRaw || Boolean(p.can_read);
-          const canCreateVal =
+          const canWriteLegacy = Boolean(p.can_write || canManageRaw);
+          const canCreateVal = Boolean(
             canManageRaw ||
             (p.can_create !== undefined && p.can_create !== null
-              ? Boolean(p.can_create)
-              : Boolean(p.can_write));
-          const canUpdateVal =
+              ? p.can_create
+              : canWriteLegacy)
+          );
+          const canUpdateVal = Boolean(
             canManageRaw ||
             (p.can_update !== undefined && p.can_update !== null
-              ? Boolean(p.can_update)
-              : Boolean(p.can_write));
-          const canDeleteVal = canManageRaw || Boolean(p.can_delete);
-          const canWrite = canManageRaw || canCreateVal || canUpdateVal || Boolean(p.can_write);
+              ? p.can_update
+              : canWriteLegacy)
+          );
+          const canDeleteVal = Boolean(canManageRaw || p.can_delete);
+          const canReadVal = Boolean(canManageRaw || p.can_read);
+          const canWrite = Boolean(canManageRaw || p.can_write || canCreateVal || canUpdateVal);
 
           permMap[slug] = {
             module_slug: slug,
-            can_read: canRead,
+            can_read: canReadVal,
             can_write: canWrite,
             can_delete: canDeleteVal,
             can_create: canCreateVal,
@@ -159,6 +173,36 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
           };
         }
       });
+
+      // If the role is a Doctor role and permissions dictionary is empty or unconfigured,
+      // fallback to default doctor clinical consultation permissions so doctors are never locked out
+      const upperRole = (currentRole || '').trim().toUpperCase();
+      if (isDoctorRole(upperRole) && Object.keys(permMap).length === 0) {
+        const defaultDoctorSlugs = [
+          'APPOINTMENTS',
+          'TODAYS_SCHEDULE',
+          'AVAILABILITY',
+          'DOCTORS',
+          'PATIENTS',
+          'PATIENT_TIMELINES',
+          'MEDICAL_RECORDS',
+          'PRESCRIPTIONS',
+          'DOCTOR_SUPPORT',
+          'SUPPORT',
+          'REVIEWS',
+        ];
+        defaultDoctorSlugs.forEach((slug) => {
+          permMap[slug] = {
+            module_slug: slug,
+            can_read: true,
+            can_write: true,
+            can_delete: false,
+            can_create: true,
+            can_update: true,
+            can_manage: slug === 'AVAILABILITY' || slug === 'APPOINTMENTS' || slug === 'TODAYS_SCHEDULE',
+          };
+        });
+      }
 
       setPermissions(permMap);
       try {
@@ -206,9 +250,11 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
     if (rec.can_manage) return true;
     switch (field) {
       case 'can_create':
-        return rec.can_create ?? rec.can_write ?? false;
+        return Boolean(rec.can_create !== undefined && rec.can_create !== null ? rec.can_create : rec.can_write);
       case 'can_update':
-        return rec.can_update ?? rec.can_write ?? false;
+        return Boolean(rec.can_update !== undefined && rec.can_update !== null ? rec.can_update : rec.can_write);
+      case 'can_delete':
+        return Boolean(rec.can_delete);
       case 'can_manage':
         return Boolean(
           rec.can_manage ??
@@ -219,6 +265,8 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
         );
       case 'can_write':
         return Boolean(rec.can_write || rec.can_create || rec.can_update);
+      case 'can_read':
+        return Boolean(rec.can_read);
       default:
         return Boolean(rec[field]);
     }
@@ -235,18 +283,23 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
       const key = moduleSlug.toUpperCase();
       const direct = permissions[key];
 
-      if (direct) {
-        return evalRecord(direct, field);
+      if (direct && evalRecord(direct, field)) {
+        return true;
       }
 
       if (fallbackSlugs && fallbackSlugs.length > 0) {
         for (const fb of fallbackSlugs) {
           const fbKey = fb.toUpperCase();
           const fbPerm = permissions[fbKey];
-          if (fbPerm) {
-            return evalRecord(fbPerm, field);
+          if (fbPerm && evalRecord(fbPerm, field)) {
+            return true;
           }
         }
+      }
+
+      // If direct was present and explicitly evaluated to false, and no fallback granted it, deny
+      if (direct) {
+        return false;
       }
 
       if (isSystemAdmin) {
@@ -257,9 +310,40 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
         return true;
       }
 
+      // Built-in doctor privilege fallback for unlisted clinical modules:
+      if (isDoctorRole(roleName)) {
+        const doctorAllowedModules = [
+          'APPOINTMENTS',
+          'TODAYS_SCHEDULE',
+          'AVAILABILITY',
+          'DOCTORS',
+          'PATIENTS',
+          'PATIENT_TIMELINES',
+          'MEDICAL_RECORDS',
+          'PRESCRIPTIONS',
+          'LOCATIONS',
+          'DOCTOR_SUPPORT',
+          'SUPPORT',
+          'REVIEWS',
+        ];
+        if (
+          doctorAllowedModules.includes(key) ||
+          fallbackSlugs?.some((fb) => doctorAllowedModules.includes(fb.toUpperCase()))
+        ) {
+          if (
+            field === 'can_read' ||
+            field === 'can_create' ||
+            field === 'can_update' ||
+            field === 'can_write'
+          ) {
+            return true;
+          }
+        }
+      }
+
       return false;
     },
-    [isSystemAdmin, permissions]
+    [isSystemAdmin, permissions, roleName]
   );
 
   const canView = useCallback(

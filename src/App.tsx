@@ -42,6 +42,7 @@ import LabReportsPage from './pages/client/LabReportsPage';
 
 import SupportCenterPage from './features/support/pages/SupportCenterPage';
 import { ReviewsManagementPage } from './features/reviews/pages/ReviewsManagementPage';
+import SettingsPage from './pages/SettingsPage';
 import { ModuleRouteGuard } from './context/PermissionContext';
 import { LocationManagementPage } from './features/locations/pages/LocationManagementPage';
 
@@ -377,6 +378,14 @@ function App() {
               </ModuleRouteGuard>
             }
           />
+          <Route
+            path="/settings"
+            element={
+              <ModuleRouteGuard module="SETTINGS" title="Settings" fallbackSlugs={['USERS', 'ROLES']}>
+                <SettingsPage />
+              </ModuleRouteGuard>
+            }
+          />
 
           {/* Support Modules */}
           <Route
@@ -393,42 +402,6 @@ function App() {
               <ModuleRouteGuard module="DOCTOR_SUPPORT" title="Doctor Support" fallbackSlugs={['SUPPORT']}>
                 <SupportCenterPage defaultUserType="DOCTOR" />
               </ModuleRouteGuard>
-            }
-          />
-        </Route>
-
-        {/* Legacy /portal fallback */}
-        <Route
-          path="/portal"
-          element={
-            <ClientProtectedRoute>
-              <ClientPortalLayout />
-            </ClientProtectedRoute>
-          }
-        >
-          <Route index element={<ClientDashboard />} />
-          <Route
-            path="labs"
-            element={
-              <ClientPermissionGate slug="LABS">
-                <Labs />
-              </ClientPermissionGate>
-            }
-          />
-          <Route
-            path="lab-services"
-            element={
-              <ClientPermissionGate slug="LAB_SERVICES">
-                <LabServices />
-              </ClientPermissionGate>
-            }
-          />
-          <Route
-            path="linked-medicals"
-            element={
-              <ClientPermissionGate slug="LABS">
-                <LinkedMedicals />
-              </ClientPermissionGate>
             }
           />
         </Route>

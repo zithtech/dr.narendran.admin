@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 
+import api from '../utils/api';
 import { usePermission } from '../context/PermissionContext';
 import { MobileNavDrawer } from './navigation/MobileNavDrawer';
 import {
@@ -73,6 +74,100 @@ export default function SidebarLayout() {
     }
   }, [matchedCategory]);
 
+  const [brandLogoUrl, setBrandLogoUrl] = useState<string>(
+    () => localStorage.getItem('adminLogoUrl') || '',
+  );
+  const [brandFirstName, setBrandFirstName] = useState<string>(() => {
+    const storedFirst = localStorage.getItem('adminFirstName');
+    if (storedFirst !== null && storedFirst.trim()) return storedFirst.trim();
+    const storedFull = localStorage.getItem('adminFullName');
+    if (storedFull) {
+      const parts = storedFull.trim().split(/\s+/);
+      if (parts[0]) return parts[0];
+    }
+    return 'HMS Admin';
+  });
+  const [brandLastName, setBrandLastName] = useState<string>(() => {
+    const storedLast = localStorage.getItem('adminLastName');
+    if (storedLast !== null && storedLast.trim()) return storedLast.trim();
+    const storedFull = localStorage.getItem('adminFullName');
+    if (storedFull) {
+      const parts = storedFull.trim().split(/\s+/);
+      if (parts.length > 1) return parts.slice(1).join(' ');
+    }
+    return 'Hospital';
+  });
+
+  // Sync brand settings & logo from server
+  useEffect(() => {
+    let ignore = false;
+    const loadSettings = async () => {
+      try {
+        const token = localStorage.getItem('adminToken');
+        if (!token) return;
+        const res = await api.get('settings');
+        if (!ignore && res.data) {
+          if (res.data.logoUrl) {
+            localStorage.setItem('adminLogoUrl', res.data.logoUrl);
+            setBrandLogoUrl(res.data.logoUrl);
+          }
+          if (res.data.firstName) {
+            localStorage.setItem('adminFirstName', res.data.firstName);
+            setBrandFirstName(res.data.firstName);
+          }
+          if (res.data.lastName) {
+            localStorage.setItem('adminLastName', res.data.lastName);
+            setBrandLastName(res.data.lastName);
+          }
+          if (res.data.fullName) {
+            localStorage.setItem('adminFullName', res.data.fullName);
+          }
+          window.dispatchEvent(new Event('admin-settings-changed'));
+        }
+      } catch (_err) {
+        // silent fallback
+      }
+    };
+    void loadSettings();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  // Listen to custom settings events
+  useEffect(() => {
+    const handleSettingsChanged = () => {
+      const l = localStorage.getItem('adminLogoUrl') || '';
+      const f = localStorage.getItem('adminFirstName');
+      const last = localStorage.getItem('adminLastName');
+      const full = localStorage.getItem('adminFullName');
+
+      setBrandLogoUrl(l);
+      if (f !== null && f.trim()) {
+        setBrandFirstName(f.trim());
+      } else if (full) {
+        const parts = full.trim().split(/\s+/);
+        setBrandFirstName(parts[0] || 'HMS Admin');
+      }
+
+      if (last !== null && last.trim()) {
+        setBrandLastName(last.trim());
+      } else if (full) {
+        const parts = full.trim().split(/\s+/);
+        setBrandLastName(parts.length > 1 ? parts.slice(1).join(' ') : 'Hospital');
+      }
+    };
+
+    window.addEventListener('admin-settings-changed', handleSettingsChanged);
+    window.addEventListener('admin-logo-changed', handleSettingsChanged);
+    window.addEventListener('storage', handleSettingsChanged);
+    return () => {
+      window.removeEventListener('admin-settings-changed', handleSettingsChanged);
+      window.removeEventListener('admin-logo-changed', handleSettingsChanged);
+      window.removeEventListener('storage', handleSettingsChanged);
+    };
+  }, []);
+
   const handleSelectCategory = (category: NavCategory) => {
     setSelectedCategoryKey(category.key);
 
@@ -123,6 +218,9 @@ export default function SidebarLayout() {
         currentRole={currentRole}
         userInitials={userInitials}
         onLogout={handleLogout}
+        brandFirstName={brandFirstName}
+        brandLastName={brandLastName}
+        brandLogoUrl={brandLogoUrl}
       />
 
       {/* 2. Right Main Column: TopNavbar on Top + Content Below */}
@@ -158,6 +256,9 @@ export default function SidebarLayout() {
         currentRole={currentRole}
         userInitials={userInitials}
         onLogout={handleLogout}
+        brandFirstName={brandFirstName}
+        brandLastName={brandLastName}
+        brandLogoUrl={brandLogoUrl}
       />
     </div>
   );
