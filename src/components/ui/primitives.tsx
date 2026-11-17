@@ -2,6 +2,7 @@ import { AlertCircle } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
 
 import { initials, toneFor } from '../../lib/format';
+import { toApiUrl } from '../../utils/doctorAvatar';
 
 /**
  * Joins class names, dropping falsy ones. Use this instead of `${cond ? ' x' : ''}`
@@ -36,7 +37,10 @@ export function Avatar({
     // Unsigned AWS S3 bucket URLs cannot be directly accessed due to 403 AccessDenied.
     // If unsigned S3, immediately route through proxy.
     if (trimmed.includes('amazonaws.com') && !trimmed.includes('X-Amz-Signature')) {
-      setImgSrc(`/api/proxy/image?url=${encodeURIComponent(trimmed)}`);
+      setImgSrc(toApiUrl(`/api/proxy/image?url=${encodeURIComponent(trimmed)}`));
+      setTriedProxy(true);
+    } else if (trimmed.startsWith('/api/proxy/image') || trimmed.startsWith('/uploads/')) {
+      setImgSrc(toApiUrl(trimmed));
       setTriedProxy(true);
     } else {
       setImgSrc(trimmed);
@@ -47,9 +51,9 @@ export function Avatar({
 
   const handleError = () => {
     // If direct load fails (CORS, blocked referrer, forbidden), try via backend proxy
-    if (!triedProxy && src?.trim() && !imgSrc?.startsWith('/api/proxy/image')) {
+    if (!triedProxy && src?.trim() && !imgSrc?.includes('/api/proxy/image')) {
       setTriedProxy(true);
-      setImgSrc(`/api/proxy/image?url=${encodeURIComponent(src.trim())}`);
+      setImgSrc(toApiUrl(`/api/proxy/image?url=${encodeURIComponent(src.trim())}`));
     } else {
       setHasError(true);
     }

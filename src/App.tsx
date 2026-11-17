@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router';
 
 import Login from './pages/Login';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import ClientLogin from './pages/ClientLogin';
 import Dashboard from './pages/Dashboard';
 import DashboardOverviewPage from './pages/DashboardOverviewPage';
@@ -90,8 +92,8 @@ function App() {
       <Routes>
         {/* Admin Portal Authentication */}
         <Route path="/login" element={<Login />} />
-        <Route path="/forgot-password" element={<Login defaultForgot={true} />} />
-        <Route path="/reset-password" element={<Login defaultForgot={true} />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Client Portal Authentication (Unique Dedicated URLs) */}
         <Route path="/client/login" element={<ClientLogin />} />

@@ -28,6 +28,7 @@ import {
   type DoctorBlockedDate,
   doctorAvailabilityApi,
 } from '../api/doctorAvailabilityApi';
+import { resolveImageUrl } from '../utils/doctorAvatar';
 import {
   CommonFilterBar,
   CommonPageHeader,
@@ -949,7 +950,7 @@ export default function DoctorAvailabilityPage() {
               >
                 {currentDoctor.profile_image_url ? (
                   <img
-                    src={currentDoctor.profile_image_url}
+                    src={resolveImageUrl(currentDoctor.profile_image_url) || currentDoctor.profile_image_url}
                     alt={currentDoctor.name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />

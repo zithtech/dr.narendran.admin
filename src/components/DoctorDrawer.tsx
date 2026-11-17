@@ -839,6 +839,7 @@ export default function DoctorDrawer({
         .doctor-drawer-split {
           display: grid;
           grid-template-columns: 330px 1fr;
+          grid-template-rows: minmax(0, 1fr);
           gap: 20px;
           height: 100%;
           min-height: 0;
@@ -847,39 +848,58 @@ export default function DoctorDrawer({
         .doctor-drawer-left {
           height: 100%;
           min-height: 0;
+          max-height: 100%;
           overflow-y: auto;
+          overflow-x: hidden;
+          overscroll-behavior: contain;
           padding-right: 6px;
           padding-bottom: 24px;
           display: flex;
           flex-direction: column;
           scrollbar-width: thin;
-          scrollbar-color: #cbd5e1 transparent;
+          scrollbar-color: #cbd5e1 #f8fafc;
         }
         .doctor-drawer-left::-webkit-scrollbar {
-          width: 5px;
+          width: 6px;
+        }
+        .doctor-drawer-left::-webkit-scrollbar-track {
+          background: #f8fafc;
+          border-radius: 4px;
         }
         .doctor-drawer-left::-webkit-scrollbar-thumb {
           background: #cbd5e1;
           border-radius: 4px;
         }
+        .doctor-drawer-left::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
         .doctor-drawer-right {
           height: 100%;
           min-height: 0;
+          max-height: 100%;
           overflow-y: auto;
+          overflow-x: hidden;
           padding-right: 6px;
           padding-bottom: 28px;
           display: flex;
           flex-direction: column;
           gap: 14px;
           scrollbar-width: thin;
-          scrollbar-color: #cbd5e1 transparent;
+          scrollbar-color: #cbd5e1 #f8fafc;
         }
         .doctor-drawer-right::-webkit-scrollbar {
-          width: 5px;
+          width: 6px;
+        }
+        .doctor-drawer-right::-webkit-scrollbar-track {
+          background: #f8fafc;
+          border-radius: 4px;
         }
         .doctor-drawer-right::-webkit-scrollbar-thumb {
           background: #cbd5e1;
           border-radius: 4px;
+        }
+        .doctor-drawer-right::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
         }
         @media (max-width: 920px) {
           .doctor-view-drawer .ui-drawer-scroll {
@@ -890,11 +910,13 @@ export default function DoctorDrawer({
           }
           .doctor-drawer-split {
             grid-template-columns: 1fr;
+            grid-template-rows: auto;
             height: auto;
           }
           .doctor-drawer-left,
           .doctor-drawer-right {
             height: auto;
+            max-height: none;
             overflow-y: visible;
           }
         }
@@ -905,11 +927,13 @@ export default function DoctorDrawer({
           background: #ffffff;
           border: 1px solid #e2e8f0;
           box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+          flex-shrink: 0;
+          margin-bottom: 20px;
         }
         .doctor-card-photo-hero {
           width: 100%;
-          height: 230px;
-          min-height: 210px;
+          height: 180px;
+          min-height: 160px;
           position: relative;
           background: #ffffff;
           overflow: hidden;
@@ -918,13 +942,13 @@ export default function DoctorDrawer({
           flex-direction: column;
           align-items: center;
           justify-content: flex-end;
-          padding: 14px 16px 36px;
+          padding: 12px 16px 32px;
         }
         .doctor-card-photo {
           max-width: 100%;
           width: auto;
           height: 100%;
-          max-height: 180px;
+          max-height: 140px;
           object-fit: contain;
           object-position: bottom center;
           display: block;
@@ -935,11 +959,58 @@ export default function DoctorDrawer({
           max-width: 100%;
           width: auto;
           height: 100%;
-          max-height: 180px;
+          max-height: 140px;
           object-fit: contain;
           object-position: bottom center;
           padding: 0;
           margin: 0 auto;
+        }
+        @media (max-height: 850px) {
+          .doctor-card-photo-hero {
+            height: 155px;
+            min-height: 140px;
+            padding: 8px 14px 28px;
+          }
+          .doctor-card-photo,
+          .doctor-card-photo.doctor-card-photo-default {
+            max-height: 120px;
+          }
+          .doctor-card-body {
+            padding: 10px 14px 14px !important;
+          }
+          .doctor-card-name {
+            font-size: 17px !important;
+          }
+          .doctor-card-divider {
+            margin: 6px 0 !important;
+          }
+          .doctor-card-cred-list {
+            gap: 4px !important;
+            margin-top: 4px !important;
+          }
+        }
+        @media (max-height: 720px) {
+          .doctor-card-photo-hero {
+            height: 130px;
+            min-height: 120px;
+            padding: 6px 12px 24px;
+          }
+          .doctor-card-photo,
+          .doctor-card-photo.doctor-card-photo-default {
+            max-height: 100px;
+          }
+          .doctor-card-body {
+            padding: 8px 12px 12px !important;
+          }
+          .doctor-card-name {
+            font-size: 16px !important;
+          }
+          .doctor-card-divider {
+            margin: 5px 0 !important;
+          }
+          .doctor-card-cred-list {
+            gap: 3px !important;
+          }
         }
         .doctor-card-photo-badge {
           position: absolute;
