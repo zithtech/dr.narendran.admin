@@ -53,6 +53,11 @@ describe('Doctors Page Actions', () => {
     expect(scheduleBtn).toBeInTheDocument();
     expect(scheduleBtn.textContent?.trim()).toBe('');
 
+    // Slots button: icon-only (title/aria-label "Slots for ...", textContent is empty)
+    const slotsBtn = screen.getByRole('button', { name: /Slots for Dr. Ramesh Kumar/i });
+    expect(slotsBtn).toBeInTheDocument();
+    expect(slotsBtn.textContent?.trim()).toBe('');
+
     // Edit button
     const editBtn = screen.getByRole('button', { name: /Edit Dr. Ramesh Kumar/i });
     expect(editBtn).toBeInTheDocument();

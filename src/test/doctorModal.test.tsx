@@ -214,4 +214,40 @@ describe('Doctor Create/Edit Modal - Clinic Address fields', () => {
       expect(screen.getByText(/Portal Login Linked: @dr\.smith/i)).toBeInTheDocument();
     });
   });
+
+  it('pre-selects gender when editing a doctor and submits updated gender', async () => {
+    vi.mocked(api).mockResolvedValue({ data: { success: true } });
+    const handleSave = vi.fn();
+
+    const doctorWithGender: Doctor = {
+      ...mockDoctor,
+      gender: 'FEMALE',
+    };
+
+    renderWithProviders(
+      <DoctorModal isOpen={true} onClose={vi.fn()} doctor={doctorWithGender} onSave={handleSave} />,
+    );
+
+    const genderSelect = screen.getByLabelText(/^Gender$/i) as HTMLSelectElement;
+    expect(genderSelect.value).toBe('FEMALE');
+
+    // Change gender to MALE
+    fireEvent.change(genderSelect, { target: { value: 'MALE' } });
+    expect(genderSelect.value).toBe('MALE');
+
+    const submitBtn = screen.getByRole('button', { name: /Save Changes/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(api).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'PUT',
+          url: 'doctors/doc-001',
+          data: expect.objectContaining({
+            gender: 'MALE',
+          }),
+        }),
+      );
+    });
+  });
 });

@@ -1,9 +1,11 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import MedicineInventoryDrawer from '../components/MedicineInventoryDrawer';
 import MedicineModal from '../components/MedicineModal';
 import MedicineStrengthModal from '../components/MedicineStrengthModal';
 import { PermissionProvider } from '../context/PermissionContext';
+import MedicineInventory from '../pages/MedicineInventory';
 import Pharmacy from '../pages/Pharmacy';
 import type { MedicineStrength } from '../types/inventory';
 import type { Medicine } from '../types/pharmacy';
@@ -266,6 +268,162 @@ describe('Medicine Drawer (Pharmacy & Inventory UI Enhancements)', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Edit Medicine')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('MedicineInventoryDrawer (Medicine Inventory View Details Drawer)', () => {
+    it('renders inventory formulation details, stock cards, packaging breakdown, and action buttons', async () => {
+      vi.mocked(api.get).mockResolvedValue({
+        data: {
+          items: [
+            {
+              id: 'txn-1',
+              medicine_strength_id: 'var-001',
+              transaction_type: 'STOCK_IN',
+              quantity_change: 50,
+              quantity_before: 0,
+              quantity_after: 50,
+              reason: 'Initial Batch PO-1234',
+              performer_name: 'Dr. Admin',
+              created_at: '2026-11-01T10:00:00.000Z',
+            },
+          ],
+          total: 1,
+        },
+      });
+
+      const handleClose = vi.fn();
+      const handleStockIn = vi.fn();
+      const handleStockOut = vi.fn();
+      const handleAdjust = vi.fn();
+      const handleHistory = vi.fn();
+      const handleEdit = vi.fn();
+
+      renderWithProviders(
+        <MedicineInventoryDrawer
+          variant={mockVariant}
+          onClose={handleClose}
+          onStockIn={handleStockIn}
+          onStockOut={handleStockOut}
+          onAdjust={handleAdjust}
+          onHistory={handleHistory}
+          onEdit={handleEdit}
+        />,
+      );
+
+      expect(screen.getAllByText('Augmentin 625 Duo').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Medicine Inventory Record')).toBeInTheDocument();
+      expect(screen.getByText('Physical Stock & Packaging Status')).toBeInTheDocument();
+      expect(screen.getByText('Commercial Pricing & Financials')).toBeInTheDocument();
+      expect(screen.getByText('System Identifiers & Barcode')).toBeInTheDocument();
+
+      // Check stock values
+      expect(screen.getAllByText('50 units').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Pack of 10 units')).toBeInTheDocument();
+      expect(screen.getByText(/5 strips/)).toBeInTheDocument();
+
+      // Check ledger preview item
+      await waitFor(() => {
+        expect(screen.getByText('Initial Batch PO-1234')).toBeInTheDocument();
+        expect(screen.getByText('+50 units')).toBeInTheDocument();
+      });
+
+      // Click footer action buttons
+      const stockInBtn = screen.getByRole('button', { name: /Stock In/i });
+      fireEvent.click(stockInBtn);
+      expect(handleStockIn).toHaveBeenCalledWith(mockVariant);
+
+      const stockOutBtn = screen.getByRole('button', { name: /Stock Out/i });
+      fireEvent.click(stockOutBtn);
+      expect(handleStockOut).toHaveBeenCalledWith(mockVariant);
+
+      const adjustBtn = screen.getByRole('button', { name: /Adjust/i });
+      fireEvent.click(adjustBtn);
+      expect(handleAdjust).toHaveBeenCalledWith(mockVariant);
+
+      const ledgerBtn = screen.getByTitle('View full audit movement history');
+      fireEvent.click(ledgerBtn);
+      expect(handleHistory).toHaveBeenCalledWith(mockVariant);
+
+      const editBtn = screen.getByRole('button', { name: /Edit Variant/i });
+      fireEvent.click(editBtn);
+      expect(handleEdit).toHaveBeenCalledWith(mockVariant);
+    });
+  });
+
+  describe('MedicineInventory Page View Drawer Integration', () => {
+    it('opens view drawer when clicking on the table row or view eye icon', async () => {
+      localStorage.setItem('adminRole', 'ADMIN');
+      vi.mocked(api.get).mockImplementation(async (url: string) => {
+        if (url.includes('rbac/roles/')) {
+          return {
+            data: {
+              name: 'ADMIN',
+              is_system_role: true,
+              permissions: [
+                {
+                  module_slug: 'INVENTORY',
+                  can_read: true,
+                  can_create: true,
+                  can_update: true,
+                  can_delete: true,
+                  can_manage: true,
+                },
+              ],
+            },
+          };
+        }
+        if (url.includes('inventory/summary')) {
+          return {
+            data: {
+              data: {
+                total_active_variants: 1,
+                in_stock_count: 1,
+                low_stock_count: 0,
+                out_of_stock_count: 0,
+                total_valuation: 9000,
+              },
+            },
+          };
+        }
+        if (url.includes('medicines')) {
+          return { data: [mockMedicine] };
+        }
+        if (url.includes('inventory/var-001/history')) {
+          return { data: { items: [], total: 0 } };
+        }
+        return {
+          data: {
+            items: [mockVariant],
+            total: 1,
+            page: 1,
+            limit: 15,
+            totalPages: 1,
+          },
+        };
+      });
+
+      renderWithProviders(
+        <PermissionProvider>
+          <MedicineInventory />
+        </PermissionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Augmentin 625 Duo')).toBeInTheDocument();
+      });
+
+      // View eye button should be present in actions
+      const viewBtn = screen.getByRole('button', { name: /View Augmentin 625 Duo details/i });
+      expect(viewBtn).toBeInTheDocument();
+
+      fireEvent.click(viewBtn);
+
+      // MedicineInventoryDrawer should be open
+      await waitFor(() => {
+        expect(screen.getByText('Medicine Inventory Record')).toBeInTheDocument();
+        expect(screen.getByText('Physical Stock & Packaging Status')).toBeInTheDocument();
       });
     });
   });

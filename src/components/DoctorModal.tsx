@@ -20,9 +20,11 @@ import { getErrorMessage } from '../utils/errors';
 import { type Branch } from './BranchModal';
 import { type Hospital } from './HospitalModal';
 import { Modal, SwitchRow } from './ui/Modal';
-import { Alert, Avatar } from './ui/primitives';
+import { Alert } from './ui/primitives';
+import { ImageUploadField } from './ui/ImageUploadField';
 import { SearchableSelect, type SearchableSelectOption } from './ui/SearchableSelect';
 import { type UserAccount } from './UserModal';
+import { getDoctorDefaultAvatar } from '../utils/doctorAvatar';
 
 export interface Doctor {
   id: string;
@@ -47,10 +49,17 @@ export interface Doctor {
   years_of_experience?: number | null;
   profile_image_url?: string | null;
   podcast_url?: string | null;
+  gender?: string | null;
   is_active?: boolean | null;
   created_at: string;
   updated_at: string;
 }
+
+export const GENDER_OPTIONS: SearchableSelectOption[] = [
+  { value: 'MALE', label: 'Male' },
+  { value: 'FEMALE', label: 'Female' },
+  { value: 'OTHER', label: 'Other' },
+];
 
 export function validateDoctorName(val: string): string | undefined {
   const trimmed = val.trim();
@@ -269,6 +278,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
   const [yearsOfExperience, setYearsOfExperience] = useState<string>('');
   const [profileImageUrl, setProfileImageUrl] = useState('');
   const [podcastUrl, setPodcastUrl] = useState('');
+  const [gender, setGender] = useState('');
   const [isActive, setIsActive] = useState<boolean>(true);
 
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
@@ -320,6 +330,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
       setYearsOfExperience(doctor.years_of_experience ? doctor.years_of_experience.toString() : '');
       setProfileImageUrl(doctor.profile_image_url || '');
       setPodcastUrl(doctor.podcast_url || '');
+      setGender(doctor.gender ? doctor.gender.trim().toUpperCase() : '');
       setIsActive(
         doctor.is_active !== undefined && doctor.is_active !== null ? doctor.is_active : true,
       );
@@ -342,6 +353,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
       setYearsOfExperience('');
       setProfileImageUrl('');
       setPodcastUrl('');
+      setGender('');
       setIsActive(true);
     }
     setError('');
@@ -530,6 +542,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
           years_of_experience: yearsOfExperience ? parseInt(yearsOfExperience, 10) : null,
           profile_image_url: normalizeUrl(profileImageUrl),
           podcast_url: normalizeUrl(podcastUrl),
+          gender: gender || null,
           is_active: isActive,
         },
       });
@@ -889,55 +902,49 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                   </div>
                 )}
               </div>
-            </div>
 
-            <div>
-              <label
-                htmlFor="doctor-image-url"
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: '#334155',
-                  display: 'block',
-                  marginBottom: 5,
-                }}
-              >
-                Profile Image URL
-              </label>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <Avatar name={name || 'Doctor'} src={profileImageUrl} size={40} />
-                <input
-                  id="doctor-image-url"
-                  className="ui-input"
+              <div>
+                <label
+                  htmlFor="doctor-gender"
                   style={{
-                    flex: 1,
-                    borderColor: errors.profileImageUrl ? '#ef4444' : undefined,
-                    boxShadow: errors.profileImageUrl ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#334155',
+                    display: 'block',
+                    marginBottom: 5,
                   }}
-                  type="text"
-                  inputMode="url"
-                  value={profileImageUrl}
-                  onChange={(e) => {
-                    const sanitized = e.target.value.slice(0, 500);
-                    setProfileImageUrl(sanitized);
-                    setErrors((prev) => ({ ...prev, profileImageUrl: validateDoctorImageUrl(sanitized) }));
-                  }}
-                  onBlur={() => {
-                    const trimmed = profileImageUrl.trim();
-                    if (trimmed && !/^https?:\/\//i.test(trimmed) && !trimmed.startsWith('/')) {
-                      setProfileImageUrl(`https://${trimmed}`);
-                    }
-                  }}
-                  placeholder="https://… (Direct photo or avatar URL)"
+                >
+                  Gender
+                </label>
+                <SearchableSelect
+                  id="doctor-gender"
+                  aria-label="Gender"
+                  value={gender ? gender.toUpperCase() : ''}
+                  onChange={(val) => setGender(val)}
+                  options={GENDER_OPTIONS}
+                  searchable={false}
+                  placeholder="Select gender…"
                 />
               </div>
-              {errors.profileImageUrl && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
-                  <AlertCircle size={12} style={{ flexShrink: 0 }} />
-                  <span>{errors.profileImageUrl}</span>
-                </div>
-              )}
             </div>
+
+            <ImageUploadField
+              id="doctor-image-upload"
+              label="Doctor Photo"
+              value={profileImageUrl}
+              onChange={(url) => {
+                setProfileImageUrl(url);
+                setErrors((prev) => ({
+                  ...prev,
+                  profileImageUrl: validateDoctorImageUrl(url),
+                }));
+              }}
+              name={name || 'Doctor'}
+              folder="doctor-profiles"
+              defaultFallbackSrc={getDoctorDefaultAvatar({ name, gender })}
+              error={errors.profileImageUrl}
+              helperText="Upload doctor photo (JPG, PNG, WEBP up to 10MB)"
+            />
           </div>
 
           {/* Section 2: Hospital & Practice Location */}

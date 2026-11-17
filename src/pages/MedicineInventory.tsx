@@ -4,6 +4,7 @@ import {
   Boxes,
   CheckCircle2,
   Download,
+  Eye,
   FileSpreadsheet,
   History,
   Layers,
@@ -21,6 +22,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 
+import MedicineInventoryDrawer from '../components/MedicineInventoryDrawer';
 import MedicineStrengthModal from '../components/MedicineStrengthModal';
 import PharmacyImportModal from '../components/PharmacyImportModal';
 import StockAdjustModal from '../components/StockAdjustModal';
@@ -29,7 +31,7 @@ import StockInModal from '../components/StockInModal';
 import StockOutModal from '../components/StockOutModal';
 import { usePermission } from '../context/PermissionContext';
 import { CommonPagination } from '../components/ui/CommonTable';
-import { Alert, Badge, cx, StatusDot } from '../components/ui/primitives';
+import { Alert, cx, StatusDot } from '../components/ui/primitives';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { timeAgo } from '../lib/format';
 import type { InventorySummary, MedicineStrength } from '../types/inventory';
@@ -133,6 +135,12 @@ export default function MedicineInventory() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const [selectedVariant, setSelectedVariant] = useState<MedicineStrength | null>(null);
+  const [viewingVariant, setViewingVariant] = useState<MedicineStrength | null>(null);
+
+  // Keep viewing variant synced with updated balances or configuration
+  const activeViewingVariant = viewingVariant
+    ? (variants.find((v) => v.id === viewingVariant.id) ?? viewingVariant)
+    : null;
 
   // Load summary KPIs
   const loadSummary = useCallback(async () => {
@@ -235,12 +243,24 @@ export default function MedicineInventory() {
 
   const getStockStatusBadge = (variant: MedicineStrength) => {
     if (variant.available_quantity === 0) {
-      return <Badge tone="red">Out of Stock</Badge>;
+      return (
+        <span className="inline-flex items-center rounded-full bg-red-50 px-1.5 py-0.2 text-[10px] font-semibold text-red-700 border border-red-200/60 leading-tight">
+          Out of Stock
+        </span>
+      );
     }
     if (variant.available_quantity <= variant.reorder_level) {
-      return <Badge tone="amber">Low Stock (≤{variant.reorder_level})</Badge>;
+      return (
+        <span className="inline-flex items-center rounded-full bg-amber-50 px-1.5 py-0.2 text-[10px] font-semibold text-amber-700 border border-amber-200/60 leading-tight">
+          Low (≤{variant.reorder_level})
+        </span>
+      );
     }
-    return <Badge tone="green">In Stock</Badge>;
+    return (
+      <span className="inline-flex items-center rounded-full bg-emerald-50 px-1.5 py-0.2 text-[10px] font-semibold text-emerald-700 border border-emerald-200/60 leading-tight">
+        In Stock
+      </span>
+    );
   };
 
   const syncedLabel = syncedAt
@@ -580,15 +600,15 @@ export default function MedicineInventory() {
         <div className="overflow-x-auto min-h-[300px]">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200/90 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
-                <th className="px-3.5 py-2 whitespace-nowrap">Medicine & Strength</th>
-                <th className="px-3.5 py-2 whitespace-nowrap">Dosage & Packaging</th>
-                <th className="px-3.5 py-2 text-right whitespace-nowrap">Available Stock</th>
-                <th className="px-3.5 py-2 text-center whitespace-nowrap">Discount Type</th>
-                <th className="px-3.5 py-2 text-right whitespace-nowrap">Discount Value</th>
-                <th className="px-3.5 py-2 text-right whitespace-nowrap">Pricing (MRP / Final)</th>
-                <th className="px-3.5 py-2 text-center whitespace-nowrap">Status</th>
-                <th className="px-3.5 py-2 text-right whitespace-nowrap font-semibold">
+              <tr className="border-b border-slate-200/90 bg-[#f8fafc] text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="sticky top-0 z-10 bg-[#f8fafc] px-3 py-1.5 whitespace-nowrap">Medicine & Strength</th>
+                <th className="sticky top-0 z-10 bg-[#f8fafc] px-3 py-1.5 whitespace-nowrap">Dosage & Packaging</th>
+                <th className="sticky top-0 z-10 bg-[#f8fafc] px-3 py-1.5 text-right whitespace-nowrap">Available Stock</th>
+                <th className="sticky top-0 z-10 bg-[#f8fafc] px-3 py-1.5 text-center whitespace-nowrap">Discount Type</th>
+                <th className="sticky top-0 z-10 bg-[#f8fafc] px-3 py-1.5 text-right whitespace-nowrap">Discount Value</th>
+                <th className="sticky top-0 z-10 bg-[#f8fafc] px-3 py-1.5 text-right whitespace-nowrap">Pricing (MRP / Final)</th>
+                <th className="sticky top-0 z-10 bg-[#f8fafc] px-3 py-1.5 text-center whitespace-nowrap">Status</th>
+                <th className="sticky top-0 right-0 z-20 bg-[#f8fafc] px-3 py-1.5 text-right whitespace-nowrap font-semibold shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
                   Actions
                 </th>
               </tr>
@@ -597,31 +617,31 @@ export default function MedicineInventory() {
               {loading && variants.length === 0 ? (
                 SKELETON_ROWS.map((i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="px-3.5 py-2">
-                      <div className="h-3.5 bg-slate-100 rounded w-36 mb-1" />
-                      <div className="h-2.5 bg-slate-50 rounded w-24" />
+                    <td className="px-3 py-1.5">
+                      <div className="h-3 bg-slate-100 rounded w-32 mb-1" />
+                      <div className="h-2 bg-slate-50 rounded w-20" />
                     </td>
-                    <td className="px-3.5 py-2">
-                      <div className="h-3.5 bg-slate-100 rounded w-20 mb-1" />
-                      <div className="h-2.5 bg-slate-50 rounded w-28" />
+                    <td className="px-3 py-1.5">
+                      <div className="h-3 bg-slate-100 rounded w-16 mb-1" />
+                      <div className="h-2 bg-slate-50 rounded w-20" />
                     </td>
-                    <td className="px-3.5 py-2 text-right">
-                      <div className="h-3.5 bg-slate-100 rounded w-20 ml-auto" />
+                    <td className="px-3 py-1.5 text-right">
+                      <div className="h-3 bg-slate-100 rounded w-16 ml-auto" />
                     </td>
-                    <td className="px-3.5 py-2 text-center">
-                      <div className="h-3.5 bg-slate-100 rounded w-16 mx-auto" />
+                    <td className="px-3 py-1.5 text-center">
+                      <div className="h-3 bg-slate-100 rounded w-12 mx-auto" />
                     </td>
-                    <td className="px-3.5 py-2 text-right">
-                      <div className="h-3.5 bg-slate-100 rounded w-14 ml-auto" />
+                    <td className="px-3 py-1.5 text-right">
+                      <div className="h-3 bg-slate-100 rounded w-12 ml-auto" />
                     </td>
-                    <td className="px-3.5 py-2 text-right">
-                      <div className="h-3.5 bg-slate-100 rounded w-16 ml-auto" />
+                    <td className="px-3 py-1.5 text-right">
+                      <div className="h-3 bg-slate-100 rounded w-14 ml-auto" />
                     </td>
-                    <td className="px-3.5 py-2 text-center">
-                      <div className="h-3.5 bg-slate-100 rounded w-12 mx-auto" />
+                    <td className="px-3 py-1.5 text-center">
+                      <div className="h-3 bg-slate-100 rounded w-10 mx-auto" />
                     </td>
-                    <td className="px-3.5 py-2 text-right">
-                      <div className="h-5 bg-slate-100 rounded w-32 ml-auto" />
+                    <td className="px-2.5 py-1.5 text-right sticky right-0 z-10 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
+                      <div className="h-4 bg-slate-100 rounded w-28 ml-auto" />
                     </td>
                   </tr>
                 ))
@@ -656,77 +676,91 @@ export default function MedicineInventory() {
                 variants.map((v) => {
                   const hasStripPack = v.tablets_per_strip && v.tablets_per_strip > 0;
                   return (
-                    <tr key={v.id} className="hover:bg-slate-50/70 transition-colors">
+                    <tr
+                      key={v.id}
+                      onClick={() => setViewingVariant(v)}
+                      className="hover:bg-slate-50/80 transition-colors cursor-pointer group border-b border-slate-100/80 last:border-b-0"
+                    >
                       {/* Medicine & Strength */}
-                      <td className="px-3.5 py-2">
-                        <div className="font-semibold text-slate-900">
-                          {v.medicine_name}
-                        </div>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-slate-500">
-                          <span className="inline-flex items-center rounded bg-blue-50 px-1.5 py-0.5 text-[10.5px] font-bold text-blue-700">
+                      <td className="px-3 py-1.5 max-w-[280px]">
+                        <div className="flex items-center gap-1.5 leading-snug">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingVariant(v);
+                            }}
+                            className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors text-left cursor-pointer truncate text-[12px]"
+                            title={v.medicine_name}
+                          >
+                            {v.medicine_name}
+                          </button>
+                          <span className="shrink-0 inline-flex items-center rounded bg-blue-50 px-1.5 py-0.2 text-[10px] font-bold text-blue-700 leading-tight">
                             {v.strength} {v.strength_unit}
                           </span>
-                          {v.generic_name && (
-                            <span
-                              className="max-w-[180px] truncate text-[11px] text-slate-500"
-                              title={v.generic_name}
-                            >
-                              • {v.generic_name}
-                            </span>
-                          )}
-                          {v.manufacturer && (
-                            <span
-                              className="max-w-[160px] truncate text-[11px] text-slate-400"
-                              title={v.manufacturer}
-                            >
-                              ({v.manufacturer})
-                            </span>
-                          )}
                         </div>
+                        {(v.generic_name || v.manufacturer) && (
+                          <div className="flex items-center gap-1 text-[10.5px] text-slate-400 leading-tight truncate mt-0.5">
+                            {v.generic_name && (
+                              <span className="truncate" title={v.generic_name}>
+                                {v.generic_name}
+                              </span>
+                            )}
+                            {v.generic_name && v.manufacturer && <span>•</span>}
+                            {v.manufacturer && (
+                              <span className="truncate text-slate-400" title={v.manufacturer}>
+                                ({v.manufacturer})
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </td>
 
                       {/* Dosage & Packaging */}
-                      <td className="px-3.5 py-2 whitespace-nowrap">
-                        <div className="font-medium text-slate-800">
+                      <td className="px-3 py-1.5 whitespace-nowrap leading-tight">
+                        <div className="font-medium text-slate-800 text-[11.5px]">
                           {v.dosage_form}
+                          {hasStripPack && (
+                            <span className="ml-1 text-[10.5px] font-normal text-slate-500">
+                              ({v.tablets_per_strip}/pk)
+                            </span>
+                          )}
                         </div>
-                        <div className="text-[11px] text-slate-400">
-                          {hasStripPack
-                            ? `Pack of ${v.tablets_per_strip} units`
-                            : 'Single unit item'}
-                          {v.variant_code && ` • SKU: ${v.variant_code}`}
-                        </div>
+                        {v.variant_code && (
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            SKU: {v.variant_code}
+                          </div>
+                        )}
                       </td>
 
                       {/* Available Stock & Breakdown */}
-                      <td className="px-3.5 py-2 text-right whitespace-nowrap">
+                      <td className="px-3 py-1.5 text-right whitespace-nowrap leading-tight">
                         <div className="flex items-center justify-end gap-1.5">
-                          <span className="font-semibold text-slate-900">
-                            {v.available_quantity} units
+                          <span className="font-semibold text-slate-900 text-[11.5px]">
+                            {v.available_quantity} <span className="font-normal text-[10px] text-slate-500">units</span>
                           </span>
                           {getStockStatusBadge(v)}
                         </div>
                         {hasStripPack && (
-                          <div className="text-[11px] text-slate-400">
-                            {v.strip_count} full strips{' '}
-                            {v.loose_tablets ? `+ ${v.loose_tablets} loose` : ''}
+                          <div className="text-[10px] text-slate-400 mt-0.5">
+                            {v.strip_count} full strips{v.loose_tablets ? ` + ${v.loose_tablets} loose` : ''}
                           </div>
                         )}
                       </td>
 
                       {/* Discount Type */}
-                      <td className="px-3.5 py-2 text-center whitespace-nowrap">
+                      <td className="px-3 py-1.5 text-center whitespace-nowrap leading-tight">
                         {v.discount_type ? (
-                          <span className="inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-700 uppercase">
+                          <span className="inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 uppercase">
                             {isPercentageDiscount(v.discount_type) ? 'Percentage' : 'Flat'}
                           </span>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className="text-slate-300 text-[11px]">—</span>
                         )}
                       </td>
 
                       {/* Discount Value */}
-                      <td className="px-3.5 py-2 text-right whitespace-nowrap font-medium text-emerald-600">
+                      <td className="px-3 py-1.5 text-right whitespace-nowrap font-medium text-emerald-600 text-[11.5px] leading-tight">
                         {v.discount_value !== null &&
                         v.discount_value !== undefined &&
                         Number(v.discount_value) > 0 ? (
@@ -736,24 +770,24 @@ export default function MedicineInventory() {
                             formatCurrency(v.discount_value)
                           )
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className="text-slate-300">—</span>
                         )}
                       </td>
 
                       {/* Pricing */}
-                      <td className="px-3.5 py-2 text-right whitespace-nowrap">
-                        <div className="font-semibold text-emerald-600">
+                      <td className="px-3 py-1.5 text-right whitespace-nowrap leading-tight">
+                        <div className="font-semibold text-emerald-600 text-[11.5px]">
                           {v.final_price !== null ? formatCurrency(v.final_price) : '—'}
                         </div>
                         {v.mrp !== null && v.mrp !== v.final_price && (
-                          <div className="text-[11px] text-slate-400 line-through">
+                          <div className="text-[10px] text-slate-400 line-through mt-0.5">
                             MRP {formatCurrency(v.mrp)}
                           </div>
                         )}
                       </td>
 
                       {/* Status */}
-                      <td className="px-3.5 py-2 text-center whitespace-nowrap">
+                      <td className="px-3 py-1.5 text-center whitespace-nowrap leading-tight">
                         <StatusDot
                           active={v.status === 'ACTIVE'}
                           label={v.status === 'ACTIVE' ? 'Active' : 'Inactive'}
@@ -761,49 +795,66 @@ export default function MedicineInventory() {
                       </td>
 
                       {/* Inventory Actions */}
-                      <td className="px-3.5 py-2 text-right whitespace-nowrap">
+                      <td className="px-2.5 py-1.5 text-right whitespace-nowrap sticky right-0 z-10 bg-white group-hover:bg-slate-50/90 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] transition-colors">
                         <div className="flex items-center justify-end gap-1">
+                          {/* View Formulation Details Drawer */}
+                          <button
+                            type="button"
+                            className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingVariant(v);
+                            }}
+                            title="View Formulation Details"
+                            aria-label={`View ${v.medicine_name} details`}
+                          >
+                            <Eye size={13} />
+                          </button>
+
                           {isInvUpdatable && (
                             <>
                               {/* Stock In */}
                               <button
                                 type="button"
-                                className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-emerald-200 bg-emerald-50 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100/70 transition-colors shadow-2xs cursor-pointer"
-                                onClick={() => {
+                                className="inline-flex items-center gap-1 h-5.5 px-1.5 rounded border border-emerald-200 bg-emerald-50 text-[10.5px] font-semibold text-emerald-700 hover:bg-emerald-100/70 transition-colors shadow-2xs cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setSelectedVariant(v);
                                   setIsStockInModalOpen(true);
                                 }}
                                 title="Receive Stock"
                               >
-                                <PackagePlus size={12} />
+                                <PackagePlus size={11} />
                                 <span>Stock In</span>
                               </button>
 
                               {/* Stock Out */}
                               <button
                                 type="button"
-                                className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-slate-200 bg-white text-[11px] font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
-                                onClick={() => {
+                                className="inline-flex items-center gap-1 h-5.5 px-1.5 rounded border border-slate-200 bg-white text-[10.5px] font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setSelectedVariant(v);
                                   setIsStockOutModalOpen(true);
                                 }}
                                 title="Issue / Dispense Stock"
                               >
-                                <PackageMinus size={12} />
+                                <PackageMinus size={11} />
                                 <span>Stock Out</span>
                               </button>
 
                               {/* Adjust Count */}
                               <button
                                 type="button"
-                                className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-slate-200 bg-white text-[11px] font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
-                                onClick={() => {
+                                className="inline-flex items-center gap-1 h-5.5 px-1.5 rounded border border-slate-200 bg-white text-[10.5px] font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setSelectedVariant(v);
                                   setIsAdjustModalOpen(true);
                                 }}
                                 title="Reconcile Physical Count"
                               >
-                                <Scale size={12} />
+                                <Scale size={11} />
                                 <span>Adjust</span>
                               </button>
                             </>
@@ -812,8 +863,9 @@ export default function MedicineInventory() {
                           {/* History */}
                           <button
                             type="button"
-                            className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                            onClick={() => {
+                            className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedVariant(v);
                               setIsHistoryModalOpen(true);
                             }}
@@ -827,8 +879,9 @@ export default function MedicineInventory() {
                           {isInvUpdatable && (
                             <button
                               type="button"
-                              className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                              onClick={() => {
+                              className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setSelectedVariant(v);
                                 setIsVariantModalOpen(true);
                               }}
@@ -864,6 +917,32 @@ export default function MedicineInventory() {
           }}
         />
       </div>
+
+      {/* Medicine Inventory Details View Drawer */}
+      <MedicineInventoryDrawer
+        variant={activeViewingVariant}
+        onClose={() => setViewingVariant(null)}
+        onStockIn={(v) => {
+          setSelectedVariant(v);
+          setIsStockInModalOpen(true);
+        }}
+        onStockOut={(v) => {
+          setSelectedVariant(v);
+          setIsStockOutModalOpen(true);
+        }}
+        onAdjust={(v) => {
+          setSelectedVariant(v);
+          setIsAdjustModalOpen(true);
+        }}
+        onHistory={(v) => {
+          setSelectedVariant(v);
+          setIsHistoryModalOpen(true);
+        }}
+        onEdit={(v) => {
+          setSelectedVariant(v);
+          setIsVariantModalOpen(true);
+        }}
+      />
 
       {/* Modals */}
       <MedicineStrengthModal

@@ -82,6 +82,7 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         icon: Stethoscope,
         slug: 'DOCTORS',
         description: 'Specialists, profiles, timings & availability',
+        aliases: ['/doctor/profile', '/profile'],
       },
       {
         name: 'Availability & Slots',
@@ -236,7 +237,7 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
   },
   {
     key: 'administration',
-    name: 'Admin',
+    name: 'Administration',
     icon: Shield,
     description: 'System access, staff credentials & role permissions',
     defaultPath: '/users',

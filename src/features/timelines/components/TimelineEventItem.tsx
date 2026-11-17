@@ -11,6 +11,7 @@ import {
   User,
 } from 'lucide-react';
 import React, { useState } from 'react';
+import { getAuthenticatedFileUrl } from '@/utils/fileUrl';
 
 import type { TimelineEvent } from '../types/patientTimelines';
 
@@ -182,10 +183,13 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
   const medicines: TimelineMedicineItem[] = (event.medicines as TimelineMedicineItem[] | undefined) ?? (details.medicines as TimelineMedicineItem[] | undefined) ?? [];
   const vitals = details.vitals as Record<string, string | number | undefined> | undefined;
   const rawDoc = (details.documentUrl ?? details.document_url ?? details.prescriptionUrl ?? details.imageUrl) as string | undefined;
+  const isLocalApi = typeof rawDoc === 'string' && rawDoc.startsWith('/api/');
   const isAbsolute = typeof rawDoc === 'string' && (rawDoc.startsWith('http://') || rawDoc.startsWith('https://') || rawDoc.startsWith('data:') || rawDoc.startsWith('blob:'));
   const documentUrl = typeof rawDoc === 'string' && rawDoc.trim()
     ? isAbsolute
-      ? rawDoc.trim()
+      ? (rawDoc.includes('/api/') ? getAuthenticatedFileUrl(rawDoc.trim()) : rawDoc.trim())
+      : isLocalApi
+      ? getAuthenticatedFileUrl(rawDoc.trim())
       : `https://zithtech-s3-bucket-431451850777-eu-north-1-an.s3.eu-north-1.amazonaws.com/${rawDoc.trim().replace(/^\/+/, '')}`
     : undefined;
 
@@ -468,7 +472,7 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
                     <Button
                       size="small"
                       type="link"
-                      href={documentUrl}
+                      href={getAuthenticatedFileUrl(documentUrl, true)}
                       target="_blank"
                       download
                       icon={<Download className="w-3.5 h-3.5" />}

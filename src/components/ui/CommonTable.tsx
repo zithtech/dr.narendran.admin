@@ -16,6 +16,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 import { cx } from './primitives';
 import { SearchableSelect } from './SearchableSelect';
+import { resolveImageUrl } from '../../utils/doctorAvatar';
 
 /* ─────────────────────────────────────────────────────────────
  * Common Page Header (Matching Image Header)
@@ -400,30 +401,36 @@ export function PrimaryAvatarCell({
   avatarSrc?: string | null | undefined;
   onOpen?: () => void;
 }) {
+  const [currentSrc, setCurrentSrc] = useState<string | null>(null);
+  const [triedProxy, setTriedProxy] = useState(false);
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
+    const resolved = resolveImageUrl(avatarSrc);
+    setCurrentSrc(resolved);
+    setTriedProxy(Boolean(resolved?.startsWith('/api/proxy/image')));
     setHasError(false);
   }, [avatarSrc]);
 
-  const cleanSrc =
-    typeof avatarSrc === 'string' &&
-    avatarSrc.trim().length > 0 &&
-    avatarSrc.trim() !== 'null' &&
-    avatarSrc.trim() !== 'undefined'
-      ? avatarSrc.trim()
-      : null;
+  const handleError = () => {
+    if (!triedProxy && currentSrc && !currentSrc.startsWith('/api/proxy/image')) {
+      setTriedProxy(true);
+      setCurrentSrc(`/api/proxy/image?url=${encodeURIComponent(currentSrc)}`);
+    } else {
+      setHasError(true);
+    }
+  };
 
-  const showImage = cleanSrc && !hasError;
+  const showImage = Boolean(currentSrc) && !hasError;
   const firstLetter = (name || '').trim().charAt(0).toUpperCase() || '?';
 
   return (
     <div className="flex items-center gap-2.5 min-w-[160px] text-left">
       {showImage ? (
         <img
-          src={cleanSrc}
+          src={currentSrc!}
           alt=""
-          onError={() => setHasError(true)}
+          onError={handleError}
           className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-100"
         />
       ) : (

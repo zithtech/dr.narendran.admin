@@ -3,6 +3,7 @@ import {
   AlertCircle,
   Building2,
   Calendar,
+  Clock,
   Download,
   ExternalLink,
   FileText,
@@ -18,6 +19,7 @@ import React, { useState } from 'react';
 import {
   DEFAULT_WORK_DAYS,
   formatWorkDays,
+  getShiftTimingDisplay,
   WORK_DAY_OPTIONS,
   type StaffDocument,
   type StaffMember,
@@ -241,16 +243,17 @@ export default function StaffDrawer({
       <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
         <div
           style={{
-            width: 48,
-            height: 48,
+            width: 50,
+            height: 50,
             borderRadius: '50%',
-            background: '#0f172a',
+            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
             color: '#ffffff',
             display: 'grid',
             placeItems: 'center',
             fontWeight: 700,
             fontSize: 17,
-            boxShadow: '0 2px 4px rgba(15, 23, 42, 0.1)',
+            boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
+            border: '2px solid #ffffff',
             flexShrink: 0,
           }}
         >
@@ -261,7 +264,7 @@ export default function StaffDrawer({
             <h2
               style={{
                 margin: 0,
-                fontSize: 17.5,
+                fontSize: 18,
                 fontWeight: 700,
                 color: '#0f172a',
                 letterSpacing: '-0.01em',
@@ -272,28 +275,28 @@ export default function StaffDrawer({
             <span
               style={{
                 fontSize: 11,
-                fontWeight: 600,
-                color: '#475569',
-                background: '#f1f5f9',
-                border: '1px solid #e2e8f0',
-                padding: '2px 7px',
-                borderRadius: 5,
+                fontWeight: 700,
+                color: '#1d4ed8',
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                padding: '2px 8px',
+                borderRadius: 6,
               }}
             >
               {staff.staffCode}
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, flexWrap: 'wrap' }}>
             <span
               style={{
                 fontSize: 11.5,
-                fontWeight: 600,
-                color: '#334155',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                padding: '2px 8px',
-                borderRadius: 5,
+                fontWeight: 650,
+                color: '#1e40af',
+                background: '#eff6ff',
+                border: '1px solid #dbeafe',
+                padding: '2px 9px',
+                borderRadius: 6,
               }}
             >
               {staff.role}
@@ -306,7 +309,7 @@ export default function StaffDrawer({
                 fontSize: 11.5,
                 fontWeight: 600,
                 padding: '2px 8px',
-                borderRadius: 5,
+                borderRadius: 6,
                 background: isActive ? '#f0fdf4' : '#f8fafc',
                 border: isActive ? '1px solid #dcfce7' : '1px solid #e2e8f0',
                 color: isActive ? '#15803d' : '#64748b',
@@ -339,6 +342,9 @@ export default function StaffDrawer({
               fontSize: 12.5,
               height: 32,
               padding: '0 11px',
+              color: '#1d4ed8',
+              borderColor: '#bfdbfe',
+              background: '#eff6ff',
             }}
           >
             <Pencil size={13.5} />
@@ -402,20 +408,50 @@ export default function StaffDrawer({
   const stats = [
     {
       label: 'Staff Role',
-      value: <span style={{ fontWeight: 650, color: '#0f172a', fontSize: 13 }}>{staff.role}</span>,
+      value: (
+        <span style={{ fontWeight: 700, color: '#1e40af', fontSize: 13 }}>
+          {staff.role}
+        </span>
+      ),
     },
     {
       label: 'Shift Timing',
       value: (
-        <span style={{ fontWeight: 600, color: '#0f172a', fontSize: 13 }}>
-          {staff.shiftTiming}
-          {staff.customShiftDetails ? ` (${staff.customShiftDetails})` : ''}
+        <span
+          style={{
+            fontWeight: 650,
+            color: '#1d4ed8',
+            fontSize: 12,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            whiteSpace: 'normal',
+            lineHeight: 1.35,
+          }}
+          title={getShiftTimingDisplay(staff.shiftTiming, staff.customShiftDetails)}
+        >
+          <Clock size={12.5} style={{ color: '#2563eb', flexShrink: 0 }} />
+          <span>{getShiftTimingDisplay(staff.shiftTiming, staff.customShiftDetails)}</span>
         </span>
       ),
     },
     {
       label: 'Joining Date',
-      value: <span style={{ fontWeight: 600, color: '#0f172a', fontSize: 13 }}>{staff.joiningDate}</span>,
+      value: (
+        <span
+          style={{
+            fontWeight: 600,
+            color: '#334155',
+            fontSize: 13,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+          }}
+        >
+          <Calendar size={13} style={{ color: '#2563eb', flexShrink: 0 }} />
+          <span>{staff.joiningDate}</span>
+        </span>
+      ),
     },
   ];
 
@@ -436,7 +472,7 @@ export default function StaffDrawer({
           onClick={() => onEdit(staff)}
           style={{
             fontSize: 12.5,
-            background: '#2563eb',
+            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
             color: '#ffffff',
             border: 'none',
             display: 'inline-flex',
@@ -447,7 +483,7 @@ export default function StaffDrawer({
             height: 35,
             cursor: 'pointer',
             fontWeight: 600,
-            boxShadow: '0 1px 3px rgba(37, 99, 235, 0.24)',
+            boxShadow: '0 2px 8px rgba(37, 99, 235, 0.28)',
           }}
         >
           <Pencil size={14} />
@@ -461,106 +497,128 @@ export default function StaffDrawer({
     <>
       <Drawer
         open={Boolean(staff)}
-      onClose={onClose}
-      label="Staff Member Profile"
-      hero={hero}
-      stats={stats}
-      footer={footer}
-      size="lg"
-      className="staff-view-drawer"
-      width="min(740px, 100vw)"
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {/* Hospital & Branch Placement */}
-        <div className="staff-view-card">
-          <div className="staff-view-header">
-            <div className="staff-view-badge">
-              <Building2 size={13.5} style={{ color: '#475569', display: 'block', margin: 'auto' }} />
-            </div>
-            <div>
-              <div className="staff-view-title">Hospital & Branch Assignment</div>
-              <div className="staff-view-subtitle">Operational location, branch unit, and shift details</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
-            <div className="staff-view-item">
-              <span className="staff-view-label">Assigned Hospital</span>
-              <span className="staff-view-val" style={{ fontWeight: 600 }}>
-                {staff.hospitalName || 'Main Hospital System'}
-              </span>
-            </div>
-
-            <div className="staff-view-item">
-              <span className="staff-view-label">Hospital Branch</span>
-              <span className="staff-view-val" style={{ fontWeight: 600 }}>
-                {staff.branchName || 'Central Campus'}
-              </span>
-            </div>
-
-            <div className="staff-view-item">
-              <span className="staff-view-label">Scheduled Shift</span>
-              <span className="staff-view-val" style={{ fontWeight: 600 }}>
-                {staff.shiftTiming}
-                {staff.customShiftDetails && (
-                  <span style={{ display: 'block', fontSize: 11.5, color: '#64748b', fontWeight: 400, marginTop: 2 }}>
-                    {staff.customShiftDetails}
-                  </span>
-                )}
-              </span>
-            </div>
-
-            <div className="staff-view-item">
-              <span className="staff-view-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <Calendar size={11.5} style={{ color: '#475569' }} />
-                <span>Work Days</span>
-              </span>
-              <span className="staff-view-val" style={{ fontWeight: 600, color: '#0f172a' }}>
-                {formatWorkDays(staff.workDays || staff.work_days)}
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3.5, flexWrap: 'wrap', marginTop: 4 }}>
-                {WORK_DAY_OPTIONS.map((day) => {
-                  const rawDays = staff.workDays || staff.work_days;
-                  const daysList: string[] = Array.isArray(rawDays)
-                    ? rawDays
-                    : typeof rawDays === 'string'
-                      ? rawDays.split(',').map((s) => s.trim()).filter(Boolean)
-                      : DEFAULT_WORK_DAYS;
-                  const isWorking = daysList.includes(day.id);
-                  return (
-                    <span
-                      key={day.id}
-                      style={{
-                        fontSize: 10,
-                        fontWeight: isWorking ? 700 : 500,
-                        padding: '1px 5px',
-                        borderRadius: 4,
-                        background: isWorking ? '#f1f5f9' : '#f8fafc',
-                        border: isWorking ? '1px solid #cbd5e1' : '1px solid #e2e8f0',
-                        color: isWorking ? '#0f172a' : '#94a3b8',
-                      }}
-                    >
-                      {day.label}
-                    </span>
-                  );
-                })}
+        onClose={onClose}
+        label={
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#2563eb', fontWeight: 600, fontSize: 11.5 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#2563eb' }} />
+            Staff Member Profile
+          </span>
+        }
+        hero={hero}
+        stats={stats}
+        footer={footer}
+        size="lg"
+        className="staff-view-drawer"
+        width="min(740px, 100vw)"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Hospital & Branch Placement */}
+          <div className="staff-view-card">
+            <div className="staff-view-header">
+              <div className="staff-view-badge">
+                <Building2 size={13.5} style={{ color: '#2563eb', display: 'block', margin: 'auto' }} />
+              </div>
+              <div>
+                <div className="staff-view-title">Hospital & Branch Assignment</div>
+                <div className="staff-view-subtitle">Operational location, branch unit, and shift details</div>
               </div>
             </div>
 
-            <div className="staff-view-item">
-              <span className="staff-view-label">Date of Joining</span>
-              <span className="staff-view-val" style={{ fontWeight: 600 }}>
-                {staff.joiningDate}
-              </span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
+              <div className="staff-view-item">
+                <span className="staff-view-label">Assigned Hospital</span>
+                <span className="staff-view-val" style={{ fontWeight: 600 }}>
+                  {staff.hospitalName || 'Main Hospital System'}
+                </span>
+              </div>
+
+              <div className="staff-view-item">
+                <span className="staff-view-label">Hospital Branch</span>
+                <span className="staff-view-val" style={{ fontWeight: 600 }}>
+                  {staff.branchName || 'Central Campus'}
+                </span>
+              </div>
+
+              <div className="staff-view-item">
+                <span className="staff-view-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Clock size={11.5} style={{ color: '#2563eb' }} />
+                  <span>Scheduled Shift</span>
+                </span>
+                <span
+                  className="staff-view-val"
+                  style={{
+                    fontWeight: 650,
+                    color: '#1d4ed8',
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    padding: '3px 8px',
+                    borderRadius: 6,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginTop: 2,
+                    width: 'fit-content',
+                    maxWidth: '100%',
+                    whiteSpace: 'normal',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  <Clock size={12.5} style={{ color: '#2563eb', flexShrink: 0 }} />
+                  <span>{getShiftTimingDisplay(staff.shiftTiming, staff.customShiftDetails)}</span>
+                </span>
+              </div>
+
+              <div className="staff-view-item">
+                <span className="staff-view-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Calendar size={11.5} style={{ color: '#2563eb' }} />
+                  <span>Work Days</span>
+                </span>
+                <span className="staff-view-val" style={{ fontWeight: 600, color: '#0f172a' }}>
+                  {formatWorkDays(staff.workDays || staff.work_days)}
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3.5, flexWrap: 'wrap', marginTop: 4 }}>
+                  {WORK_DAY_OPTIONS.map((day) => {
+                    const rawDays = staff.workDays || staff.work_days;
+                    const daysList: string[] = Array.isArray(rawDays)
+                      ? rawDays
+                      : typeof rawDays === 'string'
+                        ? rawDays.split(',').map((s) => s.trim()).filter(Boolean)
+                        : DEFAULT_WORK_DAYS;
+                    const isWorking = daysList.includes(day.id);
+                    return (
+                      <span
+                        key={day.id}
+                        style={{
+                          fontSize: 10,
+                          fontWeight: isWorking ? 700 : 500,
+                          padding: '1px 5px',
+                          borderRadius: 4,
+                          background: isWorking ? '#eff6ff' : '#f8fafc',
+                          border: isWorking ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
+                          color: isWorking ? '#1d4ed8' : '#94a3b8',
+                        }}
+                      >
+                        {day.label}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="staff-view-item">
+                <span className="staff-view-label">Date of Joining</span>
+                <span className="staff-view-val" style={{ fontWeight: 600 }}>
+                  {staff.joiningDate}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
         {/* Contact Information */}
         <div className="staff-view-card">
           <div className="staff-view-header">
             <div className="staff-view-badge">
-              <User size={13.5} style={{ color: '#475569', display: 'block', margin: 'auto' }} />
+              <User size={13.5} style={{ color: '#2563eb', display: 'block', margin: 'auto' }} />
             </div>
             <div>
               <div className="staff-view-title">Contact Information</div>
@@ -586,7 +644,7 @@ export default function StaffDrawer({
                 <a
                   href={`mailto:${staff.email}`}
                   className="staff-view-val"
-                  style={{ color: '#2563eb', textDecoration: 'none' }}
+                  style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 500 }}
                 >
                   {staff.email}
                 </a>
@@ -632,7 +690,7 @@ export default function StaffDrawer({
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div className="staff-view-badge">
-                <FileText size={13.5} style={{ color: '#475569', display: 'block', margin: 'auto' }} />
+                <FileText size={13.5} style={{ color: '#2563eb', display: 'block', margin: 'auto' }} />
               </div>
               <div>
                 <div className="staff-view-title">Staff Documents & Certifications</div>
@@ -642,10 +700,10 @@ export default function StaffDrawer({
             <span
               style={{
                 fontSize: 11,
-                fontWeight: 600,
-                color: '#334155',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
+                fontWeight: 700,
+                color: '#1d4ed8',
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
                 padding: '2px 8px',
                 borderRadius: 9999,
               }}
@@ -681,9 +739,9 @@ export default function StaffDrawer({
                             width: 32,
                             height: 32,
                             borderRadius: 6,
-                            background: '#ffffff',
-                            color: '#475569',
-                            border: '1px solid #e2e8f0',
+                            background: '#eff6ff',
+                            color: '#2563eb',
+                            border: '1px solid #bfdbfe',
                             display: 'grid',
                             placeItems: 'center',
                             flexShrink: 0,
@@ -741,7 +799,7 @@ export default function StaffDrawer({
                             e.preventDefault();
                             void handleViewDocument(doc);
                           }}
-                          style={{ width: 28, height: 28 }}
+                          style={{ width: 28, height: 28, color: '#1d4ed8', background: '#eff6ff', borderColor: '#bfdbfe' }}
                         >
                           {viewingDocId === doc.id ? (
                             <Loader2 size={13} className="is-spinning" />
@@ -759,7 +817,7 @@ export default function StaffDrawer({
                             e.preventDefault();
                             void handleDownloadDocument(doc);
                           }}
-                          style={{ width: 28, height: 28 }}
+                          style={{ width: 28, height: 28, color: '#1d4ed8', background: '#eff6ff', borderColor: '#bfdbfe' }}
                         >
                           {downloadingDocId === doc.id ? (
                             <Loader2 size={13} className="is-spinning" />
@@ -810,13 +868,13 @@ export default function StaffDrawer({
                 padding: '14px',
                 borderRadius: 10,
                 background: '#f8fafc',
-                border: '1px solid #e2e8f0',
+                border: '1px solid #bfdbfe',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 12,
               }}
             >
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0f172a' }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: '#1e40af' }}>
                 Upload New Document
               </div>
 
@@ -952,6 +1010,10 @@ export default function StaffDrawer({
                     fontSize: 12.5,
                     height: 34,
                     padding: '0 14px',
+                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                    borderColor: '#1d4ed8',
+                    color: '#ffffff',
+                    boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
                   }}
                 >
                   {isUploading ? (
@@ -972,7 +1034,7 @@ export default function StaffDrawer({
           <div className="staff-view-card">
             <div className="staff-view-header">
               <div className="staff-view-badge">
-                <FileText size={13.5} style={{ color: '#475569', display: 'block', margin: 'auto' }} />
+                <FileText size={13.5} style={{ color: '#2563eb', display: 'block', margin: 'auto' }} />
               </div>
               <div>
                 <div className="staff-view-title">Internal Administrative Remarks</div>
@@ -1018,12 +1080,39 @@ export default function StaffDrawer({
           max-width: 740px !important;
           box-shadow: -12px 0 36px rgba(15, 23, 42, 0.14) !important;
         }
+        .staff-view-drawer .ui-drawer-top {
+          background: #f8fafc;
+          border-bottom: 1px solid #e2e8f0;
+        }
+        .staff-view-drawer .ui-drawer-hero {
+          background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+          border-bottom: 1px solid #dbeafe;
+        }
+        .staff-view-drawer .ui-drawer-stats {
+          display: grid !important;
+          grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.45fr) minmax(0, 0.85fr) !important;
+          background: #ffffff;
+          border: 1px solid #bfdbfe;
+          box-shadow: 0 2px 6px rgba(37, 99, 235, 0.05);
+        }
+        .staff-view-drawer .ui-drawer-stat {
+          border-right: 1px solid #e0edff;
+          min-width: 0;
+          overflow: visible;
+        }
+        .staff-view-drawer .ui-drawer-stat-value {
+          white-space: normal !important;
+          overflow: visible !important;
+          text-overflow: clip !important;
+          font-size: 12.5px !important;
+          line-height: 1.4 !important;
+        }
         .staff-view-card {
           background: #ffffff;
-          border: 1px solid #e2e8f0;
+          border: 1px solid #dbeafe;
           border-radius: 12px;
           padding: 14px 16px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+          box-shadow: 0 1px 3px rgba(37, 99, 235, 0.03);
           display: flex;
           flex-direction: column;
           gap: 12px;
@@ -1039,8 +1128,8 @@ export default function StaffDrawer({
           width: 26px;
           height: 26px;
           border-radius: 6px;
-          background: #f1f5f9;
-          border: 1px solid #e2e8f0;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
           display: flex;
           align-items: center;
           justify-content: center;

@@ -72,7 +72,7 @@ export default function Login({ defaultForgot = false }: { defaultForgot?: boole
 
       const roleUpper = (data.role || '').toUpperCase();
       if (roleUpper === 'DOCTOR') {
-        void navigate('/appointments/today');
+        void navigate('/doctor/profile');
       } else {
         void navigate('/');
       }

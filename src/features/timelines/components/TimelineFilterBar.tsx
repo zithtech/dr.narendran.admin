@@ -39,20 +39,20 @@ export const TimelineFilterBar: React.FC<TimelineFilterBarProps> = ({
   totalEvents,
 }) => {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-xs px-3.5 sm:px-4 py-2 sm:py-2.5 space-y-2">
-      {/* Category Pills Row - Compact Height */}
-      <div className="space-y-1.5">
+    <div className="bg-white rounded-lg border border-slate-200 shadow-2xs px-3 sm:px-3.5 py-1.5 sm:py-2 space-y-1.5">
+      {/* Category Pills Row - Compact */}
+      <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-teal-700" />
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+            <Filter className="w-3 h-3 text-teal-700" />
             Filter by Event Category
           </span>
-          <span className="text-xs font-medium text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200/60">
+          <span className="text-[11px] font-medium text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200/60 leading-tight">
             {totalEvents} {totalEvents === 1 ? 'event' : 'events'} found
           </span>
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1">
           {CATEGORY_ITEMS.map((item) => {
             const isSelected = selectedType === item.type;
             return (
@@ -60,13 +60,13 @@ export const TimelineFilterBar: React.FC<TimelineFilterBarProps> = ({
                 key={item.type}
                 type="button"
                 onClick={() => onSelectType(item.type)}
-                className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-teal-800 text-white shadow-xs font-semibold'
-                    : 'bg-gray-100/80 text-gray-700 hover:bg-gray-200/70 border border-transparent'
+                    ? 'bg-teal-800 text-white shadow-2xs font-semibold'
+                    : 'bg-slate-100/80 text-slate-700 hover:bg-slate-200/80 border border-transparent'
                 }`}
               >
-                <span>{item.icon}</span>
+                <span className="text-xs">{item.icon}</span>
                 <span>{item.label}</span>
               </button>
             );
@@ -74,11 +74,11 @@ export const TimelineFilterBar: React.FC<TimelineFilterBarProps> = ({
         </div>
       </div>
 
-      {/* Period / Year Selector Row - Compact & Aligned */}
-      <div className="pt-2 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-gray-400" />
+      {/* Period / Year Selector Row - Slim */}
+      <div className="pt-1.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-1.5">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+            <Calendar className="w-3 h-3 text-slate-400" />
             Period:
           </span>
           <div className="flex items-center gap-1">
@@ -92,10 +92,10 @@ export const TimelineFilterBar: React.FC<TimelineFilterBarProps> = ({
                     onDateRangeChange(null);
                     onSelectYear(yr);
                   }}
-                  className={`px-2.5 py-0.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                  className={`px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
                     isYrSelected
-                      ? 'bg-teal-100/80 text-teal-900 font-bold border border-teal-300'
-                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
+                      ? 'bg-teal-100 text-teal-900 font-bold border border-teal-300'
+                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
                   }`}
                 >
                   {yr}
@@ -106,8 +106,8 @@ export const TimelineFilterBar: React.FC<TimelineFilterBarProps> = ({
         </div>
 
         {/* Custom Date Range Picker */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400">or Custom:</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-slate-400">or Custom:</span>
           <RangePicker
             size="small"
             value={dateRange}
@@ -119,7 +119,7 @@ export const TimelineFilterBar: React.FC<TimelineFilterBarProps> = ({
                 onDateRangeChange(null);
               }
             }}
-            className="text-xs"
+            className="text-[11px] !h-6"
           />
         </div>
       </div>

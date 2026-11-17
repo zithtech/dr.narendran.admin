@@ -142,6 +142,7 @@ describe('Staff Management Feature', () => {
     expect(screen.getByText('Sister Mary Joseph')).toBeInTheDocument();
     expect(screen.getByText('STF-001')).toBeInTheDocument();
     expect(screen.getByText('Head of Pediatric ICU')).toBeInTheDocument();
+    expect(screen.getAllByText('Morning (08:00 AM - 04:00 PM)').length).toBeGreaterThan(0);
 
     // Check document title and download button
     expect(screen.getByText('Nursing Council Registration')).toBeInTheDocument();
