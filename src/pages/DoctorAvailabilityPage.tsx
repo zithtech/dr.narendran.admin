@@ -373,7 +373,18 @@ export default function DoctorAvailabilityPage() {
 
   // Open Weekly Slot Editor Drawer
   const handleOpenEditor = (slot?: DoctorAvailabilitySlot | null, defaultDay?: DayOfWeek) => {
-    if (slot ? !isUpdatable : !isCreatable) return;
+    if (slot ? !isUpdatable : !isCreatable) {
+      void message.warning('You do not have permission to configure consultation hours.');
+      return;
+    }
+    const targetDocId = selectedDoctorId || doctors[0]?.id || '';
+    if (!targetDocId) {
+      void message.warning('Please select a doctor profile to configure consultation hours.');
+      return;
+    }
+    if (!selectedDoctorId && targetDocId) {
+      setSelectedDoctorId(targetDocId);
+    }
     if (slot) {
       setEditingSlot(slot);
       setFormBranchId(slot.branch_id);
@@ -493,7 +504,18 @@ export default function DoctorAvailabilityPage() {
 
   // Open Block Date Drawer
   const handleOpenBlockModal = (block?: DoctorBlockedDate | null) => {
-    if (block ? !isUpdatable : !isCreatable) return;
+    if (block ? !isUpdatable : !isCreatable) {
+      void message.warning('You do not have permission to block dates.');
+      return;
+    }
+    const targetDocId = selectedDoctorId || doctors[0]?.id || '';
+    if (!targetDocId) {
+      void message.warning('Please select a doctor profile to manage blocked dates.');
+      return;
+    }
+    if (!selectedDoctorId && targetDocId) {
+      setSelectedDoctorId(targetDocId);
+    }
     if (block) {
       setEditingBlock(block);
       setBlockFormDate(block.blocked_date);
@@ -862,7 +884,7 @@ export default function DoctorAvailabilityPage() {
               <button
                 type="button"
                 onClick={() => handleOpenBlockModal(null)}
-                disabled={!selectedDoctorId}
+                disabled={!selectedDoctorId && doctors.length === 0}
                 className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold shadow-2xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <CalendarX size={13} />
@@ -874,7 +896,7 @@ export default function DoctorAvailabilityPage() {
             ? {
                 createLabel: 'Add Availability Slot',
                 onCreate: () => {
-                  if (selectedDoctorId) handleOpenEditor(null);
+                  handleOpenEditor(null);
                 },
               }
             : {})}

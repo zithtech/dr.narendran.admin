@@ -12,7 +12,7 @@ import { Drawer } from '../components/ui/Drawer';
 import { addedFacet, statusFacet } from '../components/ui/facets';
 import { ActivityCell, Badge, StatusDot } from '../components/ui/primitives';
 import { useResource } from '../hooks/useResource';
-import { usePermission } from '../context/PermissionContext';
+import { isDoctorRole, usePermission } from '../context/PermissionContext';
 import { timeAgo } from '../lib/format';
 import { ErrorBoundary } from '../shared/components/ErrorBoundary';
 import api from '../utils/api';
@@ -53,7 +53,8 @@ export default function Doctors() {
   const navigate = useNavigate();
   const resource = useResource<Doctor>('doctors', 'doctors');
   const { message } = App.useApp();
-  const { canView, canCreate, canUpdate } = usePermission();
+  const { canView, canCreate, canUpdate, roleName, hasRole } = usePermission();
+  const isDoctorUser = isDoctorRole(roleName) || hasRole('DOCTOR', 'Doctor');
 
   const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
@@ -79,7 +80,10 @@ export default function Doctors() {
   };
 
   const openAvailability = (doctor: Doctor) => {
-    if (!canUpdate('AVAILABILITY')) return;
+    if (!canUpdate('AVAILABILITY') && !canView('AVAILABILITY') && !isDoctorUser) {
+      void message.warning('You do not have permission to view or manage doctor schedules.');
+      return;
+    }
     setAvailabilityDoctor(doctor);
     setIsAvailabilityModalOpen(true);
   };

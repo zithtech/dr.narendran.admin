@@ -63,10 +63,12 @@ export default function DoctorDrawer({
   onSchedule,
   scheduleVersion,
 }: DoctorDrawerProps) {
-  const { canUpdate } = usePermission();
+  const { canUpdate, roleName, hasRole } = usePermission();
+  const isDoctorUser =
+    Boolean(roleName && String(roleName).toUpperCase().includes('DOCTOR')) ||
+    Boolean(typeof hasRole === 'function' && hasRole('DOCTOR', 'Doctor'));
   const isDoctorEditable = canUpdate('DOCTORS');
-  const isScheduleEditable = canUpdate('AVAILABILITY');
-
+  const isScheduleEditable = canUpdate('AVAILABILITY') || isDoctorUser;
   // Keyed by doctor + version so a stale response never shows under another doctor.
   const [schedule, setSchedule] = useState<{ key: string; slots: Slot[]; error: string } | null>(
     null,

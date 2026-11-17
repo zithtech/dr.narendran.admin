@@ -43,6 +43,17 @@ export default function PatientTimelineDetailPage() {
   const [page, setPage] = useState<number>(1);
   const [hasNextPage, setHasNextPage] = useState<boolean>(false);
   const [totalEvents, setTotalEvents] = useState<number>(0);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+
+  // Infinite Scroll Sentinel & Sync Refs
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const loadingMoreRef = useRef<boolean>(false);
+  const hasNextPageRef = useRef<boolean>(false);
+  const pageRef = useRef<number>(1);
+
+  loadingMoreRef.current = loadingMore;
+  hasNextPageRef.current = hasNextPage;
+  pageRef.current = page;
 
   // Dynamic height measurement of sticky Patient Header for pixel-perfect sticky Filter placement
   const headerRef = useRef<HTMLDivElement>(null);
@@ -80,6 +91,7 @@ export default function PatientTimelineDetailPage() {
         setLoading(true);
       }
       setError(null);
+      setLoadMoreError(null);
 
       try {
         const params: Record<string, string | number> = {
@@ -117,10 +129,15 @@ export default function PatientTimelineDetailPage() {
           errorObj?.response?.data?.message ??
           errorObj?.message ??
           'Failed to load patient medical timeline.';
-        setError(msg);
+        if (isAppend) {
+          setLoadMoreError(msg);
+        } else {
+          setError(msg);
+        }
       } finally {
         setLoading(false);
         setLoadingMore(false);
+        loadingMoreRef.current = false;
       }
     },
     [patientId, selectedType, selectedYear, dateRange],
@@ -178,11 +195,61 @@ export default function PatientTimelineDetailPage() {
     };
   }, [patientId, selectedType, selectedYear, dateRange]);
 
-  const handleLoadMore = () => {
-    if (hasNextPage && !loadingMore) {
-      void loadTimeline(true, page + 1);
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPageRef.current && !loadingMoreRef.current && !loading) {
+      loadingMoreRef.current = true;
+      void loadTimeline(true, pageRef.current + 1);
     }
-  };
+  }, [loading, loadTimeline]);
+
+  // Automatic Infinite Scroll: loads older medical records automatically on scroll
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasNextPage || loading) return;
+
+    // Detect closest scrollable container (.ui-main in SidebarLayout)
+    const scrollContainer = sentinel.closest<HTMLElement>('.ui-main');
+
+    let observer: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== 'undefined') {
+      observer = new IntersectionObserver(
+        (entries) => {
+          const [entry] = entries;
+          if (entry?.isIntersecting) {
+            handleLoadMore();
+          }
+        },
+        {
+          root: scrollContainer || null,
+          rootMargin: '300px 0px',
+          threshold: 0,
+        },
+      );
+      observer.observe(sentinel);
+    }
+
+    // Passive scroll listener fallback for responsive/custom scroll contexts
+    const handleScroll = () => {
+      if (!hasNextPageRef.current || loadingMoreRef.current) return;
+      const target = scrollContainer || document.documentElement;
+      const isNearBottom =
+        target === document.documentElement
+          ? window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 350
+          : target.scrollTop + target.clientHeight >= target.scrollHeight - 350;
+
+      if (isNearBottom) {
+        handleLoadMore();
+      }
+    };
+
+    const scrollTarget = scrollContainer || window;
+    scrollTarget.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      observer?.disconnect();
+      scrollTarget.removeEventListener('scroll', handleScroll);
+    };
+  }, [hasNextPage, loading, handleLoadMore]);
 
   return (
     <div className="patient-timeline-detail-page w-full min-h-full block relative">
@@ -295,17 +362,48 @@ export default function PatientTimelineDetailPage() {
                     />
                   ))}
 
-                  {/* Load More Button */}
+                  {/* Automatic Infinite Scroll Sentinel & Loading Indicator */}
                   {hasNextPage && (
-                    <div className="pt-4 text-center">
+                    <div ref={sentinelRef} className="pt-4 pb-2 text-center">
+                      {loadingMore ? (
+                        <div className="flex items-center justify-center gap-2 text-teal-800 py-2">
+                          <Spin size="small" />
+                          <span className="text-xs font-medium text-slate-500">
+                            Loading older medical records...
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="h-6 w-full flex items-center justify-center text-xs text-slate-400">
+                          <span className="inline-block w-2 h-2 rounded-full bg-teal-600/40 animate-pulse mr-2" />
+                          <span>Loading older records as you scroll...</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Load More Error with Retry */}
+                  {loadMoreError && (
+                    <div className="pt-3 pb-2 text-center flex items-center justify-center gap-2">
+                      <span className="text-xs text-rose-500">{loadMoreError}</span>
                       <Button
-                        size="middle"
-                        loading={loadingMore}
-                        onClick={handleLoadMore}
-                        className="border-teal-700 text-teal-800 hover:bg-teal-50 font-semibold"
+                        size="small"
+                        onClick={() => {
+                          setLoadMoreError(null);
+                          handleLoadMore();
+                        }}
+                        className="text-xs border-teal-700 text-teal-800 hover:bg-teal-50"
                       >
-                        Load Older Medical Events
+                        Retry
                       </Button>
+                    </div>
+                  )}
+
+                  {/* End of Timeline Indicator */}
+                  {!hasNextPage && timelineEvents.length > 0 && (
+                    <div className="pt-6 pb-2 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                      <span className="w-10 h-px bg-slate-200" />
+                      <span>All medical events loaded</span>
+                      <span className="w-10 h-px bg-slate-200" />
                     </div>
                   )}
                 </div>

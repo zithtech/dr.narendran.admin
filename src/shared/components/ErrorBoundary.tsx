@@ -11,6 +11,7 @@ interface Props {
 
 interface State {
   error: Error | null;
+  componentStack?: string | null | undefined;
 }
 
 /**
@@ -33,10 +34,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
     logger.error(error, { componentStack: info.componentStack });
+    this.setState({ componentStack: info.componentStack ?? null });
   }
 
   private readonly handleReset = (): void => {
-    this.setState({ error: null });
+    this.setState({ error: null, componentStack: null });
   };
 
   override render(): ReactNode {
@@ -62,9 +64,16 @@ export class ErrorBoundary extends Component<Props, State> {
 
         {/* The raw message can contain internal detail, so it is dev-only. */}
         {IS_DEV ? (
-          <pre className="max-w-xl overflow-auto rounded bg-slate-100 p-4 text-left text-xs text-red-700">
-            {error.message}
-          </pre>
+          <div className="max-w-2xl text-left w-full">
+            <pre className="overflow-auto rounded bg-slate-100 p-4 text-xs font-mono text-red-700 whitespace-pre-wrap">
+              {error.message}
+            </pre>
+            {this.state.componentStack && (
+              <pre className="mt-2 max-h-60 overflow-auto rounded bg-slate-50 p-4 text-[11px] font-mono text-slate-600">
+                {this.state.componentStack}
+              </pre>
+            )}
+          </div>
         ) : null}
 
         <button

@@ -1,4 +1,5 @@
 import {
+  Activity,
   Building2,
   Download,
   Droplet,
@@ -294,6 +295,42 @@ export default function PatientDrawer({ patient, onClose, onEdit }: PatientDrawe
         </span>
       ),
     },
+    ...(patient.blood_pressure
+      ? [
+          {
+            label: 'Blood Pressure',
+            value: (
+              <span style={{ fontWeight: 650, color: '#dc2626', fontSize: 13 }}>
+                {patient.blood_pressure}
+              </span>
+            ),
+          },
+        ]
+      : []),
+    ...(patient.blood_sugar
+      ? [
+          {
+            label: 'Blood Sugar',
+            value: (
+              <span style={{ fontWeight: 650, color: '#d97706', fontSize: 13 }}>
+                {patient.blood_sugar}
+              </span>
+            ),
+          },
+        ]
+      : []),
+    ...(patient.body_temperature
+      ? [
+          {
+            label: 'Temperature',
+            value: (
+              <span style={{ fontWeight: 650, color: '#0284c7', fontSize: 13 }}>
+                {patient.body_temperature}
+              </span>
+            ),
+          },
+        ]
+      : []),
     {
       label: 'Prescriptions',
       value: (
@@ -845,10 +882,83 @@ export default function PatientDrawer({ patient, onClose, onEdit }: PatientDrawe
               <dd>{patient.gender ? titleCase(patient.gender) : <span className="ui-muted">—</span>}</dd>
               <dt>Blood Group</dt>
               <dd>{patient.blood_group || <span className="ui-muted">—</span>}</dd>
+              <dt>Blood Pressure</dt>
+              <dd>{patient.blood_pressure || <span className="ui-muted">—</span>}</dd>
+              <dt>Blood Sugar</dt>
+              <dd>{patient.blood_sugar || <span className="ui-muted">—</span>}</dd>
+              <dt>Body Temperature</dt>
+              <dd>{patient.body_temperature || <span className="ui-muted">—</span>}</dd>
               <dt>Marital Status</dt>
               <dd>{patient.marital_status ? titleCase(patient.marital_status) : <span className="ui-muted">—</span>}</dd>
             </dl>
           </div>
+
+          {/* Section: Custom Vitals & Metrics */}
+          {Array.isArray(patient.custom_vitals) && patient.custom_vitals.length > 0 && (
+            <div
+              style={{
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: 12,
+                padding: '16px 18px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  paddingBottom: 8,
+                  borderBottom: '1px solid #f1f5f9',
+                }}
+              >
+                <div
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 6,
+                    background: '#f0fdf4',
+                    color: '#16a34a',
+                    border: '1px solid #dcfce7',
+                    display: 'grid',
+                    placeItems: 'center',
+                  }}
+                >
+                  <Activity size={13} />
+                </div>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
+                    color: '#64748b',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Custom Vitals & Metrics
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
+                {patient.custom_vitals.map((v, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      padding: '8px 12px',
+                      background: '#f8fafc',
+                      borderRadius: 8,
+                      border: '1px solid #e2e8f0',
+                    }}
+                  >
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>{v.label}</div>
+                    <div style={{ fontSize: 13, color: '#0f172a', fontWeight: 700, marginTop: 2 }}>{v.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Section: Hospital Assignment */}
           <div
