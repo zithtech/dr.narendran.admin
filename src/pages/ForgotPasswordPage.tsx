@@ -1,13 +1,14 @@
 import {
   ArrowLeft,
   CheckCircle2,
-  HeartPulse,
-  Mail,
   RefreshCw,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 
+import brandLogoImg from '../assets/brand-logo.png';
+import loginDoctorImg from '../assets/login-doctor-illustration.png';
+import { Alert } from '../components/ui/primitives';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
 
@@ -19,6 +20,12 @@ export default function ForgotPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Hospital Brand details from storage matching Login page
+  const brandFirstName =
+    localStorage.getItem('adminFirstName') || 'Hospital Management System';
+  const brandLastName =
+    localStorage.getItem('adminLastName') || 'Clinical Suite';
 
   const validateEmail = (val: string): boolean => {
     const trimmed = val.trim();
@@ -60,7 +67,7 @@ export default function ForgotPasswordPage() {
       setSuccess(true);
       setSuccessMessage(
         response.data?.message ||
-          'If an account exists with this email, you will receive a password reset link.',
+        'If an account exists with this email, you will receive a password reset link.',
       );
     } catch (err: unknown) {
       // Do not reveal whether account exists; surface network or server errors gracefully
@@ -76,134 +83,185 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans selection:bg-blue-500 selection:text-white">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center items-center gap-2.5 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-            <HeartPulse size={24} />
-          </div>
-          <span className="text-xl font-bold tracking-tight text-slate-900">
-            Dr. Narendran HMS
-          </span>
-        </div>
-        <h2 className="text-center text-2xl font-bold tracking-tight text-slate-900">
-          Forgot Password
-        </h2>
-        <p className="mt-1 text-center text-xs text-slate-500 max-w-sm mx-auto">
-          Enter your registered email address and we will send you a secure link to reset your password.
-        </p>
-      </div>
-
-      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-[420px] px-4 sm:px-0">
-        <div className="bg-white py-8 px-6 shadow-sm border border-slate-200/80 sm:rounded-2xl sm:px-8">
-          {error && (
-            <div className="mb-5 p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
-              <span className="font-semibold shrink-0">Error:</span>
-              <span>{error}</span>
+    <div className="min-h-screen w-full bg-white flex flex-col justify-between">
+      <div className="w-full flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-screen">
+        {/* Left Column: Form & Brand Area */}
+        <div className="lg:col-span-5 xl:col-span-5 bg-white flex flex-col justify-between px-6 py-8 sm:px-12 sm:py-12 md:px-16 lg:px-14 xl:px-20 z-10">
+          {/* Top Brand Area: Kept at the top */}
+          <div className="w-full max-w-md mx-auto">
+            <div className="flex items-center gap-4">
+              <img
+                src={brandLogoImg}
+                alt={`${brandFirstName} Logo`}
+                className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0"
+              />
+              <div className="flex flex-col justify-center min-w-0">
+                <span className="block text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight leading-tight truncate">
+                  {brandFirstName}
+                </span>
+                <span className="block text-xs sm:text-sm font-medium text-slate-500 tracking-wide mt-0.5 truncate">
+                  {brandLastName}
+                </span>
+              </div>
             </div>
-          )}
+          </div>
 
-          {success ? (
-            <div className="text-center space-y-4 py-2">
-              <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 mx-auto shadow-xs">
-                <CheckCircle2 size={26} />
+          {/* Center Content Area */}
+          <div className="w-full max-w-md mx-auto my-auto py-8">
+            {/* Main Title & Subtitle */}
+            <div className="mb-8">
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                Forgot Password.
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 mt-2">
+                Enter your registered email address and we will send you a secure link to reset your password.
+              </p>
+            </div>
+
+            {/* Error Feedback Alert */}
+            {error && (
+              <div className="mb-5">
+                <Alert>{error}</Alert>
               </div>
+            )}
 
-              <div>
-                <h3 className="text-base font-semibold text-slate-900 mb-1">
-                  Reset Link Sent
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  {successMessage}
-                </p>
-              </div>
+            {/* Success State */}
+            {success ? (
+              <div className="space-y-5 py-2">
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-3">
+                  <CheckCircle2 size={20} className="text-emerald-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-bold text-emerald-900 mb-1">
+                      Reset Link Sent
+                    </h3>
+                    <p className="leading-relaxed text-emerald-800">
+                      {successMessage}
+                    </p>
+                  </div>
+                </div>
 
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-left text-xs text-slate-500 space-y-1">
-                <p className="font-medium text-slate-700">Next Steps:</p>
-                <ul className="list-disc list-inside space-y-0.5 text-[11.5px] text-slate-500">
-                  <li>Check your inbox for an email from Dr. Narendran HMS.</li>
-                  <li>Click the secure link inside the email to set a new password.</li>
-                  <li>The reset link is time-limited and expires in 30 minutes.</li>
-                </ul>
-              </div>
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-left text-xs text-slate-600 space-y-1.5">
+                  <p className="font-semibold text-slate-800">Next Steps:</p>
+                  <ul className="list-disc list-inside space-y-1 text-slate-500">
+                    <li>Check your inbox for an email from our Healthcare System.</li>
+                    <li>Click the secure link inside the email to set a new password.</li>
+                    <li>The reset link is time-limited and expires in 30 minutes.</li>
+                  </ul>
+                </div>
 
-              <div className="pt-2">
                 <button
                   type="button"
                   onClick={() => void navigate('/login')}
-                  className="w-full inline-flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors cursor-pointer"
+                  className="w-full h-12 rounded-2xl bg-[#5d45db] hover:bg-[#4e36d4] active:bg-[#432dbf] text-white font-semibold text-sm shadow-md shadow-[#5d45db]/25 transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <ArrowLeft size={14} /> Back to Login
+                  <ArrowLeft size={16} />
+                  <span>Back to Login</span>
                 </button>
               </div>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-              <div>
-                <label
-                  htmlFor="forgot-email"
-                  className="block text-xs font-semibold text-slate-700 mb-1"
-                >
-                  Email Address <span className="text-red-500">*</span>
-                </label>
-                <div className="relative rounded-lg shadow-2xs">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <Mail size={16} />
+            ) : (
+              /* Request Form */
+              <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+                <div>
+                  <label
+                    htmlFor="forgot-email"
+                    className="block text-xs font-semibold text-slate-700 mb-1.5"
+                  >
+                    Enter your email address <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="forgot-email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="you@hospital.com"
+                      value={email}
+                      onChange={handleEmailChange}
+                      required
+                      className={`w-full h-12 px-4 rounded-xl border ${emailError
+                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10'
+                        : 'border-slate-300 focus:border-[#5d45db] focus:ring-[#5d45db]/10'
+                        } bg-white text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-4 transition-all shadow-2xs`}
+                    />
                   </div>
-                  <input
-                    id="forgot-email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={handleEmailChange}
-                    onBlur={() => validateEmail(email)}
-                    placeholder="you@hospital.com"
-                    disabled={loading}
-                    className={`block w-full pl-9 pr-3 py-2 text-xs border rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                      emailError
-                        ? 'border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500'
-                        : 'border-slate-300 text-slate-900 placeholder-slate-400 focus:ring-blue-500 focus:border-blue-500'
-                    }`}
-                  />
+                  {emailError && (
+                    <p className="mt-1.5 text-xs text-red-600 font-medium">
+                      {emailError}
+                    </p>
+                  )}
                 </div>
-                {emailError && (
-                  <p className="mt-1.5 text-[11px] text-red-600 font-medium">
-                    {emailError}
-                  </p>
-                )}
-              </div>
 
-              <div className="pt-1">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  className="w-full h-12 mt-2 rounded-2xl bg-[#5d45db] hover:bg-[#4e36d4] active:bg-[#432dbf] text-white font-semibold text-sm shadow-md shadow-[#5d45db]/25 transition-all cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <>
-                      <RefreshCw size={14} className="animate-spin" />
+                      <RefreshCw size={16} className="animate-spin" />
                       <span>Sending reset link…</span>
                     </>
                   ) : (
                     <span>Send Reset Link</span>
                   )}
                 </button>
-              </div>
 
-              <div className="pt-2 text-center border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => void navigate('/login')}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
-                >
-                  <ArrowLeft size={13} />
-                  <span>Back to Login</span>
-                </button>
-              </div>
-            </form>
-          )}
+                <div className="pt-3 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => void navigate('/login')}
+                    className="w-full h-11 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <ArrowLeft size={14} />
+                    <span>Back to Login</span>
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+
+          {/* Bottom Security Note */}
+          <div className="w-full max-w-md mx-auto pt-6 border-t border-slate-100 text-center text-xs text-slate-400">
+            Protected administrative area · Authorised healthcare staff only
+          </div>
+        </div>
+
+        {/* Right Column: Hero Welcome Section with User-provided Doctor Consultation Image matching Login */}
+        <div className="hidden lg:flex lg:col-span-7 xl:col-span-7 bg-[#f7f5ff] relative overflow-hidden flex-col items-center justify-between p-8 xl:p-14 border-l border-slate-200/60 select-none">
+          {/* Subtle Ambient Decorative Circles / Bubbles matching login page */}
+          <div className="absolute top-12 left-14 w-20 h-20 rounded-full bg-violet-200/50 pointer-events-none" />
+          <div className="absolute top-36 right-20 w-12 h-12 rounded-full bg-violet-200/40 pointer-events-none" />
+          <div className="absolute top-1/2 left-10 w-8 h-8 rounded-full bg-violet-200/60 pointer-events-none" />
+          <div className="absolute bottom-28 left-20 w-14 h-14 rounded-full bg-violet-200/40 pointer-events-none" />
+          <div className="absolute bottom-20 right-16 w-24 h-24 rounded-full bg-violet-200/50 pointer-events-none" />
+          <div className="absolute top-1/4 right-1/3 w-36 h-36 rounded-full bg-violet-100/70 blur-2xl pointer-events-none" />
+          <div className="absolute bottom-1/4 left-1/3 w-48 h-48 rounded-full bg-indigo-100/60 blur-3xl pointer-events-none" />
+
+          {/* Top Heading */}
+          <div className="relative z-10 text-center pt-4 sm:pt-6">
+            <span className="block text-xs sm:text-sm font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+              Healthcare Administration &amp; Clinical Operations
+            </span>
+            <h2 className="text-3xl sm:text-4xl xl:text-5xl font-extrabold text-[#5d45db] tracking-tight">
+              Manage. Monitor. Care.
+            </h2>
+          </div>
+
+          {/* Centered Doctor Consultation Illustration */}
+          <div className="relative z-10 w-full flex-1 flex items-center justify-center p-4 max-w-xl">
+            <img
+              src={loginDoctorImg}
+              alt="Doctor and Patient Consultation"
+              className="w-full max-h-[540px] object-contain drop-shadow-2xl transition-transform duration-500 hover:scale-[1.02]"
+            />
+          </div>
+
+          {/* Bottom Hospital Tagline */}
+          <div className="relative z-10 text-center pb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-violet-400/90">
+              Healthcare Management Information System
+            </span>
+          </div>
         </div>
       </div>
     </div>
