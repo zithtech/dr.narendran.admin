@@ -526,7 +526,7 @@ export default function Login({ defaultForgot = false }: { defaultForgot?: boole
               Healthcare Administration &amp; Clinical Operations
             </span>
             <h2 className="text-3xl sm:text-4xl xl:text-5xl font-extrabold text-[#5d45db] tracking-tight">
-              Hospital Management System
+              Manage. Monitor. Care.
             </h2>
           </div>
 
