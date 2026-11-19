@@ -43,6 +43,7 @@ import LabServicesPage from './pages/client/LabServicesPage';
 import LabAccountPage from './pages/client/LabAccountPage';
 import LabChangePasswordPage from './pages/client/LabChangePasswordPage';
 import LabReportsPage from './pages/client/LabReportsPage';
+import LabUpcomingTestsPage from './pages/client/LabUpcomingTestsPage';
 
 import SupportCenterPage from './features/support/pages/SupportCenterPage';
 import { ReviewsManagementPage } from './features/reviews/pages/ReviewsManagementPage';
@@ -114,6 +115,8 @@ function App() {
         >
           <Route index element={<Navigate to="/client/dashboard" replace />} />
           <Route path="dashboard" element={<LabDashboardPage />} />
+          <Route path="upcoming-tests" element={<LabUpcomingTestsPage />} />
+          <Route path="upcoming" element={<Navigate to="/client/upcoming-tests" replace />} />
           <Route path="reports" element={<LabReportsPage />} />
           <Route path="profile" element={<LabProfilePage />} />
           <Route path="services" element={<LabServicesPage />} />
