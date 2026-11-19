@@ -16,7 +16,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 import { cx } from './primitives';
 import { SearchableSelect } from './SearchableSelect';
-import { resolveImageUrl } from '../../utils/doctorAvatar';
+import { resolveImageUrl, toApiUrl } from '../../utils/doctorAvatar';
 
 /* ─────────────────────────────────────────────────────────────
  * Common Page Header (Matching Image Header)
@@ -413,9 +413,9 @@ export function PrimaryAvatarCell({
   }, [avatarSrc]);
 
   const handleError = () => {
-    if (!triedProxy && currentSrc && !currentSrc.startsWith('/api/proxy/image')) {
+    if (!triedProxy && currentSrc && !currentSrc.includes('/api/proxy/image')) {
       setTriedProxy(true);
-      setCurrentSrc(`/api/proxy/image?url=${encodeURIComponent(currentSrc)}`);
+      setCurrentSrc(toApiUrl(`/api/proxy/image?url=${encodeURIComponent(currentSrc)}`));
     } else {
       setHasError(true);
     }

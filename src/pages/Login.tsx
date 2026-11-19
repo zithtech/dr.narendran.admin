@@ -42,7 +42,7 @@ export default function Login({ defaultForgot = false }: { defaultForgot?: boole
   const [resetSuccess, setResetSuccess] = useState(false);
 
   // Hospital Brand details from storage
-  const brandFirstName = localStorage.getItem('adminFirstName') || 'HMS Admin';
+  const brandFirstName = localStorage.getItem('adminFirstName') || 'Hospital Management System';
   const brandLastName = localStorage.getItem('adminLastName') || 'Hospital';
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -194,9 +194,9 @@ export default function Login({ defaultForgot = false }: { defaultForgot?: boole
       <div className="w-full flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-screen">
         {/* Left Column: Form & Brand Area */}
         <div className="lg:col-span-5 xl:col-span-5 bg-white flex flex-col justify-between px-6 py-8 sm:px-12 sm:py-12 md:px-16 lg:px-14 xl:px-20 z-10">
-          {/* Top Brand Area */}
-          <div>
-            <div className="flex items-center gap-4 mb-8 sm:mb-10">
+          {/* Top Brand Area: Kept at the top */}
+          <div className="w-full max-w-md mx-auto">
+            <div className="flex items-center gap-4">
               <img
                 src={brandLogoImg}
                 alt={`${brandFirstName} Logo`}
@@ -211,7 +211,10 @@ export default function Login({ defaultForgot = false }: { defaultForgot?: boole
                 </span>
               </div>
             </div>
+          </div>
 
+          {/* Center Content Area */}
+          <div className="w-full max-w-md mx-auto my-auto py-6">
             {/* Main Title & Subtitle */}
             <div className="mb-8">
               {isForgotMode ? (
@@ -504,7 +507,7 @@ export default function Login({ defaultForgot = false }: { defaultForgot?: boole
           </div>
 
           {/* Bottom Security Note */}
-          <div className="mt-8 pt-6 border-t border-slate-100 text-center text-xs text-slate-400">
+          <div className="w-full max-w-md mx-auto pt-6 border-t border-slate-100 text-center text-xs text-slate-400">
             Protected administrative area · Authorised healthcare staff only
           </div>
         </div>

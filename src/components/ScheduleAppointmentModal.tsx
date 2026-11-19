@@ -29,6 +29,7 @@ interface ScheduleAppointmentModalProps {
   onSuccess: () => void;
   preselectedDoctorId?: string | undefined;
   preselectedPatientId?: string | undefined;
+  zIndex?: number | undefined;
 }
 
 export function validateAppointmentPatientName(val: string): string | undefined {
@@ -107,6 +108,7 @@ export default function ScheduleAppointmentModal({
   onSuccess,
   preselectedDoctorId,
   preselectedPatientId,
+  zIndex,
 }: ScheduleAppointmentModalProps) {
   const { message } = App.useApp();
   const todayStr = new Date().toISOString().split('T')[0] ?? '';
@@ -428,6 +430,7 @@ export default function ScheduleAppointmentModal({
       variant="drawer"
       size="lg"
       className="schedule-appointment-drawer-modal"
+      zIndex={zIndex ?? 1100}
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div

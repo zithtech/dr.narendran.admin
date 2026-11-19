@@ -15,6 +15,7 @@ import { CommonPagination } from '../../../components/ui/CommonTable';
 import { Badge, StatusDot } from '../../../components/ui/primitives';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
 import { DoctorQualificationTable } from '../../../components/DoctorQualificationBadge';
+import { resolveImageUrl } from '../../../utils/doctorAvatar';
 import { usePermission } from '../../../context/PermissionContext';
 import { timeAgo } from '../../../lib/format';
 import { locationsApi } from '../services/locationsApi';
@@ -343,7 +344,7 @@ export const DoctorLocationsTable: React.FC = () => {
                         <div className="flex items-center gap-2.5">
                           {doc.profile_image_url ? (
                             <img
-                              src={doc.profile_image_url}
+                              src={resolveImageUrl(doc.profile_image_url) || doc.profile_image_url}
                               alt={doc.name}
                               className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-200"
                             />

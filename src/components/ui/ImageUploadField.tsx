@@ -9,6 +9,7 @@ import {
 import React, { useRef, useState } from 'react';
 import api from '../../utils/api';
 import { Avatar } from './primitives';
+import { resolveImageUrl } from '../../utils/doctorAvatar';
 
 export interface ImageUploadFieldProps {
   id?: string | undefined;
@@ -234,9 +235,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
               src={
                 displayImage.startsWith('blob:') || displayImage.startsWith('data:')
                   ? displayImage
-                  : displayImage.includes('amazonaws.com') && !displayImage.includes('X-Amz-Signature')
-                  ? `/api/proxy/image?url=${encodeURIComponent(displayImage)}`
-                  : displayImage
+                  : resolveImageUrl(displayImage) || displayImage
               }
               alt={name}
               style={{

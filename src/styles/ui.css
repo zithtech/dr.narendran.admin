@@ -2154,7 +2154,7 @@ body {
 }
 
 .ui-modal.is-drawer.is-xl {
-  width: min(860px, 100vw);
+  width: min(1080px, 94vw);
 }
 
 .ui-modal.is-drawer .ui-modal-head {
@@ -2534,18 +2534,26 @@ body {
   position: relative;
 }
 
-.ui-input-icon>svg {
+.ui-input-icon>svg,
+.patient-input-icon-left {
   position: absolute;
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--ui-subtle);
   pointer-events: none;
+  z-index: 2;
 }
 
-.ui-input-icon .ui-input {
+.ui-input-icon .ui-input,
+.patient-input-with-icon,
+input.patient-input-with-icon {
   height: 40px;
-  padding-left: 38px;
+  padding-left: 42px !important;
+}
+
+input[type="date"].patient-input-with-icon::-webkit-datetime-edit {
+  padding-left: 0 !important;
 }
 
 .ui-input-password-toggle {
@@ -3318,6 +3326,7 @@ body {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -3339,6 +3348,7 @@ body {
   from {
     transform: translateX(-100%);
   }
+
   to {
     transform: translateX(0);
   }
@@ -3960,4 +3970,111 @@ body {
   .ui-top-navbar-categories {
     gap: 4px;
   }
+}
+
+/* ───────────────────────── Patient Drawer Unified Footer ───────────────────────── */
+
+.patient-drawer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  box-shadow: 0 -4px 16px -2px rgba(15, 23, 42, 0.05);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 20;
+}
+
+.patient-footer-btn {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.patient-footer-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed !important;
+}
+
+/* Cancel / Ghost */
+.patient-footer-btn-cancel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+}
+
+.patient-footer-btn-cancel:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+/* Neutral Navigation (Previous, Next) */
+.patient-footer-btn-neutral {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.patient-footer-btn-neutral:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+/* Secondary (Save Changes / Register Patient / Save & Close) */
+.patient-footer-btn-secondary {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.patient-footer-btn-secondary:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+/* Primary (Save & Next) */
+.patient-footer-btn-primary {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border: 1px solid #2563eb;
+  color: #ffffff !important;
+  font-weight: 650;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.patient-footer-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  border-color: #1d4ed8;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+/* Success (Finish & Complete) */
+.patient-footer-btn-success {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  border: 1px solid #16a34a;
+  color: #ffffff !important;
+  font-weight: 650;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);
+}
+
+.patient-footer-btn-success:hover:not(:disabled) {
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  border-color: #15803d;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);
 }

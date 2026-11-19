@@ -97,6 +97,10 @@ export default function DoctorProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [imgError, setImgError] = useState(false);
 
+  useEffect(() => {
+    setImgError(false);
+  }, [doctor?.id, doctor?.profile_image_url, (doctor as any)?.profileImageUrl]);
+
   // Availability slots
   const [slots, setSlots] = useState<Slot[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);

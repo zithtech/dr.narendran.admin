@@ -21,13 +21,14 @@ import {
   Plus,
   RefreshCw,
   ShieldCheck,
+  Stethoscope,
   UserCheck,
   Users,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 
-import PatientModal, { type Patient } from '../components/PatientModal';
+import { type Patient } from '../components/PatientModal';
 import { usePermission } from '../context/PermissionContext';
 import { type Prescription, prescriptionsApi } from '../features/prescriptions/api/prescriptionsApi';
 import CreatePrescriptionModal from '../features/prescriptions/components/CreatePrescriptionModal';
@@ -41,6 +42,7 @@ import type {
   TimelineEvent,
   TimelineFilterType,
 } from '../features/timelines/types/patientTimelines';
+import { PatientMedicalHistoryTab } from '../features/medical_history/components/PatientMedicalHistoryTab';
 import { formatDate, formatPatientAge, timeAgo, titleCase } from '../lib/format';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
@@ -80,7 +82,13 @@ function bmiOf(heightCm: number | null | undefined, weightKg: number | null | un
   return { value: bmi.toFixed(1), band };
 }
 
-type PatientTab = 'overview' | 'prescriptions' | 'appointments' | 'documents' | 'timeline';
+type PatientTab =
+  | 'overview'
+  | 'medical-history'
+  | 'prescriptions'
+  | 'appointments'
+  | 'documents'
+  | 'timeline';
 
 const DEFAULT_PATIENT_AVATAR = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200"><rect width="320" height="200" fill="%23ffffff"/><circle cx="160" cy="78" r="44" fill="%23cbd5e1"/><path d="M72 200c0-48.6 39.4-88 88-88s88 39.4 88 88z" fill="%2394a3b8"/></svg>`;
 
@@ -98,7 +106,6 @@ export default function PatientDetailPage() {
   const [imgError, setImgError] = useState(false);
 
   // Modals state
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateRxOpen, setIsCreateRxOpen] = useState(false);
   const [viewingRx, setViewingRx] = useState<Prescription | null>(null);
   const [previewRecord, setPreviewRecord] = useState<MedicalRecord | null>(null);
@@ -395,33 +402,13 @@ export default function PatientDetailPage() {
             <span>Refresh</span>
           </button>
 
-          {isRxCreatable && (
-            <button
-              type="button"
-              className="ui-btn"
-              onClick={() => setIsCreateRxOpen(true)}
-              style={{
-                height: 34,
-                fontSize: 12.5,
-                color: '#1d4ed8',
-                background: '#eff6ff',
-                border: '1px solid #bfdbfe',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                fontWeight: 600,
-              }}
-            >
-              <FileText size={13.5} />
-              <span>New Prescription</span>
-            </button>
-          )}
-
           {isPatientEditable && (
             <button
               type="button"
               className="ui-btn ui-btn-primary"
-              onClick={() => setIsEditModalOpen(true)}
+              onClick={() => {
+                navigate(`/patients/${patient.id}/edit`);
+              }}
               style={{
                 height: 34,
                 fontSize: 12.5,
@@ -544,6 +531,13 @@ export default function PatientDetailPage() {
                       {patient.marital_status ? titleCase(patient.marital_status) : '—'}
                     </span>
                   </div>
+
+                  <div className="patient-card-cred-row">
+                    <span className="patient-card-cred-label">Occupation</span>
+                    <span className="patient-card-cred-val">
+                      {(patient as any).occupation || 'Not specified'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -605,6 +599,15 @@ export default function PatientDetailPage() {
 
             <button
               type="button"
+              className={`patient-tab-btn ${activeTab === 'medical-history' ? 'is-active' : ''}`}
+              onClick={() => setActiveTab('medical-history')}
+            >
+              <Stethoscope size={14} />
+              <span>Medical History</span>
+            </button>
+
+            <button
+              type="button"
               className={`patient-tab-btn ${activeTab === 'prescriptions' ? 'is-active' : ''}`}
               onClick={() => setActiveTab('prescriptions')}
             >
@@ -651,53 +654,6 @@ export default function PatientDetailPage() {
             {/* ── TAB 1: OVERVIEW ── */}
             {activeTab === 'overview' && (
               <div className="patient-tab-content">
-                {/* Top KPI Figures Strip */}
-                <div className="patient-kpi-grid">
-                  <div className="patient-kpi-card">
-                    <div className="patient-kpi-label">Height</div>
-                    <div className="patient-kpi-val">{patient.height_cm ? `${patient.height_cm} cm` : '—'}</div>
-                    <div className="patient-kpi-sub">Physical Stature</div>
-                  </div>
-
-                  <div className="patient-kpi-card">
-                    <div className="patient-kpi-label">Weight</div>
-                    <div className="patient-kpi-val">{patient.weight_kg ? `${patient.weight_kg} kg` : '—'}</div>
-                    <div className="patient-kpi-sub">Body Weight</div>
-                  </div>
-
-                  <div className="patient-kpi-card">
-                    <div className="patient-kpi-label">BMI Score</div>
-                    <div className="patient-kpi-val" style={{ color: '#1d4ed8' }}>
-                      {bmi ? bmi.value : '—'}
-                    </div>
-                    <div className="patient-kpi-sub">{bmi ? bmi.band : 'No measurements'}</div>
-                  </div>
-
-                  <div className="patient-kpi-card">
-                    <div className="patient-kpi-label">Blood Group</div>
-                    <div className="patient-kpi-val" style={{ color: '#dc2626' }}>
-                      {patient.blood_group || '—'}
-                    </div>
-                    <div className="patient-kpi-sub">Donor / Recipient Type</div>
-                  </div>
-
-                  <div className="patient-kpi-card">
-                    <div className="patient-kpi-label">Prescriptions</div>
-                    <div className="patient-kpi-val" style={{ color: '#047857' }}>
-                      {prescriptions.length}
-                    </div>
-                    <div className="patient-kpi-sub">Recorded on file</div>
-                  </div>
-
-                  <div className="patient-kpi-card">
-                    <div className="patient-kpi-label">Appointments</div>
-                    <div className="patient-kpi-val" style={{ color: '#7c3aed' }}>
-                      {appointments.length}
-                    </div>
-                    <div className="patient-kpi-sub">Consultations recorded</div>
-                  </div>
-                </div>
-
                 {/* Card: Hospital & Branch Assignment */}
                 <div className="patient-card-block">
                   <div className="patient-card-block-header">
@@ -844,6 +800,11 @@ export default function PatientDetailPage() {
               </div>
             )}
 
+            {/* ── TAB: MEDICAL HISTORY ── */}
+            {activeTab === 'medical-history' && (
+              <PatientMedicalHistoryTab patient={patient} isEditable={isPatientEditable} />
+            )}
+
             {/* ── TAB 2: PRESCRIPTIONS ── */}
             {activeTab === 'prescriptions' && (
               <div className="patient-tab-content">
@@ -894,8 +855,24 @@ export default function PatientDetailPage() {
                       <div key={rx.id} className="patient-rx-card">
                         <div className="patient-rx-card-top">
                           <div>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
-                              {rx.diagnosis || rx.additional_notes || 'General Consultation'}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+                                {rx.diagnosis || rx.additional_notes || 'General Consultation'}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  padding: '2px 7px',
+                                  borderRadius: 5,
+                                  background: '#eff6ff',
+                                  border: '1px solid #bfdbfe',
+                                  color: '#1d4ed8',
+                                  fontFamily: 'monospace',
+                                }}
+                              >
+                                {rx.prescription_number || `RX-${rx.id.slice(0, 8).toUpperCase()}`}
+                              </span>
                             </div>
                             <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
                               Issued {rx.prescription_date} · By {rx.doctor?.name || 'Practicing Doctor'}
@@ -1237,16 +1214,6 @@ export default function PatientDetailPage() {
       </div>
 
       {/* ── Modals ── */}
-      <PatientModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        patient={patient}
-        onSave={() => {
-          setIsEditModalOpen(false);
-          void loadPatient();
-        }}
-      />
-
       {patient && (
         <CreatePrescriptionModal
           open={isCreateRxOpen}
