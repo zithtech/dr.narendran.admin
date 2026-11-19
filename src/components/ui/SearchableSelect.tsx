@@ -150,13 +150,13 @@ export function SearchableSelect({
 
     setMenuStyle({
       position: 'fixed',
-      top: openUpward ? undefined : Math.max(0, rect.bottom + 4),
-      bottom: openUpward ? Math.max(0, viewportHeight - rect.top + 4) : undefined,
-      left: left !== undefined ? `${left}px` : undefined,
-      right: right !== undefined ? `${right}px` : undefined,
+      top: openUpward ? 'auto' : `${Math.max(0, rect.bottom + 4)}px`,
+      bottom: openUpward ? `${Math.max(0, viewportHeight - rect.top + 4)}px` : 'auto',
+      left: left !== undefined ? `${left}px` : 'auto',
+      right: right !== undefined ? `${right}px` : 'auto',
       width: typeof targetWidth === 'number' ? `${targetWidth}px` : targetWidth,
       minWidth: typeof targetMinWidth === 'number' ? `${targetMinWidth}px` : targetMinWidth,
-      maxWidth: 'min(380px, calc(100vw - 16px))',
+      maxWidth: 'min(480px, calc(100vw - 16px))',
       zIndex: 99999,
     });
   }, [menuAlign, menuWidth]);
@@ -462,7 +462,6 @@ export function SearchableSelect({
         }
         .ui-searchable-menu {
           position: absolute;
-          top: calc(100% + 4px);
           background: #ffffff;
           border: 1px solid #e2e8f0;
           border-radius: 8px;
@@ -618,7 +617,17 @@ export function SearchableSelect({
                 {selectedOption.label}
               </span>
               {selectedOption.sublabel && (
-                <span style={{ fontSize: 11, color: '#64748b', flexShrink: 0 }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: '#64748b',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    minWidth: 0,
+                    flexShrink: 1,
+                  }}
+                >
                   · {selectedOption.sublabel}
                 </span>
               )}
@@ -704,6 +713,7 @@ export function SearchableSelect({
               ...(canUsePortal
                 ? menuStyle
                 : {
+                    top: 'calc(100% + 4px)',
                     left: resolvedAlign === 'left' ? 0 : 'auto',
                     right: resolvedAlign === 'right' ? 0 : 'auto',
                     width: computedMenuWidth,

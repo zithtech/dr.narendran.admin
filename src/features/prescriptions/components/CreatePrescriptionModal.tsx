@@ -135,12 +135,17 @@ interface CreatePrescriptionModalProps {
     gender?: string | undefined;
     date_of_birth?: string | undefined;
   } | undefined;
+  /** Initial diagnosis passed from Plan of Management */
+  initialDiagnosis?: string | undefined;
+  /** Initial lab investigations ordered from Plan of Management */
+  initialLabTests?: string[] | undefined;
   /** If creating for a specific appointment/consultation */
   appointmentId?: string | undefined;
   appointmentToken?: string | number | undefined;
   appointmentDoctorId?: string | undefined;
   /** If editing an existing prescription */
   editingPrescription?: Prescription | null | undefined;
+  zIndex?: number | undefined;
 }
 
 const COMMON_DIAGNOSES = [
@@ -203,10 +208,13 @@ export default function CreatePrescriptionModal({
   onClose,
   onSuccess,
   preselectedPatient,
+  initialDiagnosis,
+  initialLabTests,
   appointmentId,
   appointmentToken,
   appointmentDoctorId,
   editingPrescription,
+  zIndex,
 }: CreatePrescriptionModalProps) {
   const { message } = App.useApp();
   const { canCreate } = usePermission();
@@ -692,6 +700,24 @@ export default function CreatePrescriptionModal({
       setMedicineModalTargetRowIndex(null);
     }
   }, [editingPrescription, open, preselectedPatient]);
+
+  // Pre-populate diagnosis and lab investigations passed from Plan of Management
+  useEffect(() => {
+    if (open && !editingPrescription) {
+      if (initialDiagnosis) {
+        setDiagnosis(initialDiagnosis);
+      }
+      if (initialLabTests && initialLabTests.length > 0) {
+        setLabTests(
+          initialLabTests.map((tName, idx) => ({
+            key: `lab-init-${idx}-${Date.now()}`,
+            testName: tName,
+            instructions: '',
+          }))
+        );
+      }
+    }
+  }, [open, editingPrescription, initialDiagnosis, initialLabTests]);
 
   useEffect(() => {
     if (!open || !editingPrescription || availableLabs.length === 0) return;
@@ -1241,6 +1267,7 @@ export default function CreatePrescriptionModal({
     <Drawer
       open={open}
       onClose={onClose}
+      zIndex={zIndex ?? 1100}
       keyboard={!isAddMedicineModalOpen}
       focusable={{ trap: !isAddMedicineModalOpen }}
       width="min(1150px, 95vw)"

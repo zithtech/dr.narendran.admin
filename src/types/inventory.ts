@@ -59,11 +59,12 @@ export type TransactionType =
 export interface StockHistoryItem {
   id: string;
   medicine_strength_id: string;
-  medicine_id?: string;
-  medicine_name?: string;
-  strength?: string;
-  strength_unit?: string;
-  dosage_form?: string;
+  medicine_id?: string | undefined;
+  medicine_name?: string | undefined;
+  generic_name?: string | null | undefined;
+  strength?: string | undefined;
+  strength_unit?: string | undefined;
+  dosage_form?: string | undefined;
   transaction_type: TransactionType;
   quantity_change: number;
   quantity_before: number;
@@ -73,8 +74,8 @@ export interface StockHistoryItem {
   reason: string | null;
   notes: string | null;
   performed_by: string | null;
-  performer_name?: string | null;
-  performer_email?: string | null;
+  performer_name?: string | null | undefined;
+  performer_email?: string | null | undefined;
   created_at: string;
 }
 
@@ -84,4 +85,38 @@ export interface InventorySummary {
   low_stock_count: number;
   out_of_stock_count: number;
   total_valuation: number;
+}
+
+export interface ReduceSummaryStats {
+  today_tablets_reduced: number;
+  today_transactions_count: number;
+  total_tablets_reduced: number;
+  total_transactions_count: number;
+  in_stock_variants: number;
+  low_stock_variants: number;
+}
+
+export interface DispensePayload {
+  medicine_strength_id?: string | undefined;
+  quantity: number;
+  patient_id?: string | null | undefined;
+  patient_name?: string | null | undefined;
+  prescription_id?: string | null | undefined;
+  reference_number?: string | null | undefined;
+  reason?: string | null | undefined;
+  notes?: string | null | undefined;
+}
+
+export interface BatchDispensePayload {
+  items: Array<{
+    medicine_strength_id: string;
+    quantity: number;
+    notes?: string | null | undefined;
+  }>;
+  patient_id?: string | null | undefined;
+  patient_name?: string | null | undefined;
+  prescription_id?: string | null | undefined;
+  reference_number?: string | null | undefined;
+  reason?: string | null | undefined;
+  notes?: string | null | undefined;
 }

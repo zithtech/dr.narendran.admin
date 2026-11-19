@@ -1,9 +1,7 @@
-import { App } from 'antd';
 import { HeartPulse } from 'lucide-react';
-import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
-import PatientModal, { type Patient } from '../components/PatientModal';
+import { type Patient } from '../components/PatientModal';
 import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
 import { addedFacet, statusFacet } from '../components/ui/facets';
 import { ActivityCell, Badge, StatusDot } from '../components/ui/primitives';
@@ -47,17 +45,16 @@ const FACETS: Facet<Patient>[] = [
 export default function Patients() {
   const navigate = useNavigate();
   const resource = useResource<Patient>('patients', 'patients');
-  const { message } = App.useApp();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
-
   const openDetails = (patient: Patient) => {
     navigate(`/patients/${patient.id}`);
   };
 
   const openEditor = (patient: Patient | null) => {
-    setEditingPatient(patient);
-    setIsModalOpen(true);
+    if (patient) {
+      navigate(`/patients/${patient.id}/edit`);
+    } else {
+      navigate('/patients/new');
+    }
   };
 
   const columns: Column<Patient>[] = [
@@ -170,21 +167,10 @@ export default function Patients() {
         columns={columns}
         createLabel="New patient"
         onCreate={() => openEditor(null)}
-        onEdit={openEditor}
+        onEdit={(p) => openEditor(p)}
         onDelete={(p) => api.delete(`patients/${p.id}`)}
         nameOf={(p) => p.name}
         onRowClick={openDetails}
-      />
-
-      <PatientModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        patient={editingPatient}
-        onSave={() => {
-          setIsModalOpen(false);
-          void message.success(editingPatient ? 'Patient updated' : 'Patient created');
-          void resource.refresh();
-        }}
       />
     </>
   );

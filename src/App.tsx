@@ -15,6 +15,7 @@ import DoctorAvailabilityPage from './pages/DoctorAvailabilityPage';
 import Users from './pages/Users';
 import Patients from './pages/Patients';
 import PatientDetailPage from './pages/PatientDetailPage';
+import PatientFormPage from './pages/PatientFormPage';
 import PatientTimelinesPage from './pages/PatientTimelinesPage';
 import PatientTimelineDetailPage from './pages/PatientTimelineDetailPage';
 import MedicalRecordsPage from './features/medical_records/pages/MedicalRecordsPage';
@@ -22,6 +23,7 @@ import Appointments from './pages/Appointments';
 import DoctorTodayAppointments from './pages/DoctorTodayAppointments';
 import Pharmacy from './pages/Pharmacy';
 import MedicineInventory from './pages/MedicineInventory';
+import ReduceMedicineManagement from './pages/ReduceMedicineManagement';
 import MedicinePackages from './pages/MedicinePackages';
 import OrdersPage from './features/orders/pages/OrdersPage';
 import PrescriptionsPage from './features/prescriptions/pages/PrescriptionsPage';
@@ -224,6 +226,22 @@ function App() {
             }
           />
           <Route
+            path="/patients/new"
+            element={
+              <ModuleRouteGuard module="PATIENTS" title="New Patient">
+                <PatientFormPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/patients/:patientId/edit"
+            element={
+              <ModuleRouteGuard module="PATIENTS" title="Edit Patient">
+                <PatientFormPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
             path="/patients/:patientId"
             element={
               <ModuleRouteGuard module="PATIENTS" title="Patient Details">
@@ -305,6 +323,15 @@ function App() {
               </ModuleRouteGuard>
             }
           />
+          <Route
+            path="/reduce-medicine"
+            element={
+              <ModuleRouteGuard module="INVENTORY" title="Reduce Medicine Management">
+                <ReduceMedicineManagement />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route path="/inventory/reduce" element={<Navigate to="/reduce-medicine" replace />} />
           <Route
             path="/prescriptions"
             element={

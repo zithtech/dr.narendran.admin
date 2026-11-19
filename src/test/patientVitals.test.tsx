@@ -41,7 +41,7 @@ const mockPatientWithVitals: Patient = {
   blood_group: 'O+',
   blood_pressure: '120/80 mmHg',
   blood_sugar: '98 mg/dL',
-  body_temperature: '98.6 °F',
+  body_temperature: '98.6',
   custom_vitals: [
     { label: 'Pulse Rate', value: '72 bpm' },
     { label: 'SpO2', value: '99%' },
@@ -50,36 +50,62 @@ const mockPatientWithVitals: Patient = {
   updated_at: '2026-11-02T10:00:00.000Z',
 };
 
-describe('PatientModal - Physical Vitals & Dynamic Metrics', () => {
+describe('PatientModal & Past Medical History - Physical Vitals & Dynamic Metrics', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(api.get).mockImplementation((url: string) => {
       if (url === 'hospitals') return Promise.resolve({ data: mockHospitals });
       if (url === 'branches') return Promise.resolve({ data: mockBranches });
       if (url === 'user-accounts') return Promise.resolve({ data: [] });
+      if (url.includes('medical-histories')) return Promise.resolve({ data: [] });
+      if (url.includes('medical-documents')) return Promise.resolve({ data: [] });
       return Promise.resolve({ data: [] });
     });
     vi.mocked(api).mockResolvedValue({ data: { success: true } } as any);
+    vi.mocked(api.post).mockResolvedValue({
+      data: {
+        id: 'pmh-saved-1',
+        patient_id: 'pat-002',
+        recorded_date: '2026-11-18',
+        current_medical_info: {
+          blood_pressure: '130/85 mmHg',
+          blood_sugar: '110 mg/dL',
+          temperature: 99.1,
+          custom_vitals: [{ label: 'SpO2', value: '98%' }],
+        },
+      },
+    } as any);
   });
 
-  it('renders BP, Blood Sugar, and Body Temperature fields in the New Patient drawer', async () => {
+  it('does NOT render Physical Vitals & Metrics in Basic Details (Step 1)', async () => {
     renderWithProviders(
-      <PatientModal isOpen={true} onClose={() => {}} patient={null} onSave={() => {}} />,
+      <PatientModal isOpen={true} onClose={() => {}} patient={null} initialStep="personal" onSave={() => {}} />,
     );
 
-    expect(screen.getByText('Physical Vitals & Metrics')).toBeInTheDocument();
+    // Verify Title is present
+    expect(screen.getByText('Register New Patient')).toBeInTheDocument();
+    // Verify Physical Vitals & Metrics section has been removed from Step 1
+    expect(screen.queryByText('Physical Vitals & Metrics')).not.toBeInTheDocument();
+  });
+
+  it('renders BP, Blood Sugar, and Body Temperature fields in Physical Vitals & Biometrics in the Past Medical History tab', async () => {
+    renderWithProviders(
+      <PatientModal isOpen={true} onClose={() => {}} patient={null} initialStep="history" onSave={() => {}} />,
+    );
+
+    expect(screen.getByText('Physical Vitals & Biometrics')).toBeInTheDocument();
     expect(screen.getByLabelText(/Blood Pressure \(BP\)/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Blood Sugar/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Body Temperature/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Add Custom Field/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Add Custom Field/i }).length).toBeGreaterThanOrEqual(1);
   }, 15000);
 
-  it('allows dynamically adding and removing custom vital fields', async () => {
+  it('allows dynamically adding and removing custom vital fields in Physical Vitals & Biometrics', async () => {
     renderWithProviders(
-      <PatientModal isOpen={true} onClose={() => {}} patient={null} onSave={() => {}} />,
+      <PatientModal isOpen={true} onClose={() => {}} patient={null} initialStep="history" onSave={() => {}} />,
     );
 
-    const addCustomBtn = screen.getByRole('button', { name: /Add Custom Field/i });
+    const addCustomBtn = screen.getAllByRole('button', { name: /Add Custom Field/i })[0]!;
     fireEvent.click(addCustomBtn);
 
     const labelInput = screen.getByPlaceholderText(/Metric name/i);
@@ -100,24 +126,11 @@ describe('PatientModal - Physical Vitals & Dynamic Metrics', () => {
     expect(screen.queryByPlaceholderText(/Metric name/i)).not.toBeInTheDocument();
   });
 
-  it('submits BP, Blood Sugar, Temperature, and custom vitals when saving a patient', async () => {
+  it('submits BP, Blood Sugar, Temperature, and custom vitals when saving in Past Medical History', async () => {
     const onSave = vi.fn();
     renderWithProviders(
-      <PatientModal isOpen={true} onClose={() => {}} patient={null} onSave={onSave} />,
+      <PatientModal isOpen={true} onClose={() => {}} patient={mockPatientWithVitals} initialStep="history" onSave={onSave} />,
     );
-
-    await waitFor(() => {
-      expect(api.get).toHaveBeenCalledWith('hospitals');
-    });
-
-    // Fill in required fields
-    fireEvent.change(screen.getByPlaceholderText(/e.g. John Doe/i), {
-      target: { value: 'Suresh Kumar' },
-    });
-
-    fireEvent.change(screen.getByLabelText(/Assigned Hospital/i), {
-      target: { value: 'hosp-1' },
-    });
 
     // Fill in vitals
     fireEvent.change(screen.getByLabelText(/Blood Pressure \(BP\)/i), {
@@ -127,54 +140,83 @@ describe('PatientModal - Physical Vitals & Dynamic Metrics', () => {
       target: { value: '110 mg/dL' },
     });
     fireEvent.change(screen.getByLabelText(/Body Temperature/i), {
-      target: { value: '99.1 °F' },
+      target: { value: '99.1' },
     });
 
     // Add a custom field
-    fireEvent.click(screen.getByRole('button', { name: /Add Custom Field/i }));
-    fireEvent.change(screen.getByPlaceholderText(/Metric name/i), {
+    const addCustomBtn = screen.getAllByRole('button', { name: /Add Custom Field/i })[0]!;
+    fireEvent.click(addCustomBtn);
+    const metricInputs = screen.getAllByPlaceholderText(/Metric name/i);
+    const valueInputs = screen.getAllByPlaceholderText(/Value/i);
+    fireEvent.change(metricInputs[metricInputs.length - 1]!, {
       target: { value: 'SpO2' },
     });
-    fireEvent.change(screen.getByPlaceholderText(/Value/i), {
+    fireEvent.change(valueInputs[valueInputs.length - 1]!, {
       target: { value: '98%' },
     });
 
-    // Submit form
-    const submitBtn = screen.getByRole('button', { name: /Register Patient/i });
-    fireEvent.click(submitBtn);
+    // Click Save & Next in medical history
+    const saveBtn = screen.getByTestId('save-and-next-btn');
+    fireEvent.click(saveBtn);
 
     await waitFor(() => {
-      expect(api).toHaveBeenCalledWith(
+      expect(api.post).toHaveBeenCalledWith(
+        'patients/pat-002/medical-histories',
         expect.objectContaining({
-          method: 'POST',
-          url: 'patients',
-          data: expect.objectContaining({
-            name: 'Suresh Kumar',
-            hospital_id: 'hosp-1',
+          current_medical_info: expect.objectContaining({
             blood_pressure: '130/85 mmHg',
             blood_sugar: '110 mg/dL',
-            body_temperature: '99.1 °F',
-            custom_vitals: [{ label: 'SpO2', value: '98%' }],
+            temperature: 99.1,
+            custom_vitals: expect.arrayContaining([
+              expect.objectContaining({ label: 'SpO2', value: '98%' }),
+            ]),
           }),
         }),
       );
-      expect(onSave).toHaveBeenCalled();
     });
   }, 15000);
 
-  it('populates existing vitals and custom metrics when editing a patient', async () => {
+  it('populates existing vitals and custom metrics when editing a patient in Past Medical History', async () => {
     renderWithProviders(
-      <PatientModal isOpen={true} onClose={() => {}} patient={mockPatientWithVitals} onSave={() => {}} />,
+      <PatientModal isOpen={true} onClose={() => {}} patient={mockPatientWithVitals} initialStep="history" onSave={() => {}} />,
     );
 
     expect(screen.getByLabelText(/Blood Pressure \(BP\)/i)).toHaveValue('120/80 mmHg');
     expect(screen.getByLabelText(/Blood Sugar/i)).toHaveValue('98 mg/dL');
-    expect(screen.getByLabelText(/Body Temperature/i)).toHaveValue('98.6 °F');
+    expect(screen.getByLabelText(/Body Temperature/i)).toHaveValue(98.6);
 
     expect(screen.getByDisplayValue('Pulse Rate')).toBeInTheDocument();
     expect(screen.getByDisplayValue('72 bpm')).toBeInTheDocument();
     expect(screen.getByDisplayValue('SpO2')).toBeInTheDocument();
     expect(screen.getByDisplayValue('99%')).toBeInTheDocument();
   });
-});
 
+  it('renders metric name, value, and tablet name in custom field rows when clicking Add Custom Field', async () => {
+    renderWithProviders(
+      <PatientModal isOpen={true} onClose={() => {}} patient={null} initialStep="history" onSave={() => {}} />,
+    );
+
+    // Click Add Custom Field
+    const addCustomBtn = screen.getAllByTestId('add-custom-vital-btn')[0]!;
+    expect(addCustomBtn).toBeInTheDocument();
+    fireEvent.click(addCustomBtn);
+
+    // Verify all 3 inputs: Metric Name, Value, Tablet Name are present
+    const metricInput = screen.getByPlaceholderText(/Metric name/i);
+    const valueInput = screen.getByPlaceholderText(/Value/i);
+    const tabletInput = screen.getByPlaceholderText(/Tablet name/i);
+
+    expect(metricInput).toBeInTheDocument();
+    expect(valueInput).toBeInTheDocument();
+    expect(tabletInput).toBeInTheDocument();
+
+    // Type into all 3 fields
+    fireEvent.change(metricInput, { target: { value: 'Blood Pressure' } });
+    fireEvent.change(valueInput, { target: { value: '140/90' } });
+    fireEvent.change(tabletInput, { target: { value: 'Telmisartan 40mg' } });
+
+    expect(metricInput).toHaveValue('Blood Pressure');
+    expect(valueInput).toHaveValue('140/90');
+    expect(tabletInput).toHaveValue('Telmisartan 40mg');
+  });
+});
