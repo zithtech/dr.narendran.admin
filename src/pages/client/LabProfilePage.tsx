@@ -4,6 +4,7 @@ import {
   Building2,
   Calendar,
   Camera,
+  Check,
   CheckCircle2,
   Clock,
   Compass,
@@ -18,7 +19,6 @@ import {
   MapPin,
   Phone,
   RefreshCw,
-  Save,
   Search,
   ShieldCheck,
   Tag,
@@ -1049,393 +1049,533 @@ export default function LabProfilePage() {
           if (!saving) setIsEditModalOpen(false);
         }}
         variant="drawer"
-        size="md"
+        size="lg"
+        className="lab-drawer-modal"
         title={
-          <div className="flex items-center gap-2">
-            <div className="p-1 rounded-md bg-blue-50 text-blue-600 inline-flex items-center justify-center">
-              <Edit3 size={16} strokeWidth={2.2} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                color: '#2563eb',
+                border: '1px solid #bfdbfe',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                boxShadow: '0 2px 6px rgba(37, 99, 235, 0.16)',
+              }}
+            >
+              <FlaskConical size={19} style={{ display: 'block', margin: 'auto' }} />
             </div>
-            <span>Edit Laboratory Profile</span>
+            <div>
+              <div
+                style={{
+                  fontSize: 16.5,
+                  fontWeight: 700,
+                  color: 'var(--ui-text, #0f172a)',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                Edit Laboratory Profile
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
+                Update facility operational details, contact channels, operating schedule, and location.
+              </div>
+            </div>
           </div>
         }
-        description="Update facility operational details, contact channels, operating schedule, and location."
       >
         <form
+          noValidate
           onSubmit={(e) => {
             void handleSave(e);
           }}
-          className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs"
+          className="ui-modal-form"
+          style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
         >
-          {/* Section 1: General & Communication */}
-          <div className="space-y-3">
-            <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
-              General & Communication
-            </h3>
+          <style>{`
+            .lab-drawer-modal {
+              width: min(740px, 100vw) !important;
+              max-width: 740px !important;
+              background: #ffffff;
+              box-shadow: -12px 0 36px rgba(15, 23, 42, 0.14) !important;
+            }
+            .lab-drawer-modal .ui-modal-head {
+              padding: 18px 24px;
+              background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+              border-bottom: 1px solid #f1f5f9;
+            }
+            .lab-drawer-modal .ui-modal-body {
+              padding: 20px 24px;
+              background: #f8fafc;
+              display: flex;
+              flex-direction: column;
+              gap: 14px;
+              overflow-y: auto;
+            }
+            .lab-section-card {
+              background: #ffffff;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              padding: 18px 20px;
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+              display: flex;
+              flex-direction: column;
+              gap: 14px;
+              transition: border-color 0.15s ease;
+            }
+            .lab-section-card:hover {
+              border-color: #cbd5e1;
+            }
+            .lab-section-header {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              padding-bottom: 8px;
+              border-bottom: 1px solid #f1f5f9;
+            }
+            .lab-section-badge {
+              width: 26px;
+              height: 26px;
+              border-radius: 7px;
+              background: #eff6ff;
+              color: #2563eb;
+              border: 1px solid #dbeafe;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+            }
+            .lab-section-badge svg {
+              display: block;
+              margin: auto;
+            }
+            .lab-section-tag {
+              font-size: 11px;
+              font-weight: 700;
+              letter-spacing: 0.06em;
+              color: #475569;
+              text-transform: uppercase;
+            }
+            .lab-section-subtitle {
+              font-size: 12px;
+              color: #64748b;
+              margin-left: auto;
+            }
+            .lab-drawer-modal .ui-input {
+              height: 38px;
+              border-radius: 8px;
+              border: 1px solid #e2e8f0;
+              font-size: 13px;
+              padding: 0 12px;
+              transition: all 0.15s ease;
+              background: #ffffff;
+              color: #0f172a;
+            }
+            .lab-drawer-modal .ui-input:focus {
+              border-color: #2563eb !important;
+              box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+              outline: none;
+            }
+            .lab-drawer-modal .ui-input.has-error {
+              border-color: #ef4444 !important;
+              box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+            }
+            .lab-drawer-modal .ui-modal-foot {
+              padding: 14px 24px;
+              background: #ffffff;
+              border-top: 1px solid #f1f5f9;
+              display: flex;
+              align-items: center;
+              justify-content: flex-end;
+              gap: 10px;
+            }
+          `}</style>
 
-            <div>
-              <label htmlFor="labNameInput" className="block text-xs font-semibold text-slate-700 mb-1">
-                Laboratory Name <span className="text-rose-500">*</span>
-              </label>
-              <input
-                id="labNameInput"
-                type="text"
-                required
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  if (fieldErrors.name) {
-                    setFieldErrors((prev) => ({ ...prev, name: '' }));
-                  }
-                }}
-                placeholder="e.g. City Central Lab"
-                className={cx(
-                  'w-full h-8 px-2.5 rounded-lg border bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-2xs',
-                  fieldErrors.name
-                    ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-100'
-                    : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100',
-                )}
-              />
-              {fieldErrors.name && (
-                <div className="text-[11px] text-rose-500 mt-1 flex items-center gap-1">
-                  <AlertCircle size={10} />
-                  <span>{fieldErrors.name}</span>
+          <div className="ui-modal-body">
+            {/* Section 1: General & Communication */}
+            <div className="lab-section-card">
+              <div className="lab-section-header">
+                <div className="lab-section-badge">
+                  <FlaskConical size={14} />
                 </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="labPhoneInput" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Contact Phone
-                </label>
-                <div className="relative">
-                  <Phone size={13} className="absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
-                  <input
-                    id="labPhoneInput"
-                    type="text"
-                    value={phone}
-                    onChange={(e) => {
-                      setPhone(e.target.value);
-                      if (fieldErrors.phone) {
-                        setFieldErrors((prev) => ({ ...prev, phone: '' }));
-                      }
-                    }}
-                    placeholder="e.g. +91 98765 43210"
-                    className={cx(
-                      'w-full h-8 pl-8 pr-2.5 rounded-lg border bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-2xs',
-                      fieldErrors.phone
-                        ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-100'
-                        : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100',
-                    )}
-                  />
-                </div>
-                {fieldErrors.phone && (
-                  <div className="text-[11px] text-rose-500 mt-1 flex items-center gap-1">
-                    <AlertCircle size={10} />
-                    <span>{fieldErrors.phone}</span>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="labEmailInput" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Official Email
-                </label>
-                <div className="relative">
-                  <Mail size={13} className="absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
-                  <input
-                    id="labEmailInput"
-                    type="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (fieldErrors.email) {
-                        setFieldErrors((prev) => ({ ...prev, email: '' }));
-                      }
-                    }}
-                    placeholder="e.g. lab@example.com"
-                    className={cx(
-                      'w-full h-8 pl-8 pr-2.5 rounded-lg border bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-2xs',
-                      fieldErrors.email
-                        ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-100'
-                        : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100',
-                    )}
-                  />
-                </div>
-                {fieldErrors.email && (
-                  <div className="text-[11px] text-rose-500 mt-1 flex items-center gap-1">
-                    <AlertCircle size={10} />
-                    <span>{fieldErrors.email}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Section 2: Operating Hours & Directory Presence */}
-          <div className="space-y-3 pt-1">
-            <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
-              Operating Hours & Directory Presence
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="labStartTimeInput" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Opening Time
-                </label>
-                <div className="relative">
-                  <Clock size={13} className="absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
-                  <input
-                    id="labStartTimeInput"
-                    type="text"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    placeholder="e.g. 07:30 AM"
-                    className="w-full h-8 pl-8 pr-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-2xs"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="labEndTimeInput" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Closing Time
-                </label>
-                <div className="relative">
-                  <Clock size={13} className="absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
-                  <input
-                    id="labEndTimeInput"
-                    type="text"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    placeholder="e.g. 09:30 PM"
-                    className="w-full h-8 pl-8 pr-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-2xs"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Public Referral Visibility Toggle */}
-            <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3">
-              <div>
-                <span className="text-xs font-bold text-slate-800 block">
-                  Public Referral Directory Visibility
-                </span>
-                <span className="text-[11px] text-slate-500 leading-tight">
-                  Display contact details on doctor referral sheets and patient receipts
+                <span className="lab-section-tag">General & Communication</span>
+                <span className="lab-section-subtitle hidden sm:inline">
+                  Facility identity & contact channels
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setContactVisibility(!contactVisibility)}
-                className={cx(
-                  'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
-                  contactVisibility ? 'bg-blue-600' : 'bg-slate-300',
-                )}
-                role="switch"
-                aria-checked={contactVisibility}
-              >
-                <span
-                  className={cx(
-                    'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out',
-                    contactVisibility ? 'translate-x-4' : 'translate-x-0',
+
+              <div className="space-y-3.5">
+                <div>
+                  <label
+                    htmlFor="labNameInput"
+                    className="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-800 cursor-pointer"
+                  >
+                    <span>Laboratory Name</span>
+                    <span className="font-bold text-rose-500">*</span>
+                  </label>
+                  <input
+                    id="labNameInput"
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      if (fieldErrors.name) {
+                        setFieldErrors((prev) => ({ ...prev, name: '' }));
+                      }
+                    }}
+                    placeholder="e.g. City Central Lab"
+                    className={cx('ui-input w-full', fieldErrors.name && 'has-error')}
+                  />
+                  {fieldErrors.name && (
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                      <AlertCircle size={12} className="shrink-0 text-rose-600" />
+                      <span>{fieldErrors.name}</span>
+                    </div>
                   )}
-                />
-              </button>
-            </div>
-          </div>
-
-          {/* Section 3: Physical Address & Location */}
-          <div className="space-y-3 pt-1">
-            <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
-              Address & Coordinates
-            </h3>
-
-            <div>
-              <label htmlFor="labAddress1Input" className="block text-xs font-semibold text-slate-700 mb-1">
-                Address Line 1
-              </label>
-              <input
-                id="labAddress1Input"
-                type="text"
-                value={addressLine1}
-                onChange={(e) => {
-                  setAddressLine1(e.target.value);
-                  if (fieldErrors.addressLine1) {
-                    setFieldErrors((prev) => ({ ...prev, addressLine1: '' }));
-                  }
-                }}
-                placeholder="Building / Street address"
-                className={cx(
-                  'w-full h-8 px-2.5 rounded-lg border bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-2xs',
-                  fieldErrors.addressLine1
-                    ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-100'
-                    : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100',
-                )}
-              />
-              {fieldErrors.addressLine1 && (
-                <div className="text-[11px] text-rose-500 mt-1 flex items-center gap-1">
-                  <AlertCircle size={10} />
-                  <span>{fieldErrors.addressLine1}</span>
                 </div>
-              )}
-            </div>
 
-            <div>
-              <label htmlFor="labAddress2Input" className="block text-xs font-semibold text-slate-700 mb-1">
-                Address Line 2 (Optional)
-              </label>
-              <input
-                id="labAddress2Input"
-                type="text"
-                value={addressLine2}
-                onChange={(e) => {
-                  setAddressLine2(e.target.value);
-                  if (fieldErrors.addressLine2) {
-                    setFieldErrors((prev) => ({ ...prev, addressLine2: '' }));
-                  }
-                }}
-                placeholder="Landmark / Area"
-                className={cx(
-                  'w-full h-8 px-2.5 rounded-lg border bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-2xs',
-                  fieldErrors.addressLine2
-                    ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-100'
-                    : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100',
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label htmlFor="labCityInput" className="block text-xs font-semibold text-slate-700 mb-1">
-                  City
-                </label>
-                <input
-                  id="labCityInput"
-                  type="text"
-                  value={city}
-                  onChange={(e) => {
-                    setCity(e.target.value);
-                    if (fieldErrors.city) {
-                      setFieldErrors((prev) => ({ ...prev, city: '' }));
-                    }
-                  }}
-                  placeholder="e.g. Chennai"
-                  className={cx(
-                    'w-full h-8 px-2.5 rounded-lg border bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-2xs',
-                    fieldErrors.city
-                      ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-100'
-                      : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100',
-                  )}
-                />
-                {fieldErrors.city && (
-                  <div className="text-[11px] text-rose-500 mt-1 flex items-center gap-1">
-                    <AlertCircle size={10} />
-                    <span>{fieldErrors.city}</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label htmlFor="labPhoneInput" className="mb-1.5 block text-xs font-semibold text-slate-800 cursor-pointer">
+                      Contact Phone
+                    </label>
+                    <div className="relative flex items-center">
+                      <Phone size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                      <input
+                        id="labPhoneInput"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => {
+                          setPhone(e.target.value);
+                          if (fieldErrors.phone) {
+                            setFieldErrors((prev) => ({ ...prev, phone: '' }));
+                          }
+                        }}
+                        placeholder="e.g. +91 98765 43210"
+                        style={{ paddingLeft: '34px' }}
+                        className={cx('ui-input w-full', fieldErrors.phone && 'has-error')}
+                      />
+                    </div>
+                    {fieldErrors.phone && (
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                        <AlertCircle size={12} className="shrink-0 text-rose-600" />
+                        <span>{fieldErrors.phone}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              <div>
-                <label htmlFor="labStateInput" className="block text-xs font-semibold text-slate-700 mb-1">
-                  State
-                </label>
-                <input
-                  id="labStateInput"
-                  type="text"
-                  value={state}
-                  onChange={(e) => {
-                    setState(e.target.value);
-                    if (fieldErrors.state) {
-                      setFieldErrors((prev) => ({ ...prev, state: '' }));
-                    }
-                  }}
-                  placeholder="e.g. Tamil Nadu"
-                  className={cx(
-                    'w-full h-8 px-2.5 rounded-lg border bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-2xs',
-                    fieldErrors.state
-                      ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-100'
-                      : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100',
-                  )}
-                />
-                {fieldErrors.state && (
-                  <div className="text-[11px] text-rose-500 mt-1 flex items-center gap-1">
-                    <AlertCircle size={10} />
-                    <span>{fieldErrors.state}</span>
+                  <div>
+                    <label htmlFor="labEmailInput" className="mb-1.5 block text-xs font-semibold text-slate-800 cursor-pointer">
+                      Official Email
+                    </label>
+                    <div className="relative flex items-center">
+                      <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                      <input
+                        id="labEmailInput"
+                        type="email"
+                        value={email}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          if (fieldErrors.email) {
+                            setFieldErrors((prev) => ({ ...prev, email: '' }));
+                          }
+                        }}
+                        placeholder="e.g. lab@example.com"
+                        style={{ paddingLeft: '34px' }}
+                        className={cx('ui-input w-full', fieldErrors.email && 'has-error')}
+                      />
+                    </div>
+                    {fieldErrors.email && (
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                        <AlertCircle size={12} className="shrink-0 text-rose-600" />
+                        <span>{fieldErrors.email}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="labPincodeInput" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Pincode
-                </label>
-                <input
-                  id="labPincodeInput"
-                  type="text"
-                  value={pincode}
-                  onChange={(e) => {
-                    setPincode(e.target.value);
-                    if (fieldErrors.pincode) {
-                      setFieldErrors((prev) => ({ ...prev, pincode: '' }));
-                    }
-                  }}
-                  placeholder="e.g. 600001"
-                  className={cx(
-                    'w-full h-8 px-2.5 rounded-lg border bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-2xs',
-                    fieldErrors.pincode
-                      ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-100'
-                      : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100',
-                  )}
-                />
-                {fieldErrors.pincode && (
-                  <div className="text-[11px] text-rose-500 mt-1 flex items-center gap-1">
-                    <AlertCircle size={10} />
-                    <span>{fieldErrors.pincode}</span>
-                  </div>
-                )}
+                </div>
               </div>
             </div>
 
-            <div>
-              <label htmlFor="labMapLinkInput" className="block text-xs font-semibold text-slate-700 mb-1">
-                Google Maps Link
-              </label>
-              <div className="relative">
-                <MapPin size={13} className="absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
-                <input
-                  id="labMapLinkInput"
-                  type="url"
-                  value={mapLink}
-                  onChange={(e) => setMapLink(e.target.value)}
-                  placeholder="https://maps.google.com/?q=..."
-                  className="w-full h-8 pl-8 pr-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-2xs"
-                />
+            {/* Section 2: Operating Hours & Directory Presence */}
+            <div className="lab-section-card">
+              <div className="lab-section-header">
+                <div className="lab-section-badge">
+                  <Clock size={14} />
+                </div>
+                <span className="lab-section-tag">Operating Hours & Timing</span>
+                <span className="lab-section-subtitle hidden sm:inline">
+                  Operating schedule & clinical shifts
+                </span>
+              </div>
+
+              <div className="space-y-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label htmlFor="labStartTimeInput" className="mb-1.5 block text-xs font-semibold text-slate-800 cursor-pointer">
+                      Opening Time
+                    </label>
+                    <div className="relative flex items-center">
+                      <Clock size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                      <input
+                        id="labStartTimeInput"
+                        type="text"
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                        placeholder="e.g. 07:30 AM"
+                        style={{ paddingLeft: '34px' }}
+                        className="ui-input w-full"
+                      />
+                    </div>
+                    <span className="mt-1 block text-[11px] text-slate-400">
+                      Earliest sample drop-off or walk-in hour
+                    </span>
+                  </div>
+
+                  <div>
+                    <label htmlFor="labEndTimeInput" className="mb-1.5 block text-xs font-semibold text-slate-800 cursor-pointer">
+                      Closing Time
+                    </label>
+                    <div className="relative flex items-center">
+                      <Clock size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                      <input
+                        id="labEndTimeInput"
+                        type="text"
+                        value={endTime}
+                        onChange={(e) => setEndTime(e.target.value)}
+                        placeholder="e.g. 09:30 PM"
+                        style={{ paddingLeft: '34px' }}
+                        className="ui-input w-full"
+                      />
+                    </div>
+                    <span className="mt-1 block text-[11px] text-slate-400">
+                      Center closure and last sample acceptance
+                    </span>
+                  </div>
+                </div>
+
+                {/* Public Referral Visibility Toggle */}
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3 shadow-2xs">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">
+                      Public Referral Directory Visibility
+                    </span>
+                    <span className="text-[11px] text-slate-500 leading-tight">
+                      Display contact details on doctor referral sheets and patient receipts
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setContactVisibility(!contactVisibility)}
+                    className={cx(
+                      'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
+                      contactVisibility ? 'bg-blue-600' : 'bg-slate-300',
+                    )}
+                    role="switch"
+                    aria-checked={contactVisibility}
+                  >
+                    <span
+                      className={cx(
+                        'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out',
+                        contactVisibility ? 'translate-x-4' : 'translate-x-0',
+                      )}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: Physical Address & Location */}
+            <div className="lab-section-card">
+              <div className="lab-section-header">
+                <div className="lab-section-badge">
+                  <MapPin size={14} />
+                </div>
+                <span className="lab-section-tag">Location & Physical Address</span>
+                <span className="lab-section-subtitle hidden sm:inline">
+                  Facility address & navigation link
+                </span>
+              </div>
+
+              <div className="space-y-3.5">
+                <div>
+                  <label htmlFor="labAddress1Input" className="mb-1.5 block text-xs font-semibold text-slate-800 cursor-pointer">
+                    Address Line 1
+                  </label>
+                  <input
+                    id="labAddress1Input"
+                    type="text"
+                    value={addressLine1}
+                    onChange={(e) => {
+                      setAddressLine1(e.target.value);
+                      if (fieldErrors.addressLine1) {
+                        setFieldErrors((prev) => ({ ...prev, addressLine1: '' }));
+                      }
+                    }}
+                    placeholder="Building / Street address"
+                    className={cx('ui-input w-full', fieldErrors.addressLine1 && 'has-error')}
+                  />
+                  {fieldErrors.addressLine1 && (
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                      <AlertCircle size={12} className="shrink-0 text-rose-600" />
+                      <span>{fieldErrors.addressLine1}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="labAddress2Input" className="mb-1.5 block text-xs font-semibold text-slate-800 cursor-pointer">
+                    Address Line 2 (Optional)
+                  </label>
+                  <input
+                    id="labAddress2Input"
+                    type="text"
+                    value={addressLine2}
+                    onChange={(e) => {
+                      setAddressLine2(e.target.value);
+                      if (fieldErrors.addressLine2) {
+                        setFieldErrors((prev) => ({ ...prev, addressLine2: '' }));
+                      }
+                    }}
+                    placeholder="Landmark / Area"
+                    className={cx('ui-input w-full', fieldErrors.addressLine2 && 'has-error')}
+                  />
+                  {fieldErrors.addressLine2 && (
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                      <AlertCircle size={12} className="shrink-0 text-rose-600" />
+                      <span>{fieldErrors.addressLine2}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div>
+                    <label htmlFor="labCityInput" className="mb-1.5 block text-xs font-semibold text-slate-800 cursor-pointer">
+                      City
+                    </label>
+                    <input
+                      id="labCityInput"
+                      type="text"
+                      value={city}
+                      onChange={(e) => {
+                        setCity(e.target.value);
+                        if (fieldErrors.city) {
+                          setFieldErrors((prev) => ({ ...prev, city: '' }));
+                        }
+                      }}
+                      placeholder="e.g. Chennai"
+                      className={cx('ui-input w-full', fieldErrors.city && 'has-error')}
+                    />
+                    {fieldErrors.city && (
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                        <AlertCircle size={12} className="shrink-0 text-rose-600" />
+                        <span>{fieldErrors.city}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="labStateInput" className="mb-1.5 block text-xs font-semibold text-slate-800 cursor-pointer">
+                      State
+                    </label>
+                    <input
+                      id="labStateInput"
+                      type="text"
+                      value={state}
+                      onChange={(e) => {
+                        setState(e.target.value);
+                        if (fieldErrors.state) {
+                          setFieldErrors((prev) => ({ ...prev, state: '' }));
+                        }
+                      }}
+                      placeholder="e.g. Tamil Nadu"
+                      className={cx('ui-input w-full', fieldErrors.state && 'has-error')}
+                    />
+                    {fieldErrors.state && (
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                        <AlertCircle size={12} className="shrink-0 text-rose-600" />
+                        <span>{fieldErrors.state}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="labPincodeInput" className="mb-1.5 block text-xs font-semibold text-slate-800 cursor-pointer">
+                      Pincode
+                    </label>
+                    <input
+                      id="labPincodeInput"
+                      type="text"
+                      value={pincode}
+                      onChange={(e) => {
+                        setPincode(e.target.value);
+                        if (fieldErrors.pincode) {
+                          setFieldErrors((prev) => ({ ...prev, pincode: '' }));
+                        }
+                      }}
+                      placeholder="e.g. 600001"
+                      className={cx('ui-input w-full', fieldErrors.pincode && 'has-error')}
+                    />
+                    {fieldErrors.pincode && (
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                        <AlertCircle size={12} className="shrink-0 text-rose-600" />
+                        <span>{fieldErrors.pincode}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="labMapLinkInput" className="mb-1.5 block text-xs font-semibold text-slate-700 cursor-pointer">
+                    Google Maps Link
+                  </label>
+                  <div className="relative flex items-center">
+                    <MapPin size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                    <input
+                      id="labMapLinkInput"
+                      type="url"
+                      value={mapLink}
+                      onChange={(e) => setMapLink(e.target.value)}
+                      placeholder="https://maps.google.com/?q=..."
+                      style={{ paddingLeft: '34px' }}
+                      className="ui-input w-full"
+                    />
+                  </div>
+                  <span className="mt-1 block text-[11px] text-slate-400">
+                    Direct navigation URL embedded in patient digital referral slips
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Drawer Footer Actions */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+          {/* Docked Drawer Footer */}
+          <div className="ui-modal-foot">
             <button
               type="button"
               onClick={() => setIsEditModalOpen(false)}
-              className="h-8 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={saving}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors disabled:opacity-50 cursor-pointer"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-blue-600 bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2 text-xs font-semibold text-white shadow-sm hover:from-blue-700 hover:to-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving ? (
                 <>
-                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
+                  <Loader2 size={13} className="animate-spin" />
                   <span>Saving Changes…</span>
                 </>
               ) : (
                 <>
-                  <Save size={13} />
+                  <Check size={14} />
                   <span>Save Changes</span>
                 </>
               )}

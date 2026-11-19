@@ -4,6 +4,7 @@ import {
   Building2,
   Calendar,
   Camera,
+  Check,
   CheckCircle2,
   Clock,
   ExternalLink,
@@ -15,7 +16,6 @@ import {
   Mail,
   Phone,
   RefreshCw,
-  Save,
   Shield,
   ShieldAlert,
   ShieldCheck,
@@ -727,161 +727,307 @@ export default function LabAccountPage() {
         }}
         variant="drawer"
         size="md"
+        className="password-drawer-modal"
         title={
-          <div className="flex items-center gap-2">
-            <div className="p-1 rounded-md bg-blue-50 text-blue-600 inline-flex items-center justify-center">
-              <KeyRound size={16} strokeWidth={2.2} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                color: '#2563eb',
+                border: '1px solid #bfdbfe',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                boxShadow: '0 2px 6px rgba(37, 99, 235, 0.16)',
+              }}
+            >
+              <KeyRound size={19} style={{ display: 'block', margin: 'auto' }} />
             </div>
-            <span>Change Account Password</span>
+            <div>
+              <div
+                style={{
+                  fontSize: 16.5,
+                  fontWeight: 700,
+                  color: 'var(--ui-text, #0f172a)',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                Change Account Password
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
+                Update your client portal login credentials to keep facility records protected.
+              </div>
+            </div>
           </div>
         }
-        description="Update your client portal login credentials to keep facility records protected."
       >
         <form
+          noValidate
           onSubmit={(e) => {
             void handlePasswordSubmit(e);
           }}
-          className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs"
+          className="ui-modal-form"
+          style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
         >
-          {passwordError && (
-            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 flex items-start gap-2">
-              <AlertCircle size={14} className="mt-0.5 shrink-0" />
-              <span>{passwordError}</span>
-            </div>
-          )}
+          <style>{`
+            .password-drawer-modal {
+              width: min(640px, 100vw) !important;
+              max-width: 640px !important;
+              background: #ffffff;
+              box-shadow: -12px 0 36px rgba(15, 23, 42, 0.14) !important;
+            }
+            .password-drawer-modal .ui-modal-head {
+              padding: 18px 24px;
+              background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+              border-bottom: 1px solid #f1f5f9;
+            }
+            .password-drawer-modal .ui-modal-body {
+              padding: 20px 24px;
+              background: #f8fafc;
+              display: flex;
+              flex-direction: column;
+              gap: 14px;
+              overflow-y: auto;
+            }
+            .password-section-card {
+              background: #ffffff;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              padding: 18px 20px;
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+              display: flex;
+              flex-direction: column;
+              gap: 14px;
+              transition: border-color 0.15s ease;
+            }
+            .password-section-card:hover {
+              border-color: #cbd5e1;
+            }
+            .password-section-header {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              padding-bottom: 8px;
+              border-bottom: 1px solid #f1f5f9;
+            }
+            .password-section-badge {
+              width: 26px;
+              height: 26px;
+              border-radius: 7px;
+              background: #eff6ff;
+              color: #2563eb;
+              border: 1px solid #dbeafe;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+            }
+            .password-section-tag {
+              font-size: 11px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+              color: #334155;
+            }
+            .password-section-subtitle {
+              font-size: 11px;
+              color: #94a3b8;
+              margin-left: auto;
+            }
+          `}</style>
 
-          {account?.must_change_password && (
-            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 flex items-start gap-2">
-              <ShieldAlert size={14} className="mt-0.5 shrink-0 text-amber-600" />
-              <div>
-                <span className="font-bold block">First-Time Login Requirement</span>
-                <span className="text-[11px] text-amber-700">
-                  You are currently authenticated using an auto-generated temporary password. Please set a new permanent password.
+          <div className="ui-modal-body">
+            {passwordError && (
+              <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 flex items-start gap-2.5 text-xs">
+                <AlertCircle size={15} className="mt-0.5 shrink-0 text-rose-600" />
+                <div className="flex-1 font-medium">{passwordError}</div>
+              </div>
+            )}
+
+            {account?.must_change_password && (
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 flex items-start gap-2.5 text-xs">
+                <ShieldAlert size={16} className="mt-0.5 shrink-0 text-amber-600" />
+                <div>
+                  <span className="font-bold block text-amber-900">First-Time Login Requirement</span>
+                  <span className="text-[11px] text-amber-700 leading-relaxed">
+                    You are currently authenticated using an auto-generated temporary password. Please configure a new permanent password to secure your account.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Section 1: Password Credentials */}
+            <div className="password-section-card">
+              <div className="password-section-header">
+                <div className="password-section-badge">
+                  <KeyRound size={14} />
+                </div>
+                <span className="password-section-tag">Password Credentials</span>
+                <span className="password-section-subtitle hidden sm:inline">
+                  Secure portal authentication
                 </span>
               </div>
-            </div>
-          )}
 
-          {/* Current Password (if not first-time login) */}
-          {!account?.must_change_password && (
-            <div>
-              <label htmlFor="currentPasswordInput" className="block text-xs font-semibold text-slate-700 mb-1">
-                Current Password <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <Lock size={13} className="absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
-                <input
-                  id="currentPasswordInput"
-                  type={showCurrentPassword ? 'text' : 'password'}
-                  required
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Enter your current password"
-                  className="w-full h-8 pl-8 pr-8 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-2xs"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                  aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}
+              {/* Current Password (if not first-time login) */}
+              {!account?.must_change_password && (
+                <div>
+                  <label
+                    htmlFor="currentPasswordInput"
+                    className="block text-xs font-semibold text-slate-800 mb-1.5"
+                  >
+                    Current Password <span className="font-bold text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Lock
+                      size={14}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                    />
+                    <input
+                      id="currentPasswordInput"
+                      type={showCurrentPassword ? 'text' : 'password'}
+                      required
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Enter your current account password"
+                      className="w-full h-9 pl-9 pr-9 rounded-lg border border-slate-300 bg-white text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors shadow-2xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-0.5"
+                      aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}
+                    >
+                      {showCurrentPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* New Password */}
+              <div>
+                <label
+                  htmlFor="newPasswordInput"
+                  className="block text-xs font-semibold text-slate-800 mb-1.5"
                 >
-                  {showCurrentPassword ? <EyeOff size={13} /> : <Eye size={13} />}
-                </button>
+                  New Password <span className="font-bold text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <KeyRound
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  />
+                  <input
+                    id="newPasswordInput"
+                    type={showNewPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter minimum 6 characters"
+                    className="w-full h-9 pl-9 pr-9 rounded-lg border border-slate-300 bg-white text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors shadow-2xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-0.5"
+                    aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
+                  >
+                    {showNewPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm New Password */}
+              <div>
+                <label
+                  htmlFor="confirmPasswordInput"
+                  className="block text-xs font-semibold text-slate-800 mb-1.5"
+                >
+                  Confirm New Password <span className="font-bold text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <Lock
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  />
+                  <input
+                    id="confirmPasswordInput"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter your new password"
+                    className="w-full h-9 pl-9 pr-9 rounded-lg border border-slate-300 bg-white text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors shadow-2xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-0.5"
+                    aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}
+                  >
+                    {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
               </div>
             </div>
-          )}
 
-          {/* New Password */}
-          <div>
-            <label htmlFor="newPasswordInput" className="block text-xs font-semibold text-slate-700 mb-1">
-              New Password <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <KeyRound size={13} className="absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
-              <input
-                id="newPasswordInput"
-                type={showNewPassword ? 'text' : 'password'}
-                required
-                minLength={6}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Minimum 6 characters"
-                className="w-full h-8 pl-8 pr-8 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-2xs"
-              />
-              <button
-                type="button"
-                onClick={() => setShowNewPassword(!showNewPassword)}
-                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
-              >
-                {showNewPassword ? <EyeOff size={13} /> : <Eye size={13} />}
-              </button>
+            {/* Section 2: Password Security Requirements */}
+            <div className="password-section-card">
+              <div className="password-section-header">
+                <div className="password-section-badge">
+                  <ShieldCheck size={14} />
+                </div>
+                <span className="password-section-tag">Security Requirements</span>
+                <span className="password-section-subtitle hidden sm:inline">
+                  Password hygiene & compliance
+                </span>
+              </div>
+
+              <div className="space-y-2 text-xs text-slate-600">
+                <div className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0" />
+                  <span>Must be at least <strong>6 characters</strong> in length</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0" />
+                  <span>Use a combination of letters, numbers, and symbols for high security</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0" />
+                  <span>Do not share portal credentials or temporary passcodes with unauthorized staff</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Confirm New Password */}
-          <div>
-            <label htmlFor="confirmPasswordInput" className="block text-xs font-semibold text-slate-700 mb-1">
-              Confirm New Password <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <Lock size={13} className="absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
-              <input
-                id="confirmPasswordInput"
-                type={showConfirmPassword ? 'text' : 'password'}
-                required
-                minLength={6}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter new password"
-                className="w-full h-8 pl-8 pr-8 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-2xs"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}
-              >
-                {showConfirmPassword ? <EyeOff size={13} /> : <Eye size={13} />}
-              </button>
-            </div>
-          </div>
-
-          {/* Guidelines Box */}
-          <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80 space-y-1.5 text-[11px] text-slate-500">
-            <div className="font-semibold text-slate-700 flex items-center gap-1.5">
-              <ShieldCheck size={13} className="text-blue-600" />
-              <span>Password Security Requirements</span>
-            </div>
-            <ul className="list-disc list-inside space-y-0.5 text-slate-500">
-              <li>Must be at least 6 characters in length</li>
-              <li>Use a combination of letters, numbers, and symbols for high strength</li>
-              <li>Do not share portal credentials with unauthorized staff</li>
-            </ul>
-          </div>
-
-          {/* Drawer Footer Actions */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+          {/* Docked Drawer Footer */}
+          <div className="ui-modal-foot">
             <button
               type="button"
               onClick={() => setIsPasswordModalOpen(false)}
-              className="h-8 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              disabled={savingPassword}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={savingPassword}
-              className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors disabled:opacity-50 cursor-pointer"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-blue-600 bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2 text-xs font-semibold text-white shadow-sm hover:from-blue-700 hover:to-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {savingPassword ? (
                 <>
-                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
+                  <Loader2 size={13} className="animate-spin" />
                   <span>Updating Password…</span>
                 </>
               ) : (
                 <>
-                  <Save size={13} />
+                  <Check size={14} />
                   <span>Save New Password</span>
                 </>
               )}

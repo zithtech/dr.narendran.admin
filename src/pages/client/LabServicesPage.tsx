@@ -1,13 +1,18 @@
 import { App } from 'antd';
 import {
+  Activity,
   AlertCircle,
+  Check,
   Edit2,
   Eye,
+  FileText,
   FlaskConical,
   IndianRupee,
+  Loader2,
   Plus,
   RefreshCw,
   Search,
+  ShieldCheck,
   Tag,
   TestTube2,
   Trash2,
@@ -41,11 +46,6 @@ interface LabService {
   status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
 }
-
-const STATUS_OPTIONS: SearchableSelectOption[] = [
-  { value: 'ACTIVE', label: 'Active', sublabel: 'Available for doctor prescriptions & orders', badge: 'Live', badgeTone: 'green' },
-  { value: 'INACTIVE', label: 'Inactive', sublabel: 'Temporarily suspended or hidden', badge: 'Disabled', badgeTone: 'neutral' },
-];
 
 export default function LabServicesPage() {
   const { message } = App.useApp();
@@ -632,7 +632,7 @@ export default function LabServicesPage() {
         )}
       </div>
 
-      {/* ── Add / Edit Diagnostic Service Drawer Matching Admin Modal Design ── */}
+      {/* ── Add / Edit Diagnostic Service Drawer Matching Admin LabServiceModal Design ── */}
       <Modal
         open={isModalOpen}
         onClose={() => {
@@ -640,258 +640,548 @@ export default function LabServicesPage() {
         }}
         variant="drawer"
         size="md"
+        className="service-drawer-modal"
         title={
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
-              <FlaskConical size={16} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                color: '#2563eb',
+                border: '1px solid #bfdbfe',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                boxShadow: '0 2px 6px rgba(37, 99, 235, 0.16)',
+              }}
+            >
+              <Activity size={19} style={{ display: 'block', margin: 'auto' }} />
             </div>
-            <span>{editingService ? 'Edit Diagnostic Service' : 'Add New Service / Test'}</span>
+            <div>
+              <div
+                style={{
+                  fontSize: 16.5,
+                  fontWeight: 700,
+                  color: 'var(--ui-text, #0f172a)',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                {editingService ? 'Edit Diagnostic Service' : 'Create Diagnostic Service'}
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
+                {editingService
+                  ? `Editing master catalog test: ${editingService.name}`
+                  : 'Add a new laboratory test or clinical investigation to the master catalog'}
+              </div>
+            </div>
           </div>
         }
-        description="Configure clinical service details, specimen requirements, pricing, and catalog status."
       >
         <form
           noValidate
           onSubmit={(e) => {
             void handleSaveService(e);
           }}
-          className="p-4 sm:p-5 space-y-3.5 overflow-y-auto flex-1 text-xs"
+          className="ui-modal-form"
+          style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
         >
-          {/* Field 1: Diagnostic Service / Test Name */}
-          <div>
-            <label htmlFor="serviceNameInput" className="block text-xs font-semibold text-slate-700 mb-1">
-              Diagnostic Service / Test Name <span className="text-rose-500">*</span>
-            </label>
-            <input
-              id="serviceNameInput"
-              type="text"
-              value={serviceName}
-              onChange={handleServiceNameChange}
-              onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
-              placeholder="e.g. Complete Blood Count (CBC)"
-              className={cx(
-                'w-full h-8 px-2.5 rounded-lg border text-xs focus:outline-none transition-all shadow-2xs',
-                nameError
-                  ? 'border-rose-500 focus:ring-2 focus:ring-rose-500/20'
-                  : 'border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100',
-              )}
-            />
-            {nameError && (
-              <div className="mt-1 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
-                <AlertCircle size={13} className="shrink-0 text-rose-600" />
-                <span>{nameError}</span>
-              </div>
-            )}
-          </div>
+          <style>{`
+            .service-drawer-modal {
+              width: min(680px, 100vw) !important;
+              max-width: 680px !important;
+              background: #ffffff;
+              box-shadow: -12px 0 36px rgba(15, 23, 42, 0.14) !important;
+            }
+            .service-drawer-modal .ui-modal-head {
+              padding: 18px 24px;
+              background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+              border-bottom: 1px solid #f1f5f9;
+            }
+            .service-drawer-modal .ui-modal-body {
+              padding: 20px 24px;
+              background: #f8fafc;
+              display: flex;
+              flex-direction: column;
+              gap: 16px;
+              overflow-y: auto;
+            }
+            .service-section-card {
+              background: #ffffff;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              padding: 18px 20px;
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+              display: flex;
+              flex-direction: column;
+              gap: 14px;
+              transition: border-color 0.15s ease;
+            }
+            .service-section-card:hover {
+              border-color: #cbd5e1;
+            }
+            .service-section-header {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              padding-bottom: 8px;
+              border-bottom: 1px solid #f1f5f9;
+            }
+            .service-section-badge {
+              width: 26px;
+              height: 26px;
+              border-radius: 7px;
+              background: #eff6ff;
+              color: #2563eb;
+              border: 1px solid #dbeafe;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+            }
+            .service-section-badge svg {
+              display: block;
+              margin: auto;
+            }
+            .service-section-tag {
+              font-size: 11px;
+              font-weight: 700;
+              letter-spacing: 0.06em;
+              color: #475569;
+              text-transform: uppercase;
+            }
+            .service-section-subtitle {
+              font-size: 12px;
+              color: #64748b;
+              margin-left: auto;
+            }
+            .service-drawer-modal .ui-input,
+            .service-drawer-modal .ui-textarea {
+              border-radius: 8px;
+              border: 1px solid #e2e8f0;
+              font-size: 13px;
+              padding: 8px 12px;
+              transition: all 0.15s ease;
+              background: #ffffff;
+              color: #0f172a;
+            }
+            .service-drawer-modal .ui-input {
+              height: 38px;
+            }
+            .service-drawer-modal .price-input-field {
+              padding-left: 36px !important;
+            }
+            .service-drawer-modal .code-input-field {
+              padding-right: 32px !important;
+            }
+            .service-drawer-modal .ui-input:focus,
+            .service-drawer-modal .ui-textarea:focus {
+              border-color: #2563eb !important;
+              box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+              outline: none;
+            }
+            .service-drawer-modal .ui-input.has-error,
+            .service-drawer-modal .ui-textarea.has-error {
+              border-color: #ef4444 !important;
+              box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+            }
+            .service-status-btn {
+              flex: 1;
+              padding: 12px 14px;
+              border-radius: 9px;
+              cursor: pointer;
+              text-align: left;
+              display: flex;
+              align-items: flex-start;
+              gap: 10px;
+              transition: all 0.15s ease;
+              position: relative;
+            }
+            .service-status-btn.is-active {
+              border: 1.5px solid #2563eb !important;
+              background: #eff6ff !important;
+              box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+            }
+            .service-status-btn:not(.is-active) {
+              border: 1px solid #e2e8f0;
+              background: #ffffff;
+            }
+            .service-status-btn:not(.is-active):hover {
+              border-color: #cbd5e1;
+              background: #fafafa;
+            }
+            .service-radio-circle {
+              width: 16px;
+              height: 16px;
+              border-radius: 50%;
+              border: 2px solid #cbd5e1;
+              margin-top: 2px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+              transition: all 0.15s ease;
+            }
+            .service-status-btn.is-active .service-radio-circle {
+              border-color: #2563eb;
+              background: #2563eb;
+            }
+            .service-radio-inner {
+              width: 6px;
+              height: 6px;
+              border-radius: 50%;
+              background: #ffffff;
+            }
+            .service-drawer-modal .ui-modal-foot {
+              padding: 14px 24px;
+              background: #ffffff;
+              border-top: 1px solid #f1f5f9;
+              display: flex;
+              align-items: center;
+              justify-content: flex-end;
+              gap: 10px;
+            }
+          `}</style>
 
-          {/* Field 2 & 3: Service Code & Service Category */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="serviceCodeInput" className="block text-xs font-semibold text-slate-700 mb-1">
-                Service Code
-              </label>
-              <div className="relative">
-                <Tag size={13} className="absolute right-2.5 top-2 text-slate-400 pointer-events-none" />
-                <input
-                  id="serviceCodeInput"
-                  type="text"
-                  value={serviceCode}
-                  onChange={handleServiceCodeChange}
-                  onBlur={() => setTouched((prev) => ({ ...prev, service_code: true }))}
-                  placeholder="e.g. CBC-001"
-                  className={cx(
-                    'w-full h-8 pl-2.5 pr-8 rounded-lg border text-xs uppercase font-mono focus:outline-none transition-all shadow-2xs',
-                    serviceCodeError
-                      ? 'border-rose-500 focus:ring-2 focus:ring-rose-500/20'
-                      : 'border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100',
-                  )}
-                />
-              </div>
-              {serviceCodeError && (
-                <div className="mt-1 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
-                  <AlertCircle size={13} className="shrink-0 text-rose-600" />
-                  <span>{serviceCodeError}</span>
+          <div className="ui-modal-body">
+            {/* Section 1: Service Specification */}
+            <div className="service-section-card">
+              <div className="service-section-header">
+                <div className="service-section-badge">
+                  <FlaskConical size={14} />
                 </div>
-              )}
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label
-                  htmlFor="client-service-cat-select"
-                  className="block text-xs font-semibold text-slate-700 cursor-pointer"
-                >
-                  Service Category
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setCustomCategoryMode((prev) => !prev)}
-                  className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
-                >
-                  {customCategoryMode ? 'Select from list' : '+ Custom Category'}
-                </button>
+                <span className="service-section-tag">Service Specification</span>
+                <span className="service-section-subtitle hidden sm:inline">
+                  Test name, clinical code & category
+                </span>
               </div>
-              {customCategoryMode ? (
-                <input
-                  id="client-service-cat-select"
-                  aria-label="Service Category"
-                  type="text"
-                  value={serviceCategory}
-                  onChange={(e) => setServiceCategory(e.target.value)}
-                  placeholder="Type custom category..."
-                  className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-2xs"
-                />
-              ) : (
-                <SearchableSelect
-                  id="client-service-cat-select"
-                  aria-label="Service Category"
-                  size="sm"
-                  variant="default"
-                  value={serviceCategory}
-                  onChange={(val) => setServiceCategory(val)}
-                  options={categoryOptions}
-                  placeholder="Select category..."
-                  searchPlaceholder="Search category..."
-                  clearable
-                  onClear={() => setServiceCategory('')}
-                />
-              )}
-            </div>
-          </div>
 
-          {/* Field 4: Sample Type */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label
-                htmlFor="client-sample-type-select"
-                className="block text-xs font-semibold text-slate-700 cursor-pointer"
-              >
-                Sample Type
-              </label>
-              <button
-                type="button"
-                onClick={() => setCustomSampleMode((prev) => !prev)}
-                className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
-              >
-                {customSampleMode ? 'Select from list' : '+ Custom Specimen'}
-              </button>
-            </div>
-            {customSampleMode ? (
-              <input
-                id="client-sample-type-select"
-                aria-label="Sample Type"
-                type="text"
-                value={sampleType}
-                onChange={(e) => setSampleType(e.target.value)}
-                placeholder="Type custom specimen..."
-                className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-2xs"
-              />
-            ) : (
-              <SearchableSelect
-                id="client-sample-type-select"
-                aria-label="Sample Type"
-                size="sm"
-                variant="default"
-                value={sampleType}
-                onChange={(val) => setSampleType(val)}
-                options={sampleTypeOptions}
-                placeholder="Select sample type..."
-                searchPlaceholder="Search specimen..."
-                clearable
-                onClear={() => setSampleType('')}
-              />
-            )}
-          </div>
+              <div className="space-y-3.5">
+                {/* Field 1: Diagnostic Service / Test Name */}
+                <div>
+                  <label
+                    htmlFor="serviceNameInput"
+                    className="mb-1.5 block text-xs font-semibold text-slate-800 cursor-pointer"
+                  >
+                    Diagnostic Service / Test Name <span className="font-bold text-rose-500">*</span>
+                  </label>
+                  <input
+                    id="serviceNameInput"
+                    className={`ui-input w-full ${nameError ? 'has-error' : ''}`}
+                    type="text"
+                    value={serviceName}
+                    onChange={handleServiceNameChange}
+                    onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
+                    placeholder="e.g. Complete Blood Count (CBC), Lipid Profile, Thyroid Panel"
+                  />
+                  {nameError && (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                      <AlertCircle size={13} className="shrink-0 text-rose-600" />
+                      <span>{nameError}</span>
+                    </div>
+                  )}
+                </div>
 
-          {/* Field 5: Service Price */}
-          <div>
-            <label htmlFor="servicePriceInput" className="block text-xs font-semibold text-slate-700 mb-1">
-              Service Price (₹)
-            </label>
-            <div className="relative flex items-center">
-              <IndianRupee size={13} className="absolute left-2.5 top-2.5 text-slate-400 pointer-events-none z-10" />
-              <input
-                id="servicePriceInput"
-                type="text"
-                inputMode="decimal"
-                value={servicePrice}
-                onChange={handlePriceChange}
-                onBlur={() => setTouched((prev) => ({ ...prev, price: true }))}
-                placeholder="0.00"
-                style={{ paddingLeft: '28px' }}
-                className={cx(
-                  'w-full h-8 pr-2.5 rounded-lg border text-xs focus:outline-none transition-all shadow-2xs',
-                  priceError
-                    ? 'border-rose-500 focus:ring-2 focus:ring-rose-500/20'
-                    : 'border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100',
-                )}
-              />
-            </div>
-            {priceError && (
-              <div className="mt-1 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
-                <AlertCircle size={13} className="shrink-0 text-rose-600" />
-                <span>{priceError}</span>
+                {/* Grid: Service Code & Service Category */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {/* Field 2: Service Code */}
+                  <div>
+                    <label
+                      htmlFor="serviceCodeInput"
+                      className="mb-1.5 block text-xs font-semibold text-slate-800 cursor-pointer"
+                    >
+                      Service Code
+                    </label>
+                    <div className="relative flex items-center">
+                      <input
+                        id="serviceCodeInput"
+                        className={`ui-input code-input-field w-full uppercase font-mono tracking-wide ${
+                          serviceCodeError ? 'has-error' : ''
+                        }`}
+                        style={{ paddingRight: '32px' }}
+                        type="text"
+                        value={serviceCode}
+                        onChange={handleServiceCodeChange}
+                        onBlur={() => setTouched((prev) => ({ ...prev, service_code: true }))}
+                        placeholder="e.g. CBC-001, LFT-02"
+                        maxLength={50}
+                      />
+                      <Tag
+                        size={13}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10"
+                      />
+                    </div>
+                    {serviceCodeError && (
+                      <div className="mt-1.5 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                        <AlertCircle size={13} className="shrink-0 text-rose-600" />
+                        <span>{serviceCodeError}</span>
+                      </div>
+                    )}
+                    <span className="mt-1 block text-[11px] text-slate-400">
+                      Alphanumeric identifier or billing test code
+                    </span>
+                  </div>
+
+                  {/* Field 3: Service Category */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label
+                        htmlFor="client-service-cat-select"
+                        className="block text-xs font-semibold text-slate-800 cursor-pointer"
+                      >
+                        Service Category
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setCustomCategoryMode((prev) => !prev)}
+                        className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+                      >
+                        {customCategoryMode ? 'Select from list' : '+ Custom Category'}
+                      </button>
+                    </div>
+                    {customCategoryMode ? (
+                      <input
+                        id="client-service-cat-select"
+                        aria-label="Service Category"
+                        className="ui-input w-full"
+                        type="text"
+                        value={serviceCategory}
+                        onChange={(e) => setServiceCategory(e.target.value)}
+                        placeholder="Type custom service category..."
+                      />
+                    ) : (
+                      <SearchableSelect
+                        id="client-service-cat-select"
+                        aria-label="Service Category"
+                        value={serviceCategory}
+                        onChange={(val) => setServiceCategory(val)}
+                        options={categoryOptions}
+                        placeholder="Select service category..."
+                        searchPlaceholder="Search category (e.g. Hematology, Biochemistry)..."
+                        clearable
+                        onClear={() => setServiceCategory('')}
+                        accentTone="blue"
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
+
+            {/* Section 2: Clinical Specifications & Pricing */}
+            <div className="service-section-card">
+              <div className="service-section-header">
+                <div className="service-section-badge">
+                  <TestTube2 size={14} />
+                </div>
+                <span className="service-section-tag">Clinical Specifications & Pricing</span>
+                <span className="service-section-subtitle hidden sm:inline">
+                  Specimen type, tariff rate & guidelines
+                </span>
+              </div>
+
+              <div className="space-y-3.5">
+                {/* Field 4: Sample Type (Single Row) */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label
+                      htmlFor="client-sample-type-select"
+                      className="block text-xs font-semibold text-slate-800 cursor-pointer"
+                    >
+                      Sample Type
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setCustomSampleMode((prev) => !prev)}
+                      className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+                    >
+                      {customSampleMode ? 'Select from list' : '+ Custom Specimen'}
+                    </button>
+                  </div>
+                  {customSampleMode ? (
+                    <input
+                      id="client-sample-type-select"
+                      aria-label="Sample Type"
+                      className="ui-input w-full"
+                      type="text"
+                      value={sampleType}
+                      onChange={(e) => setSampleType(e.target.value)}
+                      placeholder="Type custom specimen..."
+                    />
+                  ) : (
+                    <SearchableSelect
+                      id="client-sample-type-select"
+                      aria-label="Sample Type"
+                      value={sampleType}
+                      onChange={(val) => setSampleType(val)}
+                      options={sampleTypeOptions}
+                      placeholder="Select sample type..."
+                      searchPlaceholder="Search specimen (e.g. Whole Blood, Serum, Urine)..."
+                      clearable
+                      onClear={() => setSampleType('')}
+                      accentTone="blue"
+                    />
+                  )}
+                </div>
+
+                {/* Field 5: Service Price (Single Row) */}
+                <div>
+                  <label
+                    htmlFor="servicePriceInput"
+                    className="mb-1.5 block text-xs font-semibold text-slate-800 cursor-pointer"
+                  >
+                    Service Price (₹)
+                  </label>
+                  <div className="relative flex items-center">
+                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 flex items-center text-slate-400 z-10">
+                      <IndianRupee size={14} />
+                    </div>
+                    <input
+                      id="servicePriceInput"
+                      className={`ui-input price-input-field w-full font-medium ${priceError ? 'has-error' : ''}`}
+                      style={{ paddingLeft: '36px' }}
+                      type="text"
+                      inputMode="decimal"
+                      value={servicePrice}
+                      onChange={handlePriceChange}
+                      onBlur={() => setTouched((prev) => ({ ...prev, price: true }))}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  {priceError && (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                      <AlertCircle size={13} className="shrink-0 text-rose-600" />
+                      <span>{priceError}</span>
+                    </div>
+                  )}
+                  <span className="mt-1 block text-[11px] text-slate-400">
+                    Standard lab billing charge / tariff
+                  </span>
+                </div>
+
+                {/* Field 6: Description */}
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <label
+                      htmlFor="serviceDescriptionInput"
+                      className="block text-xs font-semibold text-slate-800 cursor-pointer"
+                    >
+                      Description
+                    </label>
+                    <span
+                      className={`text-[11px] flex items-center gap-1 ${
+                        serviceDesc.length > 2000 ? 'text-rose-600 font-bold' : 'text-slate-400'
+                      }`}
+                    >
+                      <FileText size={11} /> {serviceDesc.length}/2000
+                    </span>
+                  </div>
+                  <textarea
+                    id="serviceDescriptionInput"
+                    className="ui-textarea w-full"
+                    rows={3}
+                    value={serviceDesc}
+                    onChange={(e) => setServiceDesc(e.target.value.slice(0, 2000))}
+                    placeholder="Provide test overview, clinical indications, methodology, or preparation guidelines (e.g. 10-12 hours fasting required)..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: Catalog Availability & Status */}
+            <div className="service-section-card">
+              <div className="service-section-header">
+                <div className="service-section-badge">
+                  <ShieldCheck size={14} />
+                </div>
+                <span className="service-section-tag">Catalog Availability & Status</span>
+                <span className="service-section-subtitle hidden sm:inline">
+                  Referral prescription visibility
+                </span>
+              </div>
+
+              <div>
+                <div className="mb-1.5 block text-xs font-semibold text-slate-800">
+                  Service Catalog Status <span className="font-bold text-rose-500">*</span>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    className={`service-status-btn ${serviceStatus === 'ACTIVE' ? 'is-active' : ''}`}
+                    onClick={() => {
+                      setServiceStatus('ACTIVE');
+                    }}
+                  >
+                    <div className="service-radio-circle">
+                      {serviceStatus === 'ACTIVE' && <div className="service-radio-inner" />}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        Active in Catalog
+                        <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">
+                          Live
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        Available for doctor prescriptions, linked lab attachments, and orders.
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`service-status-btn ${serviceStatus === 'INACTIVE' ? 'is-active' : ''}`}
+                    onClick={() => {
+                      setServiceStatus('INACTIVE');
+                    }}
+                  >
+                    <div className="service-radio-circle">
+                      {serviceStatus === 'INACTIVE' && <div className="service-radio-inner" />}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        Inactive / Suspended
+                        <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                          Disabled
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        Temporarily paused. Hidden from doctor test requisition dropdowns.
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Field 6: Description */}
-          <div>
-            <label htmlFor="serviceDescriptionInput" className="block text-xs font-semibold text-slate-700 mb-1">
-              Description
-            </label>
-            <textarea
-              id="serviceDescriptionInput"
-              rows={2}
-              value={serviceDesc}
-              onChange={(e) => setServiceDesc(e.target.value.slice(0, 2000))}
-              placeholder="Clinical indications, methodology, preparation instructions..."
-              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-2xs"
-            />
-          </div>
-
-          {/* Field 7: Service Catalog Status */}
-          <div>
-            <label
-              htmlFor="client-service-status-select"
-              className="block text-xs font-semibold text-slate-700 mb-1 cursor-pointer"
-            >
-              Service Catalog Status <span className="text-rose-500">*</span>
-            </label>
-            <SearchableSelect
-              id="client-service-status-select"
-              aria-label="Service Catalog Status"
-              size="sm"
-              variant="default"
-              value={serviceStatus}
-              onChange={(val) => setServiceStatus(val as 'ACTIVE' | 'INACTIVE')}
-              options={STATUS_OPTIONS}
-              placeholder="Select status..."
-              searchable={false}
-            />
-          </div>
-
-          {/* Drawer Footer Actions */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+          {/* Docked Drawer Footer */}
+          <div className="ui-modal-foot">
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="h-8 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={saving}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors disabled:opacity-50 cursor-pointer"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-blue-600 bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2 text-xs font-semibold text-white shadow-sm hover:from-blue-700 hover:to-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving ? (
                 <>
-                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
-                  <span>Saving…</span>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span>Saving...</span>
                 </>
               ) : (
-                <span>{editingService ? 'Update Service' : 'Create Service'}</span>
+                <>
+                  <Check size={14} />
+                  <span>{editingService ? 'Save Changes' : 'Create Diagnostic Service'}</span>
+                </>
               )}
             </button>
           </div>
