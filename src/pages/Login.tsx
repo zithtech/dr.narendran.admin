@@ -13,6 +13,7 @@ import loginDoctorImg from '../assets/login-doctor-illustration.png';
 import { Alert } from '../components/ui/primitives';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
+import { getMediaProxyUrl } from '../utils/mediaProxy';
 
 export default function Login({ defaultForgot = false }: { defaultForgot?: boolean }) {
   const navigate = useNavigate();
@@ -41,9 +42,67 @@ export default function Login({ defaultForgot = false }: { defaultForgot?: boole
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
 
-  // Hospital Brand details from storage
-  const brandFirstName = localStorage.getItem('adminFirstName') || 'HMS Admin';
-  const brandLastName = localStorage.getItem('adminLastName') || 'Hospital';
+  // Hospital Brand details from storage & backend
+  const [brandLogoUrl, setBrandLogoUrl] = useState<string>(
+    () => localStorage.getItem('adminLogoUrl') || '',
+  );
+  const [logoError, setLogoError] = useState<boolean>(false);
+  const [brandFirstName, setBrandFirstName] = useState<string>(
+    () => localStorage.getItem('adminFirstName') || 'HMS Admin',
+  );
+  const [brandLastName, setBrandLastName] = useState<string>(
+    () => localStorage.getItem('adminLastName') || 'Hospital',
+  );
+
+  React.useEffect(() => {
+    // Attempt to load public branding for unauthenticated login screen
+    api
+      .get('settings/public-branding')
+      .then((res) => {
+        if (res.data) {
+          if (res.data.logoUrl) {
+            setBrandLogoUrl(res.data.logoUrl);
+            localStorage.setItem('adminLogoUrl', res.data.logoUrl);
+          } else {
+            setBrandLogoUrl('');
+            localStorage.removeItem('adminLogoUrl');
+          }
+          if (res.data.firstName) {
+            setBrandFirstName(res.data.firstName);
+            localStorage.setItem('adminFirstName', res.data.firstName);
+          }
+          if (res.data.lastName) {
+            setBrandLastName(res.data.lastName);
+            localStorage.setItem('adminLastName', res.data.lastName);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  React.useEffect(() => {
+    const handleBrandingChanged = () => {
+      const url = localStorage.getItem('adminLogoUrl') || '';
+      const first = localStorage.getItem('adminFirstName');
+      const last = localStorage.getItem('adminLastName');
+      setBrandLogoUrl(url);
+      setLogoError(false);
+      if (first) setBrandFirstName(first);
+      if (last) setBrandLastName(last);
+    };
+
+    window.addEventListener('admin-logo-changed', handleBrandingChanged);
+    window.addEventListener('admin-settings-changed', handleBrandingChanged);
+    window.addEventListener('storage', handleBrandingChanged);
+    return () => {
+      window.removeEventListener('admin-logo-changed', handleBrandingChanged);
+      window.removeEventListener('admin-settings-changed', handleBrandingChanged);
+      window.removeEventListener('storage', handleBrandingChanged);
+    };
+  }, []);
+
+  const proxiedLogo = brandLogoUrl ? getMediaProxyUrl(brandLogoUrl) : '';
+  const activeDisplayLogo = proxiedLogo && !logoError ? proxiedLogo : brandLogoImg;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -198,9 +257,10 @@ export default function Login({ defaultForgot = false }: { defaultForgot?: boole
           <div>
             <div className="flex items-center gap-4 mb-8 sm:mb-10">
               <img
-                src={brandLogoImg}
+                src={activeDisplayLogo}
                 alt={`${brandFirstName} Logo`}
                 className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0"
+                onError={() => setLogoError(true)}
               />
               <div className="flex flex-col justify-center min-w-0">
                 <span className="block text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight leading-tight truncate">

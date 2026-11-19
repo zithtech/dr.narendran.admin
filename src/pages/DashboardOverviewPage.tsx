@@ -30,6 +30,7 @@ import { useNavigate } from 'react-router';
 
 import api from '../utils/api';
 import { usePermission } from '../context/PermissionContext';
+import { DashboardAttendanceSection } from '../components/attendance/DashboardAttendanceSection';
 
 interface StatsState {
   hospitalsCount: number;
@@ -1068,8 +1069,15 @@ export default function DashboardOverviewPage() {
               </div>
             </div>
 
-            {/* Right Column (4 cols): Follow-ups & Quick Clinical Tools */}
+            {/* Right Column (4 cols): Attendance Card, Follow-ups & Quick Clinical Tools */}
             <div className="lg:col-span-4 space-y-3">
+              {/* Doctor Attendance & Shift Punch Card */}
+              <DashboardAttendanceSection
+                userName={doctorProfile.name || currentUsername}
+                userRole={doctorProfile.specialization || 'Doctor'}
+                isDoctor={true}
+              />
+
               {/* Follow-up Patients Card */}
               <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs">
                 <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
@@ -1669,8 +1677,15 @@ export default function DashboardOverviewPage() {
               </div>
             </div>
 
-            {/* Right 4 Cols: Departments, Recent Activity, & Quick Actions */}
+            {/* Right 4 Cols: Attendance Card, Specializations & Operational Activity */}
             <div className="lg:col-span-4 flex flex-col gap-2.5">
+              {/* Employee & Hospital Attendance Punch Card */}
+              <DashboardAttendanceSection
+                userName={currentUsername}
+                userRole={currentRole}
+                isDoctor={false}
+              />
+
               {/* Clinical Specializations */}
               <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100">
