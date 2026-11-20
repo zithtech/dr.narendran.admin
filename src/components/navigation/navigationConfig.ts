@@ -15,6 +15,7 @@ import {
   type LucideIcon,
   MapPin,
   Package,
+  PackageMinus,
   Pill,
   Settings,
   Shield,
@@ -214,6 +215,14 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         icon: Boxes,
         slug: 'INVENTORY',
         description: 'Physical stock levels, batch tracking & stock adjustments',
+      },
+      {
+        name: 'Reduce Medicine',
+        path: '/reduce-medicine',
+        icon: PackageMinus,
+        slug: 'INVENTORY',
+        description: 'Dispense tablets, record patient issues & reduce inventory stock',
+        aliases: ['/inventory/reduce', '/reduce-stock'],
       },
       {
         name: 'Medicine Package',

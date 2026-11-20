@@ -20,7 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 
 import MedicineInventoryDrawer from '../components/MedicineInventoryDrawer';
 import MedicineStrengthModal from '../components/MedicineStrengthModal';
@@ -65,6 +65,7 @@ const SKELETON_ROWS = Array.from({ length: 6 }, (_, i) => i);
 
 export default function MedicineInventory() {
   const { message } = App.useApp();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { canCreate, canUpdate } = usePermission();
 
@@ -306,6 +307,16 @@ export default function MedicineInventory() {
             aria-label="Refresh"
           >
             <RefreshCw size={13} className={loading || summaryLoading ? 'animate-spin' : ''} />
+          </button>
+
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+            onClick={() => navigate('/reduce-medicine')}
+            title="Reduce Medicine & Dispense Tablets"
+          >
+            <PackageMinus size={13} className="text-red-600" />
+            <span>Reduce Medicine</span>
           </button>
 
           <button

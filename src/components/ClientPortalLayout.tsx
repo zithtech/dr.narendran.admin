@@ -1,22 +1,28 @@
 import {
   Building2,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   FlaskConical,
   GitBranch,
   HeartPulse,
   LayoutDashboard,
-  LogOut,
   type LucideIcon,
   ShieldAlert,
   Stethoscope,
 } from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate, useOutletContext } from 'react-router';
 
 import api from '../utils/api';
-import { Avatar, cx } from './ui/primitives';
+import { ClientMobileDrawer } from './client/ClientMobileDrawer';
+import {
+  type ClientNavCategory,
+  type ClientNavModule,
+  filterClientCategoriesByPermissions,
+  findActiveClientNavigation,
+  PARTNER_PORTAL_CATEGORIES,
+} from './client/clientNavConfig';
+import { ClientSidebar } from './client/ClientSidebar';
+import { ClientTopNavbar } from './client/ClientTopNavbar';
 
 export interface ClientPortalContextType {
   allowedSlugs: string[];
@@ -33,14 +39,19 @@ export interface ClientNavItem {
   slug?: string;
 }
 
-const CLIENT_EXPANDED_KEY = 'clientRailExpanded';
+export interface ClientRolePermission {
+  module_slug: string;
+  can_read: boolean;
+  can_create?: boolean;
+  can_update?: boolean;
+  can_delete?: boolean;
+}
 
-function readExpanded(): boolean {
-  try {
-    return localStorage.getItem(CLIENT_EXPANDED_KEY) === '1';
-  } catch {
-    return false;
-  }
+export interface ClientRoleData {
+  id?: string;
+  name?: string;
+  is_system_role?: boolean;
+  permissions?: ClientRolePermission[];
 }
 
 export const CLIENT_NAV_ITEMS: readonly ClientNavItem[] = [
@@ -56,43 +67,58 @@ export const CLIENT_NAV_ITEMS: readonly ClientNavItem[] = [
 ] as const;
 
 export default function ClientPortalLayout() {
-  const [isExpanded, setIsExpanded] = useState(readExpanded);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const currentEmail = localStorage.getItem('clientPortalUser') || 'Client Partner';
-  const currentRole = localStorage.getItem('clientPortalRole') || 'Client';
+  const currentEmail = localStorage.getItem('clientPortalUser') ?? 'Client Partner';
+  const currentRole = localStorage.getItem('clientPortalRole') ?? 'Client';
 
-  const [roleData, setRoleData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [roleData, setRoleData] = useState<ClientRoleData | null>(null);
+  const [loading, setLoading] = useState<boolean>(Boolean(currentRole));
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
 
-  const fetchRole = () => {
-    if (!currentRole) {
-      setLoading(false);
-      return;
-    }
+  const refreshPermissions = useCallback(() => {
+    if (!currentRole) return;
     api
-      .get(`rbac/roles/${encodeURIComponent(currentRole)}`)
+      .get<ClientRoleData>(`rbac/roles/${encodeURIComponent(currentRole)}`)
       .then((res) => {
-        setRoleData(res.data);
-        setLoading(false);
+        if (res.data) setRoleData(res.data);
       })
-      .catch((err) => {
-        console.error('Failed to load role permissions for client:', err);
-        setLoading(false);
+      .catch((err: unknown) => {
+        console.error('Failed to refresh permissions for client:', err);
       });
-  };
+  }, [currentRole]);
 
   useEffect(() => {
-    fetchRole();
+    let ignore = false;
+    if (!currentRole) {
+      return;
+    }
 
-    // Re-verify whenever client returns to this browser tab so any
-    // admin permission changes immediately reflect in the sidebar!
+    const loadRole = async () => {
+      try {
+        const res = await api.get<ClientRoleData>(`rbac/roles/${encodeURIComponent(currentRole)}`);
+        if (!ignore && res.data) {
+          setRoleData(res.data);
+        }
+      } catch (err: unknown) {
+        console.error('Failed to load role permissions for client:', err);
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadRole();
+
     const handleFocus = () => {
-      fetchRole();
+      void loadRole();
     };
     window.addEventListener('focus', handleFocus);
     return () => {
+      ignore = true;
       window.removeEventListener('focus', handleFocus);
     };
   }, [currentRole]);
@@ -102,34 +128,62 @@ export default function ClientPortalLayout() {
     if (isSystemRole) return [];
     return (
       roleData?.permissions
-        ?.filter((p: any) => p.can_read)
-        ?.map((p: any) => p.module_slug) || []
+        ?.filter((p) => p.can_read)
+        ?.map((p) => p.module_slug) ?? []
     );
   }, [roleData, isSystemRole]);
 
-  // Dynamically filter navigation items based on assigned permissions
-  const visibleNavItems = useMemo(() => {
-    if (loading && !roleData) {
-      // While initial fetch is running, show Overview default
-      return CLIENT_NAV_ITEMS.filter((item) => !item.slug);
-    }
-    if (isSystemRole) {
-      return CLIENT_NAV_ITEMS;
-    }
-    return CLIENT_NAV_ITEMS.filter((item) => {
-      if (!item.slug) return true; // Overview is always accessible
-      return allowedSlugs.includes(item.slug);
-    });
-  }, [loading, roleData, isSystemRole, allowedSlugs]);
+  // Dynamically filter categories & modules based on assigned permissions
+  const visibleCategories = useMemo(() => {
+    return filterClientCategoriesByPermissions(
+      PARTNER_PORTAL_CATEGORIES,
+      allowedSlugs,
+      isSystemRole,
+    );
+  }, [allowedSlugs, isSystemRole]);
 
-  const toggle = () => {
-    setIsExpanded((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(CLIENT_EXPANDED_KEY, next ? '1' : '0');
-      } catch {}
-      return next;
-    });
+  const { activeCategory: matchedCategory, activeModule } = useMemo(
+    () => findActiveClientNavigation(location.pathname, visibleCategories),
+    [location.pathname, visibleCategories],
+  );
+
+  const currentCategory = useMemo(() => {
+    if (selectedCategoryKey) {
+      const found = visibleCategories.find((c) => c.key === selectedCategoryKey);
+      if (found) return found;
+    }
+    return matchedCategory;
+  }, [selectedCategoryKey, visibleCategories, matchedCategory]);
+
+  const userInitials = useMemo(() => {
+    return (
+      (currentEmail || 'CP')
+        .replace(/[._-]+/g, ' ')
+        .trim()
+        .split(/\s+/)
+        .map((w: string) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase() || 'CP'
+    );
+  }, [currentEmail]);
+
+  const handleSelectCategory = (category: ClientNavCategory) => {
+    setSelectedCategoryKey(category.key);
+    const hasCurrentModule = category.modules.some((m) => m.path === location.pathname);
+    if (!hasCurrentModule && category.modules.length > 0 && category.modules[0]) {
+      void navigate(category.modules[0].path);
+    }
+  };
+
+  const handleSelectModule = (mod: ClientNavModule) => {
+    const parentCategory = visibleCategories.find((cat) =>
+      cat.modules.some((m) => m.path === mod.path),
+    );
+    if (parentCategory) {
+      setSelectedCategoryKey(parentCategory.key);
+    }
+    void navigate(mod.path);
   };
 
   const handleLogout = () => {
@@ -145,101 +199,57 @@ export default function ClientPortalLayout() {
     isSystemRole,
     loading,
     currentRole,
-    refreshPermissions: fetchRole,
+    refreshPermissions,
   };
 
   return (
-    <div className="ui-shell">
-      <aside
-        className={cx('ui-rail', isExpanded && 'is-expanded')}
-        aria-label="Client Portal navigation"
-      >
-        <div className="ui-rail-brand">
-          <span
-            className="ui-rail-logo"
-            style={{
-              background: 'linear-gradient(135deg, #0284c7 0%, #0d9488 100%)',
-              color: '#ffffff',
-            }}
-          >
-            <FlaskConical size={16} strokeWidth={2.4} />
-          </span>
-          {isExpanded && (
-            <span className="ui-rail-brand-text">
-              <span className="ui-rail-brand-name">Client Portal</span>
-              <span className="ui-rail-brand-sub">Dr Narendran</span>
-            </span>
-          )}
-        </div>
+    <div className="ui-app-layout">
+      {/* 1. Left Full-Height Sidebar matching Admin Web App */}
+      <ClientSidebar
+        categories={visibleCategories}
+        activeCategory={currentCategory}
+        activeModule={activeModule}
+        onSelectModule={handleSelectModule}
+        brandName="Client Portal"
+        brandSub={currentRole}
+        brandHomePath="/portal"
+        onLogout={handleLogout}
+      />
 
-        <button
-          type="button"
-          className="ui-rail-item ui-rail-toggle"
-          onClick={toggle}
-          data-tip="Expand"
-          aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
-        >
-          {isExpanded ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-          {isExpanded && <span className="ui-rail-item-label">Collapse</span>}
-        </button>
+      {/* 2. Right Main Column: TopNavbar on Top + Content Below */}
+      <div className="ui-app-right-column">
+        <ClientTopNavbar
+          categories={visibleCategories}
+          activeCategory={currentCategory}
+          activeModule={activeModule}
+          onSelectCategory={handleSelectCategory}
+          currentUsername={currentEmail}
+          currentRole={currentRole}
+          userInitials={userInitials}
+          onLogout={handleLogout}
+          isMobileMenuOpen={isMobileMenuOpen}
+          onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)}
+        />
 
-        <div className="ui-rail-divider" />
+        <main className="ui-main">
+          <Outlet context={contextValue} />
+        </main>
+      </div>
 
-        <nav className="ui-rail-nav">
-          {visibleNavItems.map((item) => {
-            const isActive =
-              item.path === '/portal'
-                ? location.pathname === '/portal'
-                : location.pathname === item.path ||
-                  location.pathname.startsWith(item.path + '/');
-            const Icon = item.icon;
-            return (
-              <button
-                type="button"
-                key={item.path}
-                className={cx('ui-rail-item', isActive && 'is-active')}
-                onClick={() => {
-                  void navigate(item.path);
-                }}
-                data-tip={item.name}
-                aria-label={item.name}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                <Icon size={18} strokeWidth={isActive ? 2.1 : 1.8} />
-                {isExpanded && <span className="ui-rail-item-label">{item.name}</span>}
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="ui-rail-footer">
-          <div className="ui-rail-user" title={`${currentEmail} · ${currentRole}`}>
-            <Avatar name={currentEmail} size={32} />
-            {isExpanded && (
-              <span className="ui-rail-user-meta">
-                <span className="ui-rail-user-name" title={currentEmail}>
-                  {currentEmail}
-                </span>
-                <span className="ui-rail-user-role">{currentRole}</span>
-              </span>
-            )}
-          </div>
-          <button
-            type="button"
-            className="ui-rail-item"
-            onClick={handleLogout}
-            data-tip="Log out"
-            aria-label="Log out"
-          >
-            <LogOut size={18} strokeWidth={1.8} />
-            {isExpanded && <span className="ui-rail-item-label">Log out</span>}
-          </button>
-        </div>
-      </aside>
-
-      <main className="ui-main">
-        <Outlet context={contextValue} />
-      </main>
+      {/* 3. Mobile Responsive Drawer */}
+      <ClientMobileDrawer
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        categories={visibleCategories}
+        activeModule={activeModule}
+        onSelectModule={handleSelectModule}
+        currentUsername={currentEmail}
+        currentRole={currentRole}
+        userInitials={userInitials}
+        brandName="Client Portal"
+        brandSub={currentRole}
+        onLogout={handleLogout}
+      />
     </div>
   );
 }
@@ -324,7 +334,9 @@ export function ClientPermissionGate({
           <button
             type="button"
             className="ui-btn ui-btn-primary"
-            onClick={() => void navigate('/portal')}
+            onClick={() => {
+              void navigate('/portal');
+            }}
           >
             Return to Overview
           </button>

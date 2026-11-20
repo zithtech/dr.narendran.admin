@@ -98,7 +98,7 @@ function buildDataContext(rx: Prescription): LetterPadDataContext {
       custom_vitals: vitals.custom_vitals ?? rx.patient_custom_vitals ?? [],
     },
     prescription: {
-      prescription_id: rx.id ? String(rx.id).slice(0, 8).toUpperCase() : '',
+      prescription_id: rx.prescription_number || (rx.id ? String(rx.id).slice(0, 8).toUpperCase() : ''),
       prescription_date: rx.prescription_date,
       ...(rx.appointment_id
         ? { appointment_id: String(rx.appointment_id).slice(0, 8).toUpperCase() }
@@ -371,7 +371,7 @@ export default function ViewPrescriptionModal({
               </div>
               <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5 font-normal flex-wrap">
                 <span className="font-mono font-bold text-blue-600">
-                  #{activeRx.id.slice(0, 8).toUpperCase()}
+                  #{activeRx.prescription_number || activeRx.id.slice(0, 8).toUpperCase()}
                 </span>
                 <span>•</span>
                 <span className="inline-flex items-center gap-1">

@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router';
 
 import Login from './pages/Login';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import ClientLogin from './pages/ClientLogin';
 import Dashboard from './pages/Dashboard';
 import DashboardOverviewPage from './pages/DashboardOverviewPage';
@@ -13,6 +15,7 @@ import DoctorAvailabilityPage from './pages/DoctorAvailabilityPage';
 import Users from './pages/Users';
 import Patients from './pages/Patients';
 import PatientDetailPage from './pages/PatientDetailPage';
+import PatientFormPage from './pages/PatientFormPage';
 import PatientTimelinesPage from './pages/PatientTimelinesPage';
 import PatientTimelineDetailPage from './pages/PatientTimelineDetailPage';
 import MedicalRecordsPage from './features/medical_records/pages/MedicalRecordsPage';
@@ -20,6 +23,7 @@ import Appointments from './pages/Appointments';
 import DoctorTodayAppointments from './pages/DoctorTodayAppointments';
 import Pharmacy from './pages/Pharmacy';
 import MedicineInventory from './pages/MedicineInventory';
+import ReduceMedicineManagement from './pages/ReduceMedicineManagement';
 import MedicinePackages from './pages/MedicinePackages';
 import OrdersPage from './features/orders/pages/OrdersPage';
 import PrescriptionsPage from './features/prescriptions/pages/PrescriptionsPage';
@@ -39,6 +43,7 @@ import LabServicesPage from './pages/client/LabServicesPage';
 import LabAccountPage from './pages/client/LabAccountPage';
 import LabChangePasswordPage from './pages/client/LabChangePasswordPage';
 import LabReportsPage from './pages/client/LabReportsPage';
+import LabUpcomingTestsPage from './pages/client/LabUpcomingTestsPage';
 
 import SupportCenterPage from './features/support/pages/SupportCenterPage';
 import { ReviewsManagementPage } from './features/reviews/pages/ReviewsManagementPage';
@@ -94,8 +99,8 @@ function App() {
       <Routes>
         {/* Admin Portal Authentication */}
         <Route path="/login" element={<Login />} />
-        <Route path="/forgot-password" element={<Login defaultForgot={true} />} />
-        <Route path="/reset-password" element={<Login defaultForgot={true} />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Client Portal Authentication (Unique Dedicated URLs) */}
         <Route path="/client/login" element={<ClientLogin />} />
@@ -113,6 +118,8 @@ function App() {
         >
           <Route index element={<Navigate to="/client/dashboard" replace />} />
           <Route path="dashboard" element={<LabDashboardPage />} />
+          <Route path="upcoming-tests" element={<LabUpcomingTestsPage />} />
+          <Route path="upcoming" element={<Navigate to="/client/upcoming-tests" replace />} />
           <Route path="reports" element={<LabReportsPage />} />
           <Route path="profile" element={<LabProfilePage />} />
           <Route path="services" element={<LabServicesPage />} />
@@ -225,6 +232,22 @@ function App() {
             }
           />
           <Route
+            path="/patients/new"
+            element={
+              <ModuleRouteGuard module="PATIENTS" title="New Patient">
+                <PatientFormPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/patients/:patientId/edit"
+            element={
+              <ModuleRouteGuard module="PATIENTS" title="Edit Patient">
+                <PatientFormPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
             path="/patients/:patientId"
             element={
               <ModuleRouteGuard module="PATIENTS" title="Patient Details">
@@ -306,6 +329,15 @@ function App() {
               </ModuleRouteGuard>
             }
           />
+          <Route
+            path="/reduce-medicine"
+            element={
+              <ModuleRouteGuard module="INVENTORY" title="Reduce Medicine Management">
+                <ReduceMedicineManagement />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route path="/inventory/reduce" element={<Navigate to="/reduce-medicine" replace />} />
           <Route
             path="/prescriptions"
             element={

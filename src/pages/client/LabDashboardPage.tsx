@@ -9,16 +9,21 @@ import {
   EyeOff,
   FileCheck2,
   FlaskConical,
+  IndianRupee,
   Mail,
   MapPin,
+  MoreHorizontal,
   Phone,
   Plus,
   ShieldCheck,
   Sparkles,
+  TrendingUp,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 
+import { Modal } from '../../components/ui/Modal';
+import { Badge, cx } from '../../components/ui/primitives';
 import api from '../../utils/api';
 import { getErrorMessage } from '../../utils/errors';
 
@@ -57,12 +62,13 @@ export default function LabDashboardPage() {
   const { message } = App.useApp();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewingRecentService, setViewingRecentService] = useState<DashboardData['recentServices'][0] | null>(null);
 
   useEffect(() => {
     let active = true;
     const fetchDashboard = async () => {
       try {
-        const response = await api.get('lab-portal/dashboard');
+        const response = await api.get<DashboardData>('lab-portal/dashboard');
         if (active) {
           setData(response.data);
         }
@@ -109,370 +115,390 @@ export default function LabDashboardPage() {
     .join(', ');
 
   return (
-    <div className="w-full flex flex-col p-5 sm:p-6 lg:p-8 gap-6 max-w-7xl mx-auto box-border">
-      {/* ── 1. Clean Light Header ── */}
-      <div className="rounded-2xl bg-white p-6 sm:p-7 border border-slate-200/80 shadow-xs">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-start sm:items-center gap-4 sm:gap-5">
-            <div className="w-13 h-13 sm:w-15 sm:h-15 rounded-2xl bg-sky-50 text-sky-600 border border-sky-100 flex items-center justify-center shrink-0">
-              <FlaskConical size={26} strokeWidth={2.2} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">
-                  {lab?.name || 'Diagnostic Laboratory'}
-                </h1>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Verified Facility
-                </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-200 text-xs font-medium">
-                  <Sparkles size={11} className="text-sky-600" />
-                  Client Portal Active
-                </span>
-              </div>
-              <p className="text-slate-500 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
-                Hospital Diagnostic Partner Portal · Manage prescribed lab test reports, directory presence, and test investigations.
-              </p>
-            </div>
+    <div className="ui-page ui-dashboard-page no-scrollbar space-y-3 pb-8">
+      {/* ── 1. Executive Welcome Header (Matching Admin Web App Dashboard) ── */}
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 py-0.5 px-0.5">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-600 to-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
+            <FlaskConical size={16} strokeWidth={2.2} />
           </div>
-
-          {/* Quick Action Buttons */}
-          <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap shrink-0">
-            <button
-              type="button"
-              onClick={() => void navigate('/client/reports')}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs sm:text-sm font-bold shadow-xs transition-all cursor-pointer active:scale-[0.98]"
-            >
-              <FileCheck2 size={16} />
-              <span>Doctor Prescribed Tests</span>
-              <ArrowRight size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => void navigate('/client/profile')}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold transition-all border border-slate-200 cursor-pointer"
-            >
-              <Building2 size={14} className="text-slate-600" />
-              <span>Edit Profile</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 2. The 4 Attractive Compact KPI Metric Boxes ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-        {/* KPI 1: Diagnostic Test Catalog */}
-        <div className="relative overflow-hidden bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200/80 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between group">
-          <div className="h-0.5 absolute top-0 left-0 right-0 bg-gradient-to-r from-sky-500 to-cyan-500" />
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                Diagnostic Tests
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 leading-snug">
+                Welcome back, <span className="text-sky-700 font-extrabold">{lab?.name ?? 'Diagnostic Laboratory'}</span>
+              </h1>
+              <span className="inline-flex items-center px-2 py-0.2 rounded-full text-[10.5px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                Verified Facility
               </span>
-              <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 border border-sky-100 flex items-center justify-center transition-transform group-hover:scale-105 shrink-0">
-                <FlaskConical size={14} />
-              </div>
+              <span className="inline-flex items-center px-2 py-0.2 rounded-full text-[10.5px] font-medium bg-sky-50 text-sky-700 border border-sky-200">
+                <Sparkles size={10} className="mr-1 text-sky-600" />
+                Diagnostic Partner
+              </span>
             </div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
-              {totalServices}
-            </div>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Active investigations in catalog
+            <p className="text-[11.5px] text-slate-500 mt-0.2 font-normal">
+              Hospital Diagnostic Partner Portal · Manage prescribed lab test reports, directory presence, and test investigations.
             </p>
           </div>
-          <div className="pt-2 mt-2.5 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400">
-              Rates configured
-            </span>
+        </div>
+
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
+          <button
+            type="button"
+            onClick={() => {
+              void navigate('/client/reports');
+            }}
+            className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+          >
+            <FileCheck2 size={13} />
+            <span>Doctor Prescribed Tests</span>
+            <ArrowRight size={11} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              void navigate('/client/profile');
+            }}
+            className="inline-flex items-center gap-1.5 h-7.5 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+          >
+            <Building2 size={13} className="text-slate-600" />
+            <span>Edit Profile</span>
+          </button>
+        </div>
+      </header>
+
+      {/* ── 2. Compact Statistics Cards (Matching Admin Web App .ui-dash-stat-card) ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+        {/* KPI 1: Diagnostic Tests */}
+        <div
+          className="ui-dash-stat-card"
+          onClick={() => {
+            void navigate('/client/services');
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              void navigate('/client/services');
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ui-dash-stat-top">
+            <div className="ui-dash-stat-label-wrap">
+              <FlaskConical size={17} strokeWidth={2} className="ui-dash-stat-icon text-sky-600" />
+              <span className="ui-dash-stat-title">Diagnostic Tests</span>
+            </div>
             <button
               type="button"
-              onClick={() => void navigate('/client/services')}
-              className="text-[11px] font-semibold text-sky-600 hover:text-sky-700 inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform cursor-pointer"
+              className="ui-dash-stat-menu-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                void navigate('/client/services');
+              }}
+              aria-label="Manage Catalog"
             >
-              <span>Manage Catalog</span>
-              <ArrowRight size={11} />
+              <MoreHorizontal size={16} />
             </button>
+          </div>
+          <div className="ui-dash-stat-mid">
+            <span className="ui-dash-stat-value">{totalServices}</span>
+            <span className="ui-dash-stat-badge is-blue">
+              <TrendingUp size={11} strokeWidth={2.5} />
+              <span>Catalog</span>
+            </span>
+          </div>
+          <div className="ui-dash-stat-sub">
+            Active investigations in catalog
           </div>
         </div>
 
         {/* KPI 2: Profile Readiness */}
-        <div className="relative overflow-hidden bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200/80 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between group">
-          <div className="h-0.5 absolute top-0 left-0 right-0 bg-gradient-to-r from-emerald-500 to-teal-500" />
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                Profile Readiness
-              </span>
-              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center transition-transform group-hover:scale-105 shrink-0">
-                <ShieldCheck size={14} />
-              </div>
+        <div
+          className="ui-dash-stat-card"
+          onClick={() => {
+            void navigate('/client/profile');
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              void navigate('/client/profile');
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ui-dash-stat-top">
+            <div className="ui-dash-stat-label-wrap">
+              <ShieldCheck size={17} strokeWidth={2} className="ui-dash-stat-icon text-emerald-600" />
+              <span className="ui-dash-stat-title">Profile Readiness</span>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
-                {profileCompletion}%
-              </span>
-              <span
-                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                  profileCompletion >= 80
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    : 'bg-amber-50 text-amber-700 border border-amber-200'
-                }`}
-              >
-                {profileCompletion >= 80 ? 'Optimal' : 'Incomplete'}
-              </span>
-            </div>
-            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
-              <div
-                className={`h-1.5 rounded-full transition-all duration-700 ${
-                  profileCompletion >= 80
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
-                    : 'bg-gradient-to-r from-amber-500 to-orange-500'
-                }`}
-                style={{ width: `${profileCompletion}%` }}
-              />
-            </div>
-          </div>
-          <div className="pt-2 mt-2.5 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400">
-              {checklist.filter((c) => c.completed).length} of {checklist.length} verified
-            </span>
             <button
               type="button"
-              onClick={() => void navigate('/client/profile')}
-              className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform cursor-pointer"
+              className="ui-dash-stat-menu-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                void navigate('/client/profile');
+              }}
+              aria-label="View Details"
             >
-              <span>View Details</span>
-              <ArrowRight size={11} />
+              <MoreHorizontal size={16} />
             </button>
+          </div>
+          <div className="ui-dash-stat-mid">
+            <span className="ui-dash-stat-value">{profileCompletion}%</span>
+            <span className={`ui-dash-stat-badge ${profileCompletion >= 80 ? 'is-green' : 'is-amber'}`}>
+              <span>{profileCompletion >= 80 ? 'Optimal' : 'Incomplete'}</span>
+            </span>
+          </div>
+          <div className="ui-dash-stat-sub">
+            {checklist.filter((c) => c.completed).length} of {checklist.length} verified steps
           </div>
         </div>
 
         {/* KPI 3: Operating Schedule */}
-        <div className="relative overflow-hidden bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200/80 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between group">
-          <div className="h-0.5 absolute top-0 left-0 right-0 bg-gradient-to-r from-amber-500 to-orange-500" />
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                Operating Hours
-              </span>
-              <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center transition-transform group-hover:scale-105 shrink-0">
-                <Clock size={14} />
-              </div>
+        <div
+          className="ui-dash-stat-card"
+          onClick={() => {
+            void navigate('/client/profile');
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              void navigate('/client/profile');
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ui-dash-stat-top">
+            <div className="ui-dash-stat-label-wrap">
+              <Clock size={17} strokeWidth={2} className="ui-dash-stat-icon text-amber-600" />
+              <span className="ui-dash-stat-title">Operating Schedule</span>
             </div>
-            <div className="text-sm sm:text-base font-bold text-slate-900 tracking-tight truncate mt-0.5">
+            <button
+              type="button"
+              className="ui-dash-stat-menu-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                void navigate('/client/profile');
+              }}
+              aria-label="Set Hours"
+            >
+              <MoreHorizontal size={16} />
+            </button>
+          </div>
+          <div className="ui-dash-stat-mid">
+            <span className="ui-dash-stat-value text-base sm:text-lg truncate">
               {lab?.start_time && lab?.end_time
                 ? `${lab.start_time} – ${lab.end_time}`
                 : 'Schedule not set'}
-            </div>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Sample drop-off & collection
-            </p>
-          </div>
-          <div className="pt-2 mt-2.5 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400">
-              {lab?.start_time ? 'Open today' : 'Pending setup'}
             </span>
-            <button
-              type="button"
-              onClick={() => void navigate('/client/profile')}
-              className="text-[11px] font-semibold text-amber-600 hover:text-amber-700 inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform cursor-pointer"
-            >
-              <span>Set Hours</span>
-              <ArrowRight size={11} />
-            </button>
+            <span className={`ui-dash-stat-badge ${lab?.start_time ? 'is-green' : 'is-amber'}`}>
+              <span>{lab?.start_time ? 'Open today' : 'Pending'}</span>
+            </span>
+          </div>
+          <div className="ui-dash-stat-sub">
+            Sample drop-off &amp; collection
           </div>
         </div>
 
         {/* KPI 4: Directory Visibility */}
-        <div className="relative overflow-hidden bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200/80 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between group">
-          <div className="h-0.5 absolute top-0 left-0 right-0 bg-gradient-to-r from-indigo-500 to-violet-500" />
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                Directory Visibility
-              </span>
-              <div
-                className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-transform group-hover:scale-105 shrink-0 ${
-                  isVisible
-                    ? 'bg-indigo-50 text-indigo-600 border-indigo-100'
-                    : 'bg-slate-100 text-slate-500 border-slate-200'
-                }`}
-              >
-                {isVisible ? <Eye size={14} /> : <EyeOff size={14} />}
-              </div>
+        <div
+          className="ui-dash-stat-card"
+          onClick={() => {
+            void navigate('/client/profile');
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              void navigate('/client/profile');
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ui-dash-stat-top">
+            <div className="ui-dash-stat-label-wrap">
+              {isVisible ? (
+                <Eye size={17} strokeWidth={2} className="ui-dash-stat-icon text-indigo-600" />
+              ) : (
+                <EyeOff size={17} strokeWidth={2} className="ui-dash-stat-icon text-slate-400" />
+              )}
+              <span className="ui-dash-stat-title">Directory Visibility</span>
             </div>
-            <div className="mt-0.5">
-              <span
-                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
-                  isVisible
-                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                    : 'bg-slate-100 text-slate-600 border-slate-200'
-                }`}
-              >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    isVisible ? 'bg-indigo-600' : 'bg-slate-400'
-                  }`}
-                />
-                {isVisible ? 'Public in Directory' : 'Private / Hidden'}
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-1 truncate">
-              {isVisible ? 'Referral directory visible' : 'Direct referrals only'}
-            </p>
-          </div>
-          <div className="pt-2 mt-2.5 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400">
-              Patient contact access
-            </span>
             <button
               type="button"
-              onClick={() => void navigate('/client/profile')}
-              className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform cursor-pointer"
+              className="ui-dash-stat-menu-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                void navigate('/client/profile');
+              }}
+              aria-label="Change Visibility"
             >
-              <span>Change</span>
-              <ArrowRight size={11} />
+              <MoreHorizontal size={16} />
             </button>
+          </div>
+          <div className="ui-dash-stat-mid">
+            <span className="ui-dash-stat-value text-base sm:text-lg">
+              {isVisible ? 'Public in Directory' : 'Private / Hidden'}
+            </span>
+            <span className={`ui-dash-stat-badge ${isVisible ? 'is-purple' : 'is-amber'}`}>
+              <span>{isVisible ? 'Active' : 'Unlisted'}</span>
+            </span>
+          </div>
+          <div className="ui-dash-stat-sub">
+            {isVisible ? 'Referral directory visible' : 'Direct referrals only'}
           </div>
         </div>
       </div>
 
-      {/* ── 3. Quick Action Hub Banner ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* ── 3. Quick Action Hub Navigation (Matching Admin Dashboard Hub Cards) ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
         {/* Prescription Tests Quick Card */}
         <div
-          onClick={() => void navigate('/client/reports')}
-          className="group relative overflow-hidden bg-gradient-to-r from-sky-50 to-indigo-50/50 hover:from-sky-100/70 hover:to-indigo-100/60 p-5 rounded-2xl border border-sky-200/70 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex items-center justify-between gap-4"
+          onClick={() => {
+            void navigate('/client/reports');
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              void navigate('/client/reports');
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          className="group bg-white hover:bg-slate-50/80 border border-slate-200/80 rounded-2xl p-3.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex items-center justify-between gap-3"
         >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-sky-600 text-white flex items-center justify-center shadow-md shadow-sky-600/25 shrink-0 group-hover:scale-105 transition-transform">
-              <FileCheck2 size={24} />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-700 border border-sky-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <FileCheck2 size={18} />
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 group-hover:text-sky-800 transition-colors">
-                Doctor Prescribed Lab Tests & Uploads
+            <div className="min-w-0">
+              <h3 className="text-xs font-bold text-slate-900 group-hover:text-sky-700 transition-colors truncate">
+                Doctor Prescribed Lab Tests &amp; Uploads
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Look up patients by name or phone, view prescribed investigations, and upload test reports.
+              <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                Look up patients, review prescribed investigations, and upload medical test records.
               </p>
             </div>
           </div>
-          <div className="w-8 h-8 rounded-full bg-white text-sky-600 flex items-center justify-center shrink-0 border border-sky-200 shadow-2xs group-hover:translate-x-1 transition-transform">
-            <ArrowRight size={14} />
+          <div className="w-6 h-6 rounded-lg bg-slate-100 group-hover:bg-sky-50 text-slate-400 group-hover:text-sky-600 flex items-center justify-center shrink-0 transition-colors">
+            <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
           </div>
         </div>
 
         {/* Add Services Quick Card */}
         <div
-          onClick={() => void navigate('/client/services')}
-          className="group relative overflow-hidden bg-gradient-to-r from-emerald-50 to-teal-50/50 hover:from-emerald-100/70 hover:to-teal-100/60 p-5 rounded-2xl border border-emerald-200/70 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex items-center justify-between gap-4"
+          onClick={() => {
+            void navigate('/client/services');
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              void navigate('/client/services');
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          className="group bg-white hover:bg-slate-50/80 border border-slate-200/80 rounded-2xl p-3.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex items-center justify-between gap-3"
         >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/25 shrink-0 group-hover:scale-105 transition-transform">
-              <Plus size={24} />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <Plus size={18} />
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-800 transition-colors">
+            <div className="min-w-0">
+              <h3 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
                 Add Diagnostic Test / Investigation
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-[11px] text-slate-500 mt-0.5 truncate">
                 Configure clinical investigations, standard test rates, and turnaround times in your catalog.
               </p>
             </div>
           </div>
-          <div className="w-8 h-8 rounded-full bg-white text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200 shadow-2xs group-hover:translate-x-1 transition-transform">
-            <ArrowRight size={14} />
+          <div className="w-6 h-6 rounded-lg bg-slate-100 group-hover:bg-emerald-50 text-slate-400 group-hover:text-emerald-600 flex items-center justify-center shrink-0 transition-colors">
+            <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
           </div>
         </div>
       </div>
 
-      {/* ── 4. Main Two-Column Detailed Work Area ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* ── 4. Main Two-Column Work Area (Matching Admin Dashboard Split Grid) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5">
         {/* Left Column (5 cols): Diagnostic Facility Profile Overview */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 sm:p-6 flex flex-col justify-between">
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-4 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-sky-50 text-sky-600 rounded-xl border border-sky-100">
-                  <Building2 size={18} />
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-100 shrink-0">
+                  <Building2 size={15} />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold text-slate-900">
-                    Facility Overview
-                  </h2>
-                  <p className="text-xs text-slate-400">
-                    Clinical registration & directory card
-                  </p>
+                  <h2 className="text-xs font-bold text-slate-900 m-0">Facility Overview</h2>
+                  <p className="text-[10.5px] text-slate-500 m-0">Clinical registration &amp; directory card</p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => void navigate('/client/profile')}
-                className="text-xs text-sky-600 font-semibold hover:text-sky-700 inline-flex items-center gap-1 cursor-pointer"
+                onClick={() => {
+                  void navigate('/client/profile');
+                }}
+                className="text-xs font-semibold text-sky-700 hover:text-sky-800 flex items-center gap-1 cursor-pointer"
               >
                 <span>Edit Profile</span>
-                <ArrowRight size={12} />
+                <ArrowRight size={11} />
               </button>
             </div>
 
-            <div className="py-4 space-y-3.5 text-xs">
+            <div className="py-2.5 space-y-2 text-xs">
               {/* Phone */}
-              <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
-                    <Phone size={15} />
+              <div className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-sky-100/70 text-sky-700 flex items-center justify-center shrink-0">
+                    <Phone size={13} />
                   </div>
                   <div>
-                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       Contact Phone
                     </div>
                     {lab?.phone ? (
-                      <a href={`tel:${lab.phone}`} className="font-bold text-slate-900 hover:text-sky-600">
+                      <a href={`tel:${lab.phone}`} className="font-semibold text-xs text-slate-900 hover:text-sky-600">
                         {lab.phone}
                       </a>
                     ) : (
-                      <span className="text-slate-400 italic">Not set</span>
+                      <span className="text-slate-400 italic text-xs">Not set</span>
                     )}
                   </div>
                 </div>
               </div>
 
               {/* Email */}
-              <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
-                    <Mail size={15} />
+              <div className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-100/70 text-indigo-700 flex items-center justify-center shrink-0">
+                    <Mail size={13} />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       Facility Email
                     </div>
                     {lab?.email ? (
                       <a
                         href={`mailto:${lab.email}`}
-                        className="font-bold text-slate-900 hover:text-sky-600 truncate block max-w-[220px]"
+                        className="font-semibold text-xs text-slate-900 hover:text-sky-600 truncate block max-w-[220px]"
                       >
                         {lab.email}
                       </a>
                     ) : (
-                      <span className="text-slate-400 italic">Not set</span>
+                      <span className="text-slate-400 italic text-xs">Not set</span>
                     )}
                   </div>
                 </div>
               </div>
 
               {/* Address */}
-              <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-100">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
-                    <MapPin size={15} />
+              <div className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-100">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-100/70 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                    <MapPin size={13} />
                   </div>
-                  <div className="flex-1">
-                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
                       Physical Location
                     </div>
-                    <p className="text-slate-800 font-medium leading-relaxed">
+                    <p className="text-slate-800 font-medium text-xs leading-relaxed">
                       {addressFormatted || <span className="text-slate-400 italic font-normal">No physical address provided</span>}
                     </p>
                     {lab?.map_link && (
@@ -480,10 +506,10 @@ export default function LabDashboardPage() {
                         href={lab.map_link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-sky-600 font-semibold hover:underline mt-2 text-xs"
+                        className="inline-flex items-center gap-1 text-sky-600 font-semibold hover:underline mt-1.5 text-[11px]"
                       >
                         <span>Open in Google Maps</span>
-                        <ExternalLink size={12} />
+                        <ExternalLink size={11} />
                       </a>
                     )}
                   </div>
@@ -491,23 +517,23 @@ export default function LabDashboardPage() {
               </div>
 
               {/* Verification Checklist */}
-              <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-100">
-                <div className="flex items-center justify-between text-xs mb-2">
+              <div className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-100">
+                <div className="flex items-center justify-between text-xs mb-1.5">
                   <span className="font-bold text-slate-700">Verification Steps</span>
-                  <span className="font-bold text-emerald-600">
+                  <span className="font-bold text-emerald-600 text-[11px]">
                     {checklist.filter((c) => c.completed).length} / {checklist.length} Complete
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 mt-2">
+                <div className="grid grid-cols-2 gap-1.5">
                   {checklist.map((item, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center gap-1.5 text-[11px] text-slate-600"
+                      className="flex items-center gap-1.5 text-[10.5px] text-slate-600"
                     >
                       {item.completed ? (
-                        <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                        <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
                       ) : (
-                        <Clock size={13} className="text-slate-300 shrink-0" />
+                        <Clock size={12} className="text-slate-300 shrink-0" />
                       )}
                       <span className={item.completed ? 'font-medium text-slate-800' : 'text-slate-400'}>
                         {item.label}
@@ -519,14 +545,16 @@ export default function LabDashboardPage() {
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span className="flex items-center gap-1 text-[11px]">
-              <ShieldCheck size={14} className="text-emerald-600" />
+          <div className="pt-2.5 mt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <span className="flex items-center gap-1">
+              <ShieldCheck size={13} className="text-emerald-600" />
               <span>Verified Facility Profile</span>
             </span>
             <button
               type="button"
-              onClick={() => void navigate('/client/profile')}
+              onClick={() => {
+                void navigate('/client/profile');
+              }}
               className="text-sky-600 font-bold hover:underline cursor-pointer"
             >
               Update Profile Details →
@@ -534,107 +562,123 @@ export default function LabDashboardPage() {
           </div>
         </div>
 
-        {/* Right Column (7 cols): Diagnostic Services Catalog */}
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 sm:p-6 flex flex-col justify-between">
+        {/* Right Column (7 cols): Diagnostic Services Catalog Table */}
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-4 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-sky-50 text-sky-600 rounded-xl border border-sky-100">
-                  <FlaskConical size={18} />
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2.5 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-100 shrink-0">
+                  <FlaskConical size={15} />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold text-slate-900">
-                    Diagnostic Services & Rates
-                  </h2>
-                  <p className="text-xs text-slate-400">
-                    Investigation directory & standard charges
-                  </p>
+                  <h2 className="text-xs font-bold text-slate-900 m-0">Diagnostic Services &amp; Rates</h2>
+                  <p className="text-[10.5px] text-slate-500 m-0">Investigation directory &amp; standard charges</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
                 <button
                   type="button"
-                  onClick={() => void navigate('/client/services')}
-                  className="text-xs text-sky-600 font-semibold hover:underline cursor-pointer"
+                  onClick={() => {
+                    void navigate('/client/services');
+                  }}
+                  className="text-xs font-semibold text-sky-700 hover:text-sky-800 flex items-center gap-1 cursor-pointer"
                 >
                   View all ({totalServices})
                 </button>
                 <button
                   type="button"
-                  onClick={() => void navigate('/client/services')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs transition-colors shadow-xs cursor-pointer"
+                  onClick={() => {
+                    void navigate('/client/services');
+                  }}
+                  className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                 >
-                  <Plus size={13} />
+                  <Plus size={12} />
                   <span>Add Test</span>
                 </button>
               </div>
             </div>
 
-            <div className="py-3">
+            <div className="py-2">
               {recentServices.length === 0 ? (
-                <div className="py-12 flex flex-col items-center justify-center text-center text-slate-400">
-                  <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center mb-3">
-                    <FlaskConical size={24} />
+                <div className="py-10 flex flex-col items-center justify-center text-center text-slate-400">
+                  <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center mb-2.5">
+                    <FlaskConical size={20} />
                   </div>
-                  <p className="text-sm font-bold text-slate-700">No diagnostic tests listed yet</p>
-                  <p className="text-xs text-slate-400 max-w-sm mt-1">
+                  <p className="text-xs font-bold text-slate-700">No diagnostic tests listed yet</p>
+                  <p className="text-[11px] text-slate-400 max-w-sm mt-0.5">
                     Add standard clinical tests and charges to help doctors prescribe investigations correctly.
                   </p>
                   <button
                     type="button"
-                    onClick={() => void navigate('/client/services')}
-                    className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-semibold shadow-xs hover:bg-sky-500 cursor-pointer"
+                    onClick={() => {
+                      void navigate('/client/services');
+                    }}
+                    className="mt-3 inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-sky-600 text-white text-xs font-semibold shadow-xs hover:bg-sky-700 cursor-pointer"
                   >
-                    <Plus size={14} />
+                    <Plus size={12} />
                     <span>Add First Test</span>
                   </button>
                 </div>
               ) : (
-                <div className="overflow-auto max-h-[380px] no-scrollbar">
+                <div className="overflow-x-auto border border-slate-100 rounded-xl">
                   <table className="w-full text-left text-xs border-collapse">
-                    <thead className="sticky top-0 z-20 bg-white shadow-xs">
-                      <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-white">
-                        <th className="py-3 pr-4 sticky top-0 z-20 bg-white">Investigation Name</th>
-                        <th className="py-3 px-4 text-right sticky top-0 z-20 bg-white">Standard Price</th>
-                        <th className="py-3 px-4 text-center sticky top-0 z-20 bg-white">Status</th>
-                        <th className="py-3 pl-4 text-right sticky top-0 right-0 z-30 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Action</th>
+                    <thead>
+                      <tr className="border-b border-slate-100 text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-50/70">
+                        <th className="py-2 px-3">Investigation Name</th>
+                        <th className="py-2 px-3 text-right">Standard Price</th>
+                        <th className="py-2 px-3 text-center">Status</th>
+                        <th className="py-2 px-3 text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {recentServices.slice(0, 5).map((service) => (
-                        <tr key={service.id} className="group hover:bg-slate-50/70 transition-colors">
-                          <td className="py-3.5 pr-4 font-semibold text-slate-800">
-                            <div className="text-sm font-bold text-slate-900">{service.name}</div>
+                        <tr key={service.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="py-2 px-3 font-semibold text-slate-800">
+                            <div className="font-semibold text-slate-900">{service.name}</div>
                             {service.description && (
-                              <div className="text-xs text-slate-400 font-normal truncate max-w-xs mt-0.5">
+                              <div className="text-[10.5px] text-slate-400 font-normal truncate max-w-xs">
                                 {service.description}
                               </div>
                             )}
                           </td>
-                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                            <span className="font-extrabold text-slate-900 text-xs bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                          <td className="py-2 px-3 text-right whitespace-nowrap">
+                            <span className="font-bold text-slate-800 text-xs bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                               {Number(service.price) > 0 ? `₹${Number(service.price).toFixed(2)}` : 'Standard'}
                             </span>
                           </td>
-                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          <td className="py-2 px-3 text-center whitespace-nowrap">
                             <span
-                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                              className={`inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${
                                 service.status === 'ACTIVE'
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : 'bg-slate-100 text-slate-600'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
+                                  : 'bg-slate-100 text-slate-600 border border-slate-200'
                               }`}
                             >
                               {service.status}
                             </span>
                           </td>
-                          <td className="py-3.5 pl-4 text-right whitespace-nowrap sticky right-0 z-10 bg-white group-hover:bg-slate-50 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] transition-colors">
-                            <button
-                              type="button"
-                              onClick={() => void navigate('/client/services')}
-                              className="text-sky-600 hover:text-sky-800 font-bold text-xs cursor-pointer hover:underline"
-                            >
-                              Edit Rate
-                            </button>
+                          <td className="py-2 px-3 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center gap-2 justify-end">
+                              <button
+                                type="button"
+                                onClick={() => setViewingRecentService(service)}
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors cursor-pointer"
+                                title="View Investigation Details"
+                                aria-label="View Investigation Details"
+                              >
+                                <Eye size={11} />
+                                <span>View</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void navigate('/client/services');
+                                }}
+                                className="text-xs font-semibold text-sky-600 hover:text-sky-700 cursor-pointer"
+                              >
+                                Edit Rate
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -645,21 +689,116 @@ export default function LabDashboardPage() {
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-            <span className="text-[11px] text-slate-400">
-              Showing {recentServices.slice(0, 5).length} of {totalServices} investigations
-            </span>
+          <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <span>Showing {recentServices.slice(0, 5).length} of {totalServices} investigations</span>
             <button
               type="button"
-              onClick={() => void navigate('/client/services')}
-              className="inline-flex items-center gap-1 text-xs font-bold text-sky-600 hover:text-sky-700 cursor-pointer"
+              onClick={() => {
+                void navigate('/client/services');
+              }}
+              className="font-semibold text-sky-600 hover:text-sky-700 cursor-pointer"
             >
-              <span>Manage Test Catalog</span>
-              <ArrowRight size={13} />
+              Manage Test Catalog →
             </button>
           </div>
         </div>
       </div>
+
+      {/* ── View Investigation Details Drawer ── */}
+      <Modal
+        variant="drawer"
+        size="xl"
+        open={Boolean(viewingRecentService)}
+        onClose={() => setViewingRecentService(null)}
+        title={
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+              <FlaskConical size={16} />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-slate-900 leading-snug">
+                {viewingRecentService?.name ?? 'Investigation Details'}
+              </div>
+              <div className="text-[11px] text-slate-500 font-normal">
+                Laboratory catalog service details
+              </div>
+            </div>
+          </div>
+        }
+      >
+        {viewingRecentService && (
+          <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs">
+            {/* Header Status & Price Banner */}
+            <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200/90 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] text-slate-500 font-medium block">Catalog Price</span>
+                <span className="text-lg font-bold text-slate-900 flex items-center">
+                  <IndianRupee size={15} className="mr-0.5 text-slate-500" />
+                  {Number(viewingRecentService.price) > 0 ? Number(viewingRecentService.price).toFixed(2) : 'Standard'}
+                </span>
+              </div>
+              <Badge tone={viewingRecentService.status === 'ACTIVE' ? 'green' : 'neutral'}>
+                <span
+                  className={cx(
+                    'w-1.5 h-1.5 rounded-full mr-1 inline-block',
+                    viewingRecentService.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400',
+                  )}
+                />
+                <span>{viewingRecentService.status === 'ACTIVE' ? 'Active in Catalog' : 'Inactive'}</span>
+              </Badge>
+            </div>
+
+            {/* Service Information Grid */}
+            <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border border-slate-100 bg-white">
+              <div>
+                <span className="text-[11px] text-slate-400 block mb-0.5 font-medium">Investigation Name</span>
+                <span className="font-semibold text-slate-800">{viewingRecentService.name}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-slate-400 block mb-0.5 font-medium">Investigation ID</span>
+                <span className="font-mono text-slate-600 text-[11px]">{viewingRecentService.id}</span>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="p-3 rounded-lg border border-slate-100 bg-white">
+              <span className="text-[11px] text-slate-400 block mb-1 font-medium">Description</span>
+              <p className="text-slate-700 leading-relaxed">
+                {viewingRecentService.description ?? <span className="text-slate-400 italic">No description provided for this diagnostic service.</span>}
+              </p>
+            </div>
+
+            {/* Created Timestamp */}
+            {viewingRecentService.created_at && (
+              <div className="text-[11px] text-slate-400 px-1">
+                Added on {new Date(viewingRecentService.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+              </div>
+            )}
+
+            {/* Footer Actions */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setViewingRecentService(null)}
+                className="h-8 px-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setViewingRecentService(null);
+                  void navigate('/client/services');
+                }}
+                className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              >
+                <span>Manage in Catalog</span>
+                <ArrowRight size={12} />
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

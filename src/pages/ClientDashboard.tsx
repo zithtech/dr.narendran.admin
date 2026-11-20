@@ -2,14 +2,15 @@ import { App } from 'antd';
 import {
   Activity,
   ArrowRight,
-  CheckCircle2,
   Copy,
   ExternalLink,
   FlaskConical,
   MapPin,
+  MoreHorizontal,
   Phone,
   ShieldCheck,
   Stethoscope,
+  TrendingUp,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router';
@@ -37,8 +38,8 @@ export default function ClientDashboard() {
   const { message } = App.useApp();
   const context = useOutletContext<ClientPortalContextType>();
 
-  const email = localStorage.getItem('clientPortalUser') || 'Client Partner';
-  const role = localStorage.getItem('clientPortalRole') || 'Lab Admin';
+  const email = localStorage.getItem('clientPortalUser') ?? 'Client Partner';
+  const role = localStorage.getItem('clientPortalRole') ?? 'Lab Admin';
   const portalKey = localStorage.getItem('clientPortalKey');
 
   const canAccessLabs = context?.isSystemRole || context?.allowedSlugs?.includes('LABS');
@@ -52,9 +53,9 @@ export default function ClientDashboard() {
   useEffect(() => {
     let mounted = true;
 
-    Promise.all([
-      api.get('labs').catch(() => ({ data: [] })),
-      api.get('lab-services').catch(() => ({ data: [] })),
+    void Promise.all([
+      api.get<LabItem[]>('labs').catch(() => ({ data: [] })),
+      api.get<LabServiceItem[]>('lab-services').catch(() => ({ data: [] })),
     ]).then(([labsRes, servicesRes]) => {
       if (mounted) {
         setLabs(Array.isArray(labsRes.data) ? labsRes.data : []);
@@ -73,32 +74,42 @@ export default function ClientDashboard() {
     : `${window.location.origin}/client/login`;
 
   const copyUrl = () => {
-    navigator.clipboard.writeText(portalLoginUrl);
+    void navigator.clipboard.writeText(portalLoginUrl);
     void message.success('Portal login link copied to clipboard!');
   };
 
   return (
-    <div className="client-dashboard-page">
-      {/* SaaS Page Header */}
-      <div className="client-page-header">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="client-page-title">Overview</h1>
-            <span className="client-status-badge">
-              <span className="client-status-dot" />
-              Live
-            </span>
+    <div className="ui-page ui-dashboard-page no-scrollbar space-y-3 pb-8">
+      {/* ── 1. Executive Welcome Header (Matching Admin Web App Dashboard) ── */}
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 py-0.5 px-0.5">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
+            <FlaskConical size={16} strokeWidth={2.2} />
           </div>
-          <p className="client-page-subtitle">
-            Operations summary, linked diagnostic facilities, and active services for <span className="font-medium text-gray-700">{email}</span>.
-          </p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 leading-snug">
+                Welcome back, <span className="text-blue-600 font-bold">{email}</span>
+              </h1>
+              <span className="inline-flex items-center px-2 py-0.2 rounded-full text-[10.5px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1" />
+                Live
+              </span>
+              <span className="inline-flex items-center px-2 py-0.2 rounded-full text-[10.5px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                {role}
+              </span>
+            </div>
+            <p className="text-[11.5px] text-slate-500 mt-0.2 font-normal">
+              Operations summary, linked diagnostic facilities, and active services.
+            </p>
+          </div>
         </div>
 
-        <div className="client-header-actions">
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
           <button
             type="button"
             onClick={copyUrl}
-            className="client-btn-secondary"
+            className="inline-flex items-center gap-1.5 h-7.5 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
             title="Copy your personal portal access link"
           >
             <Copy size={13} />
@@ -107,216 +118,338 @@ export default function ClientDashboard() {
           {canAccessLabs && (
             <button
               type="button"
-              onClick={() => void navigate('/portal/labs')}
-              className="client-btn-primary"
+              onClick={() => {
+                void navigate('/portal/labs');
+              }}
+              className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
             >
-              <FlaskConical size={14} />
+              <FlaskConical size={13} />
               <span>View Labs</span>
             </button>
           )}
         </div>
-      </div>
+      </header>
 
-      {/* Metric Cards Grid */}
-      <div className="client-metrics-grid">
+      {/* ── 2. Compact Statistics Cards (Matching Admin Web App .ui-dash-stat-card) ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+        {/* Metric 1: Connected Facilities */}
         <div
-          className={`client-metric-card ${canAccessLabs ? 'cursor-pointer group' : ''}`}
+          className={`ui-dash-stat-card ${canAccessLabs ? 'cursor-pointer' : ''}`}
           onClick={() => {
             if (canAccessLabs) void navigate('/portal/labs');
           }}
-        >
-          <div className="client-metric-top">
-            <span className="client-metric-label">Connected Facilities</span>
-            <div className="client-metric-icon bg-sky-50 text-sky-600">
-              <FlaskConical size={16} />
-            </div>
-          </div>
-          <div className="client-metric-value">
-            {loading ? '…' : labs.length}
-          </div>
-          <div className="client-metric-sub">
-            <CheckCircle2 size={13} className="text-emerald-500" />
-            <span>{canAccessLabs ? 'All laboratories operational' : 'Facilities registered'}</span>
-          </div>
-        </div>
-
-        <div
-          className={`client-metric-card ${canAccessServices ? 'cursor-pointer group' : ''}`}
-          onClick={() => {
-            if (canAccessServices) void navigate('/portal/lab-services');
+          onKeyDown={(e) => {
+            if (canAccessLabs && (e.key === 'Enter' || e.key === ' ')) {
+              void navigate('/portal/labs');
+            }
           }}
+          role={canAccessLabs ? 'button' : undefined}
+          tabIndex={canAccessLabs ? 0 : undefined}
         >
-          <div className="client-metric-top">
-            <span className="client-metric-label">Configured Tests</span>
-            <div className="client-metric-icon bg-emerald-50 text-emerald-600">
-              <Stethoscope size={16} />
-            </div>
-          </div>
-          <div className="client-metric-value">
-            {loading ? '…' : services.length}
-          </div>
-          <div className="client-metric-sub">
-            <CheckCircle2 size={13} className="text-emerald-500" />
-            <span>Active service catalog</span>
-          </div>
-        </div>
-
-        <div className="client-metric-card">
-          <div className="client-metric-top">
-            <span className="client-metric-label">Access Level</span>
-            <div className="client-metric-icon bg-purple-50 text-purple-600">
-              <ShieldCheck size={16} />
-            </div>
-          </div>
-          <div className="client-metric-value text-base font-semibold text-gray-900 mt-1">
-            {role}
-          </div>
-          <div className="client-metric-sub text-gray-500">
-            <span>Verified client partner role</span>
-          </div>
-        </div>
-
-        <div className="client-metric-card">
-          <div className="client-metric-top">
-            <span className="client-metric-label">System Health</span>
-            <div className="client-metric-icon bg-emerald-50 text-emerald-600">
-              <Activity size={16} />
-            </div>
-          </div>
-          <div className="client-metric-value text-base font-semibold text-emerald-700 mt-1">
-            Operational
-          </div>
-          <div className="client-metric-sub">
-            <span className="client-dot-green" />
-            <span>99.9% uptime · Real-time sync</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Operational Split Cards */}
-      <div className="client-sections-grid">
-        {/* Connected Laboratories */}
-        <div className="client-panel-card">
-          <div className="client-panel-head">
-            <div>
-              <h2 className="client-panel-title">Connected Laboratories</h2>
-              <p className="client-panel-desc">
-                Diagnostic facilities assigned to your partner account.
-              </p>
+          <div className="ui-dash-stat-top">
+            <div className="ui-dash-stat-label-wrap">
+              <FlaskConical size={17} strokeWidth={2} className="ui-dash-stat-icon text-sky-600" />
+              <span className="ui-dash-stat-title">Connected Facilities</span>
             </div>
             {canAccessLabs && (
               <button
                 type="button"
-                onClick={() => void navigate('/portal/labs')}
-                className="client-panel-link"
+                className="ui-dash-stat-menu-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void navigate('/portal/labs');
+                }}
+                aria-label="View Facilities"
               >
-                <span>View all</span>
-                <ArrowRight size={13} />
+                <MoreHorizontal size={16} />
               </button>
             )}
           </div>
+          <div className="ui-dash-stat-mid">
+            <span className="ui-dash-stat-value">{loading ? '…' : labs.length}</span>
+            <span className="ui-dash-stat-badge is-blue">
+              <TrendingUp size={11} strokeWidth={2.5} />
+              <span>Network</span>
+            </span>
+          </div>
+          <div className="ui-dash-stat-sub">
+            {canAccessLabs ? 'All laboratories operational' : 'Facilities registered'}
+          </div>
+        </div>
 
-          <div className="client-panel-body">
-            {loading ? (
-              <div className="client-empty-state">Loading facilities…</div>
-            ) : labs.length === 0 ? (
-              <div className="client-empty-state">No linked laboratories found.</div>
-            ) : (
-              <div className="client-list">
-                {labs.slice(0, 3).map((lab) => (
-                  <div
-                    key={lab.id}
-                    onClick={() => {
-                      if (canAccessLabs) void navigate('/portal/labs');
-                    }}
-                    className={`client-list-item ${canAccessLabs ? 'cursor-pointer' : ''}`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="client-avatar">
-                        {lab.name.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="client-item-name">{lab.name}</div>
-                        <div className="client-item-meta">
-                          {lab.address_line_1 && (
-                            <span className="flex items-center gap-1">
-                              <MapPin size={11} className="text-gray-400" />
-                              {lab.address_line_1}
-                              {lab.city ? `, ${lab.city}` : ''}
-                            </span>
-                          )}
-                          {lab.phone && (
-                            <span className="flex items-center gap-1 ml-2">
-                              <Phone size={11} className="text-gray-400" />
-                              {lab.phone}
-                            </span>
-                          )}
+        {/* Metric 2: Configured Tests */}
+        <div
+          className={`ui-dash-stat-card ${canAccessServices ? 'cursor-pointer' : ''}`}
+          onClick={() => {
+            if (canAccessServices) void navigate('/portal/lab-services');
+          }}
+          onKeyDown={(e) => {
+            if (canAccessServices && (e.key === 'Enter' || e.key === ' ')) {
+              void navigate('/portal/lab-services');
+            }
+          }}
+          role={canAccessServices ? 'button' : undefined}
+          tabIndex={canAccessServices ? 0 : undefined}
+        >
+          <div className="ui-dash-stat-top">
+            <div className="ui-dash-stat-label-wrap">
+              <Stethoscope size={17} strokeWidth={2} className="ui-dash-stat-icon text-emerald-600" />
+              <span className="ui-dash-stat-title">Configured Tests</span>
+            </div>
+            {canAccessServices && (
+              <button
+                type="button"
+                className="ui-dash-stat-menu-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void navigate('/portal/lab-services');
+                }}
+                aria-label="View Services"
+              >
+                <MoreHorizontal size={16} />
+              </button>
+            )}
+          </div>
+          <div className="ui-dash-stat-mid">
+            <span className="ui-dash-stat-value">{loading ? '…' : services.length}</span>
+            <span className="ui-dash-stat-badge is-green">
+              <span>Catalog</span>
+            </span>
+          </div>
+          <div className="ui-dash-stat-sub">
+            Active service investigations catalog
+          </div>
+        </div>
+
+        {/* Metric 3: Access Level */}
+        <div className="ui-dash-stat-card">
+          <div className="ui-dash-stat-top">
+            <div className="ui-dash-stat-label-wrap">
+              <ShieldCheck size={17} strokeWidth={2} className="ui-dash-stat-icon text-purple-600" />
+              <span className="ui-dash-stat-title">Access Level</span>
+            </div>
+          </div>
+          <div className="ui-dash-stat-mid">
+            <span className="ui-dash-stat-value text-base sm:text-lg truncate">{role}</span>
+            <span className="ui-dash-stat-badge is-purple">
+              <span>Verified</span>
+            </span>
+          </div>
+          <div className="ui-dash-stat-sub">
+            Verified client partner role
+          </div>
+        </div>
+
+        {/* Metric 4: System Health */}
+        <div className="ui-dash-stat-card">
+          <div className="ui-dash-stat-top">
+            <div className="ui-dash-stat-label-wrap">
+              <Activity size={17} strokeWidth={2} className="ui-dash-stat-icon text-emerald-600" />
+              <span className="ui-dash-stat-title">System Health</span>
+            </div>
+          </div>
+          <div className="ui-dash-stat-mid">
+            <span className="ui-dash-stat-value text-base sm:text-lg text-emerald-700">Operational</span>
+            <span className="ui-dash-stat-badge is-green">
+              <span>99.9%</span>
+            </span>
+          </div>
+          <div className="ui-dash-stat-sub">
+            Real-time synchronization active
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. Main Operational Panels (Matching Admin Web App Dashboard Panels) ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+        {/* Connected Laboratories */}
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-100 shrink-0">
+                  <FlaskConical size={15} />
+                </div>
+                <div>
+                  <h2 className="text-xs font-bold text-slate-900 m-0">Connected Laboratories</h2>
+                  <p className="text-[10.5px] text-slate-500 m-0">Diagnostic facilities assigned to your partner account</p>
+                </div>
+              </div>
+              {canAccessLabs && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigate('/portal/labs');
+                  }}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+                >
+                  <span>View all</span>
+                  <ArrowRight size={11} />
+                </button>
+              )}
+            </div>
+
+            <div className="mt-2.5">
+              {loading ? (
+                <div className="py-8 text-center text-xs text-slate-400">Loading facilities…</div>
+              ) : labs.length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-400">No linked laboratories found.</div>
+              ) : (
+                <div className="space-y-2">
+                  {labs.slice(0, 3).map((lab) => (
+                    <div
+                      key={lab.id}
+                      onClick={() => {
+                        if (canAccessLabs) void navigate('/portal/labs');
+                      }}
+                      onKeyDown={(e) => {
+                        if (canAccessLabs && (e.key === 'Enter' || e.key === ' ')) {
+                          void navigate('/portal/labs');
+                        }
+                      }}
+                      role={canAccessLabs ? 'button' : undefined}
+                      tabIndex={canAccessLabs ? 0 : undefined}
+                      className={`p-2.5 rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-between gap-2.5 transition-colors ${
+                        canAccessLabs ? 'hover:bg-slate-100/80 cursor-pointer' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-600 to-indigo-600 text-white font-bold text-[10.5px] flex items-center justify-center shrink-0">
+                          {lab.name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-xs text-slate-900 truncate">{lab.name}</div>
+                          <div className="text-[10.5px] text-slate-400 flex items-center gap-2 truncate">
+                            {lab.address_line_1 && (
+                              <span className="flex items-center gap-1 truncate">
+                                <MapPin size={10} className="text-slate-400 shrink-0" />
+                                {lab.address_line_1}
+                                {lab.city ? `, ${lab.city}` : ''}
+                              </span>
+                            )}
+                            {lab.phone && (
+                              <span className="flex items-center gap-1 shrink-0">
+                                <Phone size={10} className="text-slate-400" />
+                                {lab.phone}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className="client-badge-success">Active</span>
-                      {canAccessLabs && <ExternalLink size={13} className="text-gray-400" />}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                          Active
+                        </span>
+                        {canAccessLabs && <ExternalLink size={12} className="text-slate-400" />}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <span>Showing {labs.slice(0, 3).length} of {labs.length} facilities</span>
+            {canAccessLabs && (
+              <button
+                type="button"
+                onClick={() => {
+                  void navigate('/portal/labs');
+                }}
+                className="font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+              >
+                Manage Facilities →
+              </button>
             )}
           </div>
         </div>
 
         {/* Lab Services Catalog */}
-        <div className="client-panel-card">
-          <div className="client-panel-head">
-            <div>
-              <h2 className="client-panel-title">Lab Services Catalog</h2>
-              <p className="client-panel-desc">
-                Active test types and diagnostic services.
-              </p>
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100 shrink-0">
+                  <Stethoscope size={15} />
+                </div>
+                <div>
+                  <h2 className="text-xs font-bold text-slate-900 m-0">Lab Services Catalog</h2>
+                  <p className="text-[10.5px] text-slate-500 m-0">Active test types and diagnostic services</p>
+                </div>
+              </div>
+              {canAccessServices && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigate('/portal/lab-services');
+                  }}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Manage catalog</span>
+                  <ArrowRight size={11} />
+                </button>
+              )}
             </div>
+
+            <div className="mt-2.5">
+              {loading ? (
+                <div className="py-8 text-center text-xs text-slate-400">Loading services…</div>
+              ) : services.length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-400">No services registered yet.</div>
+              ) : (
+                <div className="space-y-2">
+                  {services.slice(0, 3).map((srv) => (
+                    <div
+                      key={srv.id}
+                      onClick={() => {
+                        void navigate('/portal/lab-services');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          void navigate('/portal/lab-services');
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-between gap-2.5 hover:bg-slate-100/80 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-100/70 text-emerald-700 flex items-center justify-center shrink-0">
+                          <Stethoscope size={13} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-xs text-slate-900 truncate">{srv.name}</div>
+                          <div className="text-[10.5px] text-slate-400 truncate">Diagnostic Service Investigation</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                          Active
+                        </span>
+                        <ExternalLink size={12} className="text-slate-400" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <span>Showing {services.slice(0, 3).length} of {services.length} services</span>
             {canAccessServices && (
               <button
                 type="button"
-                onClick={() => void navigate('/portal/lab-services')}
-                className="client-panel-link"
+                onClick={() => {
+                  void navigate('/portal/lab-services');
+                }}
+                className="font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
               >
-                <span>Manage catalog</span>
-                <ArrowRight size={13} />
+                View Complete Catalog →
               </button>
-            )}
-          </div>
-
-          <div className="client-panel-body">
-            {loading ? (
-              <div className="client-empty-state">Loading services…</div>
-            ) : services.length === 0 ? (
-              <div className="client-empty-state">No services registered yet.</div>
-            ) : (
-              <div className="client-list">
-                {services.slice(0, 3).map((srv) => (
-                  <div
-                    key={srv.id}
-                    onClick={() => void navigate('/portal/lab-services')}
-                    className="client-list-item"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="client-avatar-cyan">
-                        <Stethoscope size={14} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="client-item-name">{srv.name}</div>
-                        <div className="client-item-meta">Diagnostic Service</div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className="client-badge-success">Active</span>
-                      <ExternalLink size={13} className="text-gray-400" />
-                    </div>
-                  </div>
-                ))}
-              </div>
             )}
           </div>
         </div>

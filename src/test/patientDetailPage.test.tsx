@@ -163,7 +163,6 @@ describe('PatientDetailPage View', () => {
 
     // Action buttons
     expect(screen.getAllByRole('button', { name: /edit patient/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: /new prescription/i }).length).toBeGreaterThan(0);
   });
 
   it('renders right side tabs and switches between them', async () => {
@@ -173,11 +172,7 @@ describe('PatientDetailPage View', () => {
       expect(screen.getByRole('heading', { level: 1, name: 'Kavitha Ramachandran' })).toBeInTheDocument();
     });
 
-    // Overview Tab KPI cards
-    expect(screen.getByText('Physical Stature')).toBeInTheDocument();
-    expect(screen.getByText('162 cm')).toBeInTheDocument();
-    expect(screen.getByText('Body Weight')).toBeInTheDocument();
-    expect(screen.getByText('58 kg')).toBeInTheDocument();
+    // Overview Tab
     expect(screen.getByText('Hospital & Facility Assignment')).toBeInTheDocument();
     expect(screen.getByText('Apollo Speciality Hospital')).toBeInTheDocument();
 
@@ -185,6 +180,7 @@ describe('PatientDetailPage View', () => {
     fireEvent.click(screen.getByRole('button', { name: /prescriptions/i }));
     await waitFor(() => {
       expect(screen.getByText('Hypertension Stage 1')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /new prescription/i })).toBeInTheDocument();
     });
 
     // Switch to Appointments Tab

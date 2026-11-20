@@ -35,6 +35,8 @@ export function useResource<T>(endpoint: string, errorLabel: string): Resource<T
         setItems(data.data);
       } else if (Array.isArray(data.medicines)) {
         setItems(data.medicines);
+      } else if (Array.isArray((data as any)?.items)) {
+        setItems((data as any).items);
       } else {
         setItems([]);
       }

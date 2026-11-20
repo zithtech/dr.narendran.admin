@@ -59,6 +59,7 @@ describe('Top Navigation Restructuring', () => {
     expect(operationsCat.modules.map((m) => m.name)).toEqual([
       'Pharmacy',
       'Medicine Inventory',
+      'Reduce Medicine',
       'Medicine Package',
       'Prescription',
       'Orders',
