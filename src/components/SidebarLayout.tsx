@@ -110,6 +110,9 @@ export default function SidebarLayout() {
           if (res.data.logoUrl) {
             localStorage.setItem('adminLogoUrl', res.data.logoUrl);
             setBrandLogoUrl(res.data.logoUrl);
+          } else {
+            localStorage.removeItem('adminLogoUrl');
+            setBrandLogoUrl('');
           }
           if (res.data.firstName) {
             localStorage.setItem('adminFirstName', res.data.firstName);

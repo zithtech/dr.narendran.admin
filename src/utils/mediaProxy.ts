@@ -4,6 +4,9 @@
  * If the image is a blob URL or data URL (local preview during file upload),
  * it is returned directly since it is in-memory in the browser.
  *
+ * Local bundle assets (/src/assets, /assets, etc.) are served directly by Vite
+ * and must not be proxied.
+ *
  * For external or AWS S3 URLs, it routes through `/api/proxy/image?url=...`
  * to bypass CORS and private S3 403 AccessDenied errors, streaming the image
  * directly from the backend.
@@ -20,15 +23,24 @@ export function getMediaProxyUrl(url: string | null | undefined): string {
     return trimmed;
   }
 
+  // Local static/bundled assets must be loaded directly by Vite without proxying
+  if (
+    trimmed.startsWith('/src/') ||
+    trimmed.startsWith('/assets/') ||
+    trimmed.startsWith('assets/') ||
+    (trimmed.startsWith('/') && !trimmed.startsWith('/uploads/') && !trimmed.startsWith('/branding/'))
+  ) {
+    return trimmed;
+  }
+
   // If already proxied, do not double-proxy
   if (trimmed.includes('/proxy/image')) {
     return trimmed;
   }
 
-  // Get base API URL (e.g. 'http://localhost:4000/api' or '/api')
+  // Get base API URL (e.g. 'http://localhost:5000/api' or '/api')
   const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api';
   const cleanBase = apiBase.replace(/\/+$/, '');
 
   return `${cleanBase}/proxy/image?url=${encodeURIComponent(trimmed)}`;
 }
-
