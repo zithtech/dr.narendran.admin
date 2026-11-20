@@ -3,6 +3,7 @@ import {
   Building2,
   CalendarClock,
   CalendarDays,
+  Clock,
   FileText,
   FlaskConical,
   GitBranch,
@@ -21,6 +22,7 @@ import {
   ShoppingBag,
   Star,
   Stethoscope,
+  UserCheck,
   UserCog,
   Users,
 } from 'lucide-react';
@@ -138,6 +140,14 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         icon: CalendarClock,
         slug: 'TODAYS_SCHEDULE',
         description: 'Doctor day-sheet, live consultation queues & status',
+      },
+      {
+        name: 'Doctor Attendance',
+        path: '/doctor/attendance',
+        icon: UserCheck,
+        slug: 'DOCTOR_ATTENDANCE',
+        fallbackSlugs: ['AVAILABILITY', 'DOCTORS', 'ATTENDANCE'],
+        description: 'Doctor personal shift, check-in/out and duty history',
       },
       {
         name: 'Ratings & Reviews',
@@ -272,6 +282,14 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         icon: Users,
         slug: 'STAFF',
         description: 'Hospital staff roster, duties, documents & shift timings',
+      },
+      {
+        name: 'Attendance & Shifts',
+        path: '/attendance',
+        icon: Clock,
+        slug: 'ATTENDANCE',
+        fallbackSlugs: ['STAFF', 'USERS'],
+        description: 'Hospital attendance dashboard, shift management & payroll reports',
       },
       {
         name: 'Roles & Permissions',

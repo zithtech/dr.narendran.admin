@@ -92,20 +92,12 @@ export function MobileNavDrawer({
         {/* Drawer Header */}
         <div className="ui-mobile-drawer-header">
           <div className="ui-sidebar-brand" style={{ padding: 0, height: 'auto', minHeight: 'unset' }}>
-            {proxiedLogo && !logoError && !proxiedLogo.includes('logo-1794840935856-hms.jpg') ? (
-              <img
-                src={proxiedLogo}
-                alt="Hospital Logo"
-                className="w-12 h-12 object-contain shrink-0"
-                onError={() => setLogoError(true)}
-              />
-            ) : (
-              <img
-                src={brandLogoImg}
-                alt="Hospital Logo"
-                className="w-12 h-12 object-contain shrink-0"
-              />
-            )}
+            <img
+              src={proxiedLogo && !logoError ? proxiedLogo : brandLogoImg}
+              alt="Hospital Logo"
+              className="w-12 h-12 object-contain shrink-0"
+              onError={() => setLogoError(true)}
+            />
             <div className="ui-sidebar-brand-text">
               <span className="ui-sidebar-brand-name" title={firstName}>
                 {firstName}

@@ -55,10 +55,7 @@ export function SubNavbar({
 
   const proxiedLogo = useMemo(() => getMediaProxyUrl(logoUrl), [logoUrl]);
 
-  const activeDisplayLogo =
-    proxiedLogo && !logoError && !proxiedLogo.includes('logo-1794840935856-hms.jpg')
-      ? proxiedLogo
-      : brandLogoImg;
+  const activeDisplayLogo = proxiedLogo && !logoError ? proxiedLogo : brandLogoImg;
 
   const handleBrandClick = () => {
     if (navigate) {

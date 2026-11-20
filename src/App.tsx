@@ -48,6 +48,9 @@ import LabUpcomingTestsPage from './pages/client/LabUpcomingTestsPage';
 import SupportCenterPage from './features/support/pages/SupportCenterPage';
 import { ReviewsManagementPage } from './features/reviews/pages/ReviewsManagementPage';
 import SettingsPage from './pages/SettingsPage';
+import AdminAttendancePage from './pages/attendance/AdminAttendancePage';
+import DoctorAttendancePage from './pages/attendance/DoctorAttendancePage';
+import StaffAttendancePage from './pages/attendance/StaffAttendancePage';
 import { ModuleRouteGuard } from './context/PermissionContext';
 import { LocationManagementPage } from './features/locations/pages/LocationManagementPage';
 
@@ -393,6 +396,30 @@ function App() {
                 <StaffManagement />
               </ModuleRouteGuard>
             }
+          />
+          <Route
+            path="/attendance"
+            element={
+              <ModuleRouteGuard module="ATTENDANCE" title="Attendance & Shifts" fallbackSlugs={['STAFF', 'USERS']}>
+                <AdminAttendancePage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/doctor/attendance"
+            element={
+              <ModuleRouteGuard module="DOCTOR_ATTENDANCE" title="Doctor Attendance" fallbackSlugs={['AVAILABILITY', 'DOCTORS', 'ATTENDANCE']}>
+                <DoctorAttendancePage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/my-attendance"
+            element={<StaffAttendancePage />}
+          />
+          <Route
+            path="/staff/attendance"
+            element={<StaffAttendancePage />}
           />
           <Route
             path="/roles"
