@@ -98,6 +98,7 @@ export const LocationModal: React.FC<LocationModalProps> = ({
       onClose={saving ? () => undefined : onClose}
       variant="drawer"
       size="md"
+      className="location-form-drawer"
       title={
         <div className="flex items-center gap-2">
           <MapPin size={18} className="text-blue-600" />
@@ -204,6 +205,35 @@ export const LocationModal: React.FC<LocationModalProps> = ({
           </button>
         </div>
       </form>
+
+      <style>{`
+        .location-form-drawer {
+          width: min(560px, 100vw) !important;
+          max-width: 560px !important;
+        }
+        @media (max-width: 640px) {
+          .location-form-drawer {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            border-radius: 0 !important;
+          }
+          .location-form-drawer .ui-modal-head,
+          .location-form-drawer .ui-modal-body,
+          .location-form-drawer .ui-modal-foot {
+            padding: 14px 16px !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .location-form-drawer .ui-modal-foot {
+            flex-direction: column-reverse !important;
+            gap: 8px !important;
+          }
+          .location-form-drawer .ui-modal-foot button {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+        }
+      `}</style>
     </Modal>
   );
 };

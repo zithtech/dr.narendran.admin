@@ -187,6 +187,7 @@ export default function DoctorAvailabilityModal({
         onClose={onClose}
         size="xl"
         variant="drawer"
+        className="doctor-availability-drawer-modal"
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div
@@ -217,6 +218,36 @@ export default function DoctorAvailabilityModal({
           </div>
         }
       >
+        <style>{`
+          .doctor-availability-drawer-modal {
+            width: min(760px, 100vw) !important;
+            max-width: 760px !important;
+          }
+          @media (max-width: 640px) {
+            .doctor-availability-drawer-modal {
+              width: 100vw !important;
+              max-width: 100vw !important;
+            }
+            .doctor-availability-drawer-modal .ui-modal-head {
+              padding: 14px 16px !important;
+            }
+            .doctor-availability-drawer-modal .ui-modal-body {
+              padding: 12px 14px 20px !important;
+            }
+            .doctor-availability-drawer-modal .ui-slot-form {
+              padding: 12px !important;
+              gap: 8px !important;
+            }
+            .doctor-availability-drawer-modal .ui-week-row {
+              grid-template-columns: 1fr !important;
+            }
+            .doctor-availability-drawer-modal .ui-week-day {
+              border-right: none !important;
+              border-bottom: 1px solid var(--ui-border) !important;
+              padding: 8px 12px !important;
+            }
+          }
+        `}</style>
         <div className="ui-modal-body">
           {error && <Alert>{error}</Alert>}
 

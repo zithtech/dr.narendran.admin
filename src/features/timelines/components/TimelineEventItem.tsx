@@ -404,7 +404,7 @@ export const TimelineEventItem: React.FC<TimelineEventItemProps> = ({
                   Prescribed Medicines Breakdown
                 </div>
                 <div className="overflow-auto max-h-[300px] bg-white border border-gray-200 rounded-md no-scrollbar">
-                  <table className="w-full text-left text-xs">
+                  <table className="w-full text-left text-xs" style={{ minWidth: 460 }}>
                     <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200 text-gray-500 font-semibold shadow-xs">
                       <tr>
                         <th className="py-2 px-3 sticky top-0 z-10 bg-gray-50">Medicine</th>

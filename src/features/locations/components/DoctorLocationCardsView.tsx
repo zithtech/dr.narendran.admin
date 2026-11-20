@@ -260,9 +260,11 @@ export const DoctorLocationCardsView: React.FC<DoctorLocationCardsViewProps> = (
               type="button"
               className="inline-flex items-center gap-1.5 h-7.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
               onClick={openAddModal}
+              aria-label="Add New Location"
             >
               <Plus size={13} strokeWidth={2.4} />
-              <span>Add New Location</span>
+              <span className="hidden sm:inline">Add New Location</span>
+              <span className="sm:hidden">Add Location</span>
             </button>
           )}
         </div>
@@ -271,9 +273,9 @@ export const DoctorLocationCardsView: React.FC<DoctorLocationCardsViewProps> = (
       {/* ── Main Unified Container: Filters Toolbar + Table + Pagination (Matching Patients Page Design) ── */}
       <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col">
         {/* ── Filter Bar Section ── */}
-        <div className="flex items-center gap-2 flex-wrap px-3 sm:px-3.5 py-2.5 border-b border-slate-100 bg-white">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 sm:px-3.5 py-2.5 border-b border-slate-100 bg-white">
           {/* Search Input with ⌘K */}
-          <div className="relative flex items-center flex-1 min-w-[160px] sm:min-w-[220px] max-w-full sm:max-w-xs shrink-0">
+          <div className="relative flex items-center w-full sm:w-auto sm:flex-1 sm:min-w-[220px] sm:max-w-xs shrink-0">
             <Search size={13} className="absolute left-2.5 text-slate-400 pointer-events-none" />
             <input
               ref={searchInputRef}
@@ -292,44 +294,46 @@ export const DoctorLocationCardsView: React.FC<DoctorLocationCardsViewProps> = (
             </span>
           </div>
 
-          {/* Status Filter Dropdown */}
-          <div className="shrink-0 flex-1 sm:flex-initial min-w-[125px] sm:min-w-0">
-            <SearchableSelect
-              size="sm"
-              variant="default"
-              aria-label="Status"
-              value={statusFilter}
-              onChange={(val) => {
-                setStatusFilter(val);
-                setPage(1);
-              }}
-              placeholder="All Status"
-              searchable={false}
-              options={[
-                { value: '', label: 'All Status' },
-                { value: 'ACTIVE', label: 'Active only' },
-                { value: 'INACTIVE', label: 'Inactive only' },
-              ]}
-            />
-          </div>
+          {/* Status Filter Dropdown & Reset */}
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+            <div className="flex-1 sm:flex-initial min-w-[125px] sm:min-w-0">
+              <SearchableSelect
+                size="sm"
+                variant="default"
+                aria-label="Status"
+                value={statusFilter}
+                onChange={(val) => {
+                  setStatusFilter(val);
+                  setPage(1);
+                }}
+                placeholder="All Status"
+                searchable={false}
+                options={[
+                  { value: '', label: 'All Status' },
+                  { value: 'ACTIVE', label: 'Active only' },
+                  { value: 'INACTIVE', label: 'Inactive only' },
+                ]}
+              />
+            </div>
 
-          {/* Reset Filters Button */}
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer shrink-0"
-              title="Reset all filters"
-            >
-              <span>Reset</span>
-              <X size={12} className="text-slate-500" />
-            </button>
-          )}
+            {/* Reset Filters Button */}
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer shrink-0"
+                title="Reset all filters"
+              >
+                <span>Reset</span>
+                <X size={12} className="text-slate-500" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ── Table Section ── */}
         <div className="overflow-x-auto min-h-[260px]">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse" style={{ minWidth: 620 }}>
             <thead>
               <tr className="border-b border-slate-200/90 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
                 <th className="px-3.5 py-2 whitespace-nowrap">Location / Clinic</th>
@@ -412,7 +416,7 @@ export const DoctorLocationCardsView: React.FC<DoctorLocationCardsViewProps> = (
                             {loc.location_name}
                           </span>
                           {isCurrentPrimary && (
-                            <span className="inline-flex items-center gap-1 rounded bg-amber-50 border border-amber-200/80 px-2 py-0.5 text-[10.5px] font-bold text-amber-800">
+                            <span className="inline-flex items-center gap-1 rounded bg-amber-50 border border-amber-200/80 px-2 py-0.5 text-[10.5px] font-bold text-amber-800 whitespace-nowrap">
                               <Star size={10} className="fill-amber-500 text-amber-500" />
                               Primary Practice Location
                             </span>

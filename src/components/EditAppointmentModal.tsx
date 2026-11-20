@@ -516,7 +516,7 @@ export default function EditAppointmentModal({
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+            <div className="appt-edit-field-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
               <Field label="Attending Doctor" required>
                 <SearchableSelect
                   options={doctorOptions}
@@ -560,7 +560,7 @@ export default function EditAppointmentModal({
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+            <div className="appt-edit-field-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
               <Field label="Consultation Purpose" required>
                 <select
                   className="ui-input"
@@ -657,7 +657,7 @@ export default function EditAppointmentModal({
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+            <div className="appt-edit-field-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
               <Field label="Consultation Date" required>
                 <input
                   type="date"
@@ -755,7 +755,7 @@ export default function EditAppointmentModal({
                       >
                         <Sun size={12} /> Morning
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 6 }}>
+                      <div className="appt-edit-slots-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 6 }}>
                         {morningSlots.map(renderSlotButton)}
                       </div>
                     </div>
@@ -776,7 +776,7 @@ export default function EditAppointmentModal({
                       >
                         <Sun size={12} /> Afternoon
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 6 }}>
+                      <div className="appt-edit-slots-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 6 }}>
                         {afternoonSlots.map(renderSlotButton)}
                       </div>
                     </div>
@@ -797,7 +797,7 @@ export default function EditAppointmentModal({
                       >
                         <Sunset size={12} /> Evening
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 6 }}>
+                      <div className="appt-edit-slots-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 6 }}>
                         {eveningSlots.map(renderSlotButton)}
                       </div>
                     </div>
@@ -821,7 +821,7 @@ export default function EditAppointmentModal({
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+            <div className="appt-edit-field-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
               <Field label="Patient Name">
                 <input
                   type="text"
@@ -1026,6 +1026,47 @@ export default function EditAppointmentModal({
           font-size: 11px;
           color: #64748b;
           margin-top: 1px;
+        }
+        @media (max-width: 640px) {
+          .appointment-edit-drawer-modal {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            border-radius: 0 !important;
+          }
+          .appointment-edit-drawer-modal .ui-modal-head {
+            padding: 14px 16px !important;
+          }
+          .appointment-edit-drawer-modal .ui-modal-body {
+            padding: 14px 16px !important;
+            gap: 12px !important;
+          }
+          .appointment-section-card {
+            padding: 14px 14px !important;
+            gap: 12px !important;
+          }
+          .appointment-edit-drawer-modal .ui-modal-foot {
+            padding: 12px 16px !important;
+          }
+        }
+        @media (max-width: 520px) {
+          .appt-edit-field-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .appointment-edit-drawer-modal .ui-modal-foot {
+            flex-direction: column-reverse !important;
+            gap: 8px !important;
+          }
+          .appointment-edit-drawer-modal .ui-modal-foot button {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+        }
+        @media (max-width: 360px) {
+          .appt-edit-slots-grid {
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
+          }
         }
       `}</style>
     </Modal>

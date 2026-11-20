@@ -4,8 +4,10 @@ import {
   CalendarClock,
   CalendarDays,
   CalendarX2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Clock,
   Eye,
   FileText,
@@ -339,6 +341,7 @@ export default function DoctorTodayAppointments() {
   }, [scheduleData, searchQuery, statusFilter, selectedDoctorId, onlyWithAppointments]);
 
   const isToday = selectedDate === todayStr;
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   const isFiltered = useMemo(() => {
     return (
@@ -478,7 +481,7 @@ export default function DoctorTodayAppointments() {
   };
 
   return (
-    <div style={{ padding: '6px 12px 14px 12px', width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 10, flex: 1, minHeight: 0 }}>
+    <div className="dta-page-container" style={{ padding: '6px 12px 14px 12px', width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 10, flex: 1, minHeight: 0 }}>
       <style>{`
         .dta-layout {
           display: flex;
@@ -616,11 +619,20 @@ export default function DoctorTodayAppointments() {
           background: #ffffff;
           box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
         }
+        .dta-table {
+          width: 100%;
+          min-width: 760px !important;
+          border-collapse: separate;
+          border-spacing: 0;
+        }
         .dta-table-row {
           transition: background-color 0.12s ease;
         }
         .dta-table-row:hover td {
           background-color: #f8fafc;
+        }
+        .dta-table-row:hover td.dta-actions-cell {
+          background-color: #f8fafc !important;
         }
         .dta-action-icon-btn {
           width: 28px;
@@ -649,12 +661,13 @@ export default function DoctorTodayAppointments() {
         }
         @media (max-width: 960px) {
           .dta-layout {
-            flex-direction: column;
-            overflow-y: auto;
-            max-height: calc(100vh - 120px);
+            flex-direction: column !important;
+            overflow: visible !important;
+            max-height: none !important;
+            height: auto !important;
           }
           .dta-filters-panel {
-            width: 100%;
+            width: 100% !important;
             flex: 1 1 auto;
             min-width: 0;
             max-width: none;
@@ -664,17 +677,97 @@ export default function DoctorTodayAppointments() {
             grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
             gap: 12px;
             align-items: flex-start;
-            max-height: none;
-            overflow-y: visible;
+            max-height: none !important;
+            overflow: visible !important;
           }
+          .dta-filters-header {
+            grid-column: 1 / -1;
+          }
+          .dta-filters-mobile-toggle {
+            display: inline-flex !important;
+          }
+          .dta-filters-content-collapsible {
+            display: none !important;
+          }
+          .dta-filters-content-collapsible.is-open {
+            display: contents !important;
+          }
+          .dta-filters-footer {
+            grid-column: 1 / -1;
+          }
+        }
+        @media (min-width: 961px) {
+          .dta-filters-mobile-toggle {
+            display: none !important;
+          }
+          .dta-filters-content-collapsible {
+            display: contents !important;
+          }
+        }
           .dta-content-panel {
-            max-height: none;
-            overflow-y: visible;
+            max-height: none !important;
+            overflow: visible !important;
+            height: auto !important;
+          }
+          .dta-table-scroll-container {
+            max-height: none !important;
+            overflow-y: visible !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
           }
         }
         @media (max-width: 600px) {
+          .dta-page-container {
+            padding: 4px 6px 12px 6px !important;
+            gap: 8px !important;
+          }
           .dta-filters-card {
             grid-template-columns: 1fr;
+            padding: 12px 14px !important;
+            gap: 10px !important;
+          }
+          .dta-header-row {
+            padding: 4px 0 !important;
+            gap: 10px !important;
+          }
+          .dta-header-row > div:first-child {
+            width: 100% !important;
+          }
+          .dta-header-row > div:last-child {
+            width: 100% !important;
+            justify-content: flex-start !important;
+            flex-wrap: wrap !important;
+          }
+          .dta-banner {
+            padding: 8px 10px !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 6px !important;
+          }
+          .dta-doctor-card-header {
+            padding: 10px 12px !important;
+            gap: 8px !important;
+          }
+          .dta-doctor-card-header > div:first-child {
+            width: 100% !important;
+          }
+          .dta-doctor-stats-wrap {
+            width: 100% !important;
+            justify-content: space-between !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .dta-header-row h1 {
+            font-size: 15px !important;
+          }
+          .dta-doctor-stats-wrap {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 8px !important;
+          }
+          .dta-book-doctor-btn {
+            width: 100% !important;
+            justify-content: center !important;
           }
         }
       `}</style>
@@ -735,9 +828,11 @@ export default function DoctorTodayAppointments() {
               type="button"
               className="dta-btn-violet"
               onClick={() => handleOpenBooking()}
+              aria-label="Schedule Appointment"
             >
               <Plus size={14} />
-              <span>Schedule Appointment</span>
+              <span className="hidden sm:inline">Schedule Appointment</span>
+              <span className="sm:hidden">Schedule</span>
             </button>
           )}
         </div>
@@ -750,6 +845,7 @@ export default function DoctorTodayAppointments() {
           <div className="dta-filters-card">
             {/* Filter Header */}
             <div
+              className="dta-filters-header"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -788,31 +884,57 @@ export default function DoctorTodayAppointments() {
                   </span>
                 )}
               </div>
-              {isFiltered && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <button
                   type="button"
-                  onClick={handleResetFilters}
+                  className="dta-filters-mobile-toggle"
+                  onClick={() => setIsMobileFilterOpen((prev) => !prev)}
+                  aria-expanded={isMobileFilterOpen}
+                  aria-label="Toggle filter controls"
                   style={{
-                    display: 'inline-flex',
+                    display: 'none',
                     alignItems: 'center',
-                    gap: 3,
+                    gap: 4,
                     fontSize: 11,
                     fontWeight: 600,
-                    color: '#64748b',
-                    background: 'transparent',
-                    border: 'none',
+                    color: '#2563eb',
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: 6,
+                    padding: '3px 8px',
                     cursor: 'pointer',
-                    padding: '2px 6px',
-                    borderRadius: 4,
                   }}
-                  title="Reset all filters"
                 >
-                  <RotateCcw size={10} />
-                  <span>Reset</span>
+                  <span>{isMobileFilterOpen ? 'Hide' : 'Show'}</span>
+                  {isMobileFilterOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                 </button>
-              )}
+                {isFiltered && (
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: '#64748b',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '2px 6px',
+                      borderRadius: 4,
+                    }}
+                    title="Reset all filters"
+                  >
+                    <RotateCcw size={10} />
+                    <span>Reset</span>
+                  </button>
+                )}
+              </div>
             </div>
 
+            <div className={`dta-filters-content-collapsible ${isMobileFilterOpen ? 'is-open' : ''}`}>
             {/* Date Section */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1076,7 +1198,7 @@ export default function DoctorTodayAppointments() {
             </div>
 
             {/* Toggle: Only show doctors with appointments */}
-            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 8 }}>
+            <div className="dta-filters-footer" style={{ borderTop: '1px solid #f1f5f9', paddingTop: 8 }}>
               <label
                 style={{
                   display: 'flex',
@@ -1098,6 +1220,7 @@ export default function DoctorTodayAppointments() {
                 <span>Only show doctors with appointments</span>
               </label>
             </div>
+            </div>
           </div>
         </aside>
 
@@ -1105,6 +1228,7 @@ export default function DoctorTodayAppointments() {
         <main className="dta-content-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {/* Content Header Banner */}
           <div
+            className="dta-banner"
             style={{
               background: '#ffffff',
               border: '1px solid rgba(226, 232, 240, 0.9)',
@@ -1278,6 +1402,7 @@ export default function DoctorTodayAppointments() {
                   >
                     {/* Doctor Header Banner (Refined & Modern) */}
                     <div
+                      className="dta-doctor-card-header"
                       style={{
                         padding: '10px 16px',
                         background: 'linear-gradient(180deg, #fafbfc 0%, #f8fafc 100%)',
@@ -1359,8 +1484,8 @@ export default function DoctorTodayAppointments() {
                       </div>
 
                       {/* Doctor Stats & Booking Action */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <div className="dta-doctor-stats-wrap" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <div className="dta-doctor-stats" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                           <span
                             style={{
                               fontSize: 11,
@@ -1421,6 +1546,7 @@ export default function DoctorTodayAppointments() {
                         {isApptCreatable && (
                           <button
                             type="button"
+                            className="dta-book-doctor-btn"
                             onClick={() => handleOpenBooking(doc.id)}
                             style={{
                               height: 28,
@@ -1455,10 +1581,12 @@ export default function DoctorTodayAppointments() {
 
                     {/* Doctor's Appointments Table (Executive Table Layout) */}
                     {hasAppointments ? (
-                      <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 280px)', scrollbarWidth: 'none', msOverflowStyle: 'none' }} className="no-scrollbar">
+                      <div className="dta-table-scroll-container no-scrollbar" style={{ overflow: 'auto', maxHeight: 'calc(100vh - 280px)', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                         <table
+                          className="dta-table"
                           style={{
                             width: '100%',
+                            minWidth: 760,
                             borderCollapse: 'separate',
                             borderSpacing: 0,
                             fontSize: 12.5,
@@ -1601,7 +1729,20 @@ export default function DoctorTodayAppointments() {
                                   </td>
 
                                   {/* Actions */}
-                                  <td style={{ padding: '9px 14px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle', textAlign: 'right', position: 'sticky', right: 0, background: '#ffffff', zIndex: 1, boxShadow: '-4px 0 6px -2px rgba(0,0,0,0.05)' }}>
+                                  <td
+                                    className="dta-actions-cell"
+                                    style={{
+                                      padding: '9px 14px',
+                                      borderBottom: '1px solid #f1f5f9',
+                                      verticalAlign: 'middle',
+                                      textAlign: 'right',
+                                      position: 'sticky',
+                                      right: 0,
+                                      background: '#ffffff',
+                                      zIndex: 1,
+                                      boxShadow: '-4px 0 6px -2px rgba(0,0,0,0.05)',
+                                    }}
+                                  >
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
                                       {isRxCreatable && (
                                         <button

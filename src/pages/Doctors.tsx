@@ -193,15 +193,18 @@ export default function Doctors() {
         nameOf={(d) => d.name}
         onRowClick={openDetails}
         activeId={viewingId}
+        minTableWidth={800}
         extraActions={
           canView('AVAILABILITY') ? (
             <button
               type="button"
-              className="ui-btn ui-btn-pill ui-btn-soft"
+              className="ui-btn ui-btn-pill ui-btn-soft text-xs"
               onClick={() => void navigate('/availability')}
               title="Manage Doctor Availability & Appointment Slots"
             >
-              <CalendarClock size={15} /> Availability &amp; Slots
+              <CalendarClock size={15} className="shrink-0" />
+              <span className="hidden sm:inline">Availability &amp; Slots</span>
+              <span className="sm:hidden">Availability</span>
             </button>
           ) : null
         }
@@ -210,7 +213,7 @@ export default function Doctors() {
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
             <button
               type="button"
-              className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+              className="p-1.5 min-w-[28px] min-h-[28px] sm:min-w-[24px] sm:min-h-[24px] inline-flex items-center justify-center rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 openAvailability(d);
@@ -223,7 +226,7 @@ export default function Doctors() {
             {canView('AVAILABILITY') && (
               <button
                 type="button"
-                className="p-1 rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
+                className="p-1.5 min-w-[28px] min-h-[28px] sm:min-w-[24px] sm:min-h-[24px] inline-flex items-center justify-center rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
                   void navigate(`/availability?doctorId=${d.id}`);

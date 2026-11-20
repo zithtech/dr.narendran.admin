@@ -243,7 +243,7 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
   };
 
   const footerActions = (
-    <div className="flex items-center justify-end gap-2.5 w-full">
+    <div className="flex items-center justify-end gap-2 flex-wrap w-full">
       <button
         type="button"
         className="ui-btn ui-btn-neutral"
@@ -259,27 +259,80 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
           void handleSubmit();
         }}
         disabled={uploading}
+        aria-label="Upload Record"
       >
         {uploading && <Loader2 size={14} className="animate-spin" />}
-        <span>
+        <span className="hidden sm:inline">
           {duplicateWarning && allowDuplicate
             ? 'Upload Anyway (Override Duplicate)'
             : 'Upload Record'}
+        </span>
+        <span className="sm:hidden">
+          {duplicateWarning && allowDuplicate ? 'Upload Anyway' : 'Upload'}
         </span>
       </button>
     </div>
   );
 
   return (
-    <Drawer
-      open={open}
-      onClose={onClose}
-      label="Medical Records"
-      icon={<UploadCloud size={22} className="text-blue-600" />}
-      title="Upload Patient Medical Record"
-      subtitle="Upload clinical records, test reports, or prescribed laboratory documents."
-      footer={footerActions}
-    >
+    <>
+      <style>{`
+        .upload-medical-record-drawer {
+          max-width: 100vw !important;
+        }
+        @media (max-width: 640px) {
+          .upload-medical-record-drawer .ui-drawer-panel {
+            width: 100vw !important;
+            max-width: 100vw !important;
+          }
+          .upload-medical-record-drawer .ui-drawer-hero {
+            padding: 12px 14px !important;
+            gap: 10px !important;
+          }
+          .upload-medical-record-drawer .ui-drawer-body {
+            padding: 12px 14px 20px !important;
+          }
+          .upload-medical-record-drawer .ui-drawer-foot {
+            padding: 10px 14px !important;
+          }
+        }
+        .medical-upload-record-type-radio {
+          display: flex !important;
+          width: 100% !important;
+        }
+        .medical-upload-record-type-radio .ant-radio-button-wrapper {
+          flex: 1 1 50% !important;
+          text-align: center !important;
+          height: auto !important;
+          padding: 6px 8px !important;
+          font-size: 11.5px !important;
+          line-height: 1.3 !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+        @media (max-width: 480px) {
+          .medical-upload-record-type-radio {
+            flex-direction: column !important;
+          }
+          .medical-upload-record-type-radio .ant-radio-button-wrapper {
+            width: 100% !important;
+            border-radius: 6px !important;
+            margin-bottom: 4px !important;
+            border-left: 1px solid #d9d9d9 !important;
+          }
+        }
+      `}</style>
+      <Drawer
+        open={open}
+        onClose={onClose}
+        className="upload-medical-record-drawer"
+        label="Medical Records"
+        icon={<UploadCloud size={22} className="text-blue-600" />}
+        title="Upload Patient Medical Record"
+        subtitle="Upload clinical records, test reports, or prescribed laboratory documents."
+        footer={footerActions}
+      >
       <Form form={form} layout="vertical" className="space-y-4">
         {/* Duplicate Warning Alert */}
         {duplicateWarning && (
@@ -380,7 +433,7 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
                 form.setFieldValue('prescriptionLabTestId', undefined);
               }
             }}
-            className="w-full"
+            className="medical-upload-record-type-radio w-full"
           >
             <Radio.Button value="EXTERNAL">External / Medical Document</Radio.Button>
             <Radio.Button value="PRESCRIBED">Doctor Prescribed Lab Test</Radio.Button>
@@ -493,6 +546,7 @@ export const UploadMedicalRecordModal: React.FC<UploadMedicalRecordModalProps> =
         </Form.Item>
       </Form>
     </Drawer>
+    </>
   );
 };
 

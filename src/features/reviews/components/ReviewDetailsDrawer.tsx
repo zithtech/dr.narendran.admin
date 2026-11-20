@@ -216,13 +216,15 @@ export const ReviewDetailsDrawer: React.FC<ReviewDetailsDrawerProps> = ({
         }
       }}
       footer={
-        <button
-          type="button"
-          className="h-8 px-4 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs transition-colors cursor-pointer"
-          onClick={onClose}
-        >
-          Close
-        </button>
+        <div className="flex items-center justify-end w-full">
+          <button
+            type="button"
+            className="w-full sm:w-auto h-8 px-4 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs transition-colors cursor-pointer"
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </div>
       }
     >
       {review && !loading ? (
@@ -380,7 +382,7 @@ export const ReviewDetailsDrawer: React.FC<ReviewDetailsDrawerProps> = ({
                     <button
                       type="button"
                       onClick={() => handleStartModeration('FLAG')}
-                      className="inline-flex items-center gap-1.5 h-7.5 px-3 text-xs font-semibold rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
+                      className="inline-flex items-center justify-center gap-1.5 h-8 px-3 text-xs font-semibold rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer flex-1 xs:flex-initial"
                     >
                       <Flag size={12} />
                       <span>Flag for Review</span>
@@ -391,7 +393,7 @@ export const ReviewDetailsDrawer: React.FC<ReviewDetailsDrawerProps> = ({
                     <button
                       type="button"
                       onClick={() => handleStartModeration('HIDE')}
-                      className="inline-flex items-center gap-1.5 h-7.5 px-3 text-xs font-semibold rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
+                      className="inline-flex items-center justify-center gap-1.5 h-8 px-3 text-xs font-semibold rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer flex-1 xs:flex-initial"
                     >
                       <ShieldAlert size={12} />
                       <span>Hide from Public Profile</span>
@@ -402,7 +404,7 @@ export const ReviewDetailsDrawer: React.FC<ReviewDetailsDrawerProps> = ({
                     <button
                       type="button"
                       onClick={() => handleStartModeration('RESTORE')}
-                      className="inline-flex items-center gap-1.5 h-7.5 px-3 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
+                      className="inline-flex items-center justify-center gap-1.5 h-8 px-3 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer flex-1 xs:flex-initial"
                     >
                       <CheckCircle2 size={12} />
                       <span>Restore to Active</span>

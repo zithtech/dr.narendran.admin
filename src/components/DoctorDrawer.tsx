@@ -234,7 +234,7 @@ export default function DoctorDrawer({
   const displayPhotoSrc = hasCustomPhoto ? resolvedPhoto! : defaultAvatar;
 
   const footer = (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', gap: 10 }}>
+    <div className="doctor-view-drawer-footer" style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', gap: 10 }}>
       <button
         type="button"
         className="ui-btn ui-btn-neutral"
@@ -627,7 +627,7 @@ export default function DoctorDrawer({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 }}>
+              <div className="doctor-view-grid-2">
                 <div className="doctor-view-item">
                   <div className="doctor-view-item-head">
                     <Building2 size={13} style={{ color: '#2563eb' }} />
@@ -737,7 +737,7 @@ export default function DoctorDrawer({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 }}>
+              <div className="doctor-view-grid-2">
                 <div className="doctor-view-item">
                   <div className="doctor-view-item-head">
                     <UserCheck size={13} style={{ color: doctor.user_account_id ? '#16a34a' : '#64748b' }} />
@@ -920,6 +920,77 @@ export default function DoctorDrawer({
             height: auto;
             max-height: none;
             overflow-y: visible;
+          }
+        }
+        .doctor-view-grid-2 {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+          gap: 12px;
+        }
+        .doctor-view-drawer-footer {
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
+          width: 100%;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+        @media (max-width: 640px) {
+          .doctor-view-drawer {
+            width: 100vw !important;
+            max-width: 100vw !important;
+          }
+          .doctor-view-drawer .ui-drawer-content {
+            padding: 12px 14px 16px !important;
+          }
+          .doctor-view-grid-2 {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+          }
+          .doctor-view-drawer-footer {
+            justify-content: stretch !important;
+            gap: 8px !important;
+          }
+          .doctor-view-drawer-footer > button {
+            flex: 1 1 calc(50% - 8px) !important;
+            min-height: 36px !important;
+            justify-content: center !important;
+            text-align: center !important;
+          }
+          .doctor-view-drawer-footer > button:last-child {
+            flex: 1 1 100% !important;
+          }
+          .doctor-card-photo-hero {
+            height: 145px !important;
+            min-height: 130px !important;
+            padding: 8px 12px 28px !important;
+          }
+          .doctor-card-photo,
+          .doctor-card-photo.doctor-card-photo-default {
+            max-height: 110px !important;
+          }
+          .doctor-view-card {
+            padding: 12px 14px !important;
+            gap: 12px !important;
+          }
+          .doctor-counts-list,
+          .doctor-schedule-list {
+            gap: 4px !important;
+          }
+          .doctor-count-row,
+          .doctor-schedule-row {
+            padding: 6px 10px !important;
+          }
+          .doctor-card-body {
+            padding: 10px 12px 14px !important;
+          }
+          .doctor-card-name {
+            font-size: 17px !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .doctor-view-drawer-footer > button {
+            flex: 1 1 100% !important;
           }
         }
         /* Left Doctor Profile Card matching Reference Image */

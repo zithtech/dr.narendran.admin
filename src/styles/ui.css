@@ -2944,8 +2944,120 @@ input[type="date"].patient-input-with-icon::-webkit-datetime-edit {
   justify-content: space-between;
   padding: 0 16px;
   gap: 14px;
-  z-index: 30;
+  z-index: 40;
   box-sizing: border-box;
+  position: sticky;
+  top: 0;
+}
+
+/* Mobile Dropdown Navigation */
+.ui-top-navbar-mobile-nav {
+  display: none;
+  align-items: center;
+  position: relative;
+}
+
+.ui-top-mobile-dropdown-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #1e293b;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  transition: all 0.15s ease;
+  max-width: 100%;
+}
+
+.ui-top-mobile-dropdown-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.ui-top-mobile-dropdown-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+@media (min-width: 380px) {
+  .ui-top-mobile-dropdown-label {
+    max-width: 175px;
+  }
+}
+
+.ui-top-mobile-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  width: 270px;
+  max-width: calc(100vw - 32px);
+  max-height: 70vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+  padding: 6px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ui-top-mobile-dropdown-group {
+  margin-bottom: 6px;
+}
+
+.ui-top-mobile-dropdown-group:last-child {
+  margin-bottom: 0;
+}
+
+.ui-top-mobile-dropdown-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.ui-top-mobile-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #334155;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.12s ease;
+  box-sizing: border-box;
+}
+
+.ui-top-mobile-dropdown-item:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.ui-top-mobile-dropdown-item.is-active {
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 650;
 }
 
 .ui-top-navbar-left {
@@ -3899,6 +4011,14 @@ input[type="date"].patient-input-with-icon::-webkit-datetime-edit {
 
   .ui-mobile-menu-btn {
     display: inline-flex;
+  }
+
+  .ui-top-navbar-categories {
+    display: none !important;
+  }
+
+  .ui-top-navbar-mobile-nav {
+    display: flex !important;
   }
 
   .ui-app-right-column .ui-main {

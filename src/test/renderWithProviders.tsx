@@ -11,7 +11,11 @@ import { MemoryRouter } from 'react-router';
  * failed queries twice with backoff, which would make every error-path test
  * wait seconds and then time out.
  */
-export function renderWithProviders(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
+export function renderWithProviders(
+  ui: ReactElement,
+  options?: Omit<RenderOptions, 'wrapper'> & { initialEntries?: string[] },
+) {
+  const { initialEntries, ...renderOptions } = options || {};
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0 },
@@ -23,11 +27,11 @@ export function renderWithProviders(ui: ReactElement, options?: Omit<RenderOptio
     return (
       <QueryClientProvider client={queryClient}>
         <AntdApp>
-          <MemoryRouter>{children}</MemoryRouter>
+          <MemoryRouter {...(initialEntries ? { initialEntries } : {})}>{children}</MemoryRouter>
         </AntdApp>
       </QueryClientProvider>
     );
   }
 
-  return { queryClient, ...render(ui, { wrapper: Wrapper, ...options }) };
+  return { queryClient, ...render(ui, { wrapper: Wrapper, ...renderOptions }) };
 }

@@ -171,6 +171,7 @@ export default function Patients() {
         onDelete={(p) => api.delete(`patients/${p.id}`)}
         nameOf={(p) => p.name}
         onRowClick={openDetails}
+        minTableWidth={720}
       />
     </>
   );
