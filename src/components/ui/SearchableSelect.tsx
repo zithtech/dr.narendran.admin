@@ -184,7 +184,13 @@ export function SearchableSelect({
   const showSearch = searchable !== undefined ? searchable : options.length > 3;
 
   // Find currently selected option
-  const selectedOption = options.find((opt) => opt.value === value);
+  const selectedOption =
+    options.find((opt) => opt.value === value) ||
+    options.find((opt) => String(opt.value).toLowerCase() === String(value).toLowerCase()) ||
+    options.find((opt) => opt.label.toLowerCase() === String(value).toLowerCase()) ||
+    (value !== undefined && value !== null && String(value).trim() !== ''
+      ? { value: String(value), label: String(value) }
+      : undefined);
 
   // Filter options based on search query
   const filteredOptions = options.filter((opt) => {

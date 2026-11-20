@@ -20,7 +20,7 @@ import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { usePermission } from '../context/PermissionContext';
 import { patientTimelinesApi } from '../features/timelines/services/patientTimelinesApi';
 import type { AdminPatientListItem } from '../features/timelines/types/patientTimelines';
-import { formatDate, formatPatientAge, timeAgo, titleCase } from '../lib/format';
+import { formatDate, formatPatientAge, formatPatientDisplayName, timeAgo, titleCase } from '../lib/format';
 
 const SKELETON_ROWS = Array.from({ length: 6 }, (_, i) => i);
 
@@ -131,9 +131,9 @@ export default function PatientTimelinesPage() {
     const exportColumns = [
       {
         header: 'Patient ID',
-        key: (p: AdminPatientListItem) => `#${p.id.slice(0, 8).toUpperCase()}`,
+        key: (p: AdminPatientListItem) => p.patient_id || `#${p.id.slice(0, 8).toUpperCase()}`,
       },
-      { header: 'Patient Name', key: (p: AdminPatientListItem) => p.name },
+      { header: 'Patient Name', key: (p: AdminPatientListItem) => formatPatientDisplayName(p.name, p.patient_id) },
       {
         header: 'Gender',
         key: (p: AdminPatientListItem) => (p.gender ? titleCase(p.gender) : 'Not specified'),
@@ -426,14 +426,14 @@ export default function PatientTimelinesPage() {
                       {/* Patient ID */}
                       <td className="w-28 px-3.5 py-2 whitespace-nowrap">
                         <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100/80 px-2 py-0.5 rounded border border-slate-200/60">
-                          #{patient.id.slice(0, 8).toUpperCase()}
+                          {patient.patient_id || `#${patient.id.slice(0, 8).toUpperCase()}`}
                         </span>
                       </td>
 
                       {/* Patient Name + Avatar */}
                       <td className="px-3.5 py-2">
                         <PrimaryCell
-                          name={patient.name}
+                          name={formatPatientDisplayName(patient.name, patient.patient_id)}
                           sub={
                             patient.hospital_name ||
                             patient.branch_name ||

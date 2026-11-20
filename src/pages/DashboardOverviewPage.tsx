@@ -30,6 +30,7 @@ import { useNavigate } from 'react-router';
 
 import api from '../utils/api';
 import { usePermission } from '../context/PermissionContext';
+import { formatPatientDisplayName } from '../lib/format';
 import { DashboardAttendanceSection } from '../components/attendance/DashboardAttendanceSection';
 
 interface StatsState {
@@ -499,7 +500,7 @@ export default function DashboardOverviewPage() {
       list.push({
         id: 'act-3',
         title: 'Patient Profile Registered',
-        desc: `${topPt.name || 'New Patient'} added to hospital records`,
+        desc: `${formatPatientDisplayName(topPt.name, topPt.patient_id) || 'New Patient'} added to hospital records`,
         time: '42m ago',
         tone: 'purple',
         category: 'Patients',

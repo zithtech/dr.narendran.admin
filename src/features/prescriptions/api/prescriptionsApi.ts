@@ -40,6 +40,7 @@ export interface Prescription {
   id: string;
   prescription_number?: string | undefined;
   patient_id?: string | undefined;
+  patient_code?: string | undefined;
   patient_name?: string | undefined;
   patient_phone?: string | undefined;
   patient_gender?: string | undefined;

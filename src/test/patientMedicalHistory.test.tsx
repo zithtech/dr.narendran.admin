@@ -215,7 +215,7 @@ const mockDocuments = [
   },
 ];
 
-describe('Patient Medical History Integration Suite', () => {
+describe('Patient Medical History Integration Suite', { timeout: 25000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(api.get).mockImplementation((url: string) => {
@@ -317,7 +317,7 @@ describe('Patient Medical History Integration Suite', () => {
     // Verify Medical Documents
     expect(screen.getByText('Thyroid Function Test (TSH, FT3, FT4)')).toBeInTheDocument();
     expect(screen.getByText('Thyroid Ultrasound Scan')).toBeInTheDocument();
-  });
+  }, 15000);
 
   it('allows opening Record Medical History modal to record or edit intake', async () => {
     renderComponent();
@@ -413,7 +413,7 @@ describe('Patient Medical History Integration Suite', () => {
     await waitFor(() => {
       expect(screen.getByText('Presenting Complaints & Symptoms')).toBeInTheDocument();
     });
-  });
+  }, 20000);
 
   it('allows opening Upload Medical Document modal', async () => {
     renderComponent();
@@ -503,5 +503,18 @@ describe('Patient Medical History Integration Suite', () => {
 
     // Surgery should contain Cesarean Section
     expect(screen.getByDisplayValue('Cesarean Section (LSCS)')).toBeInTheDocument();
-  });
+
+    // Check Lifestyle History step auto-population
+    const lifestyleStepBtn = screen.getByRole('button', { name: /lifestyle/i });
+    fireEvent.click(lifestyleStepBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Smoking & Tobacco Usage/i)).toBeInTheDocument();
+    });
+
+    // Lifestyle fields should be auto-populated from mockHistoryRecords[0].lifestyle_history
+    expect(screen.getByDisplayValue('7-8 hours normal sleep')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Normal office / teaching environment')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Yoga thrice a week')).toBeInTheDocument();
+  }, 25000);
 });

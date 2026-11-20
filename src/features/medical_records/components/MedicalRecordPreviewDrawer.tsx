@@ -1,7 +1,7 @@
 import { Button, Drawer, Space, Tag, Typography } from 'antd';
 import { Calendar, Download, ExternalLink, FileText, Stethoscope, User } from 'lucide-react';
 import React from 'react';
-import { getAuthenticatedFileUrl } from '@/utils/fileUrl';
+import { getAuthenticatedFileUrl } from '../../../utils/fileUrl';
 import type { MedicalRecord } from '../types/medicalRecords';
 
 const { Text, Title } = Typography;

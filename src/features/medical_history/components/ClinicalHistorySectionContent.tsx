@@ -33,8 +33,8 @@ import {
 } from 'lucide-react';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
-import { getAuthenticatedFileUrl } from '@/utils/fileUrl';
-import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/SearchableSelect';
+import { getAuthenticatedFileUrl } from '../../../utils/fileUrl';
+import { SearchableSelect, type SearchableSelectOption } from '../../../components/ui/SearchableSelect';
 import { medicalHistoryApi } from '../services/medicalHistoryApi';
 import {
   MEDICAL_DOCUMENT_TYPES,
@@ -145,6 +145,46 @@ function normalizeBreastfeeding(val: unknown): 'Yes' | 'No' | 'Not Applicable' {
   return 'Not Applicable';
 }
 
+function normalizeSmokingStatus(val: unknown): string {
+  if (!val) return 'Never';
+  const s = String(val).trim().toLowerCase();
+  if (s.includes('never') || s.includes('non') || s === 'no') return 'Never';
+  if (s.includes('former') || s.includes('quit') || s.includes('ex-')) return 'Former';
+  if (s.includes('current') || s.includes('smoker') || s === 'yes') return 'Current';
+  return String(val);
+}
+
+function normalizeAlcoholConsumption(val: unknown): string {
+  if (!val) return 'Never';
+  const s = String(val).trim().toLowerCase();
+  if (s.includes('never') || s.includes('non') || s === 'no') return 'Never';
+  if (s.includes('occasion') || s.includes('social')) return 'Occasionally';
+  if (s.includes('regular')) return 'Regularly';
+  if (s.includes('heavy') || s.includes('problem')) return 'Heavy / Problematic';
+  return String(val);
+}
+
+function normalizeDietType(val: unknown): string {
+  if (!val) return 'Non-Vegetarian';
+  const s = String(val).trim().toLowerCase();
+  if (s.includes('non-veg') || s.includes('non veg') || s.includes('nonveg')) return 'Non-Vegetarian';
+  if (s.includes('jain')) return 'Jain';
+  if (s.includes('vegan')) return 'Vegan';
+  if (s.includes('egg')) return 'Eggetarian';
+  if (s.includes('veg')) return 'Vegetarian';
+  return String(val);
+}
+
+function normalizeActivityLevel(val: unknown): string {
+  if (!val) return 'Moderate';
+  const s = String(val).trim().toLowerCase();
+  if (s.includes('sedentary')) return 'Sedentary';
+  if (s.includes('light')) return 'Light';
+  if (s.includes('moderat')) return 'Moderate';
+  if (s.includes('active') || s.includes('heavy') || s.includes('athletic')) return 'Active';
+  return String(val);
+}
+
 const DISEASE_STATUS_OPTIONS: SearchableSelectOption[] = [
   { value: 'Resolved', label: 'Resolved' },
   { value: 'Active', label: 'Active' },
@@ -160,6 +200,9 @@ const FAMILY_RELATIONSHIP_OPTIONS: SearchableSelectOption[] = FAMILY_RELATIONSHI
 const FAMILY_HEALTH_STATUS_OPTIONS: SearchableSelectOption[] = [
   { value: 'Healthy / Normal', label: 'Healthy / Normal' },
   { value: 'Living with Condition', label: 'Living with Condition' },
+  { value: 'Managed with medication', label: 'Managed with Medication' },
+  { value: 'Stable on oral medication', label: 'Stable on Oral Medication' },
+  { value: 'Under Treatment', label: 'Under Treatment' },
   { value: 'Deceased', label: 'Deceased' },
   { value: 'Unknown', label: 'Unknown' },
 ];
@@ -168,6 +211,9 @@ const MENSTRUAL_STATUS_OPTIONS: SearchableSelectOption[] = [
   { value: 'Regular', label: 'Regular' },
   { value: 'Irregular', label: 'Irregular' },
   { value: 'Menopause', label: 'Menopause' },
+  { value: 'Post-Menopausal', label: 'Post-Menopausal' },
+  { value: 'Amenorrhea', label: 'Amenorrhea' },
+  { value: 'Oligomenorrhea', label: 'Oligomenorrhea' },
   { value: 'Not Applicable', label: 'Not Applicable' },
 ];
 
@@ -458,7 +504,18 @@ export const ClinicalHistorySectionContent = forwardRef<
     setRecordedByName(record.recorded_by_name || 'Attending Doctor');
     setRecordNotes(record.notes || '');
 
-    const cmi = record.current_medical_info || {};
+    const safeObj = (val: any) => {
+      if (typeof val === 'string') {
+        try {
+          return JSON.parse(val);
+        } catch {
+          return {};
+        }
+      }
+      return val || {};
+    };
+
+    const cmi = safeObj(record.current_medical_info);
     setChiefComplaint(cmi.chief_complaint || '');
     setCurrentSymptoms(cmi.current_symptoms || '');
     setSymptomDuration(cmi.duration_of_symptoms || '');
@@ -507,9 +564,9 @@ export const ClinicalHistorySectionContent = forwardRef<
       setCustomVitals([]);
     }
 
-    const pmh = record.previous_medical_history || {};
-    setChronicDiseases(pmh.chronic_diseases || []);
-    setPreviousDiseases(pmh.previous_diseases || []);
+    const pmh = safeObj(record.previous_medical_history);
+    setChronicDiseases(Array.isArray(pmh.chronic_diseases) ? pmh.chronic_diseases : []);
+    setPreviousDiseases(Array.isArray(pmh.previous_diseases) ? pmh.previous_diseases : []);
     setDiabetesHas(normalizeYesNoUnknown(pmh.diabetes_history?.has_history));
     setDiabetesDetails(pmh.diabetes_history?.details || pmh.diabetes_history?.current_treatment || '');
     setBpHas(normalizeYesNoUnknown(pmh.blood_pressure_history?.has_history));
@@ -523,11 +580,11 @@ export const ClinicalHistorySectionContent = forwardRef<
     setRespHas(normalizeYesNoUnknown(pmh.respiratory_disease_history?.has_history));
     setRespDetails(pmh.respiratory_disease_history?.details || '');
 
-    setSurgeries(pmh.surgeries || []);
-    setAdmissions(pmh.hospital_admissions || []);
+    setSurgeries(Array.isArray(pmh.surgeries) ? pmh.surgeries : []);
+    setAdmissions(Array.isArray(pmh.hospital_admissions) ? pmh.hospital_admissions : []);
     setInjuries(
       Array.isArray(pmh.injuries_accidents)
-        ? pmh.injuries_accidents.map((i) => i.description).join('\n')
+        ? pmh.injuries_accidents.map((i: any) => i.description || i).join('\n')
         : typeof pmh.injuries_accidents === 'string'
           ? pmh.injuries_accidents
           : '',
@@ -537,47 +594,60 @@ export const ClinicalHistorySectionContent = forwardRef<
     setMedAllergies(pmh.allergies?.medicine_allergies || '');
     setFoodAllergies(pmh.allergies?.food_allergies || '');
     setOtherAllergies(pmh.allergies?.other_allergies || '');
-    setCurrentMeds(pmh.current_medications || []);
-    setPreviousMeds(pmh.previous_medications || []);
+    setCurrentMeds(Array.isArray(pmh.current_medications) ? pmh.current_medications : []);
+    setPreviousMeds(Array.isArray(pmh.previous_medications) ? pmh.previous_medications : []);
     setOngoingTreatments(pmh.ongoing_treatments || '');
 
-    const fmh = record.family_medical_history || {};
+    const fmh = safeObj(record.family_medical_history);
     setHasFamilyHistory(
       normalizeYesNoUnknown(
         fmh.has_family_history,
         fmh.members && fmh.members.length > 0 ? 'Yes' : 'No'
       )
     );
-    setFamilyMembers(fmh.members || []);
+    if (Array.isArray(fmh.members)) {
+      setFamilyMembers(
+        fmh.members.map((m: any) => ({
+          relationship: m.relationship || m.relation || 'Father',
+          disease_name: m.disease_name || m.disease || m.condition || '',
+          age_at_diagnosis: m.age_at_diagnosis != null ? m.age_at_diagnosis : null,
+          current_health_status: m.current_health_status || m.health_status || 'Living with Condition',
+          cause_of_death: m.cause_of_death || '',
+          remarks: m.remarks || '',
+        }))
+      );
+    } else {
+      setFamilyMembers([]);
+    }
 
-    const rep = record.reproductive_history || {};
+    const rep = safeObj(record.reproductive_history);
     setReproductiveApplicable(rep.is_applicable !== false);
     setMaritalStatus(rep.marital_status || '');
-    setMenarcheAge(rep.age_at_menarche != null ? String(rep.age_at_menarche) : '');
+    setMenarcheAge(rep.age_at_menarche != null && rep.age_at_menarche !== 0 ? String(rep.age_at_menarche) : '');
     setMenstrualStatus(rep.menstrual_status || 'Regular');
-    setMenopauseAge(rep.age_at_menopause != null ? String(rep.age_at_menopause) : '');
+    setMenopauseAge(rep.age_at_menopause != null && rep.age_at_menopause !== 0 ? String(rep.age_at_menopause) : '');
     setPregnancies(rep.number_of_pregnancies != null ? String(rep.number_of_pregnancies) : '');
     setDeliveries(rep.number_of_deliveries != null ? String(rep.number_of_deliveries) : '');
     setChildrenCount(rep.number_of_children != null ? String(rep.number_of_children) : '');
     setLivingChildren(rep.number_of_living_children != null ? String(rep.number_of_living_children) : '');
     setMiscarriages(rep.number_of_miscarriages != null ? String(rep.number_of_miscarriages) : '');
     setAbortions(rep.number_of_abortions != null ? String(rep.number_of_abortions) : '');
-    setFirstChildbirthAge(rep.age_at_first_childbirth != null ? String(rep.age_at_first_childbirth) : '');
-    setLastChildbirthDate(rep.date_of_last_childbirth || '');
+    setFirstChildbirthAge(rep.age_at_first_childbirth != null && rep.age_at_first_childbirth !== 0 ? String(rep.age_at_first_childbirth) : '');
+    setLastChildbirthDate(rep.date_of_last_childbirth ? String(rep.date_of_last_childbirth).split('T')[0] ?? '' : '');
     setBreastfeedingHas(normalizeBreastfeeding(rep.breastfeeding_history));
     setBreastfeedingDuration(rep.breastfeeding_duration || '');
     setContraceptiveUsage(rep.contraceptive_usage || '');
     setHormoneTherapy(rep.hormone_therapy_history || '');
     setInfertilityTreatment(rep.infertility_treatment_history || '');
 
-    const lh = record.lifestyle_history || {};
-    setSmokingStatus(lh.smoking_status || 'Never');
+    const lh = safeObj(record.lifestyle_history || (record as any).lifecycle_history);
+    setSmokingStatus(normalizeSmokingStatus(lh.smoking_status));
     setSmokingDuration(lh.smoking_duration || '');
-    setAlcoholConsumption(lh.alcohol_consumption || 'Never');
+    setAlcoholConsumption(normalizeAlcoholConsumption(lh.alcohol_consumption));
     setTobaccoUsage(lh.tobacco_usage || '');
     setChewingTobacco(lh.chewing_tobacco || '');
-    setDietType(lh.diet_type || 'Non-Vegetarian');
-    setActivityLevel(lh.physical_activity_level || 'Moderate');
+    setDietType(normalizeDietType(lh.diet_type));
+    setActivityLevel(normalizeActivityLevel(lh.physical_activity_level));
     setSleepPattern(lh.sleep_pattern || '');
     setOccupationalExposure(lh.occupational_exposure || '');
     setOtherHabits(lh.other_habits || '');
@@ -677,12 +747,17 @@ export const ClinicalHistorySectionContent = forwardRef<
     }
   }, [patientId]);
 
+  const lastPopulatedDataRef = useRef<any>(null);
+  const lastPopulatedUpdatedAtRef = useRef<any>(null);
+
   // Initialize form state from initialData, fetch latest history, or reset
   useEffect(() => {
     if (!isDrawerOpen) {
       prevOpenRef.current = false;
       prevLoadedRecordIdRef.current = undefined;
       loadedPatientIdRef.current = null;
+      lastPopulatedDataRef.current = null;
+      lastPopulatedUpdatedAtRef.current = null;
       return;
     }
 
@@ -690,13 +765,21 @@ export const ClinicalHistorySectionContent = forwardRef<
     prevOpenRef.current = true;
 
     if (initialData) {
-      if (justOpened || initialData.id !== prevLoadedRecordIdRef.current) {
+      if (
+        justOpened ||
+        initialData !== lastPopulatedDataRef.current ||
+        initialData.id !== prevLoadedRecordIdRef.current ||
+        (initialData.updated_at && initialData.updated_at !== lastPopulatedUpdatedAtRef.current)
+      ) {
         prevLoadedRecordIdRef.current = initialData.id;
+        lastPopulatedDataRef.current = initialData;
+        lastPopulatedUpdatedAtRef.current = initialData.updated_at || initialData.id;
         populateFromRecord(initialData);
       }
     } else if (initialData === null) {
       if (justOpened) {
         prevLoadedRecordIdRef.current = null;
+        lastPopulatedDataRef.current = null;
         resetForm();
       }
     } else {
@@ -710,6 +793,8 @@ export const ClinicalHistorySectionContent = forwardRef<
             if (isCancelled) return;
             if (latest) {
               prevLoadedRecordIdRef.current = latest.id;
+              lastPopulatedDataRef.current = latest;
+              lastPopulatedUpdatedAtRef.current = latest.updated_at || latest.id;
               populateFromRecord(latest);
             } else {
               resetForm();
@@ -806,6 +891,18 @@ export const ClinicalHistorySectionContent = forwardRef<
     );
   };
 
+  // Safe numeric parsing helpers to prevent NaN serialization issues
+  const safeInt = (v: any): number | null => {
+    if (v === null || v === undefined || v === '') return null;
+    const n = parseInt(String(v), 10);
+    return Number.isNaN(n) ? null : n;
+  };
+  const safeFloat = (v: any): number | null => {
+    if (v === null || v === undefined || v === '') return null;
+    const n = parseFloat(String(v));
+    return Number.isNaN(n) ? null : n;
+  };
+
   // Build structured payload
   const buildPayload = (): Partial<PatientMedicalHistoryRecord> => ({
     recorded_date: recordedDate || (new Date().toISOString().split('T')[0] ?? ''),
@@ -818,13 +915,13 @@ export const ClinicalHistorySectionContent = forwardRef<
       pain_level: painLevel,
       current_diagnosis: currentDiagnosis.trim() || null,
       clinical_observations: clinicalObservations.trim() || null,
-      height_cm: heightCm ? parseFloat(heightCm) : null,
-      weight_kg: weightKg ? parseFloat(weightKg) : null,
-      bmi: bmiInfo ? parseFloat(bmiInfo.val) : null,
+      height_cm: safeFloat(heightCm),
+      weight_kg: safeFloat(weightKg),
+      bmi: bmiInfo ? safeFloat(bmiInfo.val) : null,
       blood_pressure: bloodPressure.trim() || null,
-      pulse_rate: pulseRate ? parseInt(pulseRate, 10) : null,
-      temperature: temperature ? parseFloat(temperature) : null,
-      oxygen_saturation: oxygenSaturation ? parseInt(oxygenSaturation, 10) : null,
+      pulse_rate: safeInt(pulseRate),
+      temperature: safeFloat(temperature),
+      oxygen_saturation: safeInt(oxygenSaturation),
       blood_sugar: bloodSugar.trim() || null,
       already_taking_tablets: alreadyTakingTablets.trim() || null,
       custom_vitals: customVitals
@@ -889,44 +986,53 @@ export const ClinicalHistorySectionContent = forwardRef<
     family_medical_history: {
       has_family_history: hasFamilyHistory,
       members: familyMembers
-        .filter((m) => m.disease_name.trim())
+        .filter(
+          (m) =>
+            (m.disease_name && String(m.disease_name).trim()) ||
+            (m.relationship && String(m.relationship).trim()) ||
+            (m.remarks && String(m.remarks).trim()) ||
+            (m.cause_of_death && String(m.cause_of_death).trim()),
+        )
         .map((m) => ({
           ...m,
-          disease_name: m.disease_name.trim(),
-          relationship: m.relationship?.trim() || 'Family Member',
+          disease_name: (m.disease_name || '').trim(),
+          relationship: (m.relationship || 'Family Member').trim(),
+          current_health_status: m.current_health_status || 'Living with Condition',
+          cause_of_death: m.cause_of_death ? String(m.cause_of_death).trim() : null,
+          remarks: m.remarks ? String(m.remarks).trim() : null,
         })),
     },
     reproductive_history: {
       is_applicable: reproductiveApplicable,
-      marital_status: maritalStatus.trim() || null,
-      age_at_menarche: menarcheAge ? parseInt(menarcheAge, 10) : null,
+      marital_status: (maritalStatus || '').trim() || null,
+      age_at_menarche: safeInt(menarcheAge),
       menstrual_status: menstrualStatus,
-      age_at_menopause: menopauseAge ? parseInt(menopauseAge, 10) : null,
-      number_of_pregnancies: pregnancies ? parseInt(pregnancies, 10) : null,
-      number_of_deliveries: deliveries ? parseInt(deliveries, 10) : null,
-      number_of_children: childrenCount ? parseInt(childrenCount, 10) : null,
-      number_of_living_children: livingChildren ? parseInt(livingChildren, 10) : null,
-      number_of_miscarriages: miscarriages ? parseInt(miscarriages, 10) : null,
-      number_of_abortions: abortions ? parseInt(abortions, 10) : null,
-      age_at_first_childbirth: firstChildbirthAge ? parseInt(firstChildbirthAge, 10) : null,
+      age_at_menopause: safeInt(menopauseAge),
+      number_of_pregnancies: safeInt(pregnancies),
+      number_of_deliveries: safeInt(deliveries),
+      number_of_children: safeInt(childrenCount),
+      number_of_living_children: safeInt(livingChildren),
+      number_of_miscarriages: safeInt(miscarriages),
+      number_of_abortions: safeInt(abortions),
+      age_at_first_childbirth: safeInt(firstChildbirthAge),
       date_of_last_childbirth: lastChildbirthDate || null,
       breastfeeding_history: breastfeedingHas,
-      breastfeeding_duration: breastfeedingDuration.trim() || null,
-      contraceptive_usage: contraceptiveUsage.trim() || null,
-      hormone_therapy_history: hormoneTherapy.trim() || null,
-      infertility_treatment_history: infertilityTreatment.trim() || null,
+      breastfeeding_duration: (breastfeedingDuration || '').trim() || null,
+      contraceptive_usage: (contraceptiveUsage || '').trim() || null,
+      hormone_therapy_history: (hormoneTherapy || '').trim() || null,
+      infertility_treatment_history: (infertilityTreatment || '').trim() || null,
     },
     lifestyle_history: {
       smoking_status: smokingStatus,
-      smoking_duration: smokingDuration.trim() || null,
+      smoking_duration: (smokingDuration || '').trim() || null,
       alcohol_consumption: alcoholConsumption,
-      tobacco_usage: tobaccoUsage.trim() || null,
-      chewing_tobacco: chewingTobacco.trim() || null,
+      tobacco_usage: (tobaccoUsage || '').trim() || null,
+      chewing_tobacco: (chewingTobacco || '').trim() || null,
       diet_type: dietType,
       physical_activity_level: activityLevel,
-      sleep_pattern: sleepPattern.trim() || null,
-      occupational_exposure: occupationalExposure.trim() || null,
-      other_habits: otherHabits.trim() || null,
+      sleep_pattern: (sleepPattern || '').trim() || null,
+      occupational_exposure: (occupationalExposure || '').trim() || null,
+      other_habits: (otherHabits || '').trim() || null,
     },
   });
 
@@ -958,20 +1064,9 @@ export const ClinicalHistorySectionContent = forwardRef<
     save: persistChanges,
   }));
 
-  // Next Without Save Action
+  // Next Action (automatically persists progress)
   const handleNextWithoutSave = () => {
-    const currentIndex = STEPS.findIndex((s) => s.key === activeTab);
-    let nextIndex = currentIndex + 1;
-    // If next is reproductive and not applicable, skip to lifestyle
-    if (STEPS[nextIndex]?.key === 'reproductive' && !reproductiveApplicable && !isFemale) {
-      nextIndex += 1;
-    }
-    if (nextIndex < STEPS.length) {
-      const targetStep = STEPS[nextIndex];
-      if (targetStep) {
-        setActiveTab(targetStep.key);
-      }
-    }
+    void handleSaveAndNext();
   };
 
   // Save & Next Action
@@ -3066,7 +3161,7 @@ export const ClinicalHistorySectionContent = forwardRef<
                           placeholder="Select..."
                           searchPlaceholder="Search relationship..."
                           options={FAMILY_RELATIONSHIP_OPTIONS}
-                          value={fm.relationship}
+                          value={fm.relationship || 'Father'}
                           onChange={(val) => {
                             setFamilyMembers((prev) =>
                               prev.map((item, i) => (i === idx ? { ...item, relationship: val } : item)),
@@ -3081,7 +3176,7 @@ export const ClinicalHistorySectionContent = forwardRef<
                           type="text"
                           className="patient-form-input"
                           placeholder="e.g. Type 2 Diabetes, Breast Cancer"
-                          value={fm.disease_name}
+                          value={fm.disease_name || ''}
                           onChange={(e) => {
                             const val = e.target.value;
                             setFamilyMembers((prev) =>

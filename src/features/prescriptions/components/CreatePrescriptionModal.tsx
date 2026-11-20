@@ -37,9 +37,11 @@ import {
 } from '../api/prescriptionsApi';
 import type { LetterPadDataContext } from '../types/template';
 import { PrescriptionPreviewModal } from './PrescriptionPreviewModal';
+import { formatPatientDisplayName } from '../../../lib/format';
 
 interface PatientOption {
   id: string;
+  patient_id?: string | null | undefined;
   name: string;
   phone?: string | undefined;
   gender?: string | undefined;
@@ -130,6 +132,7 @@ interface CreatePrescriptionModalProps {
   /** If creating for a specific patient */
   preselectedPatient?: {
     id: string;
+    patient_id?: string | null | undefined;
     name: string;
     phone?: string | undefined;
     gender?: string | undefined;
@@ -337,6 +340,7 @@ export default function CreatePrescriptionModal({
         : (res.data as any)?.data || [];
       const patientsList: PatientOption[] = rawPatients.map((p: any) => ({
         id: p.id,
+        patient_id: p.patient_id ?? undefined,
         name: p.name || 'Unnamed Patient',
         phone: p.phone ?? undefined,
         gender: p.gender ?? undefined,
@@ -363,14 +367,14 @@ export default function CreatePrescriptionModal({
   // Map patient list to SearchableSelect options
   const patientOptions = useMemo<SearchableSelectOption[]>(() => {
     return patients.map((p) => {
-      const details = [p.phone, p.gender].filter(Boolean).join(' • ');
+      const details = [p.patient_id, p.phone, p.gender].filter(Boolean).join(' • ');
       return {
         value: p.id,
-        label: p.name,
+        label: formatPatientDisplayName(p.name, p.patient_id),
         sublabel: details || undefined,
         badge: p.gender ? p.gender.toUpperCase() : undefined,
         badgeTone: p.gender?.toLowerCase() === 'female' ? 'violet' : 'blue',
-        extraSearchTerms: [p.phone || '', p.gender || '', p.id],
+        extraSearchTerms: [p.patient_id || '', p.phone || '', p.gender || '', p.id],
       };
     });
   }, [patients]);
@@ -559,8 +563,8 @@ export default function CreatePrescriptionModal({
       },
       patient: {
         id: selectedPatient?.id || selectedPatientId,
-        name: selectedPatient?.name || 'Patient',
-        patient_id: selectedPatient?.id ? String(selectedPatient.id).slice(0, 8).toUpperCase() : 'HMS-2026-0456',
+        name: formatPatientDisplayName(selectedPatient?.name, selectedPatient?.patient_id),
+        patient_id: selectedPatient?.patient_id || (selectedPatient?.id ? String(selectedPatient.id).slice(0, 8).toUpperCase() : 'HMS-2026-0456'),
         phone: selectedPatient?.phone || '',
         gender: selectedPatient?.gender || '',
         date_of_birth: selectedPatient?.date_of_birth || '',
@@ -1615,7 +1619,7 @@ export default function CreatePrescriptionModal({
                     <User size={15} style={{ color: '#2563eb', flexShrink: 0 }} />
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       <span style={{ fontWeight: 650, color: '#0f172a', fontSize: 13 }}>
-                        {selectedPatient.name}
+                        {formatPatientDisplayName(selectedPatient.name, selectedPatient.patient_id)}
                       </span>
                       <span style={{ fontSize: 11.5, color: '#64748b', marginLeft: 6 }}>
                         {[selectedPatient.gender, selectedPatient.phone].filter(Boolean).join(' · ')}

@@ -23,6 +23,7 @@ import {
   Pill,
   Plus,
   RefreshCw,
+  Save,
   ShieldCheck,
   Stethoscope,
   User,
@@ -33,6 +34,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
+import { formatPatientDisplayName } from '../lib/format';
 import { type Branch } from './BranchModal';
 import { type Hospital } from './HospitalModal';
 import { Modal, SwitchRow } from './ui/Modal';
@@ -64,6 +66,7 @@ export interface CustomVitalField {
 
 export interface Patient {
   id: string;
+  patient_id?: string | null;
   user_account_id: string | null;
   hospital_id: string;
   hospital_name?: string;
@@ -148,7 +151,7 @@ export function validatePatientName(val: string): string | undefined {
   if (/[0-9]/.test(val)) {
     return 'Numbers are not allowed in patient name.';
   }
-  if (/[^a-zA-Z\s.-]/.test(val)) {
+  if (/[^a-zA-Z\s._-]/.test(val)) {
     return 'Patient name can only contain letters, spaces, hyphens, and periods.';
   }
   return undefined;
@@ -436,6 +439,7 @@ export default function PatientModal({
   const [latestMedicalHistory, setLatestMedicalHistory] = useState<PatientMedicalHistoryRecord | null | undefined>(undefined);
   const [managementPlan, setManagementPlan] = useState<PlanOfManagementData | null>(null);
   const [savingPlan, setSavingPlan] = useState(false);
+  const [savingHistory, setSavingHistory] = useState(false);
 
   // Official Prescriptions & Appointments module drawers state
   const [isRxDrawerOpen, setIsRxDrawerOpen] = useState(false);
@@ -484,16 +488,54 @@ export default function PatientModal({
     }
   }, [activePatient?.id, patient?.id, isOpen]);
 
-  const handleContinueToPlan = async () => {
+  const handleSaveMedicalHistoryProgress = async () => {
+    if (!clinicalHistoryRef.current) return;
+    setSavingHistory(true);
     try {
-      if (clinicalHistoryRef.current) {
-        await clinicalHistoryRef.current.save();
-      }
-      setActiveStep('plan');
+      const saved = await clinicalHistoryRef.current.save();
+      setLatestMedicalHistory(saved);
+      toastMessage.success('Medical history saved successfully.');
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { error?: string } }; message?: string };
-      toastMessage.error(e.response?.data?.error || e.message || 'Failed to save medical history.');
+      toastMessage.error(getErrorMessage(err, 'Failed to save medical history.'));
+    } finally {
+      setSavingHistory(false);
     }
+  };
+
+  const handleSaveAndNextHistorySubStep = async (nextStep: PatientModalStep) => {
+    if (clinicalHistoryRef.current) {
+      setSavingHistory(true);
+      try {
+        const saved = await clinicalHistoryRef.current.save();
+        setLatestMedicalHistory(saved);
+        toastMessage.success('Medical history saved successfully.');
+      } catch (err: unknown) {
+        toastMessage.error(getErrorMessage(err, 'Failed to save medical history.'));
+        setSavingHistory(false);
+        return;
+      } finally {
+        setSavingHistory(false);
+      }
+    }
+    setActiveStep(nextStep);
+  };
+
+  const handleContinueToPlan = async () => {
+    if (clinicalHistoryRef.current) {
+      setSavingHistory(true);
+      try {
+        const saved = await clinicalHistoryRef.current.save();
+        setLatestMedicalHistory(saved);
+        toastMessage.success('Medical history saved successfully.');
+      } catch (err: unknown) {
+        toastMessage.error(getErrorMessage(err, 'Failed to save medical history.'));
+        setSavingHistory(false);
+        return;
+      } finally {
+        setSavingHistory(false);
+      }
+    }
+    setActiveStep('plan');
   };
 
   const handlePlanSaved = async (plan: PlanOfManagementData) => {
@@ -510,7 +552,10 @@ export default function PatientModal({
     try {
       setManagementPlan(plan);
       const latest = await medicalHistoryApi.getLatestHistory(patId);
-      const payload = {
+      if (latest) {
+        setLatestMedicalHistory(latest);
+      }
+      const payload: any = {
         current_medical_info: {
           ...(latest?.current_medical_info || {}),
           current_diagnosis: plan.provisionalDiagnosis,
@@ -521,6 +566,18 @@ export default function PatientModal({
           care_goals: plan.careGoals || null,
         },
       };
+      if (latest?.previous_medical_history) {
+        payload.previous_medical_history = latest.previous_medical_history;
+      }
+      if (latest?.family_medical_history) {
+        payload.family_medical_history = latest.family_medical_history;
+      }
+      if (latest?.reproductive_history) {
+        payload.reproductive_history = latest.reproductive_history;
+      }
+      if (latest?.lifestyle_history) {
+        payload.lifestyle_history = latest.lifestyle_history;
+      }
 
       if (latest?.id) {
         await medicalHistoryApi.updateHistory(patId, latest.id, payload);
@@ -1005,14 +1062,12 @@ export default function PatientModal({
     const isCurrentlyInHistory =
       activeStep === 'history' ||
       ['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep);
-    const isTargetHistory =
-      stepKey === 'history' ||
-      ['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(stepKey);
 
-    if (isCurrentlyInHistory && !isTargetHistory) {
+    if (isCurrentlyInHistory && stepKey !== activeStep) {
       try {
         if (clinicalHistoryRef.current) {
-          await clinicalHistoryRef.current.save();
+          const saved = await clinicalHistoryRef.current.save();
+          setLatestMedicalHistory(saved);
         }
       } catch (err: unknown) {
         console.error('Failed to auto-save clinical history on step switch:', err);
@@ -1946,6 +2001,35 @@ export default function PatientModal({
               </div>
             </div>
 
+            {patient?.patient_id && (
+              <div>
+                <label
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#334155',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginBottom: 5,
+                  }}
+                >
+                  <span>Patient ID</span>
+                  <span style={{ fontSize: 11, fontWeight: 500, color: '#0284c7', background: '#e0f2fe', padding: '1px 6px', borderRadius: 4 }}>
+                    Unique Identifier
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  value={patient.patient_id}
+                  readOnly
+                  disabled
+                  className="ui-input"
+                  style={{ background: '#f8fafc', color: '#0f172a', fontWeight: 600, cursor: 'not-allowed', width: '100%' }}
+                />
+              </div>
+            )}
+
             <div>
               <label
                 htmlFor="patient-name"
@@ -1981,7 +2065,7 @@ export default function PatientModal({
                   type="text"
                   value={name}
                   onChange={(e) => {
-                    const sanitized = e.target.value.replace(/[^a-zA-Z\s.-]/g, '').slice(0, 100);
+                    const sanitized = e.target.value.replace(/[^a-zA-Z\s._-]/g, '').slice(0, 100);
                     setName(sanitized);
                     setErrors((prev) => ({ ...prev, name: validatePatientName(sanitized) }));
                   }}
@@ -3660,13 +3744,24 @@ export default function PatientModal({
                     </button>
                   )}
 
+                  {/* Standalone Save Progress button for any Medical History sub-tab */}
+                  <button
+                    type="button"
+                    onClick={handleSaveMedicalHistoryProgress}
+                    disabled={savingHistory}
+                    className="patient-footer-btn patient-footer-btn-secondary"
+                    style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <Save size={14} />
+                    <span>{savingHistory ? 'Saving…' : 'Save Progress'}</span>
+                  </button>
+
                   {currentSubIdx < subKeys.length - 1 && subKeys[currentSubIdx + 1] ? (
                     <>
                       <button
                         type="button"
-                        onClick={() => {
-                          setActiveStep(subKeys[currentSubIdx + 1] as PatientModalStep);
-                        }}
+                        onClick={() => handleSaveAndNextHistorySubStep(subKeys[currentSubIdx + 1] as PatientModalStep)}
+                        disabled={savingHistory}
                         className="patient-footer-btn patient-footer-btn-neutral"
                         style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                       >
@@ -3676,18 +3771,12 @@ export default function PatientModal({
 
                       <button
                         type="button"
-                        onClick={async () => {
-                          if (clinicalHistoryRef.current) {
-                            try {
-                              await clinicalHistoryRef.current.save();
-                            } catch {}
-                          }
-                          setActiveStep(subKeys[currentSubIdx + 1] as PatientModalStep);
-                        }}
+                        onClick={() => handleSaveAndNextHistorySubStep(subKeys[currentSubIdx + 1] as PatientModalStep)}
+                        disabled={savingHistory}
                         className="patient-footer-btn patient-footer-btn-primary"
                         style={{ padding: '7px 20px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                       >
-                        <span>Save &amp; Next</span>
+                        <span>{savingHistory ? 'Saving…' : 'Save & Next'}</span>
                         <ChevronRight size={15} />
                       </button>
                     </>
@@ -3695,7 +3784,8 @@ export default function PatientModal({
                     <>
                       <button
                         type="button"
-                        onClick={() => setActiveStep('plan')}
+                        onClick={handleContinueToPlan}
+                        disabled={savingHistory}
                         className="patient-footer-btn patient-footer-btn-neutral"
                         style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                       >
@@ -3706,10 +3796,11 @@ export default function PatientModal({
                       <button
                         type="button"
                         onClick={handleContinueToPlan}
+                        disabled={savingHistory}
                         className="patient-footer-btn patient-footer-btn-primary"
                         style={{ padding: '7px 20px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                       >
-                        <span>Save &amp; Next</span>
+                        <span>{savingHistory ? 'Saving…' : 'Save & Next'}</span>
                         <ChevronRight size={15} />
                       </button>
                     </>
@@ -3893,7 +3984,7 @@ export default function PatientModal({
                   letterSpacing: '-0.01em',
                 }}
               >
-                {patient ? `Edit Patient · ${patient.name}` : 'Register New Patient'}
+                {patient ? `Edit Patient · ${formatPatientDisplayName(patient.name, patient.patient_id)}` : 'Register New Patient'}
               </div>
               <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
                 {patient
@@ -3981,7 +4072,7 @@ export default function PatientModal({
                   letterSpacing: '-0.01em',
                 }}
               >
-                {patient ? `Edit Patient · ${patient.name}` : 'Register New Patient'}
+                {patient ? `Edit Patient · ${formatPatientDisplayName(patient.name, patient.patient_id)}` : 'Register New Patient'}
               </div>
               <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
                 {patient

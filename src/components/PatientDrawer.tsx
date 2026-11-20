@@ -20,7 +20,7 @@ import { useEffect, useState } from 'react';
 import { type Prescription, prescriptionsApi } from '../features/prescriptions/api/prescriptionsApi';
 import CreatePrescriptionModal from '../features/prescriptions/components/CreatePrescriptionModal';
 import ViewPrescriptionModal from '../features/prescriptions/components/ViewPrescriptionModal';
-import { formatDate, formatPatientAge, timeAgo, titleCase } from '../lib/format';
+import { formatDate, formatPatientAge, formatPatientDisplayName, timeAgo, titleCase } from '../lib/format';
 import { type Patient } from './PatientModal';
 import { usePermission } from '../context/PermissionContext';
 import { Drawer } from './ui/Drawer';
@@ -156,7 +156,7 @@ export default function PatientDrawer({ patient, onClose, onEdit }: PatientDrawe
                 letterSpacing: '-0.01em',
               }}
             >
-              {patient.name}
+              {formatPatientDisplayName(patient.name, patient.patient_id)}
             </h2>
             {patient.blood_group && (
               <span
@@ -1205,7 +1205,7 @@ export default function PatientDrawer({ patient, onClose, onEdit }: PatientDrawe
           open={isCreateRxOpen}
           preselectedPatient={{
             id: patient.id,
-            name: patient.name,
+            name: formatPatientDisplayName(patient.name, patient.patient_id),
             phone: patient.phone ?? undefined,
             gender: patient.gender ?? undefined,
             date_of_birth: patient.date_of_birth ?? undefined,

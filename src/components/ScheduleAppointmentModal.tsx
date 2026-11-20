@@ -19,6 +19,7 @@ import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
 import type { Doctor } from './DoctorModal';
 import type { Patient } from './PatientModal';
+import { formatPatientDisplayName } from '../lib/format';
 import { Field, Modal } from './ui/Modal';
 import { Alert, Badge, cx } from './ui/primitives';
 import { SearchableSelect, type SearchableSelectOption } from './ui/SearchableSelect';
@@ -46,7 +47,7 @@ export function validateAppointmentPatientName(val: string): string | undefined 
   if (/[0-9]/.test(val)) {
     return 'Numbers are not allowed in patient name.';
   }
-  if (/[^a-zA-Z\s.-]/.test(val)) {
+  if (/[^a-zA-Z\s._-]/.test(val)) {
     return 'Patient name can only contain letters, spaces, hyphens, and periods.';
   }
   return undefined;
@@ -245,11 +246,12 @@ export default function ScheduleAppointmentModal({
   const patientOptions = useMemo<SearchableSelectOption[]>(() => {
     return patients.map((pat) => ({
       value: pat.id,
-      label: pat.name,
-      sublabel: [pat.phone, pat.email].filter(Boolean).join(' · ') || undefined,
+      label: formatPatientDisplayName(pat.name, pat.patient_id),
+      sublabel: [pat.patient_id, pat.phone, pat.email].filter(Boolean).join(' · ') || undefined,
       badge: pat.blood_group || pat.branch_name || undefined,
       badgeTone: pat.blood_group ? ('red' as const) : ('neutral' as const),
       extraSearchTerms: [
+        pat.patient_id,
         pat.phone,
         pat.email,
         pat.blood_group,
@@ -930,7 +932,7 @@ export default function ScheduleAppointmentModal({
                       boxShadow: errors.newPatientName ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
                     }}
                     onChange={(e) => {
-                      const sanitized = e.target.value.replace(/[^a-zA-Z\s.-]/g, '').slice(0, 100);
+                      const sanitized = e.target.value.replace(/[^a-zA-Z\s._-]/g, '').slice(0, 100);
                       setNewPatientName(sanitized);
                       setErrors((prev) => ({ ...prev, newPatientName: validateAppointmentPatientName(sanitized) }));
                     }}
