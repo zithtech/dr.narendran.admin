@@ -1656,6 +1656,50 @@ export default function PatientModal({
               position: static !important;
             }
           }
+          @media (max-width: 640px) {
+            .patient-create-drawer-modal {
+              width: 100vw !important;
+              max-width: 100vw !important;
+              border-radius: 0 !important;
+            }
+            .patient-create-drawer-modal .ui-modal-head {
+              padding: 12px 16px !important;
+            }
+            .patient-create-drawer-modal .ui-modal-body {
+              padding: 12px 14px !important;
+            }
+            .patient-section-card {
+              padding: 16px 14px !important;
+              border-radius: 12px !important;
+            }
+            .patient-page-header {
+              padding: 12px 16px !important;
+              flex-wrap: wrap !important;
+              gap: 10px !important;
+            }
+            .patient-page-grid {
+              padding: 14px 14px 40px 14px !important;
+            }
+            .patient-page-fixed-footer > div {
+              padding: 10px 14px !important;
+              flex-direction: column !important;
+              align-items: stretch !important;
+              gap: 10px !important;
+            }
+            .patient-page-fixed-footer > div > div:last-child {
+              flex-wrap: wrap !important;
+              justify-content: flex-end !important;
+            }
+          }
+          @media (max-width: 480px) {
+            .patient-page-fixed-footer > div > div:last-child {
+              flex-direction: column-reverse !important;
+            }
+            .patient-page-fixed-footer > div > div:last-child button {
+              width: 100% !important;
+              justify-content: center !important;
+            }
+          }
           .patient-page-layout.patient-create-drawer-modal {
             width: 100% !important;
             max-width: 100% !important;

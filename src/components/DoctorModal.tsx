@@ -580,8 +580,9 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
           >
             {doctor ? <Pencil size={18} /> : <Stethoscope size={18} />}
           </div>
-          <div>
+          <div className="doctor-modal-title-wrap">
             <div
+              className="doctor-modal-title"
               style={{
                 fontSize: 16.5,
                 fontWeight: 700,
@@ -591,7 +592,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
             >
               {doctor ? `Edit Doctor · ${doctor.name}` : 'Add New Doctor'}
             </div>
-            <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
+            <div className="doctor-modal-subtitle" style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
               {doctor
                 ? 'Update doctor credentials, specialization, hospital assignments, and practice details.'
                 : 'Register a medical doctor, assign hospital facilities, and set up professional profile credentials.'}
@@ -640,6 +641,92 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
           }
           .doctor-section-card:hover {
             border-color: #cbd5e1;
+          }
+          .doctor-modal-grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+          }
+          .doctor-modal-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+          }
+          .doctor-status-options-row {
+            display: flex;
+            gap: 10px;
+          }
+          .doctor-modal-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            border-top: 1px solid #f1f5f9;
+            background: #ffffff;
+          }
+          .doctor-modal-footer-hint {
+            font-size: 12px;
+            color: #64748b;
+          }
+          .doctor-modal-footer-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+          }
+          @media (max-width: 640px) {
+            .doctor-create-drawer-modal {
+              width: 100vw !important;
+              max-width: 100vw !important;
+            }
+            .doctor-create-drawer-modal .ui-modal-head {
+              padding: 14px 16px !important;
+            }
+            .doctor-create-drawer-modal .ui-modal-body {
+              padding: 12px 14px !important;
+              gap: 12px !important;
+            }
+            .doctor-section-card {
+              padding: 14px 12px !important;
+              gap: 12px !important;
+            }
+            .doctor-modal-grid-2,
+            .doctor-modal-grid-3 {
+              grid-template-columns: 1fr !important;
+              gap: 10px !important;
+            }
+            .doctor-modal-footer {
+              flex-direction: column-reverse !important;
+              align-items: stretch !important;
+              gap: 12px !important;
+              padding: 12px 16px !important;
+            }
+            .doctor-modal-footer-hint {
+              text-align: center !important;
+              font-size: 11px !important;
+            }
+            .doctor-modal-footer-actions {
+              width: 100% !important;
+              display: flex !important;
+              gap: 8px !important;
+            }
+            .doctor-modal-footer-actions > button {
+              flex: 1 !important;
+              justify-content: center !important;
+              min-height: 38px !important;
+            }
+            .doctor-modal-title {
+              font-size: 15px !important;
+            }
+            .doctor-modal-subtitle {
+              font-size: 11px !important;
+              line-height: 1.35 !important;
+            }
+          }
+          @media (max-width: 480px) {
+            .doctor-status-options-row {
+              flex-direction: column !important;
+              gap: 8px !important;
+            }
           }
           .doctor-section-header {
             display: flex;
@@ -802,7 +889,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
               )}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+            <div className="doctor-modal-grid-2">
               <div>
                 <label
                   htmlFor="doctor-phone"
@@ -956,7 +1043,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
               <div className="doctor-section-tag">Hospital & Practice Assignment</div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+            <div className="doctor-modal-grid-2">
               <div>
                 <label
                   htmlFor="doctor-hospital"
@@ -1087,13 +1174,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
               </label>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                    gap: 12,
-                  }}
-                >
+                <div className="doctor-modal-grid-2">
                   <div>
                     <label
                       htmlFor="doctor-address-line-1"
@@ -1169,13 +1250,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                    gap: 12,
-                  }}
-                >
+                <div className="doctor-modal-grid-3">
                   <div>
                     <label
                       htmlFor="doctor-city"
@@ -1301,7 +1376,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
               <div className="doctor-section-tag">Professional Credentials & Expertise</div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+            <div className="doctor-modal-grid-2">
               <div>
                 <label
                   htmlFor="doctor-specialization"
@@ -1380,7 +1455,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+            <div className="doctor-modal-grid-2">
               <div>
                 <label
                   htmlFor="doctor-med-reg"
@@ -1627,7 +1702,7 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
               >
                 Doctor Profile Status
               </label>
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div className="doctor-status-options-row">
                 <button
                   type="button"
                   className={`doctor-status-btn ${status === 'ACTIVE' ? 'is-active' : ''}`}
@@ -1709,11 +1784,11 @@ export default function DoctorModal({ isOpen, onClose, doctor, onSave }: DoctorM
           </div>
         </div>
 
-        <div className="ui-modal-foot" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 12, color: '#64748b' }}>
+        <div className="ui-modal-foot doctor-modal-footer">
+          <div className="doctor-modal-footer-hint">
             Fields marked with <span style={{ color: '#ef4444' }}>*</span> are required
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="doctor-modal-footer-actions">
             <button type="button" onClick={onClose} className="ui-btn ui-btn-neutral">
               Cancel
             </button>

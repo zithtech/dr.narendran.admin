@@ -309,7 +309,7 @@ export default function PatientTimelineDetailPage() {
           )}
 
           {/* 2. Main Page Body: Content aligned directly with sticky header inner elements */}
-          <div className="w-full px-4 sm:px-6 space-y-2.5 sm:space-y-3 pt-2 pb-10">
+          <div className="w-full px-2.5 sm:px-6 space-y-2.5 sm:space-y-3 pt-2 pb-10">
             {/* Health Summary Card */}
             {healthSummary && (
               <TimelineHealthSummary summary={healthSummary} />
@@ -341,7 +341,7 @@ export default function PatientTimelineDetailPage() {
             </div>
 
             {/* Chronological Timeline Feed */}
-            <div className="pt-2 sm:pt-3 max-w-5xl mx-auto px-4 sm:px-8 md:px-12">
+            <div className="pt-2 sm:pt-3 max-w-5xl mx-auto px-2 sm:px-8 md:px-12">
               <div className="mb-2.5 flex items-center justify-between">
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
                   <History className="w-4 h-4 text-teal-700" />

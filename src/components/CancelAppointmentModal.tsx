@@ -246,6 +246,33 @@ export default function CancelAppointmentModal({
         .cancel-appointment-modal {
           max-width: 500px !important;
         }
+        @media (max-width: 640px) {
+          .cancel-appointment-modal {
+            width: calc(100vw - 20px) !important;
+            max-width: 100% !important;
+            margin: 10px auto !important;
+          }
+          .cancel-appointment-modal .ui-modal-head {
+            padding: 14px 16px !important;
+          }
+          .cancel-appointment-modal .ui-modal-body {
+            padding: 14px 16px !important;
+            gap: 12px !important;
+          }
+          .cancel-appointment-modal .ui-modal-foot {
+            padding: 12px 16px !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .cancel-appointment-modal .ui-modal-foot {
+            flex-direction: column-reverse !important;
+            gap: 8px !important;
+          }
+          .cancel-appointment-modal .ui-modal-foot button {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+        }
       `}</style>
     </Modal>
   );

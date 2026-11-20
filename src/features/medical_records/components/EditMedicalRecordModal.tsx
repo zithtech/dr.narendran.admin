@@ -75,100 +75,122 @@ export const EditMedicalRecordModal: React.FC<EditMedicalRecordModalProps> = ({
   };
 
   return (
-    <Modal
-      open={open}
-      onClose={saving ? () => undefined : onClose}
-      variant="drawer"
-      size="md"
-      title={
-        <div className="flex items-center gap-2">
-          <FileText size={18} className="text-blue-600" />
-          <span>Edit Medical Record Metadata</span>
-        </div>
-      }
-      description={
-        record
-          ? `Patient: ${record.patientName} • File: ${record.fileName}`
-          : 'Update record identification, date, and doctor notes.'
-      }
-    >
-      <form onSubmit={handleSubmit} className="ui-modal-form">
-        <div className="ui-modal-body space-y-4">
-          {error && <Alert>{error}</Alert>}
+    <>
+      <style>{`
+        .medical-edit-drawer-modal {
+          width: min(560px, 100vw) !important;
+          max-width: 100vw !important;
+        }
+        @media (max-width: 640px) {
+          .medical-edit-drawer-modal .ui-modal-head {
+            padding: 12px 14px !important;
+          }
+          .medical-edit-drawer-modal .ui-modal-body {
+            padding: 12px 14px !important;
+          }
+          .medical-edit-drawer-modal .ui-modal-foot {
+            padding: 10px 14px !important;
+            flex-wrap: wrap !important;
+            justify-content: flex-end !important;
+          }
+        }
+      `}</style>
+      <Modal
+        open={open}
+        onClose={saving ? () => undefined : onClose}
+        variant="drawer"
+        size="md"
+        className="medical-edit-drawer-modal"
+        title={
+          <div className="flex items-center gap-2">
+            <FileText size={18} className="text-blue-600" />
+            <span>Edit Medical Record Metadata</span>
+          </div>
+        }
+        description={
+          record
+            ? `Patient: ${record.patientName} • File: ${record.fileName}`
+            : 'Update record identification, date, and doctor notes.'
+        }
+      >
+        <form onSubmit={handleSubmit} className="ui-modal-form">
+          <div className="ui-modal-body space-y-4">
+            {error && <Alert>{error}</Alert>}
 
-          <Section title="Document Information">
-            <div className="space-y-3">
-              <Field
-                label="Test / Document Name"
-                required
-                hint="e.g. Complete Blood Count (CBC), Chest X-Ray, Discharge Summary"
-              >
-                <input
-                  type="text"
-                  className="ui-input"
-                  placeholder="Enter record or test name..."
-                  value={testName}
-                  onChange={(e) => setTestName(e.target.value)}
-                  maxLength={255}
+            <Section title="Document Information">
+              <div className="space-y-3">
+                <Field
+                  label="Test / Document Name"
                   required
-                />
-              </Field>
+                  hint="e.g. Complete Blood Count (CBC), Chest X-Ray, Discharge Summary"
+                >
+                  <input
+                    type="text"
+                    className="ui-input"
+                    placeholder="Enter record or test name..."
+                    value={testName}
+                    onChange={(e) => setTestName(e.target.value)}
+                    maxLength={255}
+                    required
+                  />
+                </Field>
 
-              <Field
-                label="Clinical / Report Date"
-                required
-                hint="Date when the diagnostic test or examination was conducted"
-              >
-                <input
-                  type="date"
-                  className="ui-input"
-                  value={reportDate}
-                  onChange={(e) => setReportDate(e.target.value)}
+                <Field
+                  label="Clinical / Report Date"
                   required
-                />
-              </Field>
+                  hint="Date when the diagnostic test or examination was conducted"
+                >
+                  <input
+                    type="date"
+                    className="ui-input"
+                    value={reportDate}
+                    onChange={(e) => setReportDate(e.target.value)}
+                    required
+                  />
+                </Field>
 
-              <Field
-                label="Clinical Notes / Observations"
-                hint="Doctor remarks, abnormal findings, or administrative observations"
-              >
-                <textarea
-                  rows={3}
-                  className="ui-textarea"
-                  placeholder="Enter clinical notes or remarks..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
-              </Field>
-            </div>
-          </Section>
-        </div>
+                <Field
+                  label="Clinical Notes / Observations"
+                  hint="Doctor remarks, abnormal findings, or administrative observations"
+                >
+                  <textarea
+                    rows={3}
+                    className="ui-textarea"
+                    placeholder="Enter clinical notes or remarks..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                  />
+                </Field>
+              </div>
+            </Section>
+          </div>
 
-        <div className="ui-modal-foot">
-          <button
-            type="button"
-            className="ui-btn"
-            onClick={onClose}
-            disabled={saving}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="ui-btn ui-btn-primary"
-            disabled={saving}
-          >
-            {saving ? (
-              <>
-                <Loader2 size={13} className="animate-spin" />
-                <span>Saving...</span>
-              </>
-            ) : (
-              <span>Save Changes</span>
-            )}
-          </button>
-        </div>
-      </form>
-    </Modal>
+          <div className="ui-modal-foot">
+            <button
+              type="button"
+              className="ui-btn"
+              onClick={onClose}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="ui-btn ui-btn-primary"
+              disabled={saving}
+            >
+              {saving ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <span>Save Changes</span>
+              )}
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </>
   );
 };

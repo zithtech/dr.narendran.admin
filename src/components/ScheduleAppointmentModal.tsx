@@ -554,6 +554,47 @@ export default function ScheduleAppointmentModal({
             background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.36) !important;
           }
+          @media (max-width: 640px) {
+            .schedule-appointment-drawer-modal {
+              width: 100vw !important;
+              max-width: 100vw !important;
+              border-radius: 0 !important;
+            }
+            .schedule-appointment-drawer-modal .ui-modal-head {
+              padding: 14px 16px !important;
+            }
+            .schedule-appointment-drawer-modal .ui-modal-body {
+              padding: 14px 16px !important;
+              gap: 12px !important;
+            }
+            .sched-section-card {
+              padding: 14px 14px !important;
+              gap: 12px !important;
+            }
+            .schedule-appointment-drawer-modal .ui-modal-foot {
+              padding: 12px 16px !important;
+            }
+          }
+          @media (max-width: 520px) {
+            .sched-field-grid {
+              grid-template-columns: 1fr !important;
+            }
+          }
+          @media (max-width: 480px) {
+            .schedule-appointment-drawer-modal .ui-modal-foot {
+              flex-direction: column-reverse !important;
+              gap: 8px !important;
+            }
+            .schedule-appointment-drawer-modal .ui-modal-foot button {
+              width: 100% !important;
+              justify-content: center !important;
+            }
+          }
+          @media (max-width: 360px) {
+            .sched-slots-grid {
+              grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)) !important;
+            }
+          }
         `}</style>
         <div className="ui-modal-body">
           {error && <Alert>{error}</Alert>}
@@ -871,6 +912,7 @@ export default function ScheduleAppointmentModal({
               </div>
             ) : (
               <div
+                className="sched-field-grid"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
@@ -941,6 +983,7 @@ export default function ScheduleAppointmentModal({
             </div>
 
             <div
+              className="sched-field-grid"
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
@@ -1080,6 +1123,7 @@ export default function ScheduleAppointmentModal({
                       <span>Morning Slots</span>
                     </div>
                     <div
+                      className="sched-slots-grid"
                       style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
@@ -1110,6 +1154,7 @@ export default function ScheduleAppointmentModal({
                       <span>Afternoon Slots</span>
                     </div>
                     <div
+                      className="sched-slots-grid"
                       style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
@@ -1140,6 +1185,7 @@ export default function ScheduleAppointmentModal({
                       <span>Evening Slots</span>
                     </div>
                     <div
+                      className="sched-slots-grid"
                       style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',

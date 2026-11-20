@@ -1,9 +1,12 @@
 import {
   ArrowDown,
   ArrowUp,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   FileSpreadsheet,
+  ListFilter,
   type LucideIcon,
   Pencil,
   Plus,
@@ -180,6 +183,13 @@ export function CommonFilterBar({
   hasActiveFilters = false,
   className = '',
 }: CommonFilterBarProps) {
+  const [isAccordionOpen, setIsAccordionOpen] = useState(false);
+
+  const activeDropdownCount =
+    dropdowns.filter((d) => Boolean(d.value)).length +
+    (dateFilter?.preset && dateFilter.preset !== 'any' ? 1 : 0) +
+    (dateFilter?.from || dateFilter?.to ? 1 : 0);
+
   return (
     <div
       className={cx(
@@ -189,7 +199,7 @@ export function CommonFilterBar({
     >
       {/* Optional Filter Tabs (if provided) */}
       {tabs.length > 0 && (
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 lg:pb-0 scrollbar-none w-full lg:w-auto">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -218,24 +228,68 @@ export function CommonFilterBar({
         </div>
       )}
 
-      {/* Search Input */}
-      {onSearchChange !== undefined && (
-        <div className="relative flex items-center min-w-[200px] max-w-[260px] flex-1 sm:flex-initial">
-          <Search size={13} className="absolute left-2.5 text-slate-400 pointer-events-none" />
-          <input
-            type="search"
-            value={search ?? ''}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={searchPlaceholder}
-            className="w-full h-8 pl-8 pr-7 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-2xs"
-          />
-        </div>
-      )}
+      {/* Search Input & Mobile Filter Toggle Button */}
+      <div className="flex items-center gap-2 w-full sm:w-auto flex-1 sm:flex-initial">
+        {onSearchChange !== undefined && (
+          <div className="relative flex items-center min-w-[190px] flex-1 sm:w-64">
+            <Search size={13} className="absolute left-2.5 text-slate-400 pointer-events-none" />
+            <input
+              type="search"
+              value={search ?? ''}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder={searchPlaceholder}
+              className="w-full h-8 pl-8 pr-7 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-2xs"
+            />
+          </div>
+        )}
+
+        {(dropdowns.length > 0 || dateFilter) && (
+          <button
+            type="button"
+            onClick={() => setIsAccordionOpen((prev) => !prev)}
+            className={cx(
+              'sm:hidden inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border text-xs font-semibold transition-all shrink-0 cursor-pointer shadow-2xs',
+              isAccordionOpen
+                ? 'border-blue-300 bg-blue-50 text-blue-700'
+                : activeDropdownCount > 0 || hasActiveFilters
+                  ? 'border-blue-200 bg-blue-50/70 text-blue-800'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+            )}
+            aria-expanded={isAccordionOpen}
+            aria-label="Toggle filters"
+            data-testid="common-filter-accordion-toggle"
+          >
+            <ListFilter
+              size={13}
+              className={activeDropdownCount > 0 || hasActiveFilters ? 'text-blue-600' : 'text-slate-500'}
+            />
+            <span>Filters</span>
+            {(activeDropdownCount > 0 || hasActiveFilters) && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-600 text-white leading-none">
+                {activeDropdownCount || 1}
+              </span>
+            )}
+            {isAccordionOpen ? (
+              <ChevronUp size={13} className="text-slate-500" />
+            ) : (
+              <ChevronDown size={13} className="text-slate-500" />
+            )}
+          </button>
+        )}
+      </div>
 
       {/* Dropdowns, Date Range & Reset Button */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div
+        className={cx(
+          'items-center gap-2 flex-wrap w-full sm:w-auto',
+          isAccordionOpen
+            ? 'flex flex-col sm:flex-row items-stretch sm:items-center pt-2 sm:pt-0 border-t border-slate-100 sm:border-0'
+            : 'hidden sm:flex',
+        )}
+        data-testid="common-filter-content"
+      >
         {dropdowns.map((d) => (
-          <div key={d.id} className="shrink-0">
+          <div key={d.id} className="shrink-0 w-full sm:w-auto">
             <SearchableSelect
               size="sm"
               variant="default"
@@ -259,7 +313,7 @@ export function CommonFilterBar({
         {dateFilter && (
           <>
             {dateFilter.presets && dateFilter.onPresetChange && (
-              <div className="shrink-0">
+              <div className="shrink-0 w-full sm:w-auto">
                 <SearchableSelect
                   size="sm"
                   variant="default"
@@ -273,7 +327,7 @@ export function CommonFilterBar({
               </div>
             )}
             {dateFilter.onFromChange && dateFilter.onToChange && (
-              <div className="ui-daterange flex items-center gap-1 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-600 shadow-2xs shrink-0">
+              <div className="ui-daterange flex items-center justify-between sm:justify-start gap-1 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-600 shadow-2xs shrink-0 max-w-full overflow-x-auto">
                 <span className="text-slate-400 font-medium text-[11px] select-none">
                   {dateFilter.dateLabel ?? 'Date'}
                 </span>
@@ -301,10 +355,10 @@ export function CommonFilterBar({
           <button
             type="button"
             onClick={onReset}
-            disabled={!hasActiveFilters}
+            disabled={!hasActiveFilters && activeDropdownCount === 0}
             className={cx(
-              'inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border text-xs font-medium transition-colors shadow-2xs cursor-pointer',
-              hasActiveFilters
+              'inline-flex items-center justify-center gap-1.5 h-8 px-2.5 rounded-lg border text-xs font-medium transition-colors shadow-2xs cursor-pointer shrink-0 w-full sm:w-auto',
+              hasActiveFilters || activeDropdownCount > 0
                 ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300'
                 : 'border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed opacity-60',
             )}

@@ -678,6 +678,15 @@ export default function LabUpcomingTestsPage() {
     formData.append('file', selectedFile);
     formData.append('testName', uploadingTest.test_name);
     formData.append('prescriptionLabTestId', uploadingTest.id);
+    if (uploadingTest.prescription_id) {
+      formData.append('prescriptionId', uploadingTest.prescription_id);
+    }
+    if (uploadingTest.patient_phone) {
+      formData.append('patientPhone', uploadingTest.patient_phone);
+    }
+    if (uploadingTest.patient_name) {
+      formData.append('patientName', uploadingTest.patient_name);
+    }
     if (reportDate) {
       formData.append('reportDate', reportDate);
     }

@@ -305,7 +305,7 @@ export default function MedicalRecordsPage() {
           )}
 
           {/* Quick Patient Selector */}
-          <div className="w-56 shrink-0">
+          <div className="w-full sm:w-56 shrink-0">
             <SearchableSelect
               size="sm"
               variant="default"
@@ -339,8 +339,9 @@ export default function MedicalRecordsPage() {
             className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
             onClick={handleExport}
             title="Export records to CSV"
+            aria-label="Export records to CSV"
           >
-            <FileSpreadsheet size={13} className="text-slate-500" />
+            <FileSpreadsheet size={13} className="text-slate-500 shrink-0" />
             <span>Export</span>
           </button>
 
@@ -352,9 +353,11 @@ export default function MedicalRecordsPage() {
                 setActivePrescribedTest(null);
                 setIsUploadOpen(true);
               }}
+              aria-label="Upload Medical Record"
             >
-              <Plus size={13} strokeWidth={2.4} />
-              <span>Upload Medical Record</span>
+              <Plus size={13} strokeWidth={2.4} className="shrink-0" />
+              <span className="hidden sm:inline">Upload Medical Record</span>
+              <span className="sm:hidden">Upload</span>
             </button>
           )}
         </div>
@@ -382,9 +385,9 @@ export default function MedicalRecordsPage() {
         /* ── Main Unified Container: Filters Toolbar + Table + Pagination (Matching Patients Page Design) ── */
         <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col">
           {/* ── Filter Bar Section ── */}
-          <div className="flex items-center gap-2 flex-wrap px-3 sm:px-3.5 py-2.5 border-b border-slate-100 bg-white">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 sm:px-3.5 py-2.5 border-b border-slate-100 bg-white">
             {/* Search Input with ⌘K */}
-            <div className="relative flex items-center flex-1 min-w-[160px] sm:min-w-[220px] max-w-full sm:max-w-xs shrink-0">
+            <div className="relative flex items-center w-full sm:w-auto sm:flex-1 sm:min-w-[220px] max-w-full sm:max-w-xs shrink-0">
               <Search size={13} className="absolute left-2.5 text-slate-400 pointer-events-none" />
               <input
                 ref={searchInputRef}
@@ -403,95 +406,97 @@ export default function MedicalRecordsPage() {
               </span>
             </div>
 
-            {/* Record Type Filter Dropdown */}
-            <div className="shrink-0 flex-1 sm:flex-initial min-w-[145px] sm:min-w-0">
-              <SearchableSelect
-                size="sm"
-                variant="default"
-                aria-label="Record Type"
-                value={typeFilter}
-                onChange={(val) => {
-                  setTypeFilter((val as any) || 'ALL');
-                  setPage(1);
-                }}
-                placeholder="All Record Types"
-                searchable={false}
-                options={[
-                  { value: 'ALL', label: 'All Record Types' },
-                  { value: 'PRESCRIBED', label: 'Prescribed Lab Tests' },
-                  { value: 'EXTERNAL', label: 'External Medical Docs' },
-                ]}
-              />
-            </div>
+            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+              {/* Record Type Filter Dropdown */}
+              <div className="shrink-0 flex-1 sm:flex-initial min-w-[145px] sm:min-w-0">
+                <SearchableSelect
+                  size="sm"
+                  variant="default"
+                  aria-label="Record Type"
+                  value={typeFilter}
+                  onChange={(val) => {
+                    setTypeFilter((val as any) || 'ALL');
+                    setPage(1);
+                  }}
+                  placeholder="All Record Types"
+                  searchable={false}
+                  options={[
+                    { value: 'ALL', label: 'All Record Types' },
+                    { value: 'PRESCRIBED', label: 'Prescribed Lab Tests' },
+                    { value: 'EXTERNAL', label: 'External Medical Docs' },
+                  ]}
+                />
+              </div>
 
-            {/* Uploaded By Filter Dropdown */}
-            <div className="shrink-0 flex-1 sm:flex-initial min-w-[125px] sm:min-w-0">
-              <SearchableSelect
-                size="sm"
-                variant="default"
-                aria-label="Uploaded By"
-                value={uploaderFilter}
-                onChange={(val) => {
-                  setUploaderFilter(val || 'ALL');
-                  setPage(1);
-                }}
-                placeholder="All Uploaders"
-                searchable={false}
-                options={[
-                  { value: 'ALL', label: 'All Uploaders' },
-                  { value: 'ADMIN', label: 'Admin' },
-                  { value: 'DOCTOR', label: 'Doctor' },
-                  { value: 'LAB', label: 'Lab' },
-                  { value: 'PATIENT', label: 'Patient' },
-                ]}
-              />
-            </div>
+              {/* Uploaded By Filter Dropdown */}
+              <div className="shrink-0 flex-1 sm:flex-initial min-w-[125px] sm:min-w-0">
+                <SearchableSelect
+                  size="sm"
+                  variant="default"
+                  aria-label="Uploaded By"
+                  value={uploaderFilter}
+                  onChange={(val) => {
+                    setUploaderFilter(val || 'ALL');
+                    setPage(1);
+                  }}
+                  placeholder="All Uploaders"
+                  searchable={false}
+                  options={[
+                    { value: 'ALL', label: 'All Uploaders' },
+                    { value: 'ADMIN', label: 'Admin' },
+                    { value: 'DOCTOR', label: 'Doctor' },
+                    { value: 'LAB', label: 'Lab' },
+                    { value: 'PATIENT', label: 'Patient' },
+                  ]}
+                />
+              </div>
 
-            {/* Date Range Inputs */}
-            <div className="ui-daterange flex items-center gap-1 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-600 shadow-2xs shrink-0 max-w-full overflow-x-auto">
-              <span className="text-slate-400 font-medium text-[11px] select-none">Date</span>
-              <input
-                type="date"
-                value={fromDate}
-                max={toDate || undefined}
-                onChange={(e) => {
-                  setFromDate(e.target.value);
-                  setPage(1);
-                }}
-                aria-label="Report from"
-                className="bg-transparent text-xs text-slate-700 outline-none w-20 cursor-pointer"
-              />
-              <ArrowRight size={11} className="text-slate-400 shrink-0" />
-              <input
-                type="date"
-                value={toDate}
-                min={fromDate || undefined}
-                onChange={(e) => {
-                  setToDate(e.target.value);
-                  setPage(1);
-                }}
-                aria-label="Report to"
-                className="bg-transparent text-xs text-slate-700 outline-none w-20 cursor-pointer"
-              />
-            </div>
+              {/* Date Range Inputs */}
+              <div className="ui-daterange flex items-center gap-1 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-600 shadow-2xs shrink-0 max-w-full overflow-x-auto">
+                <span className="text-slate-400 font-medium text-[11px] select-none">Date</span>
+                <input
+                  type="date"
+                  value={fromDate}
+                  max={toDate || undefined}
+                  onChange={(e) => {
+                    setFromDate(e.target.value);
+                    setPage(1);
+                  }}
+                  aria-label="Report from"
+                  className="bg-transparent text-xs text-slate-700 outline-none w-20 cursor-pointer"
+                />
+                <ArrowRight size={11} className="text-slate-400 shrink-0" />
+                <input
+                  type="date"
+                  value={toDate}
+                  min={fromDate || undefined}
+                  onChange={(e) => {
+                    setToDate(e.target.value);
+                    setPage(1);
+                  }}
+                  aria-label="Report to"
+                  className="bg-transparent text-xs text-slate-700 outline-none w-20 cursor-pointer"
+                />
+              </div>
 
-            {/* Reset Filters Button */}
-            {hasActiveFilters && (
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer shrink-0"
-                title="Reset all filters"
-              >
-                <span>Reset</span>
-                <X size={12} className="text-slate-500" />
-              </button>
-            )}
+              {/* Reset Filters Button */}
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer shrink-0"
+                  title="Reset all filters"
+                >
+                  <span>Reset</span>
+                  <X size={12} className="text-slate-500" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* ── Table Section ── */}
           <div className="overflow-x-auto min-h-[300px]">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse" style={{ minWidth: 760 }}>
               <thead>
                 <tr className="border-b border-slate-200/90 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
                   <th className="px-3.5 py-2 whitespace-nowrap w-28">Report Date</th>
@@ -637,29 +642,29 @@ export default function MedicalRecordsPage() {
                         <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"
-                            className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                            className="p-1.5 min-w-[28px] min-h-[28px] sm:min-w-[24px] sm:min-h-[24px] inline-flex items-center justify-center rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
                             onClick={() => setPreviewRecord(rec)}
                             title="Preview document"
-                            aria-label="Preview"
+                            aria-label={`Preview ${rec.testName}`}
                           >
                             <Eye size={13} />
                           </button>
                           <button
                             type="button"
-                            className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                            className="p-1.5 min-w-[28px] min-h-[28px] sm:min-w-[24px] sm:min-h-[24px] inline-flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                             onClick={() => window.open(getAuthenticatedFileUrl(rec.documentUrl, true), '_blank', 'noopener,noreferrer')}
                             title="Download document"
-                            aria-label="Download"
+                            aria-label={`Download ${rec.testName}`}
                           >
                             <Download size={13} />
                           </button>
                           {isRecordUpdatable && (
                             <button
                               type="button"
-                              className="p-1 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                              className="p-1.5 min-w-[28px] min-h-[28px] sm:min-w-[24px] sm:min-h-[24px] inline-flex items-center justify-center rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
                               onClick={() => setEditingRecord(rec)}
                               title="Edit metadata"
-                              aria-label="Edit"
+                              aria-label={`Edit ${rec.testName}`}
                             >
                               <Pencil size={13} />
                             </button>
@@ -667,10 +672,10 @@ export default function MedicalRecordsPage() {
                           {isRecordDeletable && (
                             <button
                               type="button"
-                              className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                              className="p-1.5 min-w-[28px] min-h-[28px] sm:min-w-[24px] sm:min-h-[24px] inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                               onClick={() => setRecordToDelete(rec)}
                               title="Delete record"
-                              aria-label="Delete"
+                              aria-label={`Delete ${rec.testName}`}
                             >
                               <Trash2 size={13} />
                             </button>

@@ -48,7 +48,7 @@ export const TimelineHeaderCard: React.FC<TimelineHeaderCardProps> = ({
       <div className="w-full px-4 sm:px-6 py-2.5 sm:py-3">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
           {/* Left section: Back button + Divider + Avatar + Patient Info */}
-          <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
+          <div className="flex items-start sm:items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
             {/* Back Button */}
             <button
               type="button"
@@ -126,7 +126,7 @@ export const TimelineHeaderCard: React.FC<TimelineHeaderCardProps> = ({
           </div>
 
           {/* Right section: Clinical Timeline Context Card & Download Action */}
-          <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto shrink-0 pl-1 md:pl-0">
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto shrink-0 w-full sm:w-auto justify-between sm:justify-start">
             {/* Clinical Timeline Badge */}
             <div className="flex items-center gap-2 bg-gradient-to-r from-teal-50 to-emerald-50/50 border border-teal-200/70 px-3 py-1.5 rounded-lg shadow-2xs">
               <div className="w-7 h-7 rounded-md bg-teal-600/10 text-teal-700 flex items-center justify-center shrink-0">
@@ -152,8 +152,10 @@ export const TimelineHeaderCard: React.FC<TimelineHeaderCardProps> = ({
                 onClick={() => {
                   void handleDownloadPdf();
                 }}
+                aria-label="Download PDF Summary"
               >
-                PDF Summary
+                <span className="hidden sm:inline">PDF Summary</span>
+                <span className="sm:hidden">PDF</span>
               </Button>
             )}
           </div>

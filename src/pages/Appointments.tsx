@@ -548,7 +548,7 @@ export default function Appointments() {
   ];
 
   return (
-    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="appointments-tab-container" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {currentTab === 'today' ? (
         <DoctorTodayAppointments />
       ) : (
@@ -849,6 +849,26 @@ export default function Appointments() {
             }
             .appointments-all-view .ui-hub-icon {
               color: #2563eb;
+            }
+            .appointments-all-view table {
+              min-width: 800px !important;
+            }
+            @media (max-width: 1024px) {
+              .appointments-tab-container,
+              .appointments-all-view {
+                height: auto !important;
+                min-height: 100% !important;
+                overflow: visible !important;
+              }
+            }
+            @media (max-width: 640px) {
+              .appointments-all-view .ui-page {
+                padding: 0 !important;
+                gap: 6px !important;
+              }
+              .appointments-all-view .ui-header {
+                padding: 2px 0 !important;
+              }
             }
           `}</style>
         </div>

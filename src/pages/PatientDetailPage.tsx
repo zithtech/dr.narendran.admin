@@ -1329,9 +1329,44 @@ export default function PatientDetailPage() {
           overflow: hidden;
         }
         @media (max-width: 768px) {
+          .patient-page-container {
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+          }
           .patient-page-layout {
-            grid-template-columns: 1fr;
-            overflow-y: auto;
+            display: flex !important;
+            flex-direction: column !important;
+            grid-template-columns: 1fr !important;
+            overflow: visible !important;
+            padding: 12px 14px 24px !important;
+            gap: 16px !important;
+          }
+          .patient-page-sidebar {
+            height: auto !important;
+            overflow: visible !important;
+            padding-right: 0 !important;
+            padding-bottom: 0 !important;
+          }
+          .patient-page-main {
+            height: auto !important;
+            overflow: visible !important;
+          }
+          .patient-tab-scroll-pane {
+            height: auto !important;
+            overflow: visible !important;
+            padding-right: 0 !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .patient-page-topbar {
+            padding: 10px 14px !important;
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+          }
+          .patient-page-topbar-actions {
+            width: 100% !important;
+            justify-content: flex-end !important;
           }
         }
         .patient-page-sidebar {
@@ -1518,6 +1553,7 @@ export default function PatientDetailPage() {
           align-items: center;
           gap: 8px;
           padding: 1px 0;
+          flex-wrap: wrap;
         }
         .patient-card-cred-label {
           font-size: 11.5px;
@@ -1626,6 +1662,7 @@ export default function PatientDetailPage() {
           flex-shrink: 0;
           overflow-x: auto;
           scrollbar-width: none;
+          flex-wrap: nowrap;
         }
         .patient-tabs-bar::-webkit-scrollbar {
           display: none;
@@ -1728,6 +1765,18 @@ export default function PatientDetailPage() {
         @media (max-width: 680px) {
           .patient-kpi-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+        @media (max-width: 480px) {
+          .patient-kpi-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+          }
+          .patient-kpi-card {
+            padding: 8px 10px;
+          }
+          .patient-kpi-val {
+            font-size: 14px;
           }
         }
         .patient-kpi-card {

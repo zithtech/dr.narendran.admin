@@ -410,7 +410,7 @@ export default function RescheduleAppointmentModal({
                       <Sun size={12} />
                       <span>Morning Slots</span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(95px, 1fr))', gap: 6 }}>
+                    <div className="resched-slots-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(95px, 1fr))', gap: 6 }}>
                       {morningSlots.map(renderSlotButton)}
                     </div>
                   </div>
@@ -432,7 +432,7 @@ export default function RescheduleAppointmentModal({
                       <Sun size={12} />
                       <span>Afternoon Slots</span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(95px, 1fr))', gap: 6 }}>
+                    <div className="resched-slots-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(95px, 1fr))', gap: 6 }}>
                       {afternoonSlots.map(renderSlotButton)}
                     </div>
                   </div>
@@ -454,7 +454,7 @@ export default function RescheduleAppointmentModal({
                       <Sunset size={12} />
                       <span>Evening Slots</span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(95px, 1fr))', gap: 6 }}>
+                    <div className="resched-slots-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(95px, 1fr))', gap: 6 }}>
                       {eveningSlots.map(renderSlotButton)}
                     </div>
                   </div>
@@ -582,6 +582,38 @@ export default function RescheduleAppointmentModal({
         .resched-section-subtitle {
           font-size: 11px;
           color: #64748b;
+        }
+        @media (max-width: 640px) {
+          .reschedule-appointment-modal {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            border-radius: 0 !important;
+          }
+          .reschedule-appointment-modal .ui-modal-head {
+            padding: 14px 16px !important;
+          }
+          .reschedule-appointment-modal .ui-modal-body {
+            padding: 14px 16px !important;
+            gap: 12px !important;
+          }
+          .reschedule-appointment-modal .ui-modal-foot {
+            padding: 12px 16px !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .reschedule-appointment-modal .ui-modal-foot {
+            flex-direction: column-reverse !important;
+            gap: 8px !important;
+          }
+          .reschedule-appointment-modal .ui-modal-foot button {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+        }
+        @media (max-width: 360px) {
+          .resched-slots-grid {
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
+          }
         }
       `}</style>
     </Modal>

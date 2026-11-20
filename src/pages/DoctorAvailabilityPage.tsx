@@ -865,6 +865,117 @@ export default function DoctorAvailabilityPage() {
             overflow-y: auto !important;
           }
         }
+        @media (max-width: 1024px) {
+          .doctor-availability-page {
+            height: auto !important;
+            min-height: 100% !important;
+            overflow: visible !important;
+          }
+          .doctor-availability-page .availability-scroll-container {
+            flex: none !important;
+            min-height: auto !important;
+            height: auto !important;
+            overflow-y: visible !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          .doctor-availability-page .blocked-cards-grid {
+            flex: none !important;
+            min-height: auto !important;
+            height: auto !important;
+            overflow-y: visible !important;
+            display: grid !important;
+          }
+          .doctor-availability-page .doctor-avail-table-container {
+            flex: none !important;
+            min-height: auto !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          .doctor-availability-page .doctor-avail-table-container > div {
+            min-height: auto !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+        }
+        .doctor-avail-banner-grid {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 14px 16px;
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+          gap: 16px;
+          flex-shrink: 0;
+        }
+        .doctor-avail-doctor-select-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .doctor-avail-tabs-bar {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          border-bottom: 1px solid #e2e8f0;
+          padding-bottom: 0px;
+          flex-shrink: 0;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+        .doctor-avail-tabs-bar::-webkit-scrollbar {
+          display: none;
+        }
+        .doctor-avail-tab-btn {
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        .blocked-cards-grid {
+          flex: 1;
+          min-height: 0;
+          overflow-y: auto;
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 14px;
+          padding-right: 4px;
+          align-content: start;
+        }
+        @media (max-width: 900px) {
+          .doctor-avail-banner-grid {
+            grid-template-columns: 1fr !important;
+            padding: 12px 14px !important;
+            gap: 12px !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .doctor-avail-banner-grid {
+            padding: 10px 12px !important;
+            gap: 10px !important;
+          }
+          .doctor-avail-doctor-select-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 6px !important;
+          }
+          .doctor-avail-doctor-select-row > div {
+            min-width: 0 !important;
+            width: 100% !important;
+          }
+          .doctor-avail-tab-btn {
+            flex: 1 1 0;
+            justify-content: center;
+            padding: 8px 8px !important;
+            font-size: 12px !important;
+          }
+          .blocked-cards-grid {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+          }
+          .doctor-slot-row {
+            padding: 8px 10px !important;
+          }
+        }
       `}</style>
 
       {/* Top Header (matching DataView / CommonPageHeader across other pages) */}
@@ -885,10 +996,12 @@ export default function DoctorAvailabilityPage() {
                 type="button"
                 onClick={() => handleOpenBlockModal(null)}
                 disabled={!selectedDoctorId && doctors.length === 0}
-                className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold shadow-2xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Block Date / Time"
+                className="inline-flex items-center justify-center gap-1.5 h-7.5 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold shadow-2xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <CalendarX size={13} />
-                <span>Block Date / Time</span>
+                <CalendarX size={13} className="shrink-0" />
+                <span className="hidden sm:inline">Block Date / Time</span>
+                <span className="sm:hidden">Block Date</span>
               </button>
             ) : null
           }
@@ -904,22 +1017,10 @@ export default function DoctorAvailabilityPage() {
       </div>
 
       {/* Doctor Profile Banner & Slot Duration Configuration Card */}
-      <div
-        style={{
-          background: '#ffffff',
-          border: '1px solid #e2e8f0',
-          borderRadius: 12,
-          padding: '14px 16px',
-          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))',
-          gap: 16,
-          flexShrink: 0,
-        }}
-      >
+      <div className="doctor-avail-banner-grid">
         {/* Left: Doctor Profile Selector & Info */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="doctor-avail-doctor-select-row">
             <span style={{ fontSize: 11.5, fontWeight: 700, color: '#475569', letterSpacing: '0.03em' }}>
               SELECT DOCTOR PROFILE:
             </span>
@@ -943,6 +1044,7 @@ export default function DoctorAvailabilityPage() {
 
           {currentDoctor && (
             <div
+              className="doctor-avail-profile-card"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1011,6 +1113,7 @@ export default function DoctorAvailabilityPage() {
 
         {/* Right: Slot Duration Configuration */}
         <div
+          className="doctor-avail-duration-card"
           style={{
             background: '#eff6ff',
             border: '1px solid #dbeafe',
@@ -1022,7 +1125,7 @@ export default function DoctorAvailabilityPage() {
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 4 }}>
               <span
                 style={{
                   fontSize: 12,
@@ -1048,7 +1151,7 @@ export default function DoctorAvailabilityPage() {
                 {selectedSlotDuration} Mins
               </span>
             </div>
-            <p style={{ margin: '0 0 10px', fontSize: 11.5, color: '#1d4ed8' }}>
+            <p style={{ margin: '0 0 10px', fontSize: 11.5, color: '#1d4ed8', lineHeight: 1.4 }}>
               {isUpdatable
                 ? `Set consultation appointment slot duration for ${currentDoctor?.name || 'this doctor'}:`
                 : `Consultation appointment slot duration for ${currentDoctor?.name || 'this doctor'} is configured to ${selectedSlotDuration} minutes (read-only).`}
@@ -1075,7 +1178,8 @@ export default function DoctorAvailabilityPage() {
                           fontWeight: 650,
                           fontSize: 11.5,
                           borderRadius: 6,
-                          padding: '4px 9px',
+                          padding: '5px 9px',
+                          minHeight: 28,
                           cursor: 'pointer',
                           transition: 'all 0.15s ease',
                           display: 'inline-flex',
@@ -1091,7 +1195,7 @@ export default function DoctorAvailabilityPage() {
                 </div>
 
                 {/* Custom Input */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 11.5, color: '#475569' }}>Custom minutes:</span>
                   <input
                     type="number"
@@ -1107,7 +1211,7 @@ export default function DoctorAvailabilityPage() {
                     className="ui-input"
                     style={{
                       width: 80,
-                      height: 26,
+                      height: 28,
                       fontSize: 11.5,
                       padding: '0 8px',
                     }}
@@ -1125,22 +1229,26 @@ export default function DoctorAvailabilityPage() {
                 onClick={handleSaveDoctorSlotDuration}
                 disabled={savingSlotDuration || !selectedDoctorId}
                 title="Apply Slot Duration"
+                aria-label="Apply Slot Duration to All Schedules"
                 style={{
                   fontSize: 12,
                   fontWeight: 600,
                   background: '#2563eb',
                   borderColor: '#2563eb',
                   color: '#ffffff',
-                  padding: '5px 12px',
+                  padding: '6px 14px',
+                  minHeight: 32,
                   borderRadius: 7,
                   display: 'inline-flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: 5,
                   cursor: 'pointer',
                 }}
               >
-                <Check size={13} />
-                {savingSlotDuration ? 'Applying...' : 'Apply Slot Duration to All Schedules'}
+                <Check size={13} className="shrink-0" />
+                <span className="hidden sm:inline">{savingSlotDuration ? 'Applying...' : 'Apply Slot Duration to All Schedules'}</span>
+                <span className="sm:hidden">{savingSlotDuration ? 'Applying...' : 'Apply Duration'}</span>
               </button>
             </div>
           )}
@@ -1148,24 +1256,16 @@ export default function DoctorAvailabilityPage() {
       </div>
 
       {/* Main Navigation Section Tabs */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          borderBottom: '1px solid #e2e8f0',
-          paddingBottom: 2,
-          flexShrink: 0,
-        }}
-      >
+      <div className="doctor-avail-tabs-bar">
         <button
           type="button"
+          className="doctor-avail-tab-btn"
           onClick={() => setActiveMainSection('schedule')}
           style={{
             border: 'none',
             background: 'none',
             cursor: 'pointer',
-            padding: '8px 16px',
+            padding: '8px 14px',
             fontSize: 13,
             fontWeight: 700,
             color: activeMainSection === 'schedule' ? '#2563eb' : '#64748b',
@@ -1175,6 +1275,7 @@ export default function DoctorAvailabilityPage() {
             alignItems: 'center',
             gap: 7,
             transition: 'all 0.15s ease',
+            whiteSpace: 'nowrap',
           }}
         >
           <CalendarClock size={16} />
@@ -1195,12 +1296,13 @@ export default function DoctorAvailabilityPage() {
 
         <button
           type="button"
+          className="doctor-avail-tab-btn"
           onClick={() => setActiveMainSection('blocked')}
           style={{
             border: 'none',
             background: 'none',
             cursor: 'pointer',
-            padding: '8px 16px',
+            padding: '8px 14px',
             fontSize: 13,
             fontWeight: 700,
             color: activeMainSection === 'blocked' ? '#dc2626' : '#64748b',
@@ -1210,6 +1312,7 @@ export default function DoctorAvailabilityPage() {
             alignItems: 'center',
             gap: 7,
             transition: 'all 0.15s ease',
+            whiteSpace: 'nowrap',
           }}
         >
           <CalendarX size={16} />
@@ -1233,7 +1336,7 @@ export default function DoctorAvailabilityPage() {
       {activeMainSection === 'schedule' && (
         <>
           {/* Filter and View Mode Controls for Weekly Schedule */}
-          <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs flex flex-wrap items-center justify-between gap-2 pr-3 shrink-0">
+          <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 pr-0 sm:pr-3 shrink-0">
             <CommonFilterBar
               className="flex-1 border-b-0 bg-transparent !justify-start"
               search={searchTerm}
@@ -1268,29 +1371,35 @@ export default function DoctorAvailabilityPage() {
             />
 
             {/* View Toggle */}
-            <div className="flex items-center gap-1.5 py-1.5 pl-3 sm:pl-0">
-              <div className="bg-slate-100 rounded-lg p-0.5 flex gap-0.5">
+            <div className="flex items-center gap-1.5 py-1.5 px-3 sm:px-0 sm:pl-0 w-full sm:w-auto border-t sm:border-t-0 border-slate-100">
+              <div className="bg-slate-100 rounded-lg p-0.5 flex gap-0.5 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setViewMode('schedule')}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  aria-label="Weekly Schedule"
+                  className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                     viewMode === 'schedule'
                       ? 'bg-white text-blue-600 shadow-2xs'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  <Grid size={13} /> Weekly Schedule
+                  <Grid size={13} />
+                  <span className="hidden sm:inline">Weekly Schedule</span>
+                  <span className="sm:hidden">Schedule</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode('table')}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  aria-label="All Slots Table"
+                  className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                     viewMode === 'table'
                       ? 'bg-white text-blue-600 shadow-2xs'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  <List size={13} /> All Slots Table
+                  <List size={13} />
+                  <span className="hidden sm:inline">All Slots Table</span>
+                  <span className="sm:hidden">Table</span>
                 </button>
               </div>
             </div>
@@ -1369,6 +1478,8 @@ export default function DoctorAvailabilityPage() {
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           marginBottom: daySlots.length > 0 ? 12 : 0,
+                          flexWrap: 'wrap',
+                          gap: 6,
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1393,6 +1504,7 @@ export default function DoctorAvailabilityPage() {
                           <button
                             type="button"
                             onClick={() => handleOpenEditor(null, day)}
+                            aria-label={`Add to ${titleCase(day)}`}
                             style={{
                               border: '1px dashed #bfdbfe',
                               background: '#eff6ff',
@@ -1407,7 +1519,9 @@ export default function DoctorAvailabilityPage() {
                               gap: 4,
                             }}
                           >
-                            <Plus size={12} /> Add to {titleCase(day)}
+                            <Plus size={12} />
+                            <span className="hidden sm:inline">Add to {titleCase(day)}</span>
+                            <span className="sm:hidden">Add</span>
                           </button>
                         )}
                       </div>
@@ -1421,34 +1535,11 @@ export default function DoctorAvailabilityPage() {
                           {daySlots.map((slot) => (
                             <div
                               key={slot.id}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                background: '#f8fafc',
-                                border: '1px solid #e2e8f0',
-                                borderRadius: 8,
-                                padding: '8px 12px',
-                                flexWrap: 'wrap',
-                                gap: 10,
-                              }}
+                              className="doctor-slot-row flex flex-col sm:flex-row sm:items-center justify-between bg-[#f8fafc] border border-slate-200 rounded-lg p-2.5 sm:p-3 gap-2.5 sm:gap-3 transition-colors hover:border-slate-300"
                             >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                                <div
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: 6,
-                                    fontWeight: 700,
-                                    color: '#1e293b',
-                                    fontSize: 13.5,
-                                    background: '#ffffff',
-                                    padding: '3px 10px',
-                                    borderRadius: 6,
-                                    border: '1px solid #cbd5e1',
-                                  }}
-                                >
-                                  <Clock size={13} style={{ color: '#2563eb' }} />
+                              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                                <div className="inline-flex items-center gap-1.5 font-bold text-slate-800 text-xs sm:text-[13.5px] bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-2xs">
+                                  <Clock size={13} className="text-blue-600 shrink-0" />
                                   <span>
                                     {formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}
                                   </span>
@@ -1458,16 +1549,8 @@ export default function DoctorAvailabilityPage() {
                                   {slot.slot_length || 30} mins slot duration
                                 </Tag>
 
-                                <span
-                                  style={{
-                                    fontSize: 12,
-                                    color: '#475569',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: 4,
-                                  }}
-                                >
-                                  <MapPin size={12} style={{ color: '#94a3b8' }} />
+                                <span className="inline-flex items-center gap-1 text-xs text-slate-600">
+                                  <MapPin size={12} className="text-slate-400 shrink-0" />
                                   <span>{slot.branch_name || 'Main Clinic'}</span>
                                 </span>
 
@@ -1480,24 +1563,12 @@ export default function DoctorAvailabilityPage() {
                               </div>
 
                               {(isUpdatable || isDeletable) && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <div className="flex items-center justify-end gap-1.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 w-full sm:w-auto">
                                   {isUpdatable && (
                                     <button
                                       type="button"
                                       onClick={() => handleOpenEditor(slot)}
-                                      style={{
-                                        border: '1px solid #dbeafe',
-                                        background: '#eff6ff',
-                                        color: '#2563eb',
-                                        fontSize: 11.5,
-                                        fontWeight: 600,
-                                        borderRadius: 5,
-                                        padding: '4px 9px',
-                                        cursor: 'pointer',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: 4,
-                                      }}
+                                      className="inline-flex items-center gap-1.5 h-7.5 px-2.5 text-xs font-semibold rounded-md border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors cursor-pointer"
                                     >
                                       <Pencil size={11} /> Edit
                                     </button>
@@ -1516,18 +1587,7 @@ export default function DoctorAvailabilityPage() {
                                         type="button"
                                         title="Delete slot"
                                         aria-label="Delete slot"
-                                        style={{
-                                          border: '1px solid #fecaca',
-                                          background: '#ffffff',
-                                          color: '#ef4444',
-                                          fontSize: 11.5,
-                                          fontWeight: 600,
-                                          borderRadius: 5,
-                                          padding: '4px 8px',
-                                          cursor: 'pointer',
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                        }}
+                                        className="inline-flex items-center justify-center h-7.5 w-7.5 text-xs font-semibold rounded-md border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 transition-colors cursor-pointer"
                                       >
                                         <Trash2 size={12} />
                                       </button>
@@ -1545,70 +1605,140 @@ export default function DoctorAvailabilityPage() {
               )}
             </div>
           ) : (
-            /* Table View of Configured Slots (CommonTable + CommonPagination matching Doctor page) */
-            <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col flex-1 min-h-0">
-              <div className="flex-1 min-h-0 overflow-y-auto [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none">
-                <CommonTable<DoctorAvailabilitySlot>
-                  columns={columns}
-                  data={pageRows}
-                  loading={loadingSlots}
-                  sort={slotSort}
-                  onSortChange={toggleSlotSort}
-                  {...(isUpdatable || isDeletable
-                    ? {
-                        rowActions: (r) => (
-                          <div className="flex items-center justify-end gap-1">
-                            {isUpdatable && (
-                              <button
-                                type="button"
-                                className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenEditor(r);
-                                }}
-                                title="Edit"
-                                aria-label="Edit"
-                              >
-                                <Pencil size={13} />
-                              </button>
-                            )}
-                            {isDeletable && (
-                              <Popconfirm
-                                title="Delete this availability slot?"
-                                description="Appointments outside remaining schedules may be affected."
-                                onConfirm={() => handleDeleteSlot(r.id, r.day_of_week)}
-                                okText="Delete"
-                                okButtonProps={{ danger: true }}
-                              >
+            /* Table View of Configured Slots (Dual presentation: Mobile Cards + Desktop Table) */
+            <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col flex-1 min-h-0 doctor-avail-table-container">
+              {/* Desktop Table View (>= 768px) */}
+              <div className="hidden md:block flex-1 min-h-0 overflow-y-auto [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none">
+                <div style={{ minWidth: 720 }}>
+                  <CommonTable<DoctorAvailabilitySlot>
+                    columns={columns}
+                    data={pageRows}
+                    loading={loadingSlots}
+                    sort={slotSort}
+                    onSortChange={toggleSlotSort}
+                    {...(isUpdatable || isDeletable
+                      ? {
+                          rowActions: (r) => (
+                            <div className="flex items-center justify-end gap-1">
+                              {isUpdatable && (
                                 <button
                                   type="button"
-                                  className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  title="Delete slot"
-                                  aria-label="Delete slot"
+                                  className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenEditor(r);
+                                  }}
+                                  title="Edit"
+                                  aria-label="Edit"
                                 >
-                                  <Trash2 size={13} />
+                                  <Pencil size={13} />
                                 </button>
-                              </Popconfirm>
-                            )}
+                              )}
+                              {isDeletable && (
+                                <Popconfirm
+                                  title="Delete this availability slot?"
+                                  description="Appointments outside remaining schedules may be affected."
+                                  onConfirm={() => handleDeleteSlot(r.id, r.day_of_week)}
+                                  okText="Delete"
+                                  okButtonProps={{ danger: true }}
+                                >
+                                  <button
+                                    type="button"
+                                    className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    title="Delete slot"
+                                    aria-label="Delete slot"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </Popconfirm>
+                              )}
+                            </div>
+                          ),
+                        }
+                      : {})}
+                    emptyState={
+                      <div className="py-10 text-center">
+                        <CalendarClock size={36} className="text-slate-300 mx-auto mb-2" />
+                        <div className="text-xs font-semibold text-slate-600">
+                          No availability configured in this doctor profile
+                        </div>
+                        {isCreatable && (
+                          <div className="text-[11px] text-slate-400 mt-1">
+                            Click &ldquo;+ Add Availability Slot&rdquo; to add consultation hours.
                           </div>
-                        ),
-                      }
-                    : {})}
-                  emptyState={
-                    <div className="py-10 text-center">
-                      <CalendarClock size={36} className="text-slate-300 mx-auto mb-2" />
-                      <div className="text-xs font-semibold text-slate-600">
-                        No availability configured in this doctor profile
+                        )}
                       </div>
-                      {isCreatable && (
-                        <div className="text-[11px] text-slate-400 mt-1">
-                          Click &ldquo;+ Add Availability Slot&rdquo; to add consultation hours.
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Mobile Cards View (< 768px) */}
+              <div className="md:hidden flex-1 overflow-y-auto divide-y divide-slate-100 p-2.5 space-y-2.5">
+                {loadingSlots && pageRows.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-400">Loading availability slots...</div>
+                ) : pageRows.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-400">No availability configured in this doctor profile</div>
+                ) : (
+                  pageRows.map((slot) => (
+                    <div
+                      key={slot.id}
+                      className="bg-white border border-slate-200 rounded-lg p-3 shadow-2xs space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-slate-900 text-xs sm:text-sm">
+                          {titleCase(slot.day_of_week)}
+                        </span>
+                        <StatusPill label={slot.status} active={slot.status === 'ACTIVE'} />
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-700 font-semibold">
+                        <Clock size={13} className="text-blue-600 shrink-0" />
+                        <span>{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap text-xs text-slate-600">
+                        <Tag color="blue" style={{ fontWeight: 650, borderRadius: 5, fontSize: 11, margin: 0 }}>
+                          {slot.slot_length || selectedSlotDuration || 30} mins
+                        </Tag>
+                        <span className="inline-flex items-center gap-1 text-slate-500">
+                          <MapPin size={11} className="shrink-0 text-slate-400" />
+                          <span>{slot.branch_name || 'Main Clinic'}</span>
+                        </span>
+                      </div>
+                      {(isUpdatable || isDeletable) && (
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
+                          {isUpdatable && (
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1 h-7.5 px-3 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md transition-colors cursor-pointer"
+                              onClick={() => handleOpenEditor(slot)}
+                            >
+                              <Pencil size={11} /> Edit
+                            </button>
+                          )}
+                          {isDeletable && (
+                            <Popconfirm
+                              title="Delete this availability slot?"
+                              description="Appointments outside remaining schedules may be affected."
+                              onConfirm={() => handleDeleteSlot(slot.id, slot.day_of_week)}
+                              okText="Delete"
+                              okButtonProps={{ danger: true }}
+                            >
+                              <button
+                                type="button"
+                                className="inline-flex items-center justify-center h-7.5 w-7.5 text-rose-500 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md transition-colors cursor-pointer"
+                                title="Delete slot"
+                                aria-label="Delete slot"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </Popconfirm>
+                          )}
                         </div>
                       )}
                     </div>
-                  }
-                />
+                  ))
+                )}
               </div>
 
               <CommonPagination
@@ -1634,7 +1764,7 @@ export default function DoctorAvailabilityPage() {
       {activeMainSection === 'blocked' && (
         <>
           {/* Blocked Dates Controls */}
-          <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs flex flex-wrap items-center justify-between gap-2 pr-3 shrink-0">
+          <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 pr-0 sm:pr-3 shrink-0">
             <CommonFilterBar
               className="flex-1 border-b-0 bg-transparent !justify-start"
               search={blockedSearchTerm}
@@ -1683,29 +1813,35 @@ export default function DoctorAvailabilityPage() {
             />
 
             {/* View Toggle */}
-            <div className="flex items-center gap-1.5 py-1.5 pl-3 sm:pl-0">
-              <div className="bg-slate-100 rounded-lg p-0.5 flex gap-0.5">
+            <div className="flex items-center gap-1.5 py-1.5 px-3 sm:px-0 sm:pl-0 w-full sm:w-auto border-t sm:border-t-0 border-slate-100">
+              <div className="bg-slate-100 rounded-lg p-0.5 flex gap-0.5 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setBlockedViewMode('table')}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  aria-label="List View"
+                  className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                     blockedViewMode === 'table'
                       ? 'bg-white text-rose-600 shadow-2xs'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  <List size={13} /> List View
+                  <List size={13} />
+                  <span className="hidden sm:inline">List View</span>
+                  <span className="sm:hidden">List</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setBlockedViewMode('cards')}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  aria-label="Calendar Cards"
+                  className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                     blockedViewMode === 'cards'
                       ? 'bg-white text-rose-600 shadow-2xs'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  <Grid size={13} /> Calendar Cards
+                  <Grid size={13} />
+                  <span className="hidden sm:inline">Calendar Cards</span>
+                  <span className="sm:hidden">Cards</span>
                 </button>
               </div>
             </div>
@@ -1713,76 +1849,177 @@ export default function DoctorAvailabilityPage() {
 
           {/* Blocked Dates Content */}
           {blockedViewMode === 'table' ? (
-            <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col flex-1 min-h-0">
-              <div className="flex-1 min-h-0 overflow-y-auto [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none">
-                <CommonTable<DoctorBlockedDate>
-                  columns={blockedColumns}
-                  data={blockedPageRows}
-                  loading={loadingBlocked}
-                  sort={blockedSort}
-                  onSortChange={toggleBlockedSort}
-                  {...(isUpdatable || isDeletable
-                    ? {
-                        rowActions: (r) => (
-                          <div className="flex items-center justify-end gap-1">
+            <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col flex-1 min-h-0 doctor-avail-table-container">
+              {/* Desktop Table View (>= 768px) */}
+              <div className="hidden md:block flex-1 min-h-0 overflow-y-auto [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none">
+                <div style={{ minWidth: 680 }}>
+                  <CommonTable<DoctorBlockedDate>
+                    columns={blockedColumns}
+                    data={blockedPageRows}
+                    loading={loadingBlocked}
+                    sort={blockedSort}
+                    onSortChange={toggleBlockedSort}
+                    {...(isUpdatable || isDeletable
+                      ? {
+                          rowActions: (r) => (
+                            <div className="flex items-center justify-end gap-1">
+                              {isUpdatable && (
+                                <button
+                                  type="button"
+                                  className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenBlockModal(r);
+                                  }}
+                                  title="Edit blocked schedule"
+                                  aria-label="Edit"
+                                >
+                                  <Pencil size={13} />
+                                </button>
+                              )}
+                              {isDeletable && (
+                                <Popconfirm
+                                  title="Remove this blocked date?"
+                                  description="The doctor will become available according to their weekly schedule on this date."
+                                  onConfirm={() => handleDeleteBlockedDate(r.id, r.blocked_date)}
+                                  okText="Unblock"
+                                  okButtonProps={{ danger: true }}
+                                >
+                                  <button
+                                    type="button"
+                                    className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    title="Unblock date"
+                                    aria-label="Delete"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </Popconfirm>
+                              )}
+                            </div>
+                          ),
+                        }
+                      : {})}
+                    emptyState={
+                      <div className="py-10 text-center">
+                        <CalendarX size={38} className="text-slate-300 mx-auto mb-2" />
+                        <div className="text-sm font-bold text-slate-700">
+                          No blocked dates or time ranges for this doctor
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          Dr. {currentDoctor?.name || 'Doctor'} is currently available for appointments according to their configured weekly schedule.
+                        </div>
+                        {isCreatable && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenBlockModal(null)}
+                            className="mt-3.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-xs font-semibold text-rose-600 hover:bg-rose-100 transition-colors cursor-pointer"
+                          >
+                            <Plus size={13} /> Block a Date / Leave
+                          </button>
+                        )}
+                      </div>
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Mobile Cards View (< 768px) */}
+              <div className="md:hidden flex-1 overflow-y-auto divide-y divide-slate-100 p-2.5 space-y-2.5">
+                {loadingBlocked && blockedPageRows.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-400">Loading blocked dates...</div>
+                ) : blockedPageRows.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-400">No blocked dates configured in this doctor profile</div>
+                ) : (
+                  blockedPageRows.map((b) => {
+                    const [y = 2026, m = 1, d = 1] = b.blocked_date.split('-').map(Number);
+                    const dateObj = new Date(y, m - 1, d);
+                    const dayName =
+                      ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][
+                        dateObj.getDay()
+                      ] || '';
+                    const formatted = dateObj.toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    });
+                    return (
+                      <div
+                        key={b.id}
+                        className="bg-white border border-slate-200 rounded-lg p-3 shadow-2xs space-y-2"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <div className="font-bold text-slate-900 text-xs sm:text-sm">{formatted}</div>
+                            <div className="text-[11px] text-slate-500">{dayName}</div>
+                          </div>
+                          {b.status === 'TODAY' ? (
+                            <Tag color="processing" style={{ margin: 0, fontWeight: 650 }}>Today</Tag>
+                          ) : b.status === 'UPCOMING' ? (
+                            <Tag color="success" style={{ margin: 0, fontWeight: 650 }}>Upcoming</Tag>
+                          ) : (
+                            <Tag color="default" style={{ margin: 0 }}>Past</Tag>
+                          )}
+                        </div>
+
+                        <div>
+                          {b.is_all_day ? (
+                            <Tag color="error" style={{ fontWeight: 650, borderRadius: 5, fontSize: 11, margin: 0 }}>
+                              Full Day Blocked (All Slots Excluded)
+                            </Tag>
+                          ) : (
+                            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-800">
+                              <Tag color="warning" style={{ fontWeight: 650, borderRadius: 5, fontSize: 11, margin: 0 }}>
+                                Time Range
+                              </Tag>
+                              <span>{formatTime12(b.start_time)} – {formatTime12(b.end_time)}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {b.reason ? (
+                          <div className="text-xs text-slate-700 bg-slate-50 p-2 rounded-md border border-slate-100">
+                            <strong>Reason:</strong> {b.reason}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-slate-400 italic">No reason specified</div>
+                        )}
+
+                        {(isUpdatable || isDeletable) && (
+                          <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
                             {isUpdatable && (
                               <button
                                 type="button"
-                                className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenBlockModal(r);
-                                }}
-                                title="Edit blocked schedule"
-                                aria-label="Edit"
+                                className="inline-flex items-center gap-1 h-7.5 px-3 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md transition-colors cursor-pointer"
+                                onClick={() => handleOpenBlockModal(b)}
                               >
-                                <Pencil size={13} />
+                                <Pencil size={11} /> Edit
                               </button>
                             )}
                             {isDeletable && (
                               <Popconfirm
                                 title="Remove this blocked date?"
                                 description="The doctor will become available according to their weekly schedule on this date."
-                                onConfirm={() => handleDeleteBlockedDate(r.id, r.blocked_date)}
+                                onConfirm={() => handleDeleteBlockedDate(b.id, b.blocked_date)}
                                 okText="Unblock"
                                 okButtonProps={{ danger: true }}
                               >
                                 <button
                                   type="button"
-                                  className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center justify-center h-7.5 w-7.5 text-rose-500 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md transition-colors cursor-pointer"
                                   title="Unblock date"
                                   aria-label="Delete"
                                 >
-                                  <Trash2 size={13} />
+                                  <Trash2 size={12} />
                                 </button>
                               </Popconfirm>
                             )}
                           </div>
-                        ),
-                      }
-                    : {})}
-                  emptyState={
-                    <div className="py-10 text-center">
-                      <CalendarX size={38} className="text-slate-300 mx-auto mb-2" />
-                      <div className="text-sm font-bold text-slate-700">
-                        No blocked dates or time ranges for this doctor
+                        )}
                       </div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        Dr. {currentDoctor?.name || 'Doctor'} is currently available for appointments according to their configured weekly schedule.
-                      </div>
-                      {isCreatable && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenBlockModal(null)}
-                          className="mt-3.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-xs font-semibold text-rose-600 hover:bg-rose-100 transition-colors cursor-pointer"
-                        >
-                          <Plus size={13} /> Block a Date / Leave
-                        </button>
-                      )}
-                    </div>
-                  }
-                />
+                    );
+                  })
+                )}
               </div>
 
               <CommonPagination
@@ -1803,7 +2040,7 @@ export default function DoctorAvailabilityPage() {
           ) : (
             /* Cards / Calendar View */
             <div
-              className="availability-scroll-container"
+              className="availability-scroll-container blocked-cards-grid"
               style={{
                 flex: 1,
                 minHeight: 0,
@@ -2025,8 +2262,9 @@ export default function DoctorAvailabilityPage() {
             >
               {editingSlot ? <Pencil size={18} /> : <CalendarClock size={18} />}
             </div>
-            <div>
+            <div className="doctor-modal-title-wrap">
               <div
+                className="doctor-modal-title"
                 style={{
                   fontSize: 16.5,
                   fontWeight: 700,
@@ -2036,7 +2274,7 @@ export default function DoctorAvailabilityPage() {
               >
                 {editingSlot ? 'Edit Availability Slot' : 'Add Availability Slot'}
               </div>
-              <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
+              <div className="doctor-modal-subtitle" style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
                 {currentDoctor?.name
                   ? `Configuring consultation schedule for ${currentDoctor.name}`
                   : 'Configure weekly consultation hours and slot duration'}
@@ -2079,6 +2317,105 @@ export default function DoctorAvailabilityPage() {
             }
             .doctor-section-card:hover {
               border-color: #cbd5e1;
+            }
+            .doctor-modal-grid-2 {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+              gap: 12px;
+            }
+            .doctor-modal-time-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 12px;
+            }
+            .doctor-status-options-row {
+              display: flex;
+              gap: 10px;
+              flex-wrap: wrap;
+            }
+            .doctor-block-scope-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 10px;
+            }
+            .doctor-modal-footer {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 16px 24px;
+              border-top: 1px solid #f1f5f9;
+              background: #ffffff;
+            }
+            .doctor-modal-footer-hint {
+              font-size: 12px;
+              color: #64748b;
+            }
+            .doctor-modal-footer-actions {
+              display: flex;
+              gap: 8px;
+              align-items: center;
+            }
+            @media (max-width: 640px) {
+              .doctor-create-drawer-modal {
+                width: 100vw !important;
+                max-width: 100vw !important;
+              }
+              .doctor-create-drawer-modal .ui-modal-head {
+                padding: 14px 16px !important;
+              }
+              .doctor-create-drawer-modal .ui-modal-body {
+                padding: 12px 14px !important;
+                gap: 12px !important;
+              }
+              .doctor-section-card {
+                padding: 14px 12px !important;
+                gap: 12px !important;
+              }
+              .doctor-modal-grid-2 {
+                grid-template-columns: 1fr !important;
+                gap: 10px !important;
+              }
+              .doctor-modal-footer {
+                flex-direction: column-reverse !important;
+                align-items: stretch !important;
+                gap: 12px !important;
+                padding: 12px 16px !important;
+              }
+              .doctor-modal-footer-hint {
+                text-align: center !important;
+                font-size: 11px !important;
+              }
+              .doctor-modal-footer-actions {
+                width: 100% !important;
+                display: flex !important;
+                gap: 8px !important;
+              }
+              .doctor-modal-footer-actions > button {
+                flex: 1 !important;
+                justify-content: center !important;
+                min-height: 38px !important;
+              }
+              .doctor-modal-title {
+                font-size: 15px !important;
+              }
+              .doctor-modal-subtitle {
+                font-size: 11px !important;
+                line-height: 1.35 !important;
+              }
+            }
+            @media (max-width: 480px) {
+              .doctor-modal-time-grid {
+                grid-template-columns: 1fr !important;
+                gap: 10px !important;
+              }
+              .doctor-block-scope-grid {
+                grid-template-columns: 1fr !important;
+                gap: 8px !important;
+              }
+              .doctor-status-options-row {
+                flex-direction: column !important;
+                gap: 8px !important;
+              }
             }
             .doctor-section-header {
               display: flex;
@@ -2185,7 +2522,7 @@ export default function DoctorAvailabilityPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+              <div className="doctor-modal-grid-2">
                 <div>
                   <label
                     style={{
@@ -2252,7 +2589,7 @@ export default function DoctorAvailabilityPage() {
                 <div className="doctor-section-tag">Consultation Hours &amp; Duration</div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="doctor-modal-time-grid">
                 <div>
                   <label
                     style={{
@@ -2345,7 +2682,7 @@ export default function DoctorAvailabilityPage() {
                 <div className="doctor-section-tag">Schedule Status{!editingSlot ? ' & Replication' : ''}</div>
               </div>
 
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <div className="doctor-status-options-row">
                 <button
                   type="button"
                   className={`doctor-status-btn ${formStatus === 'ACTIVE' ? 'is-active' : ''}`}
@@ -2470,14 +2807,11 @@ export default function DoctorAvailabilityPage() {
             </div>
           </div>
 
-          <div
-            className="ui-modal-foot"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-          >
-            <div style={{ fontSize: 12, color: '#64748b' }}>
+          <div className="ui-modal-foot doctor-modal-footer">
+            <div className="doctor-modal-footer-hint">
               Fields marked with <span style={{ color: '#ef4444' }}>*</span> are required
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="doctor-modal-footer-actions">
               <button
                 type="button"
                 className="ui-btn ui-btn-neutral"
@@ -2530,8 +2864,9 @@ export default function DoctorAvailabilityPage() {
             >
               <CalendarX size={18} />
             </div>
-            <div>
+            <div className="doctor-modal-title-wrap">
               <div
+                className="doctor-modal-title"
                 style={{
                   fontSize: 16.5,
                   fontWeight: 700,
@@ -2541,7 +2876,7 @@ export default function DoctorAvailabilityPage() {
               >
                 {editingBlock ? 'Edit Blocked Date / Time' : 'Block Date & Time Slots'}
               </div>
-              <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
+              <div className="doctor-modal-subtitle" style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
                 Prevent appointments during doctor leave, surgeries, or unavailable hours
               </div>
             </div>
@@ -2614,7 +2949,7 @@ export default function DoctorAvailabilityPage() {
                 <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 6 }}>
                   BLOCK TYPE / SCOPE <span style={{ color: '#ef4444' }}>*</span>
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div className="doctor-block-scope-grid">
                   <div
                     onClick={() => setBlockFormMode('all_day')}
                     style={{
@@ -2670,7 +3005,7 @@ export default function DoctorAvailabilityPage() {
                     gap: 10,
                   }}
                 >
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div className="doctor-modal-time-grid">
                     <div>
                       <label style={{ fontSize: 11.5, fontWeight: 650, color: '#7f1d1d', display: 'block', marginBottom: 4 }}>
                         START TIME *
@@ -2794,14 +3129,11 @@ export default function DoctorAvailabilityPage() {
             </div>
           </div>
 
-          <div
-            className="ui-modal-foot"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-          >
-            <div style={{ fontSize: 12, color: '#64748b' }}>
+          <div className="ui-modal-foot doctor-modal-footer">
+            <div className="doctor-modal-footer-hint">
               Fields marked with <span style={{ color: '#ef4444' }}>*</span> are required
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="doctor-modal-footer-actions">
               <button
                 type="button"
                 className="ui-btn ui-btn-neutral"

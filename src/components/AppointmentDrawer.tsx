@@ -435,7 +435,7 @@ export default function AppointmentDrawer({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, fontSize: 12.5 }}>
+          <div className="appt-patient-details-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, fontSize: 12.5 }}>
             <div className="appt-view-item">
               <span className="appt-view-label">Full Name</span>
               <span className="appt-view-val" style={{ fontWeight: 650 }}>{appointment.patientName}</span>
@@ -699,6 +699,33 @@ export default function AppointmentDrawer({
           width: min(740px, 100vw) !important;
           max-width: 740px !important;
           box-shadow: -12px 0 36px rgba(15, 23, 42, 0.14) !important;
+        }
+        @media (max-width: 640px) {
+          .appointment-view-drawer {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            border-radius: 0 !important;
+          }
+          .appointment-view-drawer .ui-drawer-hero,
+          .appointment-view-drawer .ui-drawer-body,
+          .appointment-view-drawer .ui-drawer-foot {
+            padding: 12px 14px !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .appointment-view-drawer .ui-drawer-foot > div {
+            flex-direction: column-reverse !important;
+          }
+          .appointment-view-drawer .ui-drawer-foot button {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+          .appointment-view-drawer .appt-view-card {
+            padding: 10px 12px !important;
+          }
+          .appointment-view-drawer .appt-patient-details-grid {
+            grid-template-columns: 1fr !important;
+          }
         }
         .appt-view-card {
           background: #ffffff;

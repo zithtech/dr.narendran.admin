@@ -3,7 +3,10 @@ import {
   ArrowDown,
   ArrowRight,
   ArrowUp,
+  ChevronDown,
+  ChevronUp,
   FileSpreadsheet,
+  ListFilter,
   type LucideIcon,
   Pencil,
   Plus,
@@ -100,6 +103,8 @@ export interface DataViewProps<T extends { id: string }> {
   /** Optional custom export action or label */
   onExport?: () => void;
   exportLabel?: string;
+  /** Optional minimum table width (e.g. 720) to prevent column crunching on small screens */
+  minTableWidth?: number | string | undefined;
 }
 
 type TimePreset = 'any' | 'today' | '7' | '30' | '90' | 'year' | 'custom';
@@ -166,6 +171,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
     canDelete: propCanDelete,
     onExport,
     exportLabel = 'Export',
+    minTableWidth,
   } = props;
   const { items, loading, error, syncedAt, refresh } = resource;
   const { message } = App.useApp();
@@ -204,6 +210,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [pendingDelete, setPendingDelete] = useState<T[] | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [isFilterAccordionOpen, setIsFilterAccordionOpen] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -505,124 +512,182 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
         )}
 
         {/* ── Filter Bar Section ── */}
-        <div className="flex items-center gap-2 flex-wrap px-3 sm:px-3.5 py-2.5 border-b border-slate-100 bg-white">
-          {/* Left: Search Input */}
-          <div className="relative flex items-center flex-1 min-w-[150px] sm:min-w-[190px] max-w-full sm:max-w-xs shrink-0">
-            <Search size={13} className="absolute left-2.5 text-slate-400 pointer-events-none" />
-            <input
-              ref={searchInputRef}
-              type="search"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              placeholder={searchPlaceholder}
-              className="w-full h-8 pl-8 pr-7 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-2xs"
-              aria-label={`Search ${nounPlural}`}
-            />
-            <span className="absolute right-2 text-[10px] text-slate-400 pointer-events-none select-none font-medium hidden sm:inline">
-              ⌘K
-            </span>
-          </div>
-
-          {/* Facets */}
-          {facetOptions.map(({ facet, options }) => (
-            <div key={facet.id} className="shrink-0 flex-1 sm:flex-initial min-w-[125px] sm:min-w-0">
-              <SearchableSelect
-                size="sm"
-                variant="default"
-                aria-label={facet.label}
-                value={filters[facet.id] ?? ''}
-                onChange={(val) => {
-                  setFilters((prev) => ({ ...prev, [facet.id]: val }));
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 sm:px-3.5 py-2.5 border-b border-slate-100 bg-white">
+          {/* Top row on mobile / Left on desktop: Search Input + Mobile Filter Accordion Toggle */}
+          <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1 sm:min-w-[190px] max-w-full sm:max-w-xs shrink-0">
+            <div className="relative flex-1">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                ref={searchInputRef}
+                type="search"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
                   setPage(1);
                 }}
-                placeholder={facet.allLabel}
-                searchPlaceholder={`Filter ${facet.label.toLowerCase()}...`}
-                options={[
-                  { value: '', label: facet.allLabel },
-                  ...options.map((o) => ({
-                    value: o.value,
-                    label: `${o.label} (${o.count})`,
-                  })),
-                ]}
+                placeholder={searchPlaceholder}
+                className="w-full h-8 pl-8 pr-7 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-2xs"
+                aria-label={`Search ${nounPlural}`}
               />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none select-none font-medium hidden sm:inline">
+                ⌘K
+              </span>
             </div>
-          ))}
 
-          {/* Date Range if configured */}
-          {dateOf && (
-            <>
-              <div className="shrink-0 flex-1 sm:flex-initial min-w-[125px] sm:min-w-0">
+            {/* Mobile Filter Accordion Toggle Button (sm:hidden) */}
+            {(facetOptions.length > 0 || dateOf) && (
+              <button
+                type="button"
+                onClick={() => setIsFilterAccordionOpen((prev) => !prev)}
+                className={cx(
+                  'sm:hidden inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border text-xs font-semibold transition-all shrink-0 cursor-pointer shadow-2xs',
+                  isFilterAccordionOpen
+                    ? 'border-blue-300 bg-blue-50 text-blue-700'
+                    : (Object.values(filters).filter(Boolean).length + (preset !== 'any' ? 1 : 0) + (from || to ? 1 : 0)) > 0
+                      ? 'border-blue-200 bg-blue-50/70 text-blue-800'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                )}
+                aria-expanded={isFilterAccordionOpen}
+                aria-label="Toggle filters"
+                data-testid="filter-accordion-toggle"
+              >
+                <ListFilter
+                  size={13}
+                  className={
+                    (Object.values(filters).filter(Boolean).length + (preset !== 'any' ? 1 : 0) + (from || to ? 1 : 0)) > 0
+                      ? 'text-blue-600'
+                      : 'text-slate-500'
+                  }
+                />
+                <span>Filters</span>
+                {(Object.values(filters).filter(Boolean).length + (preset !== 'any' ? 1 : 0) + (from || to ? 1 : 0)) > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-600 text-white leading-none">
+                    {Object.values(filters).filter(Boolean).length + (preset !== 'any' ? 1 : 0) + (from || to ? 1 : 0)}
+                  </span>
+                )}
+                {isFilterAccordionOpen ? (
+                  <ChevronUp size={13} className="text-slate-500" />
+                ) : (
+                  <ChevronDown size={13} className="text-slate-500" />
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* Filter Facets Container:
+              On desktop (sm+): Always flex inline
+              On mobile (<sm): Accordion dropdown (hidden sm:flex when collapsed, flex flex-col sm:flex-row when expanded)
+          */}
+          <div
+            className={cx(
+              'items-center gap-2 flex-wrap w-full sm:w-auto transition-all duration-200',
+              isFilterAccordionOpen
+                ? 'flex flex-col sm:flex-row items-stretch sm:items-center pt-2 sm:pt-0 border-t border-slate-100 sm:border-0'
+                : 'hidden sm:flex',
+            )}
+            data-testid="data-view-filter-content"
+          >
+            {/* Facets */}
+            {facetOptions.map(({ facet, options }) => (
+              <div key={facet.id} className="shrink-0 w-full sm:w-auto sm:flex-initial min-w-[125px] sm:min-w-0">
                 <SearchableSelect
                   size="sm"
                   variant="default"
-                  aria-label="Time range"
-                  value={preset}
+                  aria-label={facet.label}
+                  value={filters[facet.id] ?? ''}
                   onChange={(val) => {
-                    setPreset(val as TimePreset);
+                    setFilters((prev) => ({ ...prev, [facet.id]: val }));
                     setPage(1);
                   }}
-                  placeholder="Time range"
-                  searchable={false}
-                  options={TIME_PRESETS.map((p) => ({
-                    value: p.value,
-                    label: p.value === 'any' ? p.label : `${dateLabel} · ${p.label.toLowerCase()}`,
-                  }))}
+                  placeholder={facet.allLabel}
+                  searchPlaceholder={`Filter ${facet.label.toLowerCase()}...`}
+                  options={[
+                    { value: '', label: facet.allLabel },
+                    ...options.map((o) => ({
+                      value: o.value,
+                      label: `${o.label} (${o.count})`,
+                    })),
+                  ]}
                 />
               </div>
+            ))}
 
-              <div className="ui-daterange flex items-center gap-1 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-600 shadow-2xs shrink-0 max-w-full overflow-x-auto">
-                <span className="text-slate-400 font-medium text-[11px] select-none">{dateLabel}</span>
-                <input
-                  type="date"
-                  value={from}
-                  max={to || undefined}
-                  onChange={(e) => {
-                    setFrom(e.target.value);
-                    setPage(1);
-                  }}
-                  aria-label={`${dateLabel} from`}
-                  className="bg-transparent text-xs text-slate-700 outline-none w-20 cursor-pointer"
-                />
-                <ArrowRight size={11} className="text-slate-400 shrink-0" />
-                <input
-                  type="date"
-                  value={to}
-                  min={from || undefined}
-                  onChange={(e) => {
-                    setTo(e.target.value);
-                    setPage(1);
-                  }}
-                  aria-label={`${dateLabel} to`}
-                  className="bg-transparent text-xs text-slate-700 outline-none w-20 cursor-pointer"
-                />
-              </div>
-            </>
-          )}
+            {/* Date Range if configured */}
+            {dateOf && (
+              <>
+                <div className="shrink-0 w-full sm:w-auto sm:flex-initial min-w-[125px] sm:min-w-0">
+                  <SearchableSelect
+                    size="sm"
+                    variant="default"
+                    aria-label="Time range"
+                    value={preset}
+                    onChange={(val) => {
+                      setPreset(val as TimePreset);
+                      setPage(1);
+                    }}
+                    placeholder="Time range"
+                    searchable={false}
+                    options={TIME_PRESETS.map((p) => ({
+                      value: p.value,
+                      label: p.value === 'any' ? p.label : `${dateLabel} · ${p.label.toLowerCase()}`,
+                    }))}
+                  />
+                </div>
 
-          {/* Reset Button (Matching Image Reset X) */}
-          <button
-            type="button"
-            onClick={clearAll}
-            disabled={activeRules === 0}
-            className={cx(
-              'inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border text-xs font-medium transition-colors shadow-2xs cursor-pointer shrink-0',
-              activeRules > 0
-                ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300'
-                : 'border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed opacity-60',
+                <div className="ui-daterange flex items-center justify-between sm:justify-start gap-1 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-600 shadow-2xs shrink-0 max-w-full overflow-x-auto">
+                  <span className="text-slate-400 font-medium text-[11px] select-none">{dateLabel}</span>
+                  <input
+                    type="date"
+                    value={from}
+                    max={to || undefined}
+                    onChange={(e) => {
+                      setFrom(e.target.value);
+                      setPage(1);
+                    }}
+                    aria-label={`${dateLabel} from`}
+                    className="bg-transparent text-xs text-slate-700 outline-none w-20 cursor-pointer"
+                  />
+                  <ArrowRight size={11} className="text-slate-400 shrink-0" />
+                  <input
+                    type="date"
+                    value={to}
+                    min={from || undefined}
+                    onChange={(e) => {
+                      setTo(e.target.value);
+                      setPage(1);
+                    }}
+                    aria-label={`${dateLabel} to`}
+                    className="bg-transparent text-xs text-slate-700 outline-none w-20 cursor-pointer"
+                  />
+                </div>
+              </>
             )}
-            title="Reset all filters"
-          >
-            <span>Reset</span>
-            <X size={12} className="text-slate-500" />
-          </button>
+
+            {/* Reset Button (Matching Image Reset X) */}
+            <button
+              type="button"
+              onClick={clearAll}
+              disabled={activeRules === 0}
+              className={cx(
+                'inline-flex items-center justify-center gap-1.5 h-8 px-2.5 rounded-lg border text-xs font-medium transition-colors shadow-2xs cursor-pointer shrink-0 w-full sm:w-auto',
+                activeRules > 0
+                  ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300'
+                  : 'border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed opacity-60',
+              )}
+              title="Reset all filters"
+            >
+              <span>Reset</span>
+              <X size={12} className="text-slate-500" />
+            </button>
+          </div>
         </div>
 
         {/* ── Table Section ── */}
         <div className="overflow-auto min-h-[300px] max-h-[calc(100vh-270px)] no-scrollbar">
-          <table className="w-full text-left border-collapse">
+          <table
+            className="w-full text-left border-collapse"
+            style={minTableWidth !== undefined ? { minWidth: minTableWidth } : undefined}
+          >
             <thead className="sticky top-0 z-20 bg-[#f8fafc]">
               <tr className="border-b border-slate-200/90 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
                 {showCheckCol && (

@@ -78,14 +78,14 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
   return (
     <div className="space-y-3">
       {/* ── Patient Profile Header Card (Matching Patients Page Design) ── */}
-      <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5 min-w-0">
+      <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-start sm:items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
           <Avatar
             src={patient.profileImageUrl}
             name={patient.name}
-            size={52}
+            size={48}
           />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-tight">
                 {patient.name}
@@ -100,7 +100,7 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
               )}
             </div>
 
-            <div className="mt-1 flex items-center gap-3.5 text-xs text-slate-500 flex-wrap">
+            <div className="mt-1 flex items-center gap-2.5 sm:gap-3.5 text-xs text-slate-500 flex-wrap">
               {patient.phone && (
                 <span className="flex items-center gap-1">
                   <Phone size={12} className="text-slate-400" />
@@ -130,15 +130,17 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2 flex-wrap shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap w-full md:w-auto justify-start md:justify-end shrink-0">
           <button
             type="button"
             className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
             onClick={() => navigate(`/patient-timelines/${patient.id}`)}
             title="View complete longitudinal timeline"
+            aria-label="View complete longitudinal timeline"
           >
-            <History size={13} className="text-blue-600" />
-            <span>Patient Timeline</span>
+            <History size={13} className="text-blue-600 shrink-0" />
+            <span className="hidden sm:inline">Patient Timeline</span>
+            <span className="sm:hidden">Timeline</span>
           </button>
 
           {isRecordCreatable && (
@@ -146,9 +148,11 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
               type="button"
               className="inline-flex items-center gap-1.5 h-7.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
               onClick={() => onUploadClick()}
+              aria-label="Upload Record"
             >
-              <Plus size={13} strokeWidth={2.4} />
-              <span>Upload Record</span>
+              <Plus size={13} strokeWidth={2.4} className="shrink-0" />
+              <span className="hidden sm:inline">Upload Record</span>
+              <span className="sm:hidden">Upload</span>
             </button>
           )}
 
@@ -157,9 +161,11 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
             className="inline-flex items-center gap-1 h-7.5 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 text-xs font-medium shadow-2xs transition-colors cursor-pointer"
             onClick={onClose}
             title="Close patient records dossier"
+            aria-label="Close patient records dossier"
           >
-            <X size={13} />
-            <span>Close Dossier</span>
+            <X size={13} className="shrink-0" />
+            <span className="hidden sm:inline">Close Dossier</span>
+            <span className="sm:hidden">Close</span>
           </button>
         </div>
       </div>
@@ -167,7 +173,7 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
       {/* ── Main Unified Container: Dossier Tabs + Table ── */}
       <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col">
         {/* Tabs Row matching DataView Tabs */}
-        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none px-3.5 py-1.5 border-b border-slate-100 bg-slate-50/60 flex-nowrap">
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none px-2.5 sm:px-3.5 py-1.5 border-b border-slate-100 bg-slate-50/60 flex-nowrap">
           <button
             type="button"
             onClick={() => setActiveTab('records')}
@@ -179,7 +185,8 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
             )}
           >
             <FileText size={13} />
-            <span>Uploaded Medical Records</span>
+            <span className="hidden sm:inline">Uploaded Medical Records</span>
+            <span className="sm:hidden">Uploaded Records</span>
             <span
               className={cx(
                 'px-1.5 py-0.5 rounded text-[10.5px] font-semibold transition-colors',
@@ -201,7 +208,8 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
             )}
           >
             <CheckCircle2 size={13} />
-            <span>Doctor Prescribed Tests</span>
+            <span className="hidden sm:inline">Doctor Prescribed Tests</span>
+            <span className="sm:hidden">Prescribed Tests</span>
             <span
               className={cx(
                 'px-1.5 py-0.5 rounded text-[10.5px] font-semibold transition-colors',
@@ -216,7 +224,7 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
         {/* Tab 1: Uploaded Medical Records Table */}
         {activeTab === 'records' && (
           <div className="overflow-x-auto min-h-[260px]">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse" style={{ minWidth: 680 }}>
               <thead>
                 <tr className="border-b border-slate-200/90 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
                   <th className="px-3.5 py-2 whitespace-nowrap w-28">Report Date</th>
@@ -306,29 +314,29 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
                         <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"
-                            className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                            className="p-1.5 min-w-[28px] min-h-[28px] sm:min-w-[24px] sm:min-h-[24px] inline-flex items-center justify-center rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
                             onClick={() => onPreviewClick(rec)}
                             title="Preview document"
-                            aria-label="Preview"
+                            aria-label={`Preview ${rec.testName}`}
                           >
                             <Eye size={13} />
                           </button>
                           <button
                             type="button"
-                            className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                            className="p-1.5 min-w-[28px] min-h-[28px] sm:min-w-[24px] sm:min-h-[24px] inline-flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                             onClick={() => window.open(getAuthenticatedFileUrl(rec.documentUrl, true), '_blank', 'noopener,noreferrer')}
                             title="Download document"
-                            aria-label="Download"
+                            aria-label={`Download ${rec.testName}`}
                           >
                             <Download size={13} />
                           </button>
                           {isRecordUpdatable && (
                             <button
                               type="button"
-                              className="p-1 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                              className="p-1.5 min-w-[28px] min-h-[28px] sm:min-w-[24px] sm:min-h-[24px] inline-flex items-center justify-center rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
                               onClick={() => onEditClick(rec)}
                               title="Edit metadata"
-                              aria-label="Edit"
+                              aria-label={`Edit ${rec.testName}`}
                             >
                               <Pencil size={13} />
                             </button>
@@ -336,10 +344,10 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
                           {isRecordDeletable && (
                             <button
                               type="button"
-                              className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                              className="p-1.5 min-w-[28px] min-h-[28px] sm:min-w-[24px] sm:min-h-[24px] inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                               onClick={() => onDeleteClick(rec)}
                               title="Delete record"
-                              aria-label="Delete"
+                              aria-label={`Delete ${rec.testName}`}
                             >
                               <Trash2 size={13} />
                             </button>
@@ -357,7 +365,7 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
         {/* Tab 2: Doctor Prescribed Tests Table */}
         {activeTab === 'prescribed' && (
           <div className="overflow-x-auto min-h-[260px]">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse" style={{ minWidth: 680 }}>
               <thead>
                 <tr className="border-b border-slate-200/90 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
                   <th className="px-3.5 py-2 whitespace-nowrap">Prescribed Test</th>
@@ -437,9 +445,11 @@ export const PatientDossierView: React.FC<PatientDossierViewProps> = ({
                             type="button"
                             className="inline-flex items-center gap-1 h-6 px-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold transition-colors shadow-2xs cursor-pointer"
                             onClick={() => onUploadClick(item)}
+                            aria-label={`Upload report for ${item.testName}`}
                           >
-                            <Upload size={11} />
-                            <span>Upload Report</span>
+                            <Upload size={11} className="shrink-0" />
+                            <span className="hidden sm:inline">Upload Report</span>
+                            <span className="sm:hidden">Upload</span>
                           </button>
                         )}
                       </td>

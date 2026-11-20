@@ -211,9 +211,9 @@ export default function PatientTimelinesPage() {
       {/* ── Main Unified Container: Filters + Table + Pagination (Matching Patients DataView) ── */}
       <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col">
         {/* ── Filter Bar Section ── */}
-        <div className="flex items-center gap-2 flex-wrap px-3 sm:px-3.5 py-2.5 border-b border-slate-100 bg-white">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 sm:px-3.5 py-2.5 border-b border-slate-100 bg-white">
           {/* Search Input */}
-          <div className="relative flex items-center flex-1 min-w-[160px] sm:min-w-[200px] max-w-full sm:max-w-xs shrink-0">
+          <div className="relative flex items-center w-full sm:w-auto sm:flex-1 sm:min-w-[200px] max-w-full sm:max-w-xs shrink-0">
             <Search size={13} className="absolute left-2.5 text-slate-400 pointer-events-none" />
             <input
               ref={searchInputRef}
@@ -232,112 +232,114 @@ export default function PatientTimelinesPage() {
             </span>
           </div>
 
-          {/* Gender Filter Dropdown */}
-          <div className="shrink-0 flex-1 sm:flex-initial min-w-[125px] sm:min-w-0">
-            <SearchableSelect
-              size="sm"
-              variant="default"
-              aria-label="Gender"
-              value={genderFilter === 'ALL' ? '' : genderFilter}
-              onChange={(val) => {
-                setGenderFilter(val || 'ALL');
-                setPage(1);
-              }}
-              placeholder="All genders"
-              searchable={false}
-              options={[
-                { value: '', label: 'All genders' },
-                { value: 'MALE', label: 'Male' },
-                { value: 'FEMALE', label: 'Female' },
-                { value: 'OTHER', label: 'Other' },
-              ]}
-            />
-          </div>
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+            {/* Gender Filter Dropdown */}
+            <div className="shrink-0 flex-1 sm:flex-initial min-w-[125px] sm:min-w-0">
+              <SearchableSelect
+                size="sm"
+                variant="default"
+                aria-label="Gender"
+                value={genderFilter === 'ALL' ? '' : genderFilter}
+                onChange={(val) => {
+                  setGenderFilter(val || 'ALL');
+                  setPage(1);
+                }}
+                placeholder="All genders"
+                searchable={false}
+                options={[
+                  { value: '', label: 'All genders' },
+                  { value: 'MALE', label: 'Male' },
+                  { value: 'FEMALE', label: 'Female' },
+                  { value: 'OTHER', label: 'Other' },
+                ]}
+              />
+            </div>
 
-          {/* Status Filter Dropdown */}
-          <div className="shrink-0 flex-1 sm:flex-initial min-w-[125px] sm:min-w-0">
-            <SearchableSelect
-              size="sm"
-              variant="default"
-              aria-label="Status"
-              value={statusFilter === 'ALL' ? '' : statusFilter}
-              onChange={(val) => {
-                setStatusFilter(val || 'ALL');
-                setPage(1);
-              }}
-              placeholder="All statuses"
-              searchable={false}
-              options={[
-                { value: '', label: 'All statuses' },
-                { value: 'ACTIVE', label: 'Active only' },
-                { value: 'INACTIVE', label: 'Inactive only' },
-              ]}
-            />
-          </div>
+            {/* Status Filter Dropdown */}
+            <div className="shrink-0 flex-1 sm:flex-initial min-w-[125px] sm:min-w-0">
+              <SearchableSelect
+                size="sm"
+                variant="default"
+                aria-label="Status"
+                value={statusFilter === 'ALL' ? '' : statusFilter}
+                onChange={(val) => {
+                  setStatusFilter(val || 'ALL');
+                  setPage(1);
+                }}
+                placeholder="All statuses"
+                searchable={false}
+                options={[
+                  { value: '', label: 'All statuses' },
+                  { value: 'ACTIVE', label: 'Active only' },
+                  { value: 'INACTIVE', label: 'Inactive only' },
+                ]}
+              />
+            </div>
 
-          {/* Registration Date Range */}
-          <div className="ui-daterange flex items-center gap-1 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-600 shadow-2xs shrink-0 max-w-full overflow-x-auto">
-            <span className="text-slate-400 font-medium text-[11px] select-none">Registered:</span>
-            <input
-              type="date"
-              value={dateRange?.[0] ? dateRange[0].format('YYYY-MM-DD') : ''}
-              max={dateRange?.[1] ? dateRange[1].format('YYYY-MM-DD') : undefined}
-              onChange={(e) => {
-                const val = e.target.value;
-                const newFrom = val ? dayjs(val) : null;
-                const newTo = dateRange?.[1] || null;
-                if (!newFrom && !newTo) {
-                  setDateRange(null);
-                } else {
-                  setDateRange([newFrom, newTo] as any);
-                }
-                setPage(1);
-              }}
-              aria-label="Registered from"
-              className="bg-transparent text-xs text-slate-700 outline-none w-24 cursor-pointer"
-            />
-            <ArrowRight size={11} className="text-slate-400 shrink-0" />
-            <input
-              type="date"
-              value={dateRange?.[1] ? dateRange[1].format('YYYY-MM-DD') : ''}
-              min={dateRange?.[0] ? dateRange[0].format('YYYY-MM-DD') : undefined}
-              onChange={(e) => {
-                const val = e.target.value;
-                const newFrom = dateRange?.[0] || null;
-                const newTo = val ? dayjs(val) : null;
-                if (!newFrom && !newTo) {
-                  setDateRange(null);
-                } else {
-                  setDateRange([newFrom, newTo] as any);
-                }
-                setPage(1);
-              }}
-              aria-label="Registered to"
-              className="bg-transparent text-xs text-slate-700 outline-none w-24 cursor-pointer"
-            />
-          </div>
+            {/* Registration Date Range */}
+            <div className="ui-daterange flex items-center gap-1 h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-600 shadow-2xs shrink-0 max-w-full overflow-x-auto">
+              <span className="text-slate-400 font-medium text-[11px] select-none">Registered:</span>
+              <input
+                type="date"
+                value={dateRange?.[0] ? dateRange[0].format('YYYY-MM-DD') : ''}
+                max={dateRange?.[1] ? dateRange[1].format('YYYY-MM-DD') : undefined}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const newFrom = val ? dayjs(val) : null;
+                  const newTo = dateRange?.[1] || null;
+                  if (!newFrom && !newTo) {
+                    setDateRange(null);
+                  } else {
+                    setDateRange([newFrom, newTo] as any);
+                  }
+                  setPage(1);
+                }}
+                aria-label="Registered from"
+                className="bg-transparent text-xs text-slate-700 outline-none w-24 cursor-pointer"
+              />
+              <ArrowRight size={11} className="text-slate-400 shrink-0" />
+              <input
+                type="date"
+                value={dateRange?.[1] ? dateRange[1].format('YYYY-MM-DD') : ''}
+                min={dateRange?.[0] ? dateRange[0].format('YYYY-MM-DD') : undefined}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const newFrom = dateRange?.[0] || null;
+                  const newTo = val ? dayjs(val) : null;
+                  if (!newFrom && !newTo) {
+                    setDateRange(null);
+                  } else {
+                    setDateRange([newFrom, newTo] as any);
+                  }
+                  setPage(1);
+                }}
+                aria-label="Registered to"
+                className="bg-transparent text-xs text-slate-700 outline-none w-24 cursor-pointer"
+              />
+            </div>
 
-          {/* Reset Filters Button */}
-          <button
-            type="button"
-            onClick={resetFilters}
-            disabled={!hasActiveFilters}
-            className={cx(
-              'inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border text-xs font-medium transition-colors shadow-2xs cursor-pointer shrink-0',
-              hasActiveFilters
-                ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300'
-                : 'border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed opacity-60',
-            )}
-            title="Reset all filters"
-          >
-            <span>Reset</span>
-            <X size={12} className="text-slate-500" />
-          </button>
+            {/* Reset Filters Button */}
+            <button
+              type="button"
+              onClick={resetFilters}
+              disabled={!hasActiveFilters}
+              className={cx(
+                'inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border text-xs font-medium transition-colors shadow-2xs cursor-pointer shrink-0',
+                hasActiveFilters
+                  ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300'
+                  : 'border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed opacity-60',
+              )}
+              title="Reset all filters"
+            >
+              <span>Reset</span>
+              <X size={12} className="text-slate-500" />
+            </button>
+          </div>
         </div>
 
         {/* ── Table Section ── */}
         <div className="overflow-x-auto min-h-[300px]">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse" style={{ minWidth: 720 }}>
             <thead>
               <tr className="border-b border-slate-200/90 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
                 <th className="w-28 px-3.5 py-2 select-none whitespace-nowrap">Patient ID</th>
@@ -507,8 +509,10 @@ export default function PatientTimelinesPage() {
                             }}
                             className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-blue-600 hover:text-blue-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
                             title="View clinical timeline"
+                            aria-label="View Timeline"
                           >
-                            <span>View Timeline</span>
+                            <span className="hidden sm:inline">View Timeline</span>
+                            <span className="sm:hidden">View</span>
                             <ChevronRight size={13} />
                           </button>
                         )}
