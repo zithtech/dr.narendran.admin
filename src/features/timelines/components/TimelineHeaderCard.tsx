@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router';
 
 import { Avatar } from '../../../components/ui/primitives';
 import { usePermission } from '../../../context/PermissionContext';
+import { formatPatientDisplayName } from '../../../lib/format';
 import { patientTimelinesApi } from '../services/patientTimelinesApi';
 import type { PatientTimelineHeader } from '../types/patientTimelines';
 
@@ -82,10 +83,10 @@ export const TimelineHeaderCard: React.FC<TimelineHeaderCardProps> = ({
             <div className="space-y-0.5 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <Title level={4} className="!mb-0 !text-slate-900 !font-bold tracking-tight text-base sm:text-[17px]">
-                  {patient.name}
+                  {formatPatientDisplayName(patient.name, patient.patient_id)}
                 </Title>
                 <Tag color="cyan" className="font-mono text-[11px] !m-0 font-semibold px-1.5 py-0 rounded">
-                  ID: #{patient.id.slice(0, 8).toUpperCase()}
+                  ID: {patient.patient_id || `#${patient.id.slice(0, 8).toUpperCase()}`}
                 </Tag>
                 {patient.blood_group && (
                   <Tag color="red" className="font-semibold text-[11px] !m-0 px-1.5 py-0 rounded flex items-center gap-1">

@@ -43,7 +43,7 @@ import type {
   TimelineFilterType,
 } from '../features/timelines/types/patientTimelines';
 import { PatientMedicalHistoryTab } from '../features/medical_history/components/PatientMedicalHistoryTab';
-import { formatDate, formatPatientAge, timeAgo, titleCase } from '../lib/format';
+import { formatDate, formatPatientAge, formatPatientDisplayName, timeAgo, titleCase } from '../lib/format';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
 import { getAuthenticatedFileUrl } from '../utils/fileUrl';
@@ -382,7 +382,7 @@ export default function PatientDetailPage() {
             <span>Patients</span>
           </button>
           <span className="patient-breadcrumb-sep">/</span>
-          <span className="patient-breadcrumb-current">{patient.name}</span>
+          <span className="patient-breadcrumb-current">{formatPatientDisplayName(patient.name, patient.patient_id)}</span>
         </div>
 
         <div className="patient-page-topbar-actions">
@@ -453,9 +453,30 @@ export default function PatientDetailPage() {
             <div className="patient-card-body">
               {/* Patient Name & Status */}
               <div className="patient-card-name-block">
-                <h1 className="patient-card-name">{patient.name}</h1>
+                <h1 className="patient-card-name">{formatPatientDisplayName(patient.name, patient.patient_id)}</h1>
 
                 <div className="patient-card-badges-row">
+                  {patient.patient_id && (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '2px 8px',
+                        borderRadius: 12,
+                        fontSize: 11,
+                        fontWeight: 650,
+                        background: '#e0f2fe',
+                        color: '#0369a1',
+                        border: '1px solid #bae6fd',
+                      }}
+                      title="Unique Patient Identifier"
+                    >
+                      <ShieldCheck size={11} />
+                      <span>{patient.patient_id}</span>
+                    </span>
+                  )}
+
                   <span className="patient-card-status-pill">
                     <span className={`patient-status-dot ${isActive ? 'is-active' : ''}`} />
                     <span>{isActive ? 'Active Patient' : 'Inactive'}</span>
@@ -1224,7 +1245,7 @@ export default function PatientDetailPage() {
           }}
           preselectedPatient={{
             id: patient.id,
-            name: patient.name,
+            name: formatPatientDisplayName(patient.name, patient.patient_id),
             phone: patient.phone || undefined,
             gender: patient.gender || undefined,
             date_of_birth: patient.date_of_birth || undefined,

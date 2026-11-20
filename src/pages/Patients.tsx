@@ -6,7 +6,7 @@ import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui
 import { addedFacet, statusFacet } from '../components/ui/facets';
 import { ActivityCell, Badge, StatusDot } from '../components/ui/primitives';
 import { useResource } from '../hooks/useResource';
-import { ageFrom, formatDate, formatPatientAge, timeAgo, titleCase } from '../lib/format';
+import { ageFrom, formatDate, formatPatientAge, formatPatientDisplayName, timeAgo, titleCase } from '../lib/format';
 import api from '../utils/api';
 
 const FACETS: Facet<Patient>[] = [
@@ -64,7 +64,7 @@ export default function Patients() {
       sort: (p) => p.name.toLowerCase(),
       cell: (p) => (
         <PrimaryCell
-          name={p.name}
+          name={formatPatientDisplayName(p.name, p.patient_id)}
           sub={p.phone || p.email || <span className="ui-muted">No contact info</span>}
           avatarSrc={p.profile_image_url}
           onOpen={() => openDetails(p)}
@@ -151,6 +151,7 @@ export default function Patients() {
         searchPlaceholder="Search name, phone, email…"
         searchFields={(p) => [
           p.name,
+          p.patient_id,
           p.email,
           p.phone,
           p.hospital_name,
@@ -169,7 +170,7 @@ export default function Patients() {
         onCreate={() => openEditor(null)}
         onEdit={(p) => openEditor(p)}
         onDelete={(p) => api.delete(`patients/${p.id}`)}
-        nameOf={(p) => p.name}
+        nameOf={(p) => formatPatientDisplayName(p.name, p.patient_id)}
         onRowClick={openDetails}
       />
     </>

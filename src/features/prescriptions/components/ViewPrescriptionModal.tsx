@@ -84,7 +84,7 @@ function buildDataContext(rx: Prescription): LetterPadDataContext {
     },
     patient: {
       name: rx.patient_name || 'Patient',
-      patient_id: rx.patient_id ? String(rx.patient_id).slice(0, 8).toUpperCase() : '',
+      patient_id: rx.patient_code || (rx.patient_id ? String(rx.patient_id).slice(0, 8).toUpperCase() : ''),
       phone: rx.patient_phone || '',
       gender: rx.patient_gender || '',
       date_of_birth: rx.patient_dob || '',

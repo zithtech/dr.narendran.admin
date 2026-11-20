@@ -15,7 +15,7 @@ import { useEffect, useState } from 'react';
 
 import type { Patient } from '../../../components/PatientModal';
 import ScheduleAppointmentModal from '../../../components/ScheduleAppointmentModal';
-import { formatPatientAge } from '../../../lib/format';
+import { formatPatientAge, formatPatientDisplayName } from '../../../lib/format';
 import { ClinicalHistorySectionContent } from '../../medical_history/components/ClinicalHistorySectionContent';
 import { medicalHistoryApi } from '../../medical_history/services/medicalHistoryApi';
 import type { Prescription } from '../../prescriptions/api/prescriptionsApi';
@@ -141,6 +141,19 @@ export function PatientJourneyDrawer({
         },
       };
 
+      if (latest?.previous_medical_history) {
+        (payload as any).previous_medical_history = latest.previous_medical_history;
+      }
+      if (latest?.family_medical_history) {
+        (payload as any).family_medical_history = latest.family_medical_history;
+      }
+      if (latest?.reproductive_history) {
+        (payload as any).reproductive_history = latest.reproductive_history;
+      }
+      if (latest?.lifestyle_history) {
+        (payload as any).lifestyle_history = latest.lifestyle_history;
+      }
+
       if (latest?.id) {
         await medicalHistoryApi.updateHistory(patient.id, latest.id, payload);
       } else {
@@ -251,7 +264,7 @@ export function PatientJourneyDrawer({
             }}
           >
             <User size={14} style={{ color: '#2563eb' }} />
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{patient.name}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{formatPatientDisplayName(patient.name, patient.patient_id)}</span>
             {patient.gender && (
               <Tag color="geekblue" style={{ margin: 0, fontSize: 10.5 }}>
                 {patient.gender}
@@ -366,7 +379,7 @@ export function PatientJourneyDrawer({
             <ClinicalHistorySectionContent
               isOpen={isOpen}
               patientId={patient.id}
-              patientName={patient.name}
+              patientName={formatPatientDisplayName(patient.name, patient.patient_id)}
               patientGender={patient.gender}
               patientAge={patient.date_of_birth ? formatPatientAge(patient.date_of_birth) : undefined}
               patientBloodGroup={patient.blood_group || undefined}
@@ -383,7 +396,7 @@ export function PatientJourneyDrawer({
         {activeStep === 'plan' && patient && (
           <PlanOfManagementStep
             initialData={managementPlan || undefined}
-            patientName={patient.name}
+            patientName={formatPatientDisplayName(patient.name, patient.patient_id)}
             patientAge={patient.date_of_birth ? formatPatientAge(patient.date_of_birth) : undefined}
             patientGender={patient.gender}
             onSave={handlePlanSaved}
@@ -712,7 +725,7 @@ export function PatientJourneyDrawer({
           onSuccess={handlePrescriptionSuccess}
           preselectedPatient={{
             id: patient.id,
-            name: patient.name,
+            name: formatPatientDisplayName(patient.name, patient.patient_id),
             phone: patient.phone || undefined,
             gender: patient.gender || undefined,
             date_of_birth: patient.date_of_birth || undefined,

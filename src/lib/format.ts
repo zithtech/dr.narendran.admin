@@ -154,7 +154,8 @@ export function titleCase(value: string | null | undefined): string {
 }
 
 export function initials(name: string): string {
-  const cleaned = name
+  const withoutId = name.replace(/\s*\([^)]*\)$/, '').trim();
+  const cleaned = (withoutId || name)
     .replace(/^(dr|mr|mrs|ms|miss|prof)\.?\s+/i, '')
     .trim()
     .split(/\s+/)
@@ -198,4 +199,18 @@ export function monthLabel(key: string): string {
   const [y, m] = key.split('-').map(Number);
   if (!y || !m) return key;
   return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+}
+
+/**
+ * Format a patient's display name to include their unique human-readable Patient ID (e.g. "Bharathi (PA_001)").
+ * If the name already contains the patient ID, it avoids duplicate appending.
+ */
+export function formatPatientDisplayName(name?: string | null, patientId?: string | null): string {
+  const trimmedName = name?.trim() || '';
+  const trimmedId = patientId?.trim() || '';
+  if (!trimmedName) return trimmedId ? `(${trimmedId})` : '';
+  if (trimmedId && !trimmedName.includes(`(${trimmedId})`)) {
+    return `${trimmedName} (${trimmedId})`;
+  }
+  return trimmedName;
 }

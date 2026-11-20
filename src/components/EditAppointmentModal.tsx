@@ -832,7 +832,7 @@ export default function EditAppointmentModal({
                     boxShadow: errors.patientName ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
                   }}
                   onChange={(e) => {
-                    const sanitized = e.target.value.replace(/[^a-zA-Z\s.-]/g, '').slice(0, 100);
+                    const sanitized = e.target.value.replace(/[^a-zA-Z\s._-]/g, '').slice(0, 100);
                     setPatientName(sanitized);
                     setErrors((prev) => ({
                       ...prev,
