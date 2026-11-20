@@ -1,76 +1,77 @@
-import {
-  Building2,
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  FlaskConical,
-  KeyRound,
-  LayoutDashboard,
-  LogOut,
-  type LucideIcon,
-  User,
-} from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 
-import { cx } from './ui/primitives';
-
-interface NavItem {
-  name: string;
-  path: string;
-  icon: LucideIcon;
-}
-
-const LAB_NAV_ITEMS: readonly NavItem[] = [
-  { name: 'Dashboard', path: '/client/dashboard', icon: LayoutDashboard },
-  { name: 'Test Reports', path: '/client/reports', icon: FileText },
-  { name: 'Lab Profile', path: '/client/profile', icon: Building2 },
-  { name: 'Services / Tests', path: '/client/services', icon: FlaskConical },
-  { name: 'My Account', path: '/client/account', icon: User },
-  { name: 'Change Password', path: '/client/change-password', icon: KeyRound },
-] as const;
-
-const EXPANDED_KEY = 'labClientRailExpanded';
-
-function readExpanded(): boolean {
-  try {
-    return localStorage.getItem(EXPANDED_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
+import { ClientMobileDrawer } from './client/ClientMobileDrawer';
+import {
+  type ClientNavCategory,
+  type ClientNavModule,
+  findActiveClientNavigation,
+  LAB_CLIENT_CATEGORIES,
+} from './client/clientNavConfig';
+import { ClientSidebar } from './client/ClientSidebar';
+import { ClientTopNavbar } from './client/ClientTopNavbar';
 
 export default function LabClientLayout() {
-  const [isExpanded, setIsExpanded] = useState(readExpanded);
   const navigate = useNavigate();
   const location = useLocation();
 
   const userJson = localStorage.getItem('labClientUser');
   const labJson = localStorage.getItem('labClientLab');
 
-  const user = userJson ? JSON.parse(userJson) : null;
-  const lab = labJson ? JSON.parse(labJson) : null;
+  const user = userJson ? (JSON.parse(userJson) as { username?: string; role?: string }) : null;
+  const lab = labJson ? (JSON.parse(labJson) as { name?: string }) : null;
 
-  const username = user?.username || 'Lab User';
-  const labName = lab?.name || 'Diagnostic Laboratory';
+  const username = user?.username ?? 'Lab User';
+  const roleName = user?.role ?? 'Lab Admin';
+  const labName = lab?.name ?? 'Diagnostic Laboratory';
 
-  const userInitials = (username || 'LU')
-    .replace(/[._-]+/g, ' ')
-    .trim()
-    .split(/\s+/)
-    .map((w: string) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase() || 'LU';
+  const userInitials = useMemo(() => {
+    return (
+      (username || 'LU')
+        .replace(/[._-]+/g, ' ')
+        .trim()
+        .split(/\s+/)
+        .map((w: string) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase() || 'LU'
+    );
+  }, [username]);
 
-  const toggle = () => {
-    setIsExpanded((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(EXPANDED_KEY, next ? '1' : '0');
-      } catch {}
-      return next;
-    });
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
+
+  // Determine active category and active module based on current URL path
+  const { activeCategory: matchedCategory, activeModule } = useMemo(
+    () => findActiveClientNavigation(location.pathname, LAB_CLIENT_CATEGORIES),
+    [location.pathname],
+  );
+
+  // If user clicked category, use it; otherwise use matching category
+  const currentCategory = useMemo(() => {
+    if (selectedCategoryKey) {
+      const found = LAB_CLIENT_CATEGORIES.find((c) => c.key === selectedCategoryKey);
+      if (found) return found;
+    }
+    return matchedCategory;
+  }, [selectedCategoryKey, matchedCategory]);
+
+  const handleSelectCategory = (category: ClientNavCategory) => {
+    setSelectedCategoryKey(category.key);
+    const hasCurrentModule = category.modules.some((m) => m.path === location.pathname);
+    if (!hasCurrentModule && category.modules.length > 0 && category.modules[0]) {
+      void navigate(category.modules[0].path);
+    }
+  };
+
+  const handleSelectModule = (mod: ClientNavModule) => {
+    const parentCategory = LAB_CLIENT_CATEGORIES.find((cat) =>
+      cat.modules.some((m) => m.path === mod.path),
+    );
+    if (parentCategory) {
+      setSelectedCategoryKey(parentCategory.key);
+    }
+    void navigate(mod.path);
   };
 
   const handleLogout = () => {
@@ -81,117 +82,53 @@ export default function LabClientLayout() {
   };
 
   return (
-    <div className="ui-shell">
-      <aside
-        className={cx('ui-rail', isExpanded && 'is-expanded')}
-        aria-label="Lab Client Portal Navigation"
-      >
-        {/* Brand Header */}
-        <div className="ui-rail-brand">
-          <span
-            className="ui-rail-logo"
-            style={{
-              background: 'linear-gradient(135deg, #0284c7 0%, #0d9488 100%)',
-              color: '#ffffff',
-            }}
-          >
-            <FlaskConical size={16} strokeWidth={2.4} />
-          </span>
-          {isExpanded && (
-            <span className="ui-rail-brand-text">
-              <span className="ui-rail-brand-name">Client Portal</span>
-              <span className="ui-rail-brand-sub" title={labName}>
-                {labName}
-              </span>
-            </span>
-          )}
-        </div>
+    <div className="ui-app-layout">
+      {/* 1. Left Full-Height Sidebar matching Admin Web App */}
+      <ClientSidebar
+        categories={LAB_CLIENT_CATEGORIES}
+        activeCategory={currentCategory}
+        activeModule={activeModule}
+        onSelectModule={handleSelectModule}
+        brandName="Client Portal"
+        brandSub={labName}
+        brandHomePath="/client/dashboard"
+        onLogout={handleLogout}
+      />
 
-        {/* Rail Toggle Button */}
-        <button
-          type="button"
-          className="ui-rail-item ui-rail-toggle"
-          onClick={toggle}
-          data-tip="Expand"
-          aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
-        >
-          {isExpanded ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-          {isExpanded && <span className="ui-rail-item-label">Collapse</span>}
-        </button>
+      {/* 2. Right Main Column: TopNavbar on Top + Content Below */}
+      <div className="ui-app-right-column">
+        <ClientTopNavbar
+          categories={LAB_CLIENT_CATEGORIES}
+          activeCategory={currentCategory}
+          activeModule={activeModule}
+          onSelectCategory={handleSelectCategory}
+          currentUsername={username}
+          currentRole={roleName}
+          userInitials={userInitials}
+          onLogout={handleLogout}
+          isMobileMenuOpen={isMobileMenuOpen}
+          onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)}
+        />
 
-        <div className="ui-rail-divider" />
+        <main className="ui-main">
+          <Outlet />
+        </main>
+      </div>
 
-        {/* Sidebar Navigation Items */}
-        <nav className="ui-rail-nav">
-          {LAB_NAV_ITEMS.map((item) => {
-            const isActive = location.pathname === item.path;
-            const Icon = item.icon;
-            return (
-              <button
-                type="button"
-                key={item.path}
-                className={cx('ui-rail-item', isActive && 'is-active')}
-                onClick={() => {
-                  void navigate(item.path);
-                }}
-                data-tip={item.name}
-                aria-label={item.name}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                <Icon size={18} strokeWidth={isActive ? 2.1 : 1.8} />
-                {isExpanded && <span className="ui-rail-item-label">{item.name}</span>}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Footer with logged-in user card matching admin app */}
-        <div className="ui-rail-footer">
-          {/* User Card */}
-          <div
-            className={cx('ui-rail-user-card', !isExpanded && 'is-collapsed')}
-            title={`${username} · ${labName}`}
-          >
-            <div className="ui-rail-user-avatar" onClick={!isExpanded ? toggle : undefined}>
-              {userInitials}
-            </div>
-            {isExpanded && (
-              <>
-                <div className="ui-rail-user-info" onClick={toggle}>
-                  <span className="ui-rail-user-name" title={username}>{username}</span>
-                  <span className="ui-rail-user-sub" title={labName}>{labName}</span>
-                </div>
-                <button
-                  type="button"
-                  className="ui-rail-user-logout-btn"
-                  onClick={handleLogout}
-                  title="Log out"
-                  aria-label="Log out"
-                >
-                  <LogOut size={16} strokeWidth={1.8} />
-                </button>
-              </>
-            )}
-          </div>
-
-          {!isExpanded && (
-            <button
-              type="button"
-              className="ui-rail-item ui-rail-logout-collapsed"
-              onClick={handleLogout}
-              data-tip="Log out"
-              aria-label="Log out"
-            >
-              <LogOut size={18} strokeWidth={1.8} />
-            </button>
-          )}
-        </div>
-      </aside>
-
-      {/* Main Work Area */}
-      <main className="ui-main" style={{ overflowY: 'auto', height: '100vh' }}>
-        <Outlet />
-      </main>
+      {/* 3. Mobile Responsive Drawer */}
+      <ClientMobileDrawer
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        categories={LAB_CLIENT_CATEGORIES}
+        activeModule={activeModule}
+        onSelectModule={handleSelectModule}
+        currentUsername={username}
+        currentRole={roleName}
+        userInitials={userInitials}
+        brandName="Client Portal"
+        brandSub={labName}
+        onLogout={handleLogout}
+      />
     </div>
   );
 }
