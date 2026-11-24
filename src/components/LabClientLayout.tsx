@@ -16,14 +16,14 @@ export default function LabClientLayout() {
   const location = useLocation();
 
   const userJson = localStorage.getItem('labClientUser');
-  const labJson = localStorage.getItem('labClientLab');
 
   const user = userJson ? (JSON.parse(userJson) as { username?: string; role?: string }) : null;
+  const labJson = localStorage.getItem('labClientLab');
   const lab = labJson ? (JSON.parse(labJson) as { name?: string }) : null;
+  const labName = lab?.name?.trim() || 'raj lab';
 
   const username = user?.username ?? 'Lab User';
   const roleName = user?.role ?? 'Lab Admin';
-  const labName = lab?.name ?? 'Diagnostic Laboratory';
 
   const userInitials = useMemo(() => {
     return (

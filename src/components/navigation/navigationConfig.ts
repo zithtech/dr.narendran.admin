@@ -193,6 +193,15 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         slug: 'LINKED_MEDICALS',
         description: 'Affiliated clinics, dispensaries & healthcare hubs',
       },
+      {
+        name: 'Alliances – Doctor Management',
+        path: '/alliances/doctors',
+        icon: UserCheck,
+        slug: 'ALLIANCE_DOCTORS',
+        fallbackSlugs: ['DOCTORS', 'HOSPITALS'],
+        description: 'Alliance doctors, external medical specialists & partner network',
+        aliases: ['/alliance-doctors'],
+      },
     ],
   },
   {

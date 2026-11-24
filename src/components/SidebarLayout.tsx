@@ -85,7 +85,7 @@ export default function SidebarLayout() {
       const parts = storedFull.trim().split(/\s+/);
       if (parts[0]) return parts[0];
     }
-    return 'HMS Admin';
+    return 'Annaamalai';
   });
   const [brandLastName, setBrandLastName] = useState<string>(() => {
     const storedLast = localStorage.getItem('adminLastName');
@@ -95,7 +95,7 @@ export default function SidebarLayout() {
       const parts = storedFull.trim().split(/\s+/);
       if (parts.length > 1) return parts.slice(1).join(' ');
     }
-    return 'Hospital';
+    return 'Cancer Center';
   });
 
   // Sync brand settings & logo from server

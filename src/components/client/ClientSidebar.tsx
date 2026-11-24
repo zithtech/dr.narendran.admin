@@ -18,6 +18,7 @@ interface ClientSidebarProps {
   brandName?: string;
   brandSub?: string;
   brandHomePath?: string;
+  brandLogoUrl?: string;
   onLogout: () => void;
 }
 
@@ -26,8 +27,9 @@ export const ClientSidebar: React.FC<ClientSidebarProps> = ({
   activeModule,
   onSelectModule,
   brandName = 'Client Portal',
-  brandSub = 'Diagnostic Partner',
+  brandSub = 'raj lab',
   brandHomePath = '/client/dashboard',
+  brandLogoUrl,
   onLogout,
 }) => {
   const navigate = useNavigate();
@@ -62,12 +64,16 @@ export const ClientSidebar: React.FC<ClientSidebarProps> = ({
         <div
           className="ui-sidebar-brand-icon"
           style={{
-            background: 'linear-gradient(135deg, #0284c7 0%, #0d9488 100%)',
+            background: brandLogoUrl ? 'transparent' : 'linear-gradient(135deg, #0284c7 0%, #0d9488 100%)',
             color: '#ffffff',
             boxShadow: '0 2px 6px rgba(13, 148, 136, 0.28)',
           }}
         >
-          <FlaskConical size={18} strokeWidth={2.4} />
+          {brandLogoUrl ? (
+            <img src={brandLogoUrl} alt={brandName} className="w-full h-full object-contain rounded-md" />
+          ) : (
+            <FlaskConical size={18} strokeWidth={2.4} />
+          )}
         </div>
         <div className="ui-sidebar-brand-text">
           <span className="ui-sidebar-brand-name" title={brandName}>
