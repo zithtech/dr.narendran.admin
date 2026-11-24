@@ -80,6 +80,7 @@ export interface DataViewProps<T extends { id: string }> {
   columns: Column<T>[];
   createLabel?: string;
   onCreate?: () => void;
+  afterCreateAction?: ReactNode;
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => Promise<unknown>;
   nameOf?: (item: T) => string;
@@ -155,6 +156,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
     columns,
     createLabel,
     onCreate,
+    afterCreateAction,
     onEdit,
     onDelete,
     nameOf,
@@ -467,6 +469,8 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
               <span>{createLabel || 'Create'}</span>
             </button>
           )}
+
+          {afterCreateAction}
         </div>
       </header>
 

@@ -30,6 +30,7 @@ import PrescriptionsPage from './features/prescriptions/pages/PrescriptionsPage'
 import Labs from './pages/Labs';
 import LabServices from './pages/LabServices';
 import LinkedMedicals from './pages/LinkedMedicals';
+import AllianceDoctorsPage from './pages/AllianceDoctorsPage';
 import ClientPortals from './pages/ClientPortals';
 import Roles from './pages/Roles';
 import StaffManagement from './pages/StaffManagement';
@@ -171,6 +172,22 @@ function App() {
                 <LinkedMedicals />
               </ModuleRouteGuard>
             }
+          />
+          <Route
+            path="/alliances/doctors"
+            element={
+              <ModuleRouteGuard
+                module="ALLIANCE_DOCTORS"
+                fallbackSlugs={['DOCTORS', 'HOSPITALS']}
+                title="Alliances – Doctor Management"
+              >
+                <AllianceDoctorsPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/alliance-doctors"
+            element={<Navigate to="/alliances/doctors" replace />}
           />
 
           {/* Clinical Modules */}
