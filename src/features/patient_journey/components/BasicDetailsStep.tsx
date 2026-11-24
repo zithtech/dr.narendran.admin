@@ -178,7 +178,7 @@ export function BasicDetailsStep({
     }));
 
   return (
-    <form onSubmit={handleSubmit} style={{ padding: '24px 28px', maxWidth: 1040, margin: '0 auto' }}>
+    <form onSubmit={handleSubmit} style={{ padding: '20px 24px', width: '100%', boxSizing: 'border-box' }}>
       {/* ── Header Banner ── */}
       <div
         style={{
@@ -280,7 +280,7 @@ export function BasicDetailsStep({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                style={{ height: 34, fontSize: 12.5 }}
+                style={{ height: 38, fontSize: 13 }}
               />
             </div>
 
@@ -294,7 +294,7 @@ export function BasicDetailsStep({
                 placeholder="e.g. +91 98765 43210"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                style={{ height: 34, fontSize: 12.5 }}
+                style={{ height: 38, fontSize: 13 }}
               />
             </div>
 
@@ -308,7 +308,7 @@ export function BasicDetailsStep({
                 placeholder="e.g. patient@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                style={{ height: 34, fontSize: 12.5 }}
+                style={{ height: 38, fontSize: 13 }}
               />
             </div>
 
@@ -333,7 +333,7 @@ export function BasicDetailsStep({
                 className="patient-form-input"
                 value={dateOfBirth}
                 onChange={(e) => setDateOfBirth(e.target.value)}
-                style={{ height: 34, fontSize: 12.5 }}
+                style={{ height: 38, fontSize: 13 }}
               />
             </div>
 
@@ -360,7 +360,7 @@ export function BasicDetailsStep({
                 placeholder="e.g. Teacher, Engineer, Homemaker"
                 value={occupation}
                 onChange={(e) => setOccupation(e.target.value)}
-                style={{ height: 34, fontSize: 12.5 }}
+                style={{ height: 38, fontSize: 13 }}
               />
             </div>
           </div>
@@ -377,7 +377,7 @@ export function BasicDetailsStep({
                   placeholder="Emergency contact name"
                   value={emergencyName}
                   onChange={(e) => setEmergencyName(e.target.value)}
-                  style={{ height: 32, fontSize: 12 }}
+                  style={{ height: 38, fontSize: 13 }}
                 />
               </div>
               <div>
@@ -387,7 +387,7 @@ export function BasicDetailsStep({
                   placeholder="Emergency phone number"
                   value={emergencyPhone}
                   onChange={(e) => setEmergencyPhone(e.target.value)}
-                  style={{ height: 32, fontSize: 12 }}
+                  style={{ height: 38, fontSize: 13 }}
                 />
               </div>
               <div>
@@ -397,7 +397,7 @@ export function BasicDetailsStep({
                   placeholder="Relationship (e.g. Spouse)"
                   value={emergencyRelation}
                   onChange={(e) => setEmergencyRelation(e.target.value)}
-                  style={{ height: 32, fontSize: 12 }}
+                  style={{ height: 38, fontSize: 13 }}
                 />
               </div>
             </div>
@@ -470,7 +470,7 @@ export function BasicDetailsStep({
                 placeholder="e.g. 42 Gandhi Road, Anna Nagar"
                 value={addressLine1}
                 onChange={(e) => setAddressLine1(e.target.value)}
-                style={{ height: 34, fontSize: 12.5 }}
+                style={{ height: 38, fontSize: 13 }}
               />
             </div>
 
@@ -484,7 +484,7 @@ export function BasicDetailsStep({
                 placeholder="e.g. Chennai"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                style={{ height: 34, fontSize: 12.5 }}
+                style={{ height: 38, fontSize: 13 }}
               />
             </div>
 
@@ -498,7 +498,7 @@ export function BasicDetailsStep({
                 placeholder="e.g. Tamil Nadu"
                 value={state}
                 onChange={(e) => setState(e.target.value)}
-                style={{ height: 34, fontSize: 12.5 }}
+                style={{ height: 38, fontSize: 13 }}
               />
             </div>
 
@@ -512,7 +512,7 @@ export function BasicDetailsStep({
                 placeholder="e.g. 600001"
                 value={pincode}
                 onChange={(e) => setPincode(e.target.value)}
-                style={{ height: 34, fontSize: 12.5 }}
+                style={{ height: 38, fontSize: 13 }}
               />
             </div>
           </div>
@@ -559,7 +559,7 @@ export function BasicDetailsStep({
                 placeholder="e.g. 165"
                 value={heightCm}
                 onChange={(e) => setHeightCm(e.target.value)}
-                style={{ height: 34, fontSize: 12.5 }}
+                style={{ height: 38, fontSize: 13 }}
               />
             </div>
 
@@ -574,7 +574,7 @@ export function BasicDetailsStep({
                 placeholder="e.g. 62"
                 value={weightKg}
                 onChange={(e) => setWeightKg(e.target.value)}
-                style={{ height: 34, fontSize: 12.5 }}
+                style={{ height: 38, fontSize: 13 }}
               />
             </div>
 
@@ -588,7 +588,7 @@ export function BasicDetailsStep({
                 placeholder="e.g. 120/80"
                 value={bloodPressure}
                 onChange={(e) => setBloodPressure(e.target.value)}
-                style={{ height: 34, fontSize: 12.5 }}
+                style={{ height: 38, fontSize: 13 }}
               />
             </div>
 
@@ -602,7 +602,7 @@ export function BasicDetailsStep({
                 placeholder="e.g. 98.4"
                 value={temperature}
                 onChange={(e) => setTemperature(e.target.value)}
-                style={{ height: 34, fontSize: 12.5 }}
+                style={{ height: 38, fontSize: 13 }}
               />
             </div>
           </div>

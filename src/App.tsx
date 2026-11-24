@@ -30,6 +30,7 @@ import PrescriptionsPage from './features/prescriptions/pages/PrescriptionsPage'
 import Labs from './pages/Labs';
 import LabServices from './pages/LabServices';
 import LinkedMedicals from './pages/LinkedMedicals';
+import Referrals from './pages/Referrals';
 import ClientPortals from './pages/ClientPortals';
 import Roles from './pages/Roles';
 import StaffManagement from './pages/StaffManagement';
@@ -172,6 +173,15 @@ function App() {
               </ModuleRouteGuard>
             }
           />
+          <Route
+            path="/referrals"
+            element={
+              <ModuleRouteGuard module="REFERRALS" title="Referrals" fallbackSlugs={['HOSPITALS', 'DOCTORS']}>
+                <Referrals />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route path="/referral" element={<Navigate to="/referrals" replace />} />
 
           {/* Clinical Modules */}
           <Route

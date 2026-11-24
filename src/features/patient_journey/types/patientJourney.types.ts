@@ -11,6 +11,8 @@ export interface PlanOfManagementData {
   investigationsOrdered: string[];
   customInvestigations?: string | undefined;
   clinicalObservations?: string | undefined;
+  performanceScore?: number | null | undefined;
+  performanceDescription?: string | undefined;
   treatmentStrategy: string;
   careGoals?: string | undefined;
   recommendedFollowUpDays?: number | undefined;

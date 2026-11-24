@@ -11,7 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  Code2,
   FileText,
   HeartPulse,
   History,
@@ -27,6 +26,7 @@ import {
   ShieldCheck,
   Stethoscope,
   User,
+  UserCheck,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -93,6 +93,9 @@ export interface Patient {
   body_temperature?: string | null;
   custom_vitals?: CustomVitalField[] | any | null;
   marital_status?: string | null;
+  referred_by?: 'REFERRAL' | 'DOCTOR' | string | null;
+  referral_id?: string | null;
+  referral_doctor_id?: string | null;
   emergency_contacts?: any | null;
   profile_image_url?: string | null;
   is_active?: boolean | null;
@@ -123,9 +126,10 @@ export const ALL_DRAWER_STEPS: Array<{
 }> = [
   { key: 'personal', stepNum: 1, label: '1. Basic Details', shortLabel: 'Basic Details', icon: <User size={13} /> },
   { key: 'history', stepNum: 2, label: '2. Past Medical History', shortLabel: 'Medical History', icon: <History size={13} /> },
-  { key: 'plan', stepNum: 3, label: '3. Plan of Management', shortLabel: 'Care Plan', icon: <Stethoscope size={13} /> },
-  { key: 'prescription', stepNum: 4, label: '4. Prescription', shortLabel: 'Prescription', icon: <Pill size={13} /> },
-  { key: 'appointment', stepNum: 5, label: '5. Appointments', shortLabel: 'Appointments', icon: <Calendar size={13} /> },
+  { key: 'current', stepNum: 3, label: '3. Current Examination', shortLabel: 'Current Examination', icon: <HeartPulse size={13} /> },
+  { key: 'plan', stepNum: 4, label: '4. Plan of Management', shortLabel: 'Care Plan', icon: <Stethoscope size={13} /> },
+  { key: 'prescription', stepNum: 5, label: '5. Prescription', shortLabel: 'Prescription', icon: <Pill size={13} /> },
+  { key: 'appointment', stepNum: 6, label: '6. Appointments', shortLabel: 'Appointments', icon: <Calendar size={13} /> },
 ];
 
 export interface PatientModalProps {
@@ -470,6 +474,8 @@ export default function PatientModal({
               provisionalDiagnosis: cmi.current_diagnosis || '',
               differentialDiagnosis: cmi.differential_diagnosis || undefined,
               clinicalObservations: cmi.clinical_observations || undefined,
+              performanceScore: (cmi as any).performance_score ?? null,
+              performanceDescription: (cmi as any).performance_description || '',
               investigationsOrdered: tests,
               treatmentStrategy: cmi.treatment_strategy || '',
               careGoals: cmi.care_goals || undefined,
@@ -561,6 +567,8 @@ export default function PatientModal({
           current_diagnosis: plan.provisionalDiagnosis,
           differential_diagnosis: plan.differentialDiagnosis || null,
           clinical_observations: plan.clinicalObservations || null,
+          performance_score: plan.performanceScore ?? null,
+          performance_description: plan.performanceDescription || null,
           investigations_ordered: plan.investigationsOrdered,
           treatment_strategy: plan.treatmentStrategy,
           care_goals: plan.careGoals || null,
@@ -640,6 +648,28 @@ export default function PatientModal({
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
+  const [ageInput, setAgeInput] = useState('');
+
+  const handleAgeChange = (val: string) => {
+    setAgeInput(val);
+    const parsed = parseInt(val.replace(/[^0-9]/g, ''), 10);
+    if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 130) {
+      const currentYear = new Date().getFullYear();
+      const birthYear = currentYear - parsed;
+      if (dateOfBirth) {
+        const parts = dateOfBirth.split('-');
+        if (parts.length === 3) {
+          setDateOfBirth(`${birthYear}-${parts[1]}-${parts[2]}`);
+          return;
+        }
+      }
+      setDateOfBirth(`${birthYear}-01-01`);
+    } else if (val === '') {
+      setDateOfBirth('');
+      setAgeInput('');
+      setAgeInput('');
+    }
+  };
   const [gender, setGender] = useState('');
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
@@ -660,7 +690,6 @@ export default function PatientModal({
   const [emergencyName, setEmergencyName] = useState('');
   const [emergencyPhone, setEmergencyPhone] = useState('');
   const [emergencyRelation, setEmergencyRelation] = useState('');
-  const [showRawJson, setShowRawJson] = useState(false);
   const [profileImageUrl, setProfileImageUrl] = useState('');
   const [isActive, setIsActive] = useState<boolean>(true);
 
@@ -678,6 +707,35 @@ export default function PatientModal({
 
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
+  const [referredByType, setReferredByType] = useState<'REFERRAL' | 'DOCTOR' | ''>('');
+  const [referralId, setReferralId] = useState<string>('');
+  const [referralDoctorId, setReferralDoctorId] = useState<string>('');
+  const [referralList, setReferralList] = useState<
+    Array<{
+      id: string;
+      name: string;
+      phone?: string | null;
+      email?: string | null;
+      gender?: string | null;
+      occupation?: string | null;
+      city?: string | null;
+      state?: string | null;
+      status: string;
+    }>
+  >([]);
+  const [doctorList, setDoctorList] = useState<
+    Array<{
+      id: string;
+      name: string;
+      phone?: string | null;
+      email?: string | null;
+      specialization?: string | null;
+      hospital_name?: string | null;
+      branch_name?: string | null;
+      status: string;
+    }>
+  >([]);
+
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [users, setUsers] = useState<UserAccount[]>([]);
@@ -688,15 +746,21 @@ export default function PatientModal({
     if (isOpen) {
       const fetchData = async () => {
         try {
-          const [hRes, bRes, uRes] = await Promise.all([
+          const [hRes, bRes, uRes, docRes, refRes] = await Promise.all([
             api.get('hospitals'),
             api.get('branches'),
             api.get('user-accounts'),
+            api.get('doctors').catch(() => ({ data: [] })),
+            api.get('referrals').catch(() => ({ data: [] })),
           ]);
           setHospitals(hRes.data);
           setBranches(bRes.data);
           const allUsers: UserAccount[] = uRes.data;
           setUsers(allUsers.filter((u) => u.role === 'PATIENT' && u.status === 'ACTIVE'));
+          const rawDocs = docRes.data;
+          setDoctorList(Array.isArray(rawDocs) ? rawDocs : Array.isArray(rawDocs?.data) ? rawDocs.data : []);
+          const rawRefs = refRes.data;
+          setReferralList(Array.isArray(rawRefs) ? rawRefs : Array.isArray(rawRefs?.data) ? rawRefs.data : []);
         } catch (err) {
           console.error('Failed to fetch required data for patient modal', err);
         }
@@ -713,11 +777,16 @@ export default function PatientModal({
       setUserAccountId(patient.user_account_id || '');
       setPhone(patient.phone || '');
       setEmail(patient.email || '');
-      setDateOfBirth(
-        patient.date_of_birth
-          ? new Date(patient.date_of_birth).toISOString().split('T')[0] || ''
-          : '',
-      );
+      const dobVal = patient.date_of_birth
+        ? new Date(patient.date_of_birth).toISOString().split('T')[0] || ''
+        : '';
+      setDateOfBirth(dobVal);
+      if (dobVal) {
+        const formatted = formatPatientAge(dobVal);
+        setAgeInput(formatted !== 'DOB not set' ? formatted : '');
+      } else {
+        setAgeInput('');
+      }
       setGender(patient.gender || '');
       setAddressLine1(patient.address_line_1 || patient.address || '');
       setAddressLine2(patient.address_line_2 || '');
@@ -781,11 +850,16 @@ export default function PatientModal({
         setEmergencyRelation('');
       }
 
-      setShowRawJson(false);
       setProfileImageUrl(patient.profile_image_url || '');
       setIsActive(
         patient.is_active !== undefined && patient.is_active !== null ? patient.is_active : true,
       );
+      setReferredByType(
+        (patient.referred_by as 'REFERRAL' | 'DOCTOR') ||
+          (patient.referral_doctor_id ? 'DOCTOR' : patient.referral_id ? 'REFERRAL' : ''),
+      );
+      setReferralId(patient.referral_id || '');
+      setReferralDoctorId(patient.referral_doctor_id || '');
     } else {
       setName('');
       setHospitalId('');
@@ -794,6 +868,7 @@ export default function PatientModal({
       setPhone('');
       setEmail('');
       setDateOfBirth('');
+      setAgeInput('');
       setGender('');
       setAddressLine1('');
       setAddressLine2('');
@@ -814,9 +889,11 @@ export default function PatientModal({
       setEmergencyName('');
       setEmergencyPhone('');
       setEmergencyRelation('');
-      setShowRawJson(false);
       setProfileImageUrl('');
       setIsActive(true);
+      setReferredByType('');
+      setReferralId('');
+      setReferralDoctorId('');
     }
     setError('');
     setErrors({});
@@ -866,6 +943,16 @@ export default function PatientModal({
     return opts;
   }, [users]);
 
+  const selectedReferral = useMemo(
+    () => (referredByType === 'REFERRAL' && referralId ? referralList.find((r) => r.id === referralId) : null),
+    [referredByType, referralId, referralList],
+  );
+
+  const selectedDoctor = useMemo(
+    () => (referredByType === 'DOCTOR' && referralDoctorId ? doctorList.find((d) => d.id === referralDoctorId) : null),
+    [referredByType, referralDoctorId, doctorList],
+  );
+
   const handlePrimaryEmergencyChange = (nameVal: string, phoneVal: string, relVal: string) => {
     setEmergencyName(nameVal);
     setEmergencyPhone(phoneVal);
@@ -896,15 +983,7 @@ export default function PatientModal({
     };
 
     let parsedContacts: any = null;
-    if (showRawJson) {
-      if (emergencyContacts.trim()) {
-        try {
-          parsedContacts = JSON.parse(emergencyContacts);
-        } catch {
-          // ignore
-        }
-      }
-    } else if (emergencyName.trim() || emergencyPhone.trim() || emergencyRelation.trim()) {
+    if (emergencyName.trim() || emergencyPhone.trim() || emergencyRelation.trim()) {
       parsedContacts = [
         {
           name: emergencyName.trim() || undefined,
@@ -956,6 +1035,9 @@ export default function PatientModal({
       emergency_contacts: parsedContacts,
       profile_image_url: normalizeUrl(profileImageUrl),
       is_active: isActive,
+      referred_by: referredByType || null,
+      referral_id: (referredByType === 'REFERRAL' ? referralId : null) || null,
+      referral_doctor_id: (referredByType === 'DOCTOR' ? referralDoctorId : null) || null,
     };
   };
 
@@ -1182,9 +1264,24 @@ export default function PatientModal({
       isComplete: isHistoryComplete,
     },
     {
+      id: 'tab-examination',
+      step: 'current' as const,
+      num: '03',
+      title: 'Current Examination',
+      subtitle: 'Presenting complaints, symptoms, and systemic clinical observations.',
+      required: false,
+      icon: <HeartPulse size={16} />,
+      isComplete: Boolean(
+        cmh?.chief_complaint ||
+        cmh?.blood_pressure ||
+        cmh?.pulse_rate ||
+        (initialVitalsMemo && (initialVitalsMemo.bloodPressure || initialVitalsMemo.bloodSugar))
+      ),
+    },
+    {
       id: 'tab-plan',
       step: 'plan' as const,
-      num: '03',
+      num: '04',
       title: 'Plan of Management',
       subtitle: 'Provisional diagnosis, clinical assessment, and therapeutic strategy.',
       required: false,
@@ -1194,7 +1291,7 @@ export default function PatientModal({
     {
       id: 'tab-prescription',
       step: 'prescription' as const,
-      num: '04',
+      num: '05',
       title: 'Prescription',
       subtitle: 'Medication orders, dosages, and pharmacy instructions.',
       required: false,
@@ -1204,7 +1301,7 @@ export default function PatientModal({
     {
       id: 'tab-appointment',
       step: 'appointment' as const,
-      num: '05',
+      num: '06',
       title: 'Appointments',
       subtitle: 'Clinical consultations, scheduling, and upcoming visits.',
       required: false,
@@ -1215,33 +1312,19 @@ export default function PatientModal({
 
   const isHistoryActive =
     activeStep === 'history' ||
-    ['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep);
+    ['previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep);
 
-  const activeSubStep = (['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)
+  const activeSubStep = (['previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)
     ? activeStep
-    : 'current') as SectionTab;
+    : 'previous') as SectionTab;
 
   const HISTORY_SUB_SECTIONS = [
     {
-      id: 'subtab-current',
-      step: 'current' as const,
-      num: '2.1',
-      title: 'Current Examination & Vitals',
-      shortTitle: 'Examination & Vitals',
-      icon: <HeartPulse size={16} />,
-      isComplete: Boolean(
-        cmh?.chief_complaint ||
-        cmh?.blood_pressure ||
-        cmh?.pulse_rate ||
-        (initialVitalsMemo && (initialVitalsMemo.bloodPressure || initialVitalsMemo.bloodSugar))
-      ),
-    },
-    {
       id: 'subtab-previous',
       step: 'previous' as const,
-      num: '2.2',
+      num: '2.1',
       title: 'Previous Medical History',
-      shortTitle: 'Previous Diseases & Surgeries',
+      shortTitle: 'Previous Diseases & Vitals',
       icon: <History size={16} />,
       isComplete: Boolean(
         (pmh?.previous_diseases && pmh.previous_diseases.length > 0) ||
@@ -1253,7 +1336,7 @@ export default function PatientModal({
     {
       id: 'subtab-family',
       step: 'family' as const,
-      num: '2.3',
+      num: '2.2',
       title: 'Family Medical History',
       shortTitle: 'Family History',
       icon: <Users size={16} />,
@@ -1262,7 +1345,7 @@ export default function PatientModal({
     {
       id: 'subtab-reproductive',
       step: 'reproductive' as const,
-      num: '2.4',
+      num: '2.3',
       title: 'Reproductive History',
       shortTitle: 'Reproductive & Obstetric',
       icon: <User size={16} />,
@@ -1271,7 +1354,7 @@ export default function PatientModal({
     {
       id: 'subtab-lifestyle',
       step: 'lifestyle' as const,
-      num: '2.5',
+      num: '2.4',
       title: 'Lifestyle History',
       shortTitle: 'Lifestyle & Habits',
       icon: <Activity size={16} />,
@@ -1280,7 +1363,7 @@ export default function PatientModal({
     {
       id: 'subtab-documents',
       step: 'documents' as const,
-      num: '2.6',
+      num: '2.5',
       title: 'Medical Documents',
       shortTitle: 'Documents & Reports',
       icon: <FileText size={16} />,
@@ -1316,6 +1399,8 @@ export default function PatientModal({
         display: 'flex',
         flexDirection: 'column',
         gap: 10,
+        width: 300,
+        boxSizing: 'border-box',
       }}
     >
       {/* Patient Readiness / History Readiness Header */}
@@ -1517,6 +1602,7 @@ export default function PatientModal({
             const isCurrentActive =
               (sec.step === 'personal' && activeStep === 'personal') ||
               (sec.step === 'history' && isHistoryActive) ||
+              (sec.step === 'current' && activeStep === 'current') ||
               (sec.step === 'plan' && activeStep === 'plan') ||
               (sec.step === 'prescription' && activeStep === 'prescription') ||
               (sec.step === 'appointment' && activeStep === 'appointment');
@@ -1689,7 +1775,7 @@ export default function PatientModal({
           })}
 
           {/* Hidden alias buttons for legacy test compatibility */}
-          {['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].map((subKey) => (
+          {['previous', 'family', 'reproductive', 'lifestyle', 'documents'].map((subKey) => (
             <button
               key={subKey}
               type="button"
@@ -1703,66 +1789,59 @@ export default function PatientModal({
       )}
 
       <style>{`
-          @media (max-width: 992px) {
-            .patient-page-grid {
-              grid-template-columns: 1fr !important;
-            }
-            .patient-readiness-sidebar {
-              position: static !important;
-            }
-          }
-          @media (max-width: 640px) {
-            .patient-create-drawer-modal {
-              width: 100vw !important;
-              max-width: 100vw !important;
-              border-radius: 0 !important;
-            }
-            .patient-create-drawer-modal .ui-modal-head {
-              padding: 12px 16px !important;
-            }
-            .patient-create-drawer-modal .ui-modal-body {
-              padding: 12px 14px !important;
-            }
-            .patient-section-card {
-              padding: 16px 14px !important;
-              border-radius: 12px !important;
-            }
-            .patient-page-header {
-              padding: 12px 16px !important;
-              flex-wrap: wrap !important;
-              gap: 10px !important;
-            }
-            .patient-page-grid {
-              padding: 14px 14px 40px 14px !important;
-            }
-            .patient-page-fixed-footer > div {
-              padding: 10px 14px !important;
-              flex-direction: column !important;
-              align-items: stretch !important;
-              gap: 10px !important;
-            }
-            .patient-page-fixed-footer > div > div:last-child {
-              flex-wrap: wrap !important;
-              justify-content: flex-end !important;
-            }
-          }
-          @media (max-width: 480px) {
-            .patient-page-fixed-footer > div > div:last-child {
-              flex-direction: column-reverse !important;
-            }
-            .patient-page-fixed-footer > div > div:last-child button {
-              width: 100% !important;
-              justify-content: center !important;
-            }
+          .patient-page-layout {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            min-width: 768px;
+            box-sizing: border-box !important;
           }
           .patient-page-layout.patient-create-drawer-modal {
             width: 100% !important;
             max-width: 100% !important;
+            margin: 0 !important;
             box-shadow: none !important;
             border-radius: 0 !important;
             border: none !important;
             height: auto !important;
             background: #f8fafc !important;
+          }
+          .patient-page-grid {
+            display: grid !important;
+            grid-template-columns: 300px minmax(0, 1fr) !important;
+            gap: 20px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 16px 20px 40px 20px !important;
+            box-sizing: border-box !important;
+          }
+          .patient-readiness-sidebar {
+            position: sticky !important;
+            top: 84px !important;
+            width: 300px !important;
+            box-sizing: border-box !important;
+          }
+          .patient-page-header {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 14px 20px !important;
+            box-sizing: border-box !important;
+          }
+          .patient-page-fixed-footer {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .patient-page-fixed-footer > div {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 12px 20px !important;
+            box-sizing: border-box !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
           }
           .patient-page-layout .ui-modal-body {
             max-width: 100% !important;
@@ -1864,7 +1943,10 @@ export default function PatientModal({
           .patient-create-drawer-modal input[type="email"],
           .patient-create-drawer-modal input[type="number"],
           .patient-create-drawer-modal input[type="date"],
-          .patient-create-drawer-modal select {
+          .patient-create-drawer-modal select,
+          .patient-form-input,
+          input.patient-form-input {
+            width: 100% !important;
             border-radius: 8px !important;
             border: 1.5px solid #e2e8f0 !important;
             font-size: 13.5px !important;
@@ -1873,18 +1955,22 @@ export default function PatientModal({
             transition: all 0.15s ease !important;
             box-sizing: border-box !important;
           }
-          .patient-create-drawer-modal .ui-input:not(.patient-input-with-icon),
+          .patient-create-drawer-modal .ui-input,
           .patient-create-drawer-modal .ui-select,
-          .patient-create-drawer-modal input.patient-form-input:not(.patient-input-with-icon),
+          .patient-create-drawer-modal input.patient-form-input,
           .patient-create-drawer-modal select.patient-form-input,
-          .patient-create-drawer-modal input[type="text"]:not([style*="height"]):not(.patient-input-with-icon),
-          .patient-create-drawer-modal input[type="tel"]:not([style*="height"]):not(.patient-input-with-icon),
-          .patient-create-drawer-modal input[type="email"]:not([style*="height"]):not(.patient-input-with-icon),
-          .patient-create-drawer-modal input[type="number"]:not([style*="height"]),
-          .patient-create-drawer-modal input[type="date"]:not([style*="height"]):not(.patient-input-with-icon),
-          .patient-create-drawer-modal select:not([style*="height"]) {
-            height: 42px !important;
-            padding: 0 14px;
+          .patient-create-drawer-modal input[type="text"],
+          .patient-create-drawer-modal input[type="tel"],
+          .patient-create-drawer-modal input[type="email"],
+          .patient-create-drawer-modal input[type="number"],
+          .patient-create-drawer-modal input[type="date"],
+          .patient-create-drawer-modal select,
+          .patient-create-drawer-modal .ui-searchable-trigger {
+            height: 38px !important;
+            padding: 0 12px !important;
+            font-size: 13px !important;
+            border-radius: 8px !important;
+            box-sizing: border-box !important;
           }
           .patient-input-icon-left {
             position: absolute !important;
@@ -1901,8 +1987,10 @@ export default function PatientModal({
           .patient-create-drawer-modal input[type="email"].patient-input-with-icon,
           .patient-create-drawer-modal input[type="date"].patient-input-with-icon,
           input.patient-input-with-icon {
+            height: 38px !important;
             padding-left: 42px !important;
             padding-right: 14px !important;
+            box-sizing: border-box !important;
           }
           .patient-create-drawer-modal input[type="date"].patient-input-with-icon::-webkit-datetime-edit,
           input[type="date"].patient-input-with-icon::-webkit-datetime-edit {
@@ -1911,7 +1999,9 @@ export default function PatientModal({
           .patient-create-drawer-modal .ui-textarea,
           .patient-create-drawer-modal textarea.patient-form-input,
           .patient-create-drawer-modal textarea {
-            padding: 12px 14px !important;
+            height: auto !important;
+            min-height: 76px;
+            padding: 10px 14px !important;
           }
           .patient-create-drawer-modal .ui-input:focus,
           .patient-create-drawer-modal .ui-select:focus,
@@ -2081,7 +2171,7 @@ export default function PatientModal({
               )}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
               <div>
                 <label
                   htmlFor="patient-dob"
@@ -2109,9 +2199,41 @@ export default function PatientModal({
                     style={{ paddingLeft: 42 }}
                     type="date"
                     value={dateOfBirth}
-                    onChange={(e) => setDateOfBirth(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDateOfBirth(val);
+                      if (val) {
+                        const calculated = formatPatientAge(val);
+                        setAgeInput(calculated !== 'DOB not set' ? calculated : '');
+                      } else {
+                        setAgeInput('');
+                      }
+                    }}
                   />
                 </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="patient-age"
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#334155',
+                    display: 'block',
+                    marginBottom: 5,
+                  }}
+                >
+                  Age
+                </label>
+                <input
+                  id="patient-age"
+                  className="ui-input"
+                  type="text"
+                  value={ageInput}
+                  onChange={(e) => handleAgeChange(e.target.value)}
+                  placeholder="e.g. 35 yrs"
+                />
               </div>
 
               <div>
@@ -2138,7 +2260,7 @@ export default function PatientModal({
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr)', gap: 12 }}>
               <div>
                 <label
                   htmlFor="patient-marital"
@@ -2202,7 +2324,8 @@ export default function PatientModal({
                 <input
                   id="patient-occupation"
                   type="text"
-                  className="patient-form-input"
+                  className="ui-input patient-form-input"
+                  style={{ width: '100%' }}
                   placeholder="e.g. Teacher, Engineer, Self-employed..."
                   value={occupation}
                   onChange={(e) => {
@@ -2241,7 +2364,271 @@ export default function PatientModal({
             />
           </div>
 
-          {/* Section 2: Hospital & Branch Assignment */}
+          {/* Section 2: Referrals */}
+          <div id="sec-referrals" className="patient-section-card">
+            <div className="patient-section-header">
+              <div className="patient-section-badge">
+                <UserCheck size={18} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>02</span>
+                  <span className="patient-section-tag">Referrals</span>
+                </div>
+                <div style={{ color: '#64748b', fontSize: 12.5, marginTop: 2, fontWeight: 400, textTransform: 'none' }}>
+                  Specify patient referral channel and referring doctor or partner.
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+              {/* Dropdown 1: Referred By */}
+              <div>
+                <label
+                  htmlFor="patient-referred-by"
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#334155',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    marginBottom: 5,
+                  }}
+                >
+                  <span>Referred by</span>
+                </label>
+                <SearchableSelect
+                  id="patient-referred-by"
+                  value={referredByType}
+                  onChange={(val) => {
+                    const nextType = val as 'REFERRAL' | 'DOCTOR' | '';
+                    setReferredByType(nextType);
+                    if (nextType !== 'REFERRAL') setReferralId('');
+                    if (nextType !== 'DOCTOR') setReferralDoctorId('');
+                  }}
+                  options={[
+                    {
+                      value: 'REFERRAL',
+                      label: 'Referrals',
+                      sublabel: 'Partner clinic, external provider, or medical referral',
+                      icon: <UserCheck size={14} />,
+                    },
+                    {
+                      value: 'DOCTOR',
+                      label: 'Doctor',
+                      sublabel: 'Registered consulting doctor or physician',
+                      icon: <Stethoscope size={14} />,
+                    },
+                  ]}
+                  placeholder="Select referral source..."
+                  searchable={false}
+                  clearable
+                />
+              </div>
+
+              {/* Dropdown 2: Referrals / Doctor details */}
+              <div>
+                <label
+                  htmlFor="patient-referral-target"
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#334155',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    marginBottom: 5,
+                  }}
+                >
+                  <span>{referredByType === 'DOCTOR' ? 'Doctor' : 'Referrals'}</span>
+                </label>
+                {referredByType === 'REFERRAL' ? (
+                  <SearchableSelect
+                    id="patient-referral-target"
+                    value={referralId}
+                    onChange={(val) => setReferralId(val)}
+                    options={referralList.map((ref) => ({
+                      value: ref.id,
+                      label: ref.name,
+                      sublabel: [ref.occupation, ref.phone, ref.city].filter(Boolean).join(' · '),
+                      badge: ref.status === 'ACTIVE' ? 'Active' : 'Inactive',
+                      badgeTone: ref.status === 'ACTIVE' ? 'green' : 'neutral',
+                      icon: <UserCheck size={14} />,
+                    }))}
+                    placeholder="Select referral partner…"
+                    searchPlaceholder="Search referrals by name, occupation, phone, city..."
+                    searchable
+                    clearable
+                  />
+                ) : referredByType === 'DOCTOR' ? (
+                  <SearchableSelect
+                    id="patient-referral-target"
+                    value={referralDoctorId}
+                    onChange={(val) => setReferralDoctorId(val)}
+                    options={doctorList.map((doc) => ({
+                      value: doc.id,
+                      label: doc.name,
+                      sublabel: [doc.specialization, doc.hospital_name, doc.branch_name].filter(Boolean).join(' · '),
+                      badge: doc.status === 'ACTIVE' ? 'Active' : 'Inactive',
+                      badgeTone: doc.status === 'ACTIVE' ? 'green' : 'neutral',
+                      icon: <Stethoscope size={14} />,
+                    }))}
+                    placeholder="Select doctor…"
+                    searchPlaceholder="Search doctors by name, specialization, hospital..."
+                    searchable
+                    clearable
+                  />
+                ) : (
+                  <SearchableSelect
+                    id="patient-referral-target"
+                    value=""
+                    onChange={() => {}}
+                    disabled
+                    placeholder="Choose 'Referred by' first (Referrals or Doctor)"
+                    searchable={false}
+                    options={[]}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Selected referral partner preview details */}
+            {selectedReferral && (
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 8,
+                  padding: '12px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  marginTop: 2,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      background: '#eff6ff',
+                      color: '#2563eb',
+                      display: 'grid',
+                      placeItems: 'center',
+                      fontWeight: 700,
+                      fontSize: 13,
+                      flexShrink: 0,
+                      border: '1px solid #bfdbfe',
+                    }}
+                  >
+                    {selectedReferral.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>
+                      {selectedReferral.name}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>
+                      {[selectedReferral.occupation, selectedReferral.city, selectedReferral.phone]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {selectedReferral.email && (
+                    <span style={{ fontSize: 11, color: '#475569', background: '#ffffff', padding: '3px 8px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                      {selectedReferral.email}
+                    </span>
+                  )}
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: selectedReferral.status === 'ACTIVE' ? '#16a34a' : '#64748b',
+                      background: selectedReferral.status === 'ACTIVE' ? '#f0fdf4' : '#f1f5f9',
+                      padding: '3px 8px',
+                      borderRadius: 6,
+                      border: `1px solid ${selectedReferral.status === 'ACTIVE' ? '#bbf7d0' : '#e2e8f0'}`,
+                    }}
+                  >
+                    {selectedReferral.status === 'ACTIVE' ? 'Active Referral' : 'Inactive'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Selected doctor preview details */}
+            {selectedDoctor && (
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 8,
+                  padding: '12px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  marginTop: 2,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      background: '#f5f3ff',
+                      color: '#7c3aed',
+                      display: 'grid',
+                      placeItems: 'center',
+                      fontWeight: 700,
+                      fontSize: 13,
+                      flexShrink: 0,
+                      border: '1px solid #ddd6fe',
+                    }}
+                  >
+                    <Stethoscope size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>
+                      {selectedDoctor.name}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>
+                      {[selectedDoctor.specialization, selectedDoctor.hospital_name, selectedDoctor.branch_name]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {selectedDoctor.phone && (
+                    <span style={{ fontSize: 11, color: '#475569', background: '#ffffff', padding: '3px 8px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                      {selectedDoctor.phone}
+                    </span>
+                  )}
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: selectedDoctor.status === 'ACTIVE' ? '#16a34a' : '#64748b',
+                      background: selectedDoctor.status === 'ACTIVE' ? '#f0fdf4' : '#f1f5f9',
+                      padding: '3px 8px',
+                      borderRadius: 6,
+                      border: `1px solid ${selectedDoctor.status === 'ACTIVE' ? '#bbf7d0' : '#e2e8f0'}`,
+                    }}
+                  >
+                    {selectedDoctor.status === 'ACTIVE' ? 'Active Doctor' : 'Inactive'}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Section 3: Hospital & Branch Assignment */}
           <div id="sec-hospital" className="patient-section-card">
             <div className="patient-section-header">
               <div className="patient-section-badge">
@@ -2249,7 +2636,7 @@ export default function PatientModal({
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>02</span>
+                  <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>03</span>
                   <span className="patient-section-tag">Hospital &amp; Branch Assignment</span>
                 </div>
                 <div style={{ color: '#64748b', fontSize: 12.5, marginTop: 2, fontWeight: 400, textTransform: 'none' }}>
@@ -2258,7 +2645,7 @@ export default function PatientModal({
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
               <div>
                 <label
                   htmlFor="patient-hospital"
@@ -2325,7 +2712,7 @@ export default function PatientModal({
             </div>
           </div>
 
-          {/* Section 3: Contact & Address */}
+          {/* Section 4: Contact & Address */}
           <div id="sec-contact" className="patient-section-card">
             <div className="patient-section-header">
               <div className="patient-section-badge">
@@ -2333,7 +2720,7 @@ export default function PatientModal({
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>03</span>
+                  <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>04</span>
                   <span className="patient-section-tag">Contact &amp; Address</span>
                 </div>
                 <div style={{ color: '#64748b', fontSize: 12.5, marginTop: 2, fontWeight: 400, textTransform: 'none' }}>
@@ -2342,7 +2729,7 @@ export default function PatientModal({
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
               <div>
                 <label
                   htmlFor="patient-phone"
@@ -2458,7 +2845,7 @@ export default function PatientModal({
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
                     gap: 12,
                   }}
                 >
@@ -2546,7 +2933,7 @@ export default function PatientModal({
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
                     gap: 12,
                   }}
                 >
@@ -2683,7 +3070,7 @@ export default function PatientModal({
                 </div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>04</span>
+                    <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>05</span>
                     <span className="patient-section-tag">Emergency Contact</span>
                   </div>
                   <div style={{ color: '#64748b', fontSize: 12.5, marginTop: 2, fontWeight: 400, textTransform: 'none' }}>
@@ -2692,28 +3079,9 @@ export default function PatientModal({
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowRawJson(!showRawJson)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#2563eb',
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
-              >
-                <Code2 size={13} />
-                <span>{showRawJson ? 'Standard Form View' : 'Raw JSON Editor'}</span>
-              </button>
             </div>
 
-            {!showRawJson ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
                 <div>
                   <label
                     htmlFor="emergency-name"
@@ -2834,31 +3202,6 @@ export default function PatientModal({
                   )}
                 </div>
               </div>
-            ) : (
-              <div>
-                <label
-                  htmlFor="emergency-json"
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: '#334155',
-                    display: 'block',
-                    marginBottom: 5,
-                  }}
-                >
-                  Emergency Contacts JSON Array
-                </label>
-                <textarea
-                  id="emergency-json"
-                  className="ui-textarea"
-                  rows={4}
-                  value={emergencyContacts}
-                  onChange={(e) => setEmergencyContacts(e.target.value)}
-                  placeholder='[{"name": "Jane Doe", "phone": "1234567890", "relation": "Spouse"}]'
-                  style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12 }}
-                />
-              </div>
-            )}
           </div>
 
           {/* Section 5: Access & Profile Status */}
@@ -2869,7 +3212,7 @@ export default function PatientModal({
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>05</span>
+                  <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>06</span>
                   <span className="patient-section-tag">Access &amp; System Status</span>
                 </div>
                 <div style={{ color: '#64748b', fontSize: 12.5, marginTop: 2, fontWeight: 400, textTransform: 'none' }}>
@@ -3069,14 +3412,26 @@ export default function PatientModal({
             patientAge={activePatient?.date_of_birth ? formatPatientAge(activePatient.date_of_birth) : (dateOfBirth ? formatPatientAge(dateOfBirth) : undefined)}
             patientBloodGroup={activePatient?.blood_group || patient?.blood_group || bloodGroup}
             initialData={latestMedicalHistory}
-            activeTab={(['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep) ? activeStep : 'current') as SectionTab}
+            activeTab={
+              activeStep === 'current'
+                ? 'current'
+                : (['previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)
+                    ? activeStep
+                    : 'previous') as SectionTab
+            }
             onTabChange={(t) => setActiveStep(t)}
             onPreviousToPersonal={() => setActiveStep('personal')}
             onClose={onClose}
             onSuccess={(saved) => {
               setLatestMedicalHistory(saved);
             }}
-            onFinish={() => setActiveStep('plan')}
+            onFinish={() => {
+              if (activeStep === 'current') {
+                setActiveStep('plan');
+              } else {
+                setActiveStep('current');
+              }
+            }}
             ensurePatientSaved={ensurePatientSaved}
             initialVitals={initialVitalsMemo}
             hideStepperHeader={isPage}
@@ -3606,10 +3961,10 @@ export default function PatientModal({
       >
         <div
           style={{
-            maxWidth: 1440,
             width: '100%',
-            margin: '0 auto',
-            padding: '12px 28px',
+            maxWidth: '100%',
+            margin: 0,
+            padding: '12px 20px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -3621,24 +3976,24 @@ export default function PatientModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: '#64748b' }}>
             <span style={{ fontWeight: 700, color: '#0f172a' }}>
               {activeStep === 'personal'
-                ? 'Step 1 of 5'
-                : activeStep === 'history' || ['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)
-                ? 'Step 2 of 5'
+                ? 'Step 1 of 6'
+                : activeStep === 'history' || ['previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)
+                ? 'Step 2 of 6'
+                : activeStep === 'current'
+                ? 'Step 3 of 6'
                 : activeStep === 'plan'
-                ? 'Step 3 of 5'
+                ? 'Step 4 of 6'
                 : activeStep === 'prescription'
-                ? 'Step 4 of 5'
-                : 'Step 5 of 5'}
+                ? 'Step 5 of 6'
+                : 'Step 6 of 6'}
             </span>
             <span style={{ color: '#cbd5e1' }}>•</span>
             <span style={{ fontWeight: 600, color: '#334155' }}>
               {activeStep === 'personal'
                 ? 'Basic Information'
-                : activeStep === 'history' || ['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)
+                : activeStep === 'history' || ['previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)
                 ? `Past Medical History · ${
-                    activeSubStep === 'current'
-                      ? 'Current Examination & Vitals'
-                      : activeSubStep === 'previous'
+                    activeSubStep === 'previous'
                       ? 'Previous Medical History'
                       : activeSubStep === 'family'
                       ? 'Family Medical History'
@@ -3648,6 +4003,8 @@ export default function PatientModal({
                       ? 'Lifestyle History'
                       : 'Medical Documents'
                   }`
+                : activeStep === 'current'
+                ? 'Current Examination'
                 : activeStep === 'plan'
                 ? 'Plan of Management'
                 : activeStep === 'prescription'
@@ -3717,8 +4074,8 @@ export default function PatientModal({
             )}
 
             {(activeStep === 'history' ||
-              ['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)) && (() => {
-              const subKeys: SectionTab[] = ['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'];
+              ['previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)) && (() => {
+              const subKeys: SectionTab[] = ['previous', 'family', 'reproductive', 'lifestyle', 'documents'];
               const currentSubIdx = subKeys.indexOf(activeSubStep);
               return (
                 <>
@@ -3736,6 +4093,7 @@ export default function PatientModal({
                     <button
                       type="button"
                       onClick={() => setActiveStep('personal')}
+                      data-testid="prev-step-btn"
                       className="patient-footer-btn patient-footer-btn-secondary"
                       style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                     >
@@ -3762,6 +4120,7 @@ export default function PatientModal({
                         type="button"
                         onClick={() => handleSaveAndNextHistorySubStep(subKeys[currentSubIdx + 1] as PatientModalStep)}
                         disabled={savingHistory}
+                        data-testid="next-step-btn"
                         className="patient-footer-btn patient-footer-btn-neutral"
                         style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                       >
@@ -3773,6 +4132,7 @@ export default function PatientModal({
                         type="button"
                         onClick={() => handleSaveAndNextHistorySubStep(subKeys[currentSubIdx + 1] as PatientModalStep)}
                         disabled={savingHistory}
+                        data-testid="save-and-next-btn"
                         className="patient-footer-btn patient-footer-btn-primary"
                         style={{ padding: '7px 20px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                       >
@@ -3784,19 +4144,21 @@ export default function PatientModal({
                     <>
                       <button
                         type="button"
-                        onClick={handleContinueToPlan}
+                        onClick={() => handleSaveAndNextHistorySubStep('current')}
                         disabled={savingHistory}
+                        data-testid="next-step-btn"
                         className="patient-footer-btn patient-footer-btn-neutral"
                         style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                       >
-                        <span>Next</span>
+                        <span>Next: Current Examination</span>
                         <ChevronRight size={15} />
                       </button>
 
                       <button
                         type="button"
-                        onClick={handleContinueToPlan}
+                        onClick={() => handleSaveAndNextHistorySubStep('current')}
                         disabled={savingHistory}
+                        data-testid="save-and-next-btn"
                         className="patient-footer-btn patient-footer-btn-primary"
                         style={{ padding: '7px 20px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                       >
@@ -3809,16 +4171,65 @@ export default function PatientModal({
               );
             })()}
 
-            {activeStep === 'plan' && (
+            {activeStep === 'current' && (
               <>
                 <button
                   type="button"
                   onClick={() => setActiveStep('history')}
+                  data-testid="prev-step-btn"
                   className="patient-footer-btn patient-footer-btn-secondary"
                   style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 >
                   <ChevronLeft size={15} />
-                  <span>Previous: Medical History</span>
+                  <span>Previous: Past Medical History</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveMedicalHistoryProgress}
+                  disabled={savingHistory}
+                  className="patient-footer-btn patient-footer-btn-secondary"
+                  style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Save size={14} />
+                  <span>{savingHistory ? 'Saving…' : 'Save Progress'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveStep('plan')}
+                  data-testid="next-step-btn"
+                  className="patient-footer-btn patient-footer-btn-neutral"
+                  style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  <span>Next: Plan of Management</span>
+                  <ChevronRight size={15} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleContinueToPlan}
+                  disabled={savingHistory}
+                  data-testid="save-and-next-btn"
+                  className="patient-footer-btn patient-footer-btn-primary"
+                  style={{ padding: '7px 20px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  <span>{savingHistory ? 'Saving…' : 'Save & Next'}</span>
+                  <ChevronRight size={15} />
+                </button>
+              </>
+            )}
+
+            {activeStep === 'plan' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveStep('current')}
+                  className="patient-footer-btn patient-footer-btn-secondary"
+                  style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  <ChevronLeft size={15} />
+                  <span>Previous: Current Examination</span>
                 </button>
                 <button
                   type="button"
@@ -3934,12 +4345,14 @@ export default function PatientModal({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '16px 28px',
+            padding: '14px 20px',
             background: '#ffffff',
             borderBottom: '1px solid #e2e8f0',
             position: 'sticky',
             top: 0,
             zIndex: 40,
+            width: '100%',
+            boxSizing: 'border-box',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -4004,16 +4417,16 @@ export default function PatientModal({
           </button>
         </div>
 
-        {/* 2-Column Responsive Layout Matching UI Reference */}
+        {/* 2-Column Consistent Layout Matching UI Reference Across All Screen Sizes */}
         <div
           className="patient-page-grid"
           style={{
-            maxWidth: 1440,
             width: '100%',
-            margin: '0 auto',
-            padding: '20px 28px 40px 28px',
+            maxWidth: '100%',
+            margin: 0,
+            padding: '16px 20px 40px 20px',
             display: 'grid',
-            gridTemplateColumns: '240px 1fr',
+            gridTemplateColumns: '300px minmax(0, 1fr)',
             gap: 20,
             alignItems: 'start',
             boxSizing: 'border-box',

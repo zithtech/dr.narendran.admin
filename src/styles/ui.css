@@ -2548,8 +2548,21 @@ body {
 .ui-input-icon .ui-input,
 .patient-input-with-icon,
 input.patient-input-with-icon {
-  height: 40px;
+  height: 38px;
   padding-left: 42px !important;
+}
+
+.patient-form-input:not(textarea),
+input.patient-form-input,
+select.patient-form-input {
+  height: 38px;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+textarea.patient-form-input {
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 input[type="date"].patient-input-with-icon::-webkit-datetime-edit {
@@ -3287,6 +3300,10 @@ input[type="date"].patient-input-with-icon::-webkit-datetime-edit {
   overflow-x: clip;
   display: block;
   position: relative;
+}
+
+.ui-app-right-column .ui-main:has(.patient-page-layout) {
+  overflow-x: auto;
 }
 
 /* Patient Detail Page: lock parent overflow so header stays fixed and only right pane scrolls */
