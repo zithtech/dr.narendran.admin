@@ -140,8 +140,18 @@ export function generatePatientSummaryHtml({
   const perfScoreNum =
     perfScoreRaw !== undefined && perfScoreRaw !== null && perfScoreRaw !== ''
       ? Number(perfScoreRaw)
+    : null;
+  const rawGuideline = perfScoreNum !== null ? PERFORMANCE_SCALE_GUIDELINES[perfScoreNum] : null;
+  // Strictly enforce green, red, blue palette
+  const perfGuideline =
+    rawGuideline && perfScoreNum !== null
+      ? {
+          ...rawGuideline,
+          color: perfScoreNum <= 1 ? '#15803d' : perfScoreNum === 2 ? '#1d4ed8' : '#b91c1c',
+          bg: perfScoreNum <= 1 ? '#f0fdf4' : perfScoreNum === 2 ? '#eff6ff' : '#fef2f2',
+          border: perfScoreNum <= 1 ? '#86efac' : perfScoreNum === 2 ? '#93c5fd' : '#fca5a5',
+        }
       : null;
-  const perfGuideline = perfScoreNum !== null ? PERFORMANCE_SCALE_GUIDELINES[perfScoreNum] : null;
 
   // Emergency contact extraction
   let emContacts = '';
@@ -300,9 +310,9 @@ export function generatePatientSummaryHtml({
 
     .rx-tagline {
       text-align: center !important;
-      color: #67358f !important;
+      color: #1e40af !important;
       font-size: 10px !important;
-      font-weight: 700 !important;
+      font-weight: 850 !important;
       line-height: 1.25 !important;
       margin: 3.5mm 0 2mm 0 !important;
       text-transform: uppercase !important;
@@ -336,8 +346,8 @@ export function generatePatientSummaryHtml({
       margin: 0 0 1mm !important;
       font-size: 15px !important;
       line-height: 1.2 !important;
-      font-weight: 700 !important;
-      color: #67358f !important;
+      font-weight: 850 !important;
+      color: #000000 !important;
       white-space: normal !important;
       word-break: normal !important;
       overflow-wrap: break-word !important;
@@ -348,8 +358,8 @@ export function generatePatientSummaryHtml({
       margin: 0 0 1mm !important;
       font-size: 10px !important;
       line-height: 1.25 !important;
-      color: #1e293b !important;
-      font-weight: 600 !important;
+      color: #000000 !important;
+      font-weight: 750 !important;
       white-space: normal !important;
       word-break: normal !important;
       overflow-wrap: break-word !important;
@@ -360,8 +370,8 @@ export function generatePatientSummaryHtml({
       margin: 0 0 1mm !important;
       font-size: 9.5px !important;
       line-height: 1.25 !important;
-      color: #475569 !important;
-      font-weight: 500 !important;
+      color: #1e40af !important;
+      font-weight: 700 !important;
       white-space: normal !important;
     }
 
@@ -369,8 +379,13 @@ export function generatePatientSummaryHtml({
       margin: 0 !important;
       font-size: 9.5px !important;
       line-height: 1.2 !important;
-      color: #67358f !important;
-      font-weight: 700 !important;
+      color: #000000 !important;
+      font-weight: 800 !important;
+    }
+
+    .rx-reg-number {
+      color: #1e40af !important;
+      font-weight: 850 !important;
     }
 
     .report-footer-wrapper {
@@ -477,7 +492,7 @@ export function generatePatientSummaryHtml({
     /* Section Cards - Flow naturally across pages without artificial gaps */
     .pdf-card {
       width: 100%;
-      border: 1px solid #e2e8f0;
+      border: 1.2px solid #cbd5e1;
       border-radius: 6px;
       margin-bottom: 2.5mm;
       page-break-inside: auto !important;
@@ -491,8 +506,7 @@ export function generatePatientSummaryHtml({
 
     .pdf-card-header {
       background: #f8fafc;
-      border-bottom: 1px solid #e2e8f0;
-      border-left: 3.5px solid #67358f;
+      border-bottom: 1.2px solid #cbd5e1;
       padding: 1.8mm 3.2mm;
       display: flex;
       justify-content: space-between;
@@ -505,8 +519,8 @@ export function generatePatientSummaryHtml({
 
     .pdf-card-title {
       font-size: 9.5px;
-      font-weight: 750;
-      color: #581c87;
+      font-weight: 850;
+      color: #000000;
       text-transform: uppercase;
       letter-spacing: 0.03em;
       margin: 0;
@@ -517,10 +531,10 @@ export function generatePatientSummaryHtml({
 
     .pdf-card-badge {
       font-size: 8px;
-      font-weight: 700;
-      color: #67358f;
-      background: #f3e8ff;
-      border: 0.5px solid #d8b4fe;
+      font-weight: 800;
+      color: #1e40af;
+      background: #eff6ff;
+      border: 1px solid #93c5fd;
       padding: 1px 6px;
       border-radius: 3px;
     }
@@ -579,8 +593,8 @@ export function generatePatientSummaryHtml({
 
     .pdf-label {
       font-size: 7.5px;
-      font-weight: 750;
-      color: #64748b;
+      font-weight: 800;
+      color: #000000; /* Black for labels */
       text-transform: uppercase;
       letter-spacing: 0.03em;
       margin-bottom: 0.6mm;
@@ -589,20 +603,20 @@ export function generatePatientSummaryHtml({
 
     .pdf-value {
       font-size: 9.5px;
-      color: #0f172a;
+      color: #4b5563; /* Gray for values */
       font-weight: 500;
       line-height: 1.35;
     }
 
     .pdf-value strong {
-      font-weight: 750;
-      color: #0f172a;
+      font-weight: 700;
+      color: #374151; /* Darker gray for bold values */
     }
 
     /* Metric Highlight Boxes (for Vitals) - Compact single row dashboard */
     .pdf-metric-box {
       background: #f8fafc;
-      border: 1px solid #e2e8f0;
+      border: 1.2px solid #cbd5e1;
       border-radius: 5px;
       padding: 1.6mm 1.2mm;
       text-align: center;
@@ -612,16 +626,18 @@ export function generatePatientSummaryHtml({
 
     .pdf-metric-box .pdf-label {
       font-size: 7px;
+      font-weight: 800;
+      color: #000000; /* Black for label */
       margin-bottom: 0.6mm;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      overflow: visible;
+      text-overflow: clip;
     }
 
     .pdf-metric-box .pdf-val-metric {
       font-size: 11px;
       font-weight: 800;
-      color: #0f172a;
+      color: #374151; /* Gray for metric value */
       white-space: nowrap;
     }
 
@@ -644,11 +660,11 @@ export function generatePatientSummaryHtml({
 
     .pdf-table th {
       background: #f1f5f9;
-      color: #334155;
-      font-weight: 750;
+      color: #000000; /* Black for table header label */
+      font-weight: 850;
       text-align: left;
       padding: 1.6mm 2.5mm;
-      border: 0.5px solid #cbd5e1;
+      border: 1px solid #cbd5e1;
       font-size: 7.5px;
       text-transform: uppercase;
       letter-spacing: 0.03em;
@@ -658,32 +674,38 @@ export function generatePatientSummaryHtml({
 
     .pdf-table td {
       padding: 1.6mm 2.5mm;
-      border: 0.5px solid #e2e8f0;
-      color: #1e293b;
+      border: 0.5px solid #cbd5e1;
+      color: #4b5563; /* Gray for table values */
+      font-weight: 500;
       vertical-align: middle;
       line-height: 1.35;
     }
 
-    .pdf-table tbody tr:nth-child(even) {
-      background: #fbfcfe;
+    .pdf-table td strong {
+      color: #374151;
+      font-weight: 700;
     }
 
-    /* Pill Badges - Sleek & compact */
+    .pdf-table tbody tr:nth-child(even) {
+      background: #f8fafc;
+    }
+
+    /* Pill Badges - Sleek & compact (Strictly Green, Red, Blue, and Bold Black) */
     .pdf-pill {
       display: inline-block;
       padding: 1.5px 6.5px;
       border-radius: 4px;
       font-size: 8px;
-      font-weight: 650;
+      font-weight: 800;
       margin-right: 4px;
       margin-bottom: 3px;
       line-height: 1.3;
     }
-    .pdf-pill-purple { background: #f5f3ff; color: #581c87; border: 0.5px solid #d8b4fe; }
-    .pdf-pill-blue { background: #eff6ff; color: #1e40af; border: 0.5px solid #bfdbfe; }
-    .pdf-pill-green { background: #f0fdf4; color: #166534; border: 0.5px solid #bbf7d0; }
-    .pdf-pill-amber { background: #fffbeb; color: #92400e; border: 0.5px solid #fde68a; }
-    .pdf-pill-red { background: #fef2f2; color: #991b1b; border: 0.5px solid #fecaca; }
+    .pdf-pill-blue { background: #eff6ff; color: #1e40af; border: 1px solid #93c5fd; }
+    .pdf-pill-green { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+    .pdf-pill-red { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .pdf-pill-purple { background: #eff6ff; color: #1e40af; border: 1px solid #93c5fd; }
+    .pdf-pill-amber { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
 
     /* Performance Status Box - Compact & elegant */
     .pdf-perf-box {
@@ -697,7 +719,7 @@ export function generatePatientSummaryHtml({
 
     .pdf-perf-score {
       font-size: 16px;
-      font-weight: 850;
+      font-weight: 900;
       line-height: 1;
       padding: 3.5px 9px;
       border-radius: 5px;
@@ -711,7 +733,7 @@ export function generatePatientSummaryHtml({
       break-inside: avoid;
       margin-top: 3.5mm;
       padding-top: 2.5mm;
-      border-top: 1px dashed #cbd5e1;
+      border-top: 1.5px dashed #000000;
       display: table;
       width: 100%;
     }
@@ -721,7 +743,8 @@ export function generatePatientSummaryHtml({
       vertical-align: top;
       width: 60%;
       font-size: 8px;
-      color: #64748b;
+      color: #000000;
+      font-weight: 650;
       line-height: 1.35;
       padding-right: 5mm;
     }
@@ -735,19 +758,24 @@ export function generatePatientSummaryHtml({
 
     .pdf-signature-line {
       width: 44mm;
-      border-bottom: 1.5px solid #334155;
+      border-bottom: 2px solid #000000;
       margin-left: auto;
       margin-bottom: 1.5mm;
       height: 9mm;
     }
 
     .pdf-signature-name {
-      font-size: 10.5px;
-      font-weight: 750;
-      color: #67358f;
+      font-size: 11px;
+      font-weight: 850;
+      color: #000000;
     }
 
     .pdf-signature-title {
+      font-size: 8.5px;
+      font-weight: 750;
+      color: #1e40af;
+      margin-top: 0.3mm;
+    }
       font-size: 8.5px;
       color: #475569;
       margin-top: 0.3mm;
@@ -866,40 +894,40 @@ export function generatePatientSummaryHtml({
                       : '—';
                     return `
                       <div class="pdf-grid-6" style="margin-bottom: 0;">
-                        <div class="pdf-grid-cell" style="width: 13.5%;">
+                        <div class="pdf-grid-cell" style="width: 13%;">
                           <div class="pdf-metric-box">
                             <span class="pdf-label">Blood Pressure</span>
                             <div class="pdf-val-metric">${escapeHtml(patient.blood_pressure || currentInfo?.blood_pressure || '—')}</div>
                           </div>
                         </div>
-                        <div class="pdf-grid-cell" style="width: 13%;">
+                        <div class="pdf-grid-cell" style="width: 11%;">
                           <div class="pdf-metric-box">
                             <span class="pdf-label">Pulse Rate</span>
                             <div class="pdf-val-metric">${escapeHtml(currentInfo?.pulse_rate ? `${currentInfo.pulse_rate} bpm` : '—')}</div>
                           </div>
                         </div>
-                        <div class="pdf-grid-cell" style="width: 13%;">
+                        <div class="pdf-grid-cell" style="width: 11%;">
                           <div class="pdf-metric-box">
                             <span class="pdf-label">Body Temp</span>
                             <div class="pdf-val-metric">${escapeHtml(patient.body_temperature || (currentInfo?.temperature ? `${currentInfo.temperature} °F` : '—'))}</div>
                           </div>
                         </div>
-                        <div class="pdf-grid-cell" style="width: 13%;">
+                        <div class="pdf-grid-cell" style="width: 12%;">
                           <div class="pdf-metric-box">
                             <span class="pdf-label">SpO2 (Oxygen)</span>
                             <div class="pdf-val-metric">${escapeHtml(currentInfo?.oxygen_saturation ? `${currentInfo.oxygen_saturation} %` : '—')}</div>
                           </div>
                         </div>
-                        <div class="pdf-grid-cell" style="width: 13%;">
+                        <div class="pdf-grid-cell" style="width: 12%;">
                           <div class="pdf-metric-box">
                             <span class="pdf-label">Blood Sugar</span>
                             <div class="pdf-val-metric">${escapeHtml(patient.blood_sugar || currentInfo?.blood_sugar || '—')}</div>
                           </div>
                         </div>
-                        <div class="pdf-grid-cell" style="width: 34.5%;">
-                          <div class="pdf-metric-box">
-                            <span class="pdf-label" style="text-overflow: clip; overflow: visible;">Height / Weight / BMI</span>
-                            <div class="pdf-val-metric" style="font-size: 9.5px; font-weight: 750;">
+                        <div class="pdf-grid-cell" style="width: 41%;">
+                          <div class="pdf-metric-box" style="padding: 1.6mm 1.5mm;">
+                            <span class="pdf-label" style="text-overflow: clip; overflow: visible; white-space: nowrap;">Height / Weight / BMI</span>
+                            <div class="pdf-val-metric" style="font-size: 9.5px; font-weight: 800; white-space: nowrap;">
                               ${htWtStr}${bmi ? ` · ${bmi}` : ''}
                             </div>
                           </div>
@@ -925,7 +953,7 @@ export function generatePatientSummaryHtml({
                         ? `<span class="pdf-pill pdf-pill-red">Drug: ${escapeHtml(prevMed.allergies.medicine_allergies)}</span>`
                         : '<span class="pdf-pill pdf-pill-green">No Known Drug Allergies (NKDA)</span>'}
                       ${prevMed?.allergies?.food_allergies
-                        ? `<span class="pdf-pill pdf-pill-amber">Food: ${escapeHtml(prevMed.allergies.food_allergies)}</span>`
+                        ? `<span class="pdf-pill pdf-pill-red">Food: ${escapeHtml(prevMed.allergies.food_allergies)}</span>`
                         : ''}
                       ${prevMed?.allergies?.other_allergies
                         ? `<span class="pdf-pill pdf-pill-blue">Other: ${escapeHtml(prevMed.allergies.other_allergies)}</span>`
@@ -938,7 +966,7 @@ export function generatePatientSummaryHtml({
                     <div class="pdf-sub-block">
                       <span class="pdf-label">Chronic Conditions &amp; Co-morbidities</span>
                       <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 0.6mm;">
-                        ${prevMed.chronic_diseases.map((d) => `<span class="pdf-pill pdf-pill-purple">${escapeHtml(d)}</span>`).join('')}
+                        ${prevMed.chronic_diseases.map((d) => `<span class="pdf-pill pdf-pill-blue">${escapeHtml(d)}</span>`).join('')}
                       </div>
                     </div>
                   ` : ''}
@@ -1169,9 +1197,9 @@ export function generatePatientSummaryHtml({
                   </div>
 
                   ${currentInfo?.current_symptoms ? `
-                    <div class="pdf-sub-block" style="background: #faf5ff; border: 1px solid #e9d5ff; border-left: 3px solid #7c3aed; padding: 2mm 3mm; border-radius: 5px;">
-                      <span class="pdf-label" style="color: #6b21a8; margin-bottom: 0.4mm;">Symptom Details &amp; History of Present Illness</span>
-                      <div class="pdf-value" style="white-space: pre-line; margin-top: 0.5mm;">${escapeHtml(currentInfo.current_symptoms)}</div>
+                    <div class="pdf-sub-block" style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 3.5px solid #2563eb; padding: 2mm 3mm; border-radius: 5px;">
+                      <span class="pdf-label" style="color: #1e40af; font-weight: 850; margin-bottom: 0.4mm;">Symptom Details &amp; History of Present Illness</span>
+                      <div class="pdf-value" style="white-space: pre-line; margin-top: 0.5mm; font-weight: 500; color: #4b5563;">${escapeHtml(currentInfo.current_symptoms)}</div>
                     </div>
                   ` : ''}
 
@@ -1181,8 +1209,14 @@ export function generatePatientSummaryHtml({
                         <span class="pdf-label">Pain Scale Assessment</span>
                         <span class="pdf-value">
                           ${currentInfo?.pain_level !== undefined && currentInfo?.pain_level !== null
-                            ? `<strong>${currentInfo.pain_level} / 10</strong> ${Number(currentInfo.pain_level) === 0 ? '(No Pain)' : Number(currentInfo.pain_level) <= 3 ? '(Mild)' : Number(currentInfo.pain_level) <= 6 ? '(Moderate)' : '(Severe)'}`
-                            : 'Not Reported (0/10)'}
+                            ? `<strong>${currentInfo.pain_level} / 10</strong> ${
+                                Number(currentInfo.pain_level) === 0
+                                  ? '<span style="color: #15803d; font-weight: 800;">(No Pain)</span>'
+                                  : Number(currentInfo.pain_level) <= 3
+                                    ? '<span style="color: #1e40af; font-weight: 800;">(Mild)</span>'
+                                    : `<span style="color: #b91c1c; font-weight: 800;">${Number(currentInfo.pain_level) <= 6 ? '(Moderate)' : '(Severe)'}</span>`
+                              }`
+                            : '<span style="color: #15803d; font-weight: 800;">Not Reported (0/10)</span>'}
                         </span>
                       </div>
                       <div class="pdf-grid-cell">
@@ -1195,7 +1229,7 @@ export function generatePatientSummaryHtml({
                   ${currentInfo?.clinical_observations ? `
                     <div class="pdf-sub-block" style="padding-top: 2mm; border-top: 0.5px solid #f1f5f9;">
                       <span class="pdf-label" style="margin-bottom: 0.4mm;">Physical &amp; Clinical Examination Observations</span>
-                      <div class="pdf-value" style="white-space: pre-line; margin-top: 0.5mm;">${escapeHtml(currentInfo.clinical_observations)}</div>
+                      <div class="pdf-value" style="white-space: pre-line; margin-top: 0.5mm; font-weight: 500; color: #4b5563;">${escapeHtml(currentInfo.clinical_observations)}</div>
                     </div>
                   ` : ''}
                 </div>
@@ -1211,11 +1245,11 @@ export function generatePatientSummaryHtml({
                   <!-- Clinical Diagnosis -->
                   <div class="pdf-sub-block">
                     <span class="pdf-label">Doctor's Clinical / Provisional Diagnosis</span>
-                    <div class="pdf-value" style="font-size: 11.5px; font-weight: 750; color: #581c87; margin-top: 0.3mm;">
+                    <div class="pdf-value" style="font-size: 11.5px; font-weight: 750; color: #374151; margin-top: 0.3mm;">
                       ${escapeHtml(currentInfo?.current_diagnosis || 'Clinical Consultation Underway')}
                     </div>
                     ${currentInfo?.differential_diagnosis ? `
-                      <div style="font-size: 9px; color: #64748b; margin-top: 0.5mm;">
+                      <div style="font-size: 9px; color: #1e40af; font-weight: 750; margin-top: 0.5mm;">
                         <strong>Differential Diagnosis:</strong> ${escapeHtml(currentInfo.differential_diagnosis)}
                       </div>
                     ` : ''}
@@ -1229,10 +1263,10 @@ export function generatePatientSummaryHtml({
                           ${perfScoreNum}
                         </div>
                         <div>
-                          <div style="font-weight: 750; font-size: 10px; color: ${perfGuideline.color};">
+                          <div style="font-weight: 850; font-size: 10px; color: ${perfGuideline.color};">
                             ${escapeHtml(perfGuideline.title)}
                           </div>
-                          <div style="font-size: 8.5px; color: #334155; margin-top: 0.5mm; line-height: 1.3;">
+                          <div style="font-size: 8.5px; color: #4b5563; font-weight: 500; margin-top: 0.5mm; line-height: 1.3;">
                             ${escapeHtml(currentInfo?.performance_description || perfGuideline.desc)}
                           </div>
                         </div>
@@ -1245,7 +1279,7 @@ export function generatePatientSummaryHtml({
                     <span class="pdf-label">Recommended Diagnostic Investigations &amp; Laboratory Panels (${orderedTests.length})</span>
                     ${orderedTests.length > 0 ? `
                       <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 1mm;">
-                        ${orderedTests.map((t) => `<span class="pdf-pill pdf-pill-purple">✓ ${escapeHtml(t)}</span>`).join('')}
+                        ${orderedTests.map((t) => `<span class="pdf-pill pdf-pill-blue">✓ ${escapeHtml(t)}</span>`).join('')}
                       </div>
                     ` : '<span class="pdf-value" style="color: #64748b;">No specific diagnostic laboratory or imaging tests ordered at this visit.</span>'}
                   </div>
@@ -1253,7 +1287,7 @@ export function generatePatientSummaryHtml({
                   <!-- Overall Treatment Strategy -->
                   <div class="pdf-sub-block">
                     <span class="pdf-label">Overall Treatment Strategy &amp; Care Plan</span>
-                    <div class="pdf-value" style="white-space: pre-line; background: #f8fafc; padding: 2mm 3mm; border-radius: 5px; border: 0.5px solid #e2e8f0; border-left: 3px solid #67358f; margin-top: 0.8mm;">
+                    <div class="pdf-value" style="white-space: pre-line; background: #f8fafc; padding: 2mm 3mm; border-radius: 5px; border: 0.5px solid #cbd5e1; border-left: 3.5px solid #2563eb; margin-top: 0.8mm; color: #4b5563; font-weight: 500;">
                       ${escapeHtml(currentInfo?.treatment_strategy || 'Continue supportive medical care and scheduled monitoring.')}
                     </div>
                   </div>
@@ -1317,7 +1351,7 @@ export function generatePatientSummaryHtml({
                         <span class="pdf-label">Status &amp; Follow-Up</span>
                         <span class="pdf-value">
                           <span class="pdf-pill ${rxStatus === 'ACTIVE' ? 'pdf-pill-green' : 'pdf-pill-blue'}" style="margin: 0 4px 0 0;">${escapeHtml(rxStatus)}</span>
-                          ${followUpText ? `<span class="pdf-pill pdf-pill-purple" style="margin: 0;">${escapeHtml(followUpText)}</span>` : ''}
+                          ${followUpText ? `<span class="pdf-pill pdf-pill-blue" style="margin: 0;">${escapeHtml(followUpText)}</span>` : ''}
                         </span>
                       </div>
                     </div>
@@ -1341,23 +1375,23 @@ export function generatePatientSummaryHtml({
                         <tbody>
                           ${meds.map((m, mIdx) => `
                             <tr>
-                              <td style="text-align: center; color: #64748b; font-weight: 700;">${mIdx + 1}</td>
+                              <td style="text-align: center; color: #6b7280; font-weight: 600;">${mIdx + 1}</td>
                               <td>
-                                <div style="font-weight: 750; color: #0f172a; font-size: 9px;">${escapeHtml(m.medicine_name)}</div>
-                                ${m.strength ? `<div style="font-size: 7.5px; color: #64748b; margin-top: 0.3mm;">Strength: ${escapeHtml(m.strength)}</div>` : ''}
+                                <div style="font-weight: 700; color: #374151; font-size: 9.5px;">${escapeHtml(m.medicine_name)}</div>
+                                ${m.strength ? `<div style="font-size: 8px; color: #1e40af; font-weight: 800; margin-top: 0.3mm;">Strength: ${escapeHtml(m.strength)}</div>` : ''}
                               </td>
                               <td>
-                                <span style="font-weight: 700; color: #1e293b;">${escapeHtml(m.dosage || '1 unit')}</span>
+                                <span style="font-weight: 600; color: #4b5563;">${escapeHtml(m.dosage || '1 unit')}</span>
                               </td>
                               <td>
-                                <span class="pdf-pill pdf-pill-purple" style="margin: 0; font-size: 8px; font-weight: 700;">${escapeHtml(m.frequency || 'As directed')}</span>
+                                <span class="pdf-pill pdf-pill-blue" style="margin: 0; font-size: 8px; font-weight: 800;">${escapeHtml(m.frequency || 'As directed')}</span>
                               </td>
                               <td>
-                                <span style="font-weight: 650; color: #334155;">${escapeHtml(m.duration || '—')}</span>
+                                <span style="font-weight: 600; color: #4b5563;">${escapeHtml(m.duration || '—')}</span>
                               </td>
                               <td>
-                                ${m.food_instruction ? `<span class="pdf-pill pdf-pill-blue" style="margin: 0 0 2px 0; font-size: 7.5px; display: inline-block;">${escapeHtml(m.food_instruction)}</span><br/>` : ''}
-                                <span style="font-size: 8px; color: #475569;">${escapeHtml(m.instructions || 'As advised')}</span>
+                                ${m.food_instruction ? `<span class="pdf-pill ${m.food_instruction.toLowerCase().includes('after') ? 'pdf-pill-green' : 'pdf-pill-blue'}" style="margin: 0 0 2px 0; font-size: 7.5px; display: inline-block;">${escapeHtml(m.food_instruction)}</span><br/>` : ''}
+                                <span style="font-size: 8px; color: #6b7280; font-weight: 500;">${escapeHtml(m.instructions || 'As advised')}</span>
                               </td>
                             </tr>
                           `).join('')}
@@ -1371,7 +1405,7 @@ export function generatePatientSummaryHtml({
                     <div class="pdf-sub-block" style="margin-top: 2mm; padding-top: 1.8mm; border-top: 0.5px solid #f1f5f9;">
                       <span class="pdf-label">Ordered Diagnostic Investigations &amp; Panels (${labTests.length})</span>
                       <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 1mm;">
-                        ${labTests.map((t) => `<span class="pdf-pill pdf-pill-purple">✓ ${escapeHtml(t.test_name)}${t.instructions ? ` (${escapeHtml(t.instructions)})` : ''}</span>`).join('')}
+                        ${labTests.map((t) => `<span class="pdf-pill pdf-pill-blue">✓ ${escapeHtml(t.test_name)}${t.instructions ? ` (${escapeHtml(t.instructions)})` : ''}</span>`).join('')}
                       </div>
                     </div>
                   ` : ''}
@@ -1380,7 +1414,7 @@ export function generatePatientSummaryHtml({
                   ${rx.additional_notes ? `
                     <div class="pdf-sub-block" style="margin-top: 2mm; padding-top: 1.8mm; border-top: 0.5px solid #f1f5f9;">
                       <span class="pdf-label">Doctor's Advice &amp; Special Clinical Instructions</span>
-                      <div class="pdf-value" style="white-space: pre-line; background: #faf5ff; border: 0.5px solid #e9d5ff; border-left: 3px solid #7c3aed; padding: 1.8mm 2.5mm; border-radius: 4px; margin-top: 0.5mm;">
+                      <div class="pdf-value" style="white-space: pre-line; background: #eff6ff; border: 1px solid #bfdbfe; border-left: 3.5px solid #2563eb; padding: 1.8mm 2.5mm; border-radius: 4px; margin-top: 0.5mm; color: #4b5563; font-weight: 500;">
                         ${escapeHtml(rx.additional_notes)}
                       </div>
                     </div>
@@ -1417,12 +1451,12 @@ export function generatePatientSummaryHtml({
                       <tbody>
                         ${currentMedsFallback.map((m, mIdx) => `
                           <tr>
-                            <td style="text-align: center; color: #64748b; font-weight: 700;">${mIdx + 1}</td>
-                            <td><strong>${escapeHtml(m.medicine_name)}</strong></td>
-                            <td>${escapeHtml(m.dosage || '—')}</td>
-                            <td><span class="pdf-pill pdf-pill-purple" style="margin: 0; font-size: 8px;">${escapeHtml(m.frequency || '—')}</span></td>
-                            <td>${escapeHtml(m.route || 'Oral')}</td>
-                            <td>${formatDate(m.started_date)}</td>
+                            <td style="text-align: center; color: #6b7280; font-weight: 600;">${mIdx + 1}</td>
+                            <td><strong style="color: #374151;">${escapeHtml(m.medicine_name)}</strong></td>
+                            <td style="font-weight: 600; color: #4b5563;">${escapeHtml(m.dosage || '—')}</td>
+                            <td><span class="pdf-pill pdf-pill-blue" style="margin: 0; font-size: 8px;">${escapeHtml(m.frequency || '—')}</span></td>
+                            <td style="color: #4b5563; font-weight: 500;">${escapeHtml(m.route || 'Oral')}</td>
+                            <td style="color: #4b5563; font-weight: 500;">${formatDate(m.started_date)}</td>
                           </tr>
                         `).join('')}
                       </tbody>

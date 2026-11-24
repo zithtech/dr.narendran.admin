@@ -30,6 +30,20 @@ const mockReferrals = [
   { id: 'ref-001', name: 'Dr. Sarah Connor', occupation: 'Cardiologist', phone: '9876543210', city: 'Chennai', status: 'ACTIVE' },
 ];
 
+const mockAllianceDoctors = [
+  {
+    id: 'alliance-doc-001',
+    name: 'Dr. Suresh Varma',
+    specialization: 'Oncology',
+    hospital_clinic_name: 'Metro Care Clinic',
+    category: 'Surgical Partner',
+    city: 'Coimbatore',
+    mobile_number: '+91 94433 22110',
+    email: 'suresh.varma@metrocare.com',
+    status: 'ACTIVE',
+  },
+];
+
 const mockPatient: Patient = {
   id: 'pat-001',
   user_account_id: null,
@@ -67,6 +81,7 @@ describe('Patient Create/Edit Modal - Residential Address fields', () => {
       if (url === 'user-accounts') return Promise.resolve({ data: [] });
       if (url === 'doctors') return Promise.resolve({ data: mockDoctors });
       if (url === 'referrals') return Promise.resolve({ data: mockReferrals });
+      if (url.startsWith('alliances/doctors')) return Promise.resolve({ data: mockAllianceDoctors });
       return Promise.resolve({ data: [] });
     });
   });
@@ -226,7 +241,7 @@ describe('Patient Create/Edit Modal - Residential Address fields', () => {
     // Check dropdowns
     expect(screen.getByLabelText('Referred by')).toBeInTheDocument();
     expect(
-      screen.getAllByText("Choose 'Referred by' first (Referrals or Doctor)").length,
+      screen.getAllByText(/Choose 'Referred by' first/).length,
     ).toBeGreaterThanOrEqual(1);
   });
 
@@ -244,6 +259,25 @@ describe('Patient Create/Edit Modal - Residential Address fields', () => {
     await waitFor(() => {
       expect(screen.getAllByText('Dr. Sarah Connor').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Active Referral')).toBeInTheDocument();
+    });
+  });
+
+  it('loads alliance doctor details for existing patient with alliance referral record', async () => {
+    const patientWithAlliance: Patient = {
+      ...mockPatient,
+      referred_by: 'ALLIANCE',
+      referral_doctor_id: 'alliance-doc-001',
+      alliance_doctor_id: 'alliance-doc-001',
+    };
+
+    renderWithProviders(
+      <PatientModal isOpen={true} onClose={vi.fn()} patient={patientWithAlliance} onSave={vi.fn()} />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Dr. Suresh Varma').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Active Alliance Doctor')).toBeInTheDocument();
+      expect(screen.getByText('+91 94433 22110')).toBeInTheDocument();
     });
   });
 });
