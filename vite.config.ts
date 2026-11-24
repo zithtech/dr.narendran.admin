@@ -3,12 +3,29 @@ import { fileURLToPath, URL } from 'node:url';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { createLogger, defineConfig } from 'vite';
 
 /** Backend dev server pointing to dr.narendran.adminbackend on port 5000 */
 const API_DEV_TARGET = 'http://localhost:5000';
 
+// Custom logger to filter benign WebSocket proxy socket teardowns (EPIPE/ECONNRESET)
+const customLogger = createLogger();
+const originalLoggerError = customLogger.error.bind(customLogger);
+customLogger.error = (msg, options) => {
+  if (
+    typeof msg === 'string' &&
+    (msg.includes('ws proxy error') ||
+      msg.includes('ws proxy socket error') ||
+      msg.includes('write EPIPE') ||
+      msg.includes('ECONNRESET'))
+  ) {
+    return;
+  }
+  originalLoggerError(msg, options);
+};
+
 export default defineConfig({
+  customLogger,
   plugins: [
     react(),
     // Tailwind v4 runs as a Vite plugin. There is no tailwind.config.js and no
@@ -49,6 +66,25 @@ export default defineConfig({
       '/socket.io': {
         target: API_DEV_TARGET,
         ws: true,
+        changeOrigin: true,
+        rewriteWsOrigin: true,
+        configure: (proxy) => {
+          proxy.on('error', (err: any) => {
+            // Ignore normal WebSocket teardowns / broken pipe when client or server closes connection
+            if (err?.code === 'EPIPE' || err?.code === 'ECONNRESET') {
+              return;
+            }
+            console.warn('[vite] ws proxy error:', err?.message || err);
+          });
+          proxy.on('proxyReqWs', (_proxyReq, _req, socket) => {
+            socket.on('error', (err: any) => {
+              if (err?.code === 'EPIPE' || err?.code === 'ECONNRESET') {
+                return;
+              }
+              console.warn('[vite] ws proxy socket error:', err?.message || err);
+            });
+          });
+        },
       },
     },
   },
