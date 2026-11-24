@@ -106,6 +106,19 @@ export interface DataViewProps<T extends { id: string }> {
   exportLabel?: string;
   /** Optional minimum table width (e.g. 720) to prevent column crunching on small screens */
   minTableWidth?: number | string | undefined;
+  /** Optional custom mobile card renderer for row items */
+  renderMobileCard?: (
+    item: T,
+    helpers: {
+      isSel: boolean;
+      toggleRow: () => void;
+      onEdit?: (() => void) | undefined;
+      onDelete?: (() => void) | undefined;
+      isUpdateAllowed: boolean;
+      isDeleteAllowed: boolean;
+      showCheckCol: boolean;
+    },
+  ) => ReactNode;
 }
 
 type TimePreset = 'any' | 'today' | '7' | '30' | '90' | 'year' | 'custom';
@@ -174,6 +187,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
     onExport,
     exportLabel = 'Export',
     minTableWidth,
+    renderMobileCard,
   } = props;
   const { items, loading, error, syncedAt, refresh } = resource;
   const { message } = App.useApp();
@@ -213,6 +227,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
   const [pendingDelete, setPendingDelete] = useState<T[] | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [isFilterAccordionOpen, setIsFilterAccordionOpen] = useState(false);
+  const [mobileViewMode, setMobileViewMode] = useState<'card' | 'table'>('card');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -438,7 +453,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
 
           <button
             type="button"
-            className="inline-flex items-center justify-center w-7.5 h-7.5 shrink-0 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+            className="inline-flex items-center justify-center w-8 h-8 sm:w-7.5 sm:h-7.5 shrink-0 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
             onClick={() => {
               void refresh();
             }}
@@ -452,7 +467,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
 
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 h-8 sm:h-7.5 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
             onClick={handleExport}
           >
             <FileSpreadsheet size={13} className="text-slate-500" />
@@ -462,7 +477,7 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
           {onCreate && isCreateAllowed && (
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 h-7.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 h-8 sm:h-7.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
               onClick={onCreate}
             >
               <Plus size={13} strokeWidth={2.4} />
@@ -576,6 +591,43 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
                 )}
               </button>
             )}
+
+            {/* Mobile View Switcher (Cards / Table) if renderMobileCard is provided */}
+            {renderMobileCard && (
+              <div
+                className="sm:hidden inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs shrink-0 shadow-2xs"
+                role="group"
+                aria-label="View presentation"
+                data-testid="data-view-mobile-switcher"
+              >
+                <button
+                  type="button"
+                  onClick={() => setMobileViewMode('card')}
+                  className={cx(
+                    'px-2 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer',
+                    mobileViewMode === 'card'
+                      ? 'bg-white text-blue-700 shadow-2xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900',
+                  )}
+                  aria-pressed={mobileViewMode === 'card'}
+                >
+                  Cards
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileViewMode('table')}
+                  className={cx(
+                    'px-2 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer',
+                    mobileViewMode === 'table'
+                      ? 'bg-white text-blue-700 shadow-2xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900',
+                  )}
+                  aria-pressed={mobileViewMode === 'table'}
+                >
+                  Table
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Filter Facets Container:
@@ -686,8 +738,90 @@ export function DataView<T extends { id: string }>(props: DataViewProps<T>) {
           </div>
         </div>
 
+        {/* ── Mobile Cards Section ── */}
+        {renderMobileCard && (
+          <div
+            className={cx(
+              'sm:hidden p-2.5 sm:p-3 space-y-2.5 bg-slate-50/50 min-h-[220px]',
+              mobileViewMode === 'table' && 'hidden',
+            )}
+            data-testid="data-view-mobile-cards"
+          >
+            {loading && !hasData ? (
+              SKELETON_ROWS.slice(0, 4).map((i) => (
+                <div
+                  key={i}
+                  className="animate-pulse bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs space-y-2.5"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="h-4 bg-slate-100 rounded w-32" />
+                    <div className="h-4 bg-slate-100 rounded w-16" />
+                  </div>
+                  <div className="h-3 bg-slate-50 rounded w-48" />
+                  <div className="h-3 bg-slate-50 rounded w-40" />
+                </div>
+              ))
+            ) : pageRows.length === 0 ? (
+              <div className="py-10 text-center">
+                <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
+                  <div className="p-2.5 rounded-full bg-slate-50 text-slate-400">
+                    {hasData ? <SearchX size={22} /> : <Icon size={22} />}
+                  </div>
+                  <strong className="text-xs font-semibold text-slate-700">
+                    {hasData ? `No matching ${nounPlural}` : `No ${nounPlural} yet`}
+                  </strong>
+                  <span className="text-[11px] text-slate-500 max-w-sm">
+                    {hasData
+                      ? 'Try a different search term or remove filters.'
+                      : isCreateAllowed
+                        ? `Create your first ${noun} to get started.`
+                        : `No ${nounPlural} available.`}
+                  </span>
+                  <div className="mt-1.5">
+                    {hasData ? (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                        onClick={clearAll}
+                      >
+                        Clear filters
+                      </button>
+                    ) : onCreate && isCreateAllowed ? (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 h-7 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium cursor-pointer"
+                        onClick={onCreate}
+                      >
+                        <Plus size={13} /> {createLabel || 'Create'}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              pageRows.map((item) =>
+                renderMobileCard(item, {
+                  isSel: selected.has(item.id),
+                  toggleRow: () => toggleRow(item.id),
+                  onEdit: onEdit ? () => onEdit(item) : undefined,
+                  onDelete: onDelete ? () => setPendingDelete([item]) : undefined,
+                  isUpdateAllowed,
+                  isDeleteAllowed,
+                  showCheckCol,
+                }),
+              )
+            )}
+          </div>
+        )}
+
         {/* ── Table Section ── */}
-        <div className="overflow-auto min-h-[300px] max-h-[calc(100vh-270px)] no-scrollbar">
+        <div
+          className={cx(
+            'overflow-auto min-h-[300px] max-h-[calc(100vh-270px)] no-scrollbar',
+            renderMobileCard && mobileViewMode === 'card' && 'hidden sm:block',
+          )}
+          data-testid="data-view-table-container"
+        >
           <table
             className="w-full text-left border-collapse"
             style={minTableWidth !== undefined ? { minWidth: minTableWidth } : undefined}

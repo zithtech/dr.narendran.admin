@@ -1,5 +1,16 @@
 import { App } from 'antd';
-import { CalendarClock, Clock, Stethoscope } from 'lucide-react';
+import {
+  Building2,
+  CalendarClock,
+  Clock,
+  Eye,
+  Mail,
+  MapPin,
+  Pencil,
+  Phone,
+  Stethoscope,
+  Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -194,6 +205,165 @@ export default function Doctors() {
         onRowClick={openDetails}
         activeId={viewingId}
         minTableWidth={800}
+        renderMobileCard={(d, helpers) => {
+          const initials = d.name
+            ? d.name
+                .replace(/^Dr\.\s*/i, '')
+                .split(' ')
+                .map((n) => n[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase()
+            : 'DR';
+          const isActive = d.status === 'ACTIVE';
+
+          return (
+            <div
+              key={d.id}
+              data-testid={`doctor-card-${d.id}`}
+              className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-2xs space-y-3 cursor-pointer hover:border-slate-300 transition-colors"
+              onClick={() => openDetails(d)}
+            >
+              {/* Header: Avatar, Name, Specialization & Status */}
+              <div className="flex items-start justify-between gap-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 text-white font-bold text-xs grid place-items-center shrink-0 overflow-hidden border border-slate-200">
+                    {d.profile_image_url ? (
+                      <img
+                        src={d.profile_image_url}
+                        alt={d.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      initials
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                      {d.name}
+                    </h4>
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200/60">
+                        {d.specialization || 'General Specialist'}
+                      </span>
+                      {d.years_of_experience ? (
+                        <span className="text-[11px] text-slate-500">
+                          • {d.years_of_experience} yrs exp
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+                <StatusDot active={isActive} />
+              </div>
+
+              {/* Hospital & Branch */}
+              {(d.hospital_name || d.branch_name) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-slate-600 bg-slate-50/70 p-2 rounded-lg border border-slate-100">
+                  {d.hospital_name && (
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Building2 size={12} className="text-slate-400 shrink-0" />
+                      <span className="truncate">{d.hospital_name}</span>
+                    </div>
+                  )}
+                  {d.branch_name && (
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <MapPin size={12} className="text-slate-400 shrink-0" />
+                      <span className="truncate">{d.branch_name}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Contact Details */}
+              <div className="flex flex-col gap-1 text-[11px] text-slate-600">
+                {d.phone && (
+                  <div className="flex items-center gap-1.5">
+                    <Phone size={11} className="text-slate-400 shrink-0" />
+                    <span>{d.phone}</span>
+                  </div>
+                )}
+                {d.email && (
+                  <div className="flex items-center gap-1.5 truncate">
+                    <Mail size={11} className="text-slate-400 shrink-0" />
+                    <span className="truncate">{d.email}</span>
+                  </div>
+                )}
+                {d.medical_registration_number && (
+                  <div className="text-[10.5px] text-slate-400 font-mono">
+                    Reg: {d.medical_registration_number}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer: Activity & Row Actions */}
+              <div
+                className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="text-[10px] text-slate-400">
+                  {d.updated_at && d.updated_at !== d.created_at
+                    ? `Updated ${timeAgo(d.updated_at)}`
+                    : `Added ${timeAgo(d.created_at)}`}
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    className="p-1.5 min-w-[28px] min-h-[28px] inline-flex items-center justify-center rounded-md text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 transition-colors cursor-pointer"
+                    onClick={() => openAvailability(d)}
+                    title="Weekly Schedule"
+                    aria-label={`Weekly Schedule for ${d.name}`}
+                  >
+                    <CalendarClock size={13} />
+                  </button>
+                  {canView('AVAILABILITY') && (
+                    <button
+                      type="button"
+                      className="p-1.5 min-w-[28px] min-h-[28px] inline-flex items-center justify-center rounded-md text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 border border-slate-200 transition-colors cursor-pointer"
+                      onClick={() => void navigate(`/availability?doctorId=${d.id}`)}
+                      title="Availability & Slots"
+                      aria-label={`Slots for ${d.name}`}
+                    >
+                      <Clock size={13} />
+                    </button>
+                  )}
+                  {helpers.isUpdateAllowed && (
+                    <button
+                      type="button"
+                      className="p-1.5 min-w-[28px] min-h-[28px] inline-flex items-center justify-center rounded-md text-slate-500 hover:text-blue-600 hover:bg-blue-50 border border-slate-200 transition-colors cursor-pointer"
+                      onClick={() => openEditor(d)}
+                      title="Edit doctor"
+                      aria-label={`Edit ${d.name}`}
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  )}
+                  {helpers.isDeleteAllowed && helpers.onDelete && (
+                    <button
+                      type="button"
+                      className="p-1.5 min-w-[28px] min-h-[28px] inline-flex items-center justify-center rounded-md text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors cursor-pointer"
+                      onClick={helpers.onDelete}
+                      title="Delete doctor"
+                      aria-label={`Delete ${d.name}`}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="p-1.5 min-w-[28px] min-h-[28px] inline-flex items-center justify-center rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+                    onClick={() => openDetails(d)}
+                    title="View details"
+                    aria-label={`View ${d.name}`}
+                  >
+                    <Eye size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        }}
         extraActions={
           canView('AVAILABILITY') ? (
             <button

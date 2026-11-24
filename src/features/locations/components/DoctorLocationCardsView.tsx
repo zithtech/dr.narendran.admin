@@ -20,6 +20,7 @@ import { CommonPagination } from '../../../components/ui/CommonTable';
 import { ConfirmDialog } from '../../../components/ui/Modal';
 import { cx, StatusDot } from '../../../components/ui/primitives';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
+import { ViewModeSwitcher } from '../../../components/ui/ViewModeSwitcher';
 import { usePermission } from '../../../context/PermissionContext';
 import { timeAgo } from '../../../lib/format';
 import { locationsApi } from '../services/locationsApi';
@@ -65,6 +66,7 @@ export const DoctorLocationCardsView: React.FC<DoctorLocationCardsViewProps> = (
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [editingLocation, setEditingLocation] = useState<DoctorLocation | null>(null);
   const [locationToDelete, setLocationToDelete] = useState<DoctorLocation | null>(null);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -328,10 +330,194 @@ export const DoctorLocationCardsView: React.FC<DoctorLocationCardsViewProps> = (
                 <X size={12} className="text-slate-500" />
               </button>
             )}
+
+            {/* View Mode Switcher */}
+            <ViewModeSwitcher
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+            />
           </div>
         </div>
 
+        {/* ── Cards View Section ── */}
+        {viewMode === 'cards' && (
+          <div className="p-3 sm:p-4 bg-slate-50/50 min-h-[260px] border-b border-slate-200">
+            {loading && locations.length === 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {SKELETON_ROWS.map((i) => (
+                  <div
+                    key={i}
+                    className="animate-pulse bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="h-4 bg-slate-100 rounded w-32" />
+                      <div className="h-4 bg-slate-100 rounded w-16" />
+                    </div>
+                    <div className="h-3.5 bg-slate-50 rounded w-full" />
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                      <div className="h-5 bg-slate-100 rounded w-20" />
+                      <div className="h-5 bg-slate-100 rounded w-16" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredLocations.length === 0 ? (
+              <div className="py-12 text-center bg-white rounded-xl border border-slate-200 shadow-2xs">
+                <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
+                  <div className="p-2.5 rounded-full bg-slate-50 text-slate-400">
+                    {hasActiveFilters ? <SearchX size={22} /> : <Building2 size={22} />}
+                  </div>
+                  <strong className="text-xs font-semibold text-slate-700">
+                    {hasActiveFilters ? 'No matching locations found' : 'No locations added yet'}
+                  </strong>
+                  <span className="text-[11px] text-slate-500 max-w-sm">
+                    {hasActiveFilters
+                      ? 'Try adjusting your search criteria or clearing filters.'
+                      : "This doctor doesn't have any registered practice locations yet."}
+                  </span>
+                  <div className="mt-1.5">
+                    {hasActiveFilters ? (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                        onClick={resetFilters}
+                      >
+                        Clear filters
+                      </button>
+                    ) : isLocCreatable ? (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 h-7 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium cursor-pointer shadow-2xs"
+                        onClick={openAddModal}
+                      >
+                        <Plus size={13} /> Add First Location
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {pageRows.map((loc) => {
+                  const isCurrentPrimary = Boolean(loc.is_primary);
+                  const isActive = !loc.status || loc.status.toUpperCase() === 'ACTIVE';
+
+                  return (
+                    <div
+                      key={loc.id}
+                      className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 flex flex-col justify-between hover:border-slate-300 transition-all gap-3"
+                    >
+                      {/* Location Header */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-slate-900 text-sm">
+                              {loc.location_name}
+                            </span>
+                            {isCurrentPrimary && (
+                              <span className="inline-flex items-center gap-1 rounded bg-amber-50 border border-amber-200/80 px-2 py-0.5 text-[10.5px] font-bold text-amber-800 whitespace-nowrap">
+                                <Star size={10} className="fill-amber-500 text-amber-500" />
+                                Primary
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <StatusDot active={isActive} label={isActive ? 'Active' : 'Inactive'} />
+                      </div>
+
+                      {/* Location Address & Map Link */}
+                      <div className="flex flex-col gap-1.5 text-xs">
+                        {loc.address ? (
+                          <div className="flex items-start gap-1 text-[11px] text-slate-600">
+                            <MapPin size={12} className="text-slate-400 shrink-0 mt-0.5" />
+                            <span className="line-clamp-2">{loc.address}</span>
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-slate-400 italic">
+                            No street address specified
+                          </div>
+                        )}
+
+                        {loc.map_link && (
+                          <div className="mt-0.5">
+                            <a
+                              href={loc.map_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                            >
+                              <span>View on Map</span>
+                              <ExternalLink size={12} />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Location Actions */}
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5">
+                        <div>
+                          {isLocUpdatable && !isCurrentPrimary && (
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-amber-200 bg-amber-50 text-[11px] font-semibold text-amber-800 hover:bg-amber-100/80 transition-colors shadow-2xs cursor-pointer"
+                              onClick={() => void handleMakePrimary(loc)}
+                              disabled={actionLoading === `primary-${loc.id}`}
+                              title="Set as primary practice location"
+                            >
+                              <Star size={11} />
+                              <span>Make Primary</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          {isLocUpdatable && (
+                            <button
+                              type="button"
+                              className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer border border-slate-200/60"
+                              onClick={() => openEditModal(loc)}
+                              title="Edit practice location"
+                              aria-label="Edit Location"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                          )}
+                          {isLocDeletable && (
+                            <button
+                              type="button"
+                              className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed border border-slate-200/60"
+                              onClick={() => {
+                                if (isCurrentPrimary) {
+                                  message.warning(
+                                    'Cannot delete the primary location. Please assign another primary location first.',
+                                  );
+                                  return;
+                                }
+                                setLocationToDelete(loc);
+                              }}
+                              disabled={isCurrentPrimary}
+                              title={
+                                isCurrentPrimary
+                                  ? 'Cannot delete primary location'
+                                  : 'Delete practice location'
+                              }
+                              aria-label="Delete Location"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Table Section ── */}
+        {viewMode === 'table' && (
         <div className="overflow-x-auto min-h-[260px]">
           <table className="w-full text-left border-collapse" style={{ minWidth: 620 }}>
             <thead>
@@ -522,6 +708,7 @@ export const DoctorLocationCardsView: React.FC<DoctorLocationCardsViewProps> = (
             </tbody>
           </table>
         </div>
+        )}
 
         {/* ── Footer / Pagination (Matching SupportCenterPage & CommonTable) ── */}
         <CommonPagination

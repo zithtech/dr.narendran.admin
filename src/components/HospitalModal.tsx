@@ -489,6 +489,45 @@ export default function HospitalModal({ isOpen, onClose, onSave, hospital }: Hos
             background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.36) !important;
           }
+          @media (max-width: 640px) {
+            .hospital-drawer-modal {
+              width: 100vw !important;
+              max-width: 100vw !important;
+            }
+            .hospital-drawer-modal .ui-modal-head {
+              padding: 14px 16px !important;
+            }
+            .hospital-drawer-modal .ui-modal-body {
+              padding: 14px 14px !important;
+              gap: 12px !important;
+            }
+            .hosp-section-card {
+              padding: 14px 14px !important;
+              border-radius: 10px !important;
+              gap: 12px !important;
+            }
+            .hosp-section-header {
+              padding-bottom: 6px !important;
+            }
+            .hospital-drawer-modal .ui-modal-foot {
+              padding: 12px 16px !important;
+            }
+          }
+          @media (max-width: 480px) {
+            .hospital-drawer-modal .ui-modal-foot {
+              flex-direction: column-reverse !important;
+              align-items: stretch !important;
+              gap: 8px !important;
+            }
+            .hospital-drawer-modal .ui-modal-foot button {
+              width: 100% !important;
+              height: 40px !important;
+              justify-content: center !important;
+            }
+            .hosp-status-btn {
+              flex: 1 1 100% !important;
+            }
+          }
         `}</style>
 
         <div className="ui-modal-body">
@@ -890,7 +929,7 @@ export default function HospitalModal({ isOpen, onClose, onSave, hospital }: Hos
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(115px, 1fr))',
                     gap: 12,
                   }}
                 >

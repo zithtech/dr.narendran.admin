@@ -1,0 +1,182 @@
+import api from '../../../utils/api';
+import type { ChatConversation, ChatMessage, ChatRecipient } from '../types/chat';
+
+export const chatApi = {
+  /**
+   * Get doctors list for chat with presence and last message
+   */
+  getDoctors: async (speciality?: string, search?: string): Promise<ChatRecipient[]> => {
+    try {
+      const res = await api.get('chat/doctors', {
+        params: { speciality, search },
+      });
+      const data = res.data?.data || res.data?.doctors || res.data || [];
+      if (Array.isArray(data) && data.length > 0) {
+        return data.map((d: any) => ({
+          id: d.id,
+          name: d.name?.startsWith('Dr.') ? d.name : `Dr. ${d.name || 'Doctor'}`,
+          role: 'DOCTOR',
+          subtitle: d.specialization || d.specialty || 'General Medicine',
+          specialization: d.specialization || d.specialty || 'General Medicine',
+          phone: d.phone,
+          email: d.email,
+          avatar_url: d.profile_image_url || d.avatar_url,
+          is_online: Boolean(d.is_online || d.online_status === 'online'),
+          unread_count: d.unread_count || 0,
+          last_message: d.last_message,
+          last_message_at: d.last_message_at,
+          user_account_id: d.user_account_id || d.userAccountId,
+          status: d.status || 'ACTIVE',
+        }));
+      }
+    } catch {
+      // Fallback to standard doctors endpoint if chat/doctors is not ready
+    }
+
+    try {
+      const fallbackRes = await api.get('doctors');
+      const fallbackData = fallbackRes.data?.data || fallbackRes.data?.doctors || fallbackRes.data || [];
+      return (Array.isArray(fallbackData) ? fallbackData : []).map((d: any) => ({
+        id: d.id,
+        name: d.name?.startsWith('Dr.') ? d.name : `Dr. ${d.name || 'Doctor'}`,
+        role: 'DOCTOR',
+        subtitle: d.specialization || 'General Medicine',
+        specialization: d.specialization || 'General Medicine',
+        phone: d.phone,
+        email: d.email,
+        avatar_url: d.profile_image_url,
+        is_online: false,
+        unread_count: 0,
+        user_account_id: d.user_account_id,
+        status: d.status || 'ACTIVE',
+      }));
+    } catch {
+      return [];
+    }
+  },
+
+  /**
+   * Get patients list for chat
+   */
+  getPatients: async (search?: string): Promise<ChatRecipient[]> => {
+    try {
+      const res = await api.get('patients', { params: { search } });
+      const data = res.data?.data || res.data?.patients || res.data || [];
+      return (Array.isArray(data) ? data : []).map((p: any) => {
+        const displayName = p.name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Patient';
+        const ageGender = [p.age ? `${p.age} yrs` : null, p.gender].filter(Boolean).join(' • ');
+        return {
+          id: p.id,
+          name: displayName,
+          role: 'PATIENT',
+          subtitle: ageGender || p.phone || p.mrn || 'Patient',
+          phone: p.phone,
+          email: p.email,
+          age: p.age,
+          gender: p.gender,
+          avatar_url: p.profile_image_url || p.avatar_url,
+          is_online: false,
+          user_account_id: p.user_account_id || p.user_id,
+          status: p.status || 'ACTIVE',
+        };
+      });
+    } catch {
+      return [];
+    }
+  },
+
+  /**
+   * Get eligible other users (Admins, Staff, etc.)
+   */
+  getOtherUsers: async (search?: string): Promise<ChatRecipient[]> => {
+    try {
+      const res = await api.get('user-accounts', { params: { search } });
+      const data = res.data?.data || res.data?.users || res.data || [];
+      return (Array.isArray(data) ? data : []).map((u: any) => ({
+        id: u.id,
+        name: u.username || u.name || 'User',
+        role: (u.role || 'ADMIN').toUpperCase(),
+        subtitle: `${u.role || 'Admin'} Account`,
+        email: u.email,
+        phone: u.phone,
+        is_online: false,
+        user_account_id: u.id,
+        status: u.status || 'ACTIVE',
+      }));
+    } catch {
+      return [];
+    }
+  },
+
+  /**
+   * Get list of conversations
+   */
+  getConversations: async (): Promise<ChatConversation[]> => {
+    try {
+      const res = await api.get('chat/conversations');
+      const data = res.data?.data || res.data?.conversations || res.data || [];
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
+  },
+
+  /**
+   * Find or create conversation with a recipient
+   */
+  getOrCreateConversation: async (params: {
+    doctor_id?: string | undefined;
+    patient_id?: string | undefined;
+    recipient_id?: string | undefined;
+  }): Promise<ChatConversation> => {
+    const payload: Record<string, string | undefined> = {};
+    if (params.doctor_id) {
+      payload['doctor_id'] = params.doctor_id;
+      payload['doctorId'] = params.doctor_id;
+    }
+    if (params.patient_id) {
+      payload['patient_id'] = params.patient_id;
+      payload['patientId'] = params.patient_id;
+    }
+    if (params.recipient_id) {
+      payload['recipient_id'] = params.recipient_id;
+      payload['recipientId'] = params.recipient_id;
+    }
+    const res = await api.post('chat/conversations', payload);
+    const data = res.data?.data || res.data;
+    return {
+      ...data,
+      id: data?.id || data?.conversation_id,
+    };
+  },
+
+  /**
+   * Get message history for a conversation
+   */
+  getMessages: async (
+    conversationId: string,
+    limit = 50,
+    before?: string,
+  ): Promise<ChatMessage[]> => {
+    try {
+      const res = await api.get(`chat/conversations/${conversationId}/messages`, {
+        params: { limit, before },
+      });
+      const data = res.data?.data || res.data?.messages || res.data || [];
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
+  },
+
+  /**
+   * Mark messages as read in conversation
+   */
+  markAsRead: async (conversationId: string): Promise<void> => {
+    try {
+      await api.post(`chat/conversations/${conversationId}/read`);
+    } catch {
+      // Ignore background read receipt failure
+    }
+  },
+};

@@ -47,6 +47,7 @@ import LabReportsPage from './pages/client/LabReportsPage';
 import LabUpcomingTestsPage from './pages/client/LabUpcomingTestsPage';
 
 import SupportCenterPage from './features/support/pages/SupportCenterPage';
+import ChatPage from './pages/ChatPage';
 import { ReviewsManagementPage } from './features/reviews/pages/ReviewsManagementPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminAttendancePage from './pages/attendance/AdminAttendancePage';
@@ -477,6 +478,22 @@ function App() {
             element={
               <ModuleRouteGuard module="DOCTOR_SUPPORT" title="Doctor Support" fallbackSlugs={['SUPPORT']}>
                 <SupportCenterPage defaultUserType="DOCTOR" />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/support/chat"
+            element={
+              <ModuleRouteGuard module="CHAT" title="Chat" fallbackSlugs={['SUPPORT', 'PATIENT_SUPPORT', 'DOCTOR_SUPPORT']}>
+                <ChatPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/chat"
+            element={
+              <ModuleRouteGuard module="CHAT" title="Chat" fallbackSlugs={['SUPPORT', 'PATIENT_SUPPORT', 'DOCTOR_SUPPORT']}>
+                <ChatPage />
               </ModuleRouteGuard>
             }
           />
