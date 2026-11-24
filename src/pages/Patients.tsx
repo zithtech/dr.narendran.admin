@@ -5,10 +5,13 @@ import {
   Mail,
   Pencil,
   Phone,
+  Settings,
   Trash2,
 } from 'lucide-react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
+import PatientSettingsDrawer from '../components/PatientSettingsDrawer';
 import { type Patient } from '../components/PatientModal';
 import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
 import { addedFacet, statusFacet } from '../components/ui/facets';
@@ -52,6 +55,7 @@ const FACETS: Facet<Patient>[] = [
 
 export default function Patients() {
   const navigate = useNavigate();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const resource = useResource<Patient>('patients', 'patients');
   const openDetails = (patient: Patient) => {
     navigate(`/patients/${patient.id}`);
@@ -67,12 +71,33 @@ export default function Patients() {
 
   const columns: Column<Patient>[] = [
     {
+      id: 'patient_code',
+      header: 'Patient Code',
+      sort: (p) => (p.patient_code || p.patient_id || '').toLowerCase(),
+      cell: (p) => (
+        <div className="flex flex-col gap-0.5 items-start">
+          <span
+            className="font-mono text-xs font-bold text-blue-700 bg-blue-50/80 px-2.5 py-1 rounded-md border border-blue-200/70 inline-block cursor-pointer hover:bg-blue-100 transition-colors"
+            onClick={() => openDetails(p)}
+            title={`View details for ${p.patient_code || p.patient_id || p.name}`}
+          >
+            {p.patient_code || p.patient_id || '—'}
+          </span>
+          {p.legacy_patient_code && (
+            <span className="text-[10px] text-slate-500 font-mono" title={`Legacy code: ${p.legacy_patient_code}`}>
+              {/* (Old: {p.legacy_patient_code}) */}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
       id: 'name',
-      header: 'Patient',
+      header: 'Patient Name',
       sort: (p) => p.name.toLowerCase(),
       cell: (p) => (
         <PrimaryCell
-          name={formatPatientDisplayName(p.name, p.patient_id)}
+          name={p.name}
           sub={p.phone || p.email || <span className="ui-muted">No contact info</span>}
           avatarSrc={p.profile_image_url}
           onOpen={() => openDetails(p)}
@@ -158,8 +183,10 @@ export default function Patients() {
         resource={resource}
         searchPlaceholder="Search name, phone, email…"
         searchFields={(p) => [
-          p.name,
+          p.patient_code,
           p.patient_id,
+          p.legacy_patient_code,
+          p.name,
           p.email,
           p.phone,
           p.hospital_name,
@@ -175,6 +202,18 @@ export default function Patients() {
         dateLabel="Registered"
         columns={columns}
         createLabel="New patient"
+        extraActions={
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 h-8 sm:h-7.5 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+            onClick={() => setIsSettingsOpen(true)}
+            title="Configure Patient Code generation"
+            aria-label="Patient Settings"
+          >
+            <Settings size={13.5} className="text-slate-500" />
+            <span>Patient Settings</span>
+          </button>
+        }
         onCreate={() => openEditor(null)}
         onEdit={(p) => openEditor(p)}
         onDelete={(p) => api.delete(`patients/${p.id}`)}
@@ -184,11 +223,11 @@ export default function Patients() {
         renderMobileCard={(p, helpers) => {
           const initials = p.name
             ? p.name
-                .split(' ')
-                .map((n) => n[0])
-                .join('')
-                .slice(0, 2)
-                .toUpperCase()
+              .split(' ')
+              .map((n) => n[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase()
             : 'PT';
           const ageDisplay = formatPatientAge(p.date_of_birth);
           const isActive = p.status === 'ACTIVE';
@@ -219,9 +258,14 @@ export default function Patients() {
                       {formatPatientDisplayName(p.name, p.patient_id)}
                     </h4>
                     <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                      <span className="text-[10.5px] font-mono font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                        {p.patient_id || `#${p.id.slice(0, 8).toUpperCase()}`}
+                      <span className="text-[10.5px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200/80">
+                        {p.patient_code || p.patient_id || `#${p.id.slice(0, 8).toUpperCase()}`}
                       </span>
+                      {p.legacy_patient_code && (
+                        <span className="text-[9.5px] font-mono text-slate-500">
+                          {/* (Old: {p.legacy_patient_code}) */}
+                        </span>
+                      )}
                       {p.blood_group && (
                         <Badge tone="red">{p.blood_group}</Badge>
                       )}
@@ -322,6 +366,12 @@ export default function Patients() {
             </div>
           );
         }}
+      />
+
+      <PatientSettingsDrawer
+        open={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSettingsSaved={() => void resource.refresh()}
       />
     </>
   );

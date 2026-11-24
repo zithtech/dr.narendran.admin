@@ -67,6 +67,8 @@ export interface CustomVitalField {
 export interface Patient {
   id: string;
   patient_id?: string | null;
+  patient_code?: string | null;
+  legacy_patient_code?: string | null;
   user_account_id: string | null;
   hospital_id: string;
   hospital_name?: string;
@@ -2001,7 +2003,7 @@ export default function PatientModal({
               </div>
             </div>
 
-            {patient?.patient_id && (
+            {(patient?.patient_code || patient?.patient_id) && (
               <div>
                 <label
                   style={{
@@ -2014,14 +2016,14 @@ export default function PatientModal({
                     marginBottom: 5,
                   }}
                 >
-                  <span>Patient ID</span>
+                  <span>Patient Code</span>
                   <span style={{ fontSize: 11, fontWeight: 500, color: '#0284c7', background: '#e0f2fe', padding: '1px 6px', borderRadius: 4 }}>
                     Unique Identifier
                   </span>
                 </label>
                 <input
                   type="text"
-                  value={patient.patient_id}
+                  value={patient.patient_code || patient.patient_id || ''}
                   readOnly
                   disabled
                   className="ui-input"

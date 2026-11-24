@@ -132,10 +132,10 @@ export default function PatientTimelinesPage() {
     if (patients.length === 0) return;
     const exportColumns = [
       {
-        header: 'Patient ID',
-        key: (p: AdminPatientListItem) => p.patient_id || `#${p.id.slice(0, 8).toUpperCase()}`,
+        header: 'Patient Code',
+        key: (p: AdminPatientListItem) => p.patient_code || p.patient_id || '—',
       },
-      { header: 'Patient Name', key: (p: AdminPatientListItem) => formatPatientDisplayName(p.name, p.patient_id) },
+      { header: 'Patient Name', key: (p: AdminPatientListItem) => formatPatientDisplayName(p.name, p.patient_code || p.patient_id) },
       {
         header: 'Gender',
         key: (p: AdminPatientListItem) => (p.gender ? titleCase(p.gender) : 'Not specified'),
@@ -225,7 +225,7 @@ export default function PatientTimelinesPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              placeholder="Search name, ID, phone, email…"
+              placeholder="Search name, Code, phone, email…"
               className="w-full h-8 pl-8 pr-7 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-2xs"
               aria-label="Search patients"
             />
@@ -417,10 +417,10 @@ export default function PatientTimelinesPage() {
                             </div>
                             <div className="min-w-0">
                               <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                                {formatPatientDisplayName(patient.name, patient.patient_id)}
+                                {formatPatientDisplayName(patient.name, patient.patient_code || patient.patient_id)}
                               </h4>
                               <span className="text-[10.5px] font-mono font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                                {patient.patient_id || `#${patient.id.slice(0, 8).toUpperCase()}`}
+                                {patient.patient_code || patient.patient_id || '—'}
                               </span>
                             </div>
                           </div>
@@ -491,7 +491,7 @@ export default function PatientTimelinesPage() {
           <table className="w-full text-left border-collapse" style={{ minWidth: 720 }}>
             <thead>
               <tr className="border-b border-slate-200/90 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
-                <th className="w-28 px-3.5 py-2 select-none whitespace-nowrap">Patient ID</th>
+                <th className="w-28 px-3.5 py-2 select-none whitespace-nowrap">Patient Code</th>
                 <th className="px-3.5 py-2 whitespace-nowrap min-w-[200px]">Patient Name</th>
                 <th className="w-24 px-3.5 py-2 whitespace-nowrap">Gender</th>
                 <th className="w-36 px-3.5 py-2 whitespace-nowrap">Age & DOB</th>
@@ -572,10 +572,10 @@ export default function PatientTimelinesPage() {
                       className="group transition-colors duration-100 hover:bg-slate-50/70 cursor-pointer"
                       onClick={() => navigate(`/patient-timelines/${patient.id}`)}
                     >
-                      {/* Patient ID */}
+                      {/* Patient Code */}
                       <td className="w-28 px-3.5 py-2 whitespace-nowrap">
                         <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100/80 px-2 py-0.5 rounded border border-slate-200/60">
-                          {patient.patient_id || `#${patient.id.slice(0, 8).toUpperCase()}`}
+                          {patient.patient_code || patient.patient_id || '—'}
                         </span>
                       </td>
 

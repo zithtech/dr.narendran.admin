@@ -190,6 +190,7 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
           'DOCTOR_SUPPORT',
           'SUPPORT',
           'REVIEWS',
+          'CHAT',
         ];
         defaultDoctorSlugs.forEach((slug) => {
           permMap[slug] = {
@@ -325,6 +326,7 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
           'DOCTOR_SUPPORT',
           'SUPPORT',
           'REVIEWS',
+          'CHAT',
         ];
         if (
           doctorAllowedModules.includes(key) ||
