@@ -23,6 +23,7 @@ import { usePermission } from '../../../context/PermissionContext';
 import { CommonPagination, exportToCSV } from '../../../components/ui/CommonTable';
 import { Alert, Badge, cx } from '../../../components/ui/primitives';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
+import { ViewModeSwitcher } from '../../../components/ui/ViewModeSwitcher';
 import { formatDate, timeAgo } from '../../../lib/format';
 import { getErrorMessage } from '../../../utils/errors';
 import { ReviewDetailsDrawer } from '../components/ReviewDetailsDrawer';
@@ -52,6 +53,7 @@ export const ReviewsManagementPage: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
 
   // Sync timestamps
   const [syncedAt, setSyncedAt] = useState<number | null>(null);
@@ -690,116 +692,135 @@ export const ReviewsManagementPage: React.FC = () => {
                     <span>Reset</span>
                   </button>
                 )}
+
+                {/* View Mode Switcher */}
+                <ViewModeSwitcher
+                  viewMode={viewMode}
+                  onViewModeChange={setViewMode}
+                />
               </div>
             </div>
           </div>
 
-          {/* ── Mobile Review Cards List (Visible on < md) ── */}
-          <div className="md:hidden divide-y divide-slate-100">
-            {loading && reviews.length === 0 ? (
-              SKELETON_ROWS.map((idx) => (
-                <div key={idx} className="p-3.5 space-y-2.5 animate-pulse">
-                  <div className="flex items-center justify-between">
-                    <div className="h-3.5 w-28 bg-slate-200 rounded" />
-                    <div className="h-5 w-16 bg-slate-200 rounded-full" />
-                  </div>
-                  <div className="h-3 w-40 bg-slate-100 rounded" />
-                  <div className="h-3 w-24 bg-slate-100 rounded" />
-                  <div className="h-12 w-full bg-slate-50 rounded" />
+          {/* ── Cards View Section ── */}
+          {viewMode === 'cards' && (
+            <div className="p-3 sm:p-4 bg-slate-50/50 min-h-[300px] border-b border-slate-200">
+              {loading && reviews.length === 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {SKELETON_ROWS.map((idx) => (
+                    <div
+                      key={idx}
+                      className="p-3.5 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2.5 animate-pulse"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="h-3.5 w-28 bg-slate-200 rounded" />
+                        <div className="h-5 w-16 bg-slate-200 rounded-full" />
+                      </div>
+                      <div className="h-3 w-40 bg-slate-100 rounded" />
+                      <div className="h-3 w-24 bg-slate-100 rounded" />
+                      <div className="h-12 w-full bg-slate-50 rounded" />
+                    </div>
+                  ))}
                 </div>
-              ))
-            ) : reviews.length === 0 ? (
-              <div className="px-3.5 py-12 text-center text-slate-400">
-                <Star size={32} className="mx-auto mb-2 text-slate-300" />
-                <p className="font-semibold text-slate-700 text-sm">
-                  No ratings or reviews found.
-                </p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {isFiltered
-                    ? 'Try adjusting your search criteria or resetting active filters.'
-                    : 'No patient reviews have been submitted yet.'}
-                </p>
-                {isFiltered && (
-                  <button
-                    type="button"
-                    onClick={handleResetFilters}
-                    className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                  >
-                    <X size={12} />
-                    <span>Clear Filters</span>
-                  </button>
-                )}
-              </div>
-            ) : (
-              reviews.map((r) => (
-                <div
-                  key={`mobile-${r.id}`}
-                  className="p-3.5 hover:bg-slate-50/70 transition-colors cursor-pointer space-y-2.5"
-                  onClick={() => handleOpenDrawer(r.id)}
-                >
-                  {/* Row 1: Patient Name, Appt ID & Status Badge */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <span className="font-semibold text-slate-900 text-sm block truncate">
-                        {r.patient_name ?? 'Patient'}
-                      </span>
-                      <span className="text-[11px] font-mono text-slate-400">
-                        Appt: #{r.appointment_id.slice(0, 8).toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="shrink-0">
-                      {renderStatusBadge(r.status)}
-                    </div>
-                  </div>
-
-                  {/* Row 2: Doctor Name & Specialty */}
-                  <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50/80 px-2.5 py-1.5 rounded-md border border-slate-100">
-                    <span className="font-medium text-slate-900 truncate">
-                      {r.doctor_name ?? 'Dr. Narendran'}
-                    </span>
-                    <span className="text-slate-300">·</span>
-                    <span className="text-slate-500 truncate">
-                      {r.doctor_specialty ?? 'General Consultation'}
-                    </span>
-                  </div>
-
-                  {/* Row 3: Rating Stars & Date */}
-                  <div className="flex items-center justify-between gap-2 text-xs">
-                    <div>{renderStars(r.rating)}</div>
-                    <span className="text-[11px] text-slate-400 shrink-0">
-                      {formatDate(r.created_at)} ({timeAgo(r.created_at, now)})
-                    </span>
-                  </div>
-
-                  {/* Row 4: Review Comment Quote */}
-                  {r.review_comment ? (
-                    <blockquote className="text-xs text-slate-700 bg-slate-50/60 p-2.5 rounded-lg border border-slate-200/70 italic leading-relaxed">
-                      "{r.review_comment}"
-                    </blockquote>
-                  ) : (
-                    <span className="text-slate-400 italic text-[11px] block">
-                      No written comment
-                    </span>
-                  )}
-
-                  {/* Row 5: Action Button */}
-                  <div className="pt-1 flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+              ) : reviews.length === 0 ? (
+                <div className="px-3.5 py-12 text-center text-slate-400 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                  <Star size={32} className="mx-auto mb-2 text-slate-300" />
+                  <p className="font-semibold text-slate-700 text-sm">
+                    No ratings or reviews found.
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {isFiltered
+                      ? 'Try adjusting your search criteria or resetting active filters.'
+                      : 'No patient reviews have been submitted yet.'}
+                  </p>
+                  {isFiltered && (
                     <button
                       type="button"
-                      onClick={() => handleOpenDrawer(r.id)}
-                      className="w-full inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-600 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                      onClick={handleResetFilters}
+                      className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
                     >
-                      <Eye size={13} className="text-slate-500" />
-                      <span>{canModerate ? 'View & Moderate Review' : 'View Details'}</span>
+                      <X size={12} />
+                      <span>Clear Filters</span>
                     </button>
-                  </div>
+                  )}
                 </div>
-              ))
-            )}
-          </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {reviews.map((r) => (
+                    <div
+                      key={`card-${r.id}`}
+                      className="p-3.5 bg-white rounded-xl border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all cursor-pointer space-y-2.5 flex flex-col justify-between"
+                      onClick={() => handleOpenDrawer(r.id)}
+                    >
+                      <div className="space-y-2.5">
+                        {/* Row 1: Patient Name, Appt ID & Status Badge */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <span className="font-semibold text-slate-900 text-sm block truncate">
+                              {r.patient_name ?? 'Patient'}
+                            </span>
+                            <span className="text-[11px] font-mono text-slate-400">
+                              Appt: #{r.appointment_id.slice(0, 8).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="shrink-0">{renderStatusBadge(r.status)}</div>
+                        </div>
 
-          {/* ── Desktop Table Section (Visible on >= md) ── */}
-          <div className="hidden md:block overflow-x-auto">
+                        {/* Row 2: Doctor Name & Specialty */}
+                        <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50/80 px-2.5 py-1.5 rounded-md border border-slate-100">
+                          <span className="font-medium text-slate-900 truncate">
+                            {r.doctor_name ?? 'Dr. Narendran'}
+                          </span>
+                          <span className="text-slate-300">·</span>
+                          <span className="text-slate-500 truncate">
+                            {r.doctor_specialty ?? 'General Consultation'}
+                          </span>
+                        </div>
+
+                        {/* Row 3: Rating Stars & Date */}
+                        <div className="flex items-center justify-between gap-2 text-xs">
+                          <div>{renderStars(r.rating)}</div>
+                          <span className="text-[11px] text-slate-400 shrink-0">
+                            {formatDate(r.created_at)} ({timeAgo(r.created_at, now)})
+                          </span>
+                        </div>
+
+                        {/* Row 4: Review Comment Quote */}
+                        {r.review_comment ? (
+                          <blockquote className="text-xs text-slate-700 bg-slate-50/60 p-2.5 rounded-lg border border-slate-200/70 italic leading-relaxed line-clamp-3">
+                            "{r.review_comment}"
+                          </blockquote>
+                        ) : (
+                          <span className="text-slate-400 italic text-[11px] block">
+                            No written comment
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Row 5: Action Button */}
+                      <div
+                        className="pt-2 border-t border-slate-100 flex items-center justify-end"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDrawer(r.id)}
+                          className="w-full inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-600 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                        >
+                          <Eye size={13} className="text-slate-500" />
+                          <span>{canModerate ? 'View & Moderate Review' : 'View Details'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Table Section ── */}
+          {viewMode === 'table' && (
+          <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse" style={{ minWidth: 760 }}>
               <thead>
                 <tr className="border-b border-slate-200/90 bg-[#f8fafc]">
@@ -965,6 +986,7 @@ export const ReviewsManagementPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+          )}
 
           {/* ── Standard Pagination Footer (Matching SupportCenterPage & CommonTable) ── */}
           <CommonPagination

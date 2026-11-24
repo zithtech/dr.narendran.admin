@@ -39,6 +39,7 @@ import {
 } from '../components/ui/CommonTable';
 import { Modal } from '../components/ui/Modal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { ViewModeSwitcher } from '../components/ui/ViewModeSwitcher';
 import { titleCase } from '../lib/format';
 import { usePermission } from '../context/PermissionContext';
 import api from '../utils/api';
@@ -142,6 +143,7 @@ export default function DoctorAvailabilityPage() {
   const [dayFilter, setDayFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'schedule' | 'table'>('schedule');
+  const [slotsPresentation, setSlotsPresentation] = useState<'cards' | 'table'>('table');
 
   // Pagination & sorting for weekly slots table view
   const [perPage, setPerPage] = useState<number>(10);
@@ -1371,7 +1373,7 @@ export default function DoctorAvailabilityPage() {
             />
 
             {/* View Toggle */}
-            <div className="flex items-center gap-1.5 py-1.5 px-3 sm:px-0 sm:pl-0 w-full sm:w-auto border-t sm:border-t-0 border-slate-100">
+            <div className="flex items-center gap-1.5 py-1.5 px-3 sm:px-0 sm:pl-0 w-full sm:w-auto border-t sm:border-t-0 border-slate-100 flex-wrap">
               <div className="bg-slate-100 rounded-lg p-0.5 flex gap-0.5 w-full sm:w-auto">
                 <button
                   type="button"
@@ -1402,6 +1404,13 @@ export default function DoctorAvailabilityPage() {
                   <span className="sm:hidden">Table</span>
                 </button>
               </div>
+
+              {viewMode === 'table' && (
+                <ViewModeSwitcher
+                  viewMode={slotsPresentation}
+                  onViewModeChange={setSlotsPresentation}
+                />
+              )}
             </div>
           </div>
 
@@ -1607,8 +1616,12 @@ export default function DoctorAvailabilityPage() {
           ) : (
             /* Table View of Configured Slots (Dual presentation: Mobile Cards + Desktop Table) */
             <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col flex-1 min-h-0 doctor-avail-table-container">
-              {/* Desktop Table View (>= 768px) */}
-              <div className="hidden md:block flex-1 min-h-0 overflow-y-auto [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none">
+              {/* Table View */}
+              <div
+                className={`flex-1 min-h-0 overflow-y-auto overflow-x-auto [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none ${
+                  slotsPresentation === 'cards' ? 'hidden md:block' : 'block'
+                }`}
+              >
                 <div style={{ minWidth: 720 }}>
                   <CommonTable<DoctorAvailabilitySlot>
                     columns={columns}
@@ -1674,8 +1687,12 @@ export default function DoctorAvailabilityPage() {
                 </div>
               </div>
 
-              {/* Mobile Cards View (< 768px) */}
-              <div className="md:hidden flex-1 overflow-y-auto divide-y divide-slate-100 p-2.5 space-y-2.5">
+              {/* Mobile Cards View */}
+              <div
+                className={`flex-1 overflow-y-auto divide-y divide-slate-100 p-2.5 space-y-2.5 ${
+                  slotsPresentation === 'table' ? 'hidden' : 'block md:hidden'
+                }`}
+              >
                 {loadingSlots && pageRows.length === 0 ? (
                   <div className="py-8 text-center text-xs text-slate-400">Loading availability slots...</div>
                 ) : pageRows.length === 0 ? (
@@ -1850,8 +1867,8 @@ export default function DoctorAvailabilityPage() {
           {/* Blocked Dates Content */}
           {blockedViewMode === 'table' ? (
             <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xs overflow-hidden flex flex-col flex-1 min-h-0 doctor-avail-table-container">
-              {/* Desktop Table View (>= 768px) */}
-              <div className="hidden md:block flex-1 min-h-0 overflow-y-auto [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none">
+              {/* Table View */}
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none">
                 <div style={{ minWidth: 680 }}>
                   <CommonTable<DoctorBlockedDate>
                     columns={blockedColumns}
@@ -1924,8 +1941,12 @@ export default function DoctorAvailabilityPage() {
                 </div>
               </div>
 
-              {/* Mobile Cards View (< 768px) */}
-              <div className="md:hidden flex-1 overflow-y-auto divide-y divide-slate-100 p-2.5 space-y-2.5">
+              {/* Mobile Cards View */}
+              <div
+                className={`flex-1 overflow-y-auto divide-y divide-slate-100 p-2.5 space-y-2.5 ${
+                  slotsPresentation === 'table' ? 'hidden' : 'block md:hidden'
+                }`}
+              >
                 {loadingBlocked && blockedPageRows.length === 0 ? (
                   <div className="py-8 text-center text-xs text-slate-400">Loading blocked dates...</div>
                 ) : blockedPageRows.length === 0 ? (

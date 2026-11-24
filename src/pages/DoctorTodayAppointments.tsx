@@ -33,6 +33,7 @@ import RescheduleAppointmentModal from '../components/RescheduleAppointmentModal
 import ScheduleAppointmentModal from '../components/ScheduleAppointmentModal';
 import { Badge, type BadgeTone } from '../components/ui/primitives';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { ViewModeSwitcher } from '../components/ui/ViewModeSwitcher';
 import CreatePrescriptionModal from '../features/prescriptions/components/CreatePrescriptionModal';
 import ViewPrescriptionModal from '../features/prescriptions/components/ViewPrescriptionModal';
 import { type Prescription, prescriptionsApi } from '../features/prescriptions/api/prescriptionsApi';
@@ -143,6 +144,7 @@ export default function DoctorTodayAppointments() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [onlyWithAppointments, setOnlyWithAppointments] = useState<boolean>(true);
+  const [appointmentsViewMode, setAppointmentsViewMode] = useState<'cards' | 'table'>('table');
 
   // Data fetching states
   const [loading, setLoading] = useState<boolean>(true);
@@ -811,6 +813,11 @@ export default function DoctorTodayAppointments() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <ViewModeSwitcher
+            viewMode={appointmentsViewMode}
+            onViewModeChange={setAppointmentsViewMode}
+          />
+
           <button
             type="button"
             className="ui-btn ui-btn-subtle"
@@ -1579,8 +1586,121 @@ export default function DoctorTodayAppointments() {
                       </div>
                     </div>
 
-                    {/* Doctor's Appointments Table (Executive Table Layout) */}
+                    {/* Doctor's Appointments Table or Card View */}
                     {hasAppointments ? (
+                      appointmentsViewMode === 'cards' ? (
+                        <div className="p-3 sm:p-4 bg-slate-50/50 border-t border-slate-200">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {doc.filteredAppointments.map((appt) => {
+                              return (
+                                <div
+                                  key={appt.id}
+                                  className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 flex flex-col justify-between hover:border-slate-300 transition-all gap-3"
+                                >
+                                  {/* Header: Time, Token, Status */}
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                        Token #{appt.tokenNumber}
+                                      </span>
+                                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700">
+                                        <Clock size={12} className="text-slate-400" />
+                                        {appt.time}
+                                      </span>
+                                    </div>
+                                    <Badge tone={getStatusBadgeTone(appt.status)}>
+                                      <span className="capitalize text-[11px]">
+                                        {appt.status.replace('_', ' ')}
+                                      </span>
+                                    </Badge>
+                                  </div>
+
+                                  {/* Patient Details */}
+                                  <div>
+                                    <div className="font-semibold text-slate-900 text-sm">
+                                      {appt.patientName}
+                                    </div>
+                                    <div className="flex items-center gap-2.5 text-[11px] text-slate-500 mt-1 flex-wrap">
+                                      {appt.patientPhone && (
+                                        <div className="flex items-center gap-1">
+                                          <Phone size={11} className="text-slate-400" />
+                                          <span>{appt.patientPhone}</span>
+                                        </div>
+                                      )}
+                                      {appt.patientEmail && (
+                                        <div className="flex items-center gap-1">
+                                          <Mail size={11} className="text-slate-400" />
+                                          <span className="truncate max-w-[140px]">
+                                            {appt.patientEmail}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Purpose & Notes */}
+                                  <div className="text-xs text-slate-600 bg-slate-50/70 rounded-lg p-2 border border-slate-100">
+                                    <div className="font-medium text-slate-700">
+                                      {appt.purpose || 'General Consultation'}
+                                    </div>
+                                    {appt.patientNote && (
+                                      <div className="text-[11px] text-slate-500 italic mt-0.5">
+                                        Note: {appt.patientNote}
+                                      </div>
+                                    )}
+                                    {appt.cancellationReason && (
+                                      <div className="text-[11px] text-red-600 font-medium mt-0.5">
+                                        Cancelled: {appt.cancellationReason}
+                                      </div>
+                                    )}
+                                    {appt.rescheduleReason && (
+                                      <div className="text-[11px] text-amber-700 font-medium mt-0.5">
+                                        Rescheduled: {appt.rescheduleReason}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Footer: Prescription & Actions */}
+                                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1">
+                                    <div>
+                                      {isRxCreatable && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleOpenCreatePrescription(appt, doc);
+                                          }}
+                                          title="Create Prescription"
+                                          className="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                                        >
+                                          <FileText size={12} className="text-slate-500" />
+                                          <span>Prescription</span>
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    <Dropdown
+                                      menu={{ items: getTodayActionMenuItems(appt, doc) }}
+                                      trigger={['click']}
+                                      placement="bottomRight"
+                                    >
+                                      <button
+                                        type="button"
+                                        className="dta-action-icon-btn"
+                                        title="Actions"
+                                        aria-label="Actions"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <MoreVertical size={14} />
+                                      </button>
+                                    </Dropdown>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : (
                       <div className="dta-table-scroll-container no-scrollbar" style={{ overflow: 'auto', maxHeight: 'calc(100vh - 280px)', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                         <table
                           className="dta-table"
@@ -1793,6 +1913,7 @@ export default function DoctorTodayAppointments() {
                           </tbody>
                         </table>
                       </div>
+                      )
                     ) : (
                       <div
                         style={{

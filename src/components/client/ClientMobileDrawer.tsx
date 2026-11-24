@@ -15,6 +15,7 @@ interface ClientMobileDrawerProps {
   userInitials: string;
   brandName?: string;
   brandSub?: string;
+  brandLogoUrl?: string;
   onLogout: () => void;
 }
 
@@ -28,7 +29,7 @@ export const ClientMobileDrawer: React.FC<ClientMobileDrawerProps> = ({
   currentRole,
   userInitials,
   brandName = 'Client Portal',
-  brandSub = 'Diagnostic Partner',
+  brandSub = 'raj lab',
   onLogout,
 }) => {
   if (!isOpen) return null;
@@ -63,10 +64,11 @@ export const ClientMobileDrawer: React.FC<ClientMobileDrawerProps> = ({
         <div className="ui-mobile-drawer-header">
           <div className="flex items-center gap-2.5 min-w-0">
             <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
               style={{
                 background: 'linear-gradient(135deg, #0284c7 0%, #0d9488 100%)',
                 color: '#ffffff',
+                boxShadow: '0 2px 6px rgba(13, 148, 136, 0.28)',
               }}
             >
               <FlaskConical size={18} strokeWidth={2.4} />

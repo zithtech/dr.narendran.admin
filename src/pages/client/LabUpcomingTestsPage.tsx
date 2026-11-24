@@ -10,6 +10,8 @@ import {
   FileSpreadsheet,
   FileText,
   FlaskConical,
+  LayoutGrid,
+  LayoutList,
   RefreshCw,
   Search,
   Stethoscope,
@@ -351,6 +353,25 @@ export default function LabUpcomingTestsPage() {
   const [sortAsc, setSortAsc] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // View mode (List vs Cards)
+  const [viewMode, setViewMode] = useState<'list' | 'card'>(() => {
+    try {
+      const saved = localStorage.getItem('labClientUpcomingTestsViewMode');
+      return saved === 'card' ? 'card' : 'list';
+    } catch {
+      return 'list';
+    }
+  });
+
+  const handleViewModeChange = (mode: 'list' | 'card') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('labClientUpcomingTestsViewMode', mode);
+    } catch {
+      // ignore
+    }
+  };
 
   // Selected test for Slide-in Drawer
   const [selectedTest, setSelectedTest] = useState<UpcomingTestItem | null>(null);
@@ -714,7 +735,7 @@ export default function LabUpcomingTestsPage() {
   };
 
   return (
-    <div className="ui-page space-y-3">
+    <div className="ui-page space-y-3 pb-8">
       {/* ── Executive Page Header Matching HMS Admin Design ── */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 py-1">
         <div className="flex flex-col min-w-0 flex-1">
@@ -957,6 +978,38 @@ export default function LabUpcomingTestsPage() {
                 <span>Reset</span>
               </button>
             )}
+
+            {/* View Mode Toggle (List / Cards) */}
+            <div className="flex items-center rounded-lg border border-slate-200 bg-slate-100/80 p-0.5 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => handleViewModeChange('list')}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-all cursor-pointer ${
+                  viewMode === 'list'
+                    ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+                title="Table View"
+                aria-label="Table View"
+              >
+                <LayoutList size={13} strokeWidth={2.2} />
+                <span>List</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleViewModeChange('card')}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-all cursor-pointer ${
+                  viewMode === 'card'
+                    ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+                title="Card View"
+                aria-label="Card View"
+              >
+                <LayoutGrid size={13} strokeWidth={2.2} />
+                <span>Cards</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1024,7 +1077,7 @@ export default function LabUpcomingTestsPage() {
               </button>
             )}
           </div>
-        ) : (
+        ) : viewMode === 'list' ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -1229,6 +1282,155 @@ export default function LabUpcomingTestsPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        ) : (
+          <div
+            className="p-3.5 sm:p-4 bg-slate-50/50 overflow-y-auto max-h-[calc(100vh-340px)] min-h-[320px] overscroll-contain transition-all"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#cbd5e1 transparent',
+            }}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 pb-2">
+              {paginatedTests.map((t) => {
+                const initial = (t.patient_name ?? 'P').trim().charAt(0).toUpperCase();
+                const isTodayTest = isDateToday(t.scheduled_date);
+                const patientIdDisplay = t.patient_id?.startsWith('PA_')
+                  ? t.patient_id
+                  : t.patient_id && t.patient_id.length > 10
+                    ? `${t.patient_id.slice(0, 8)}...`
+                    : t.patient_id;
+
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => setSelectedTest(t)}
+                    className="group bg-white rounded-xl border border-slate-200/90 hover:border-blue-400/80 p-3.5 transition-all duration-200 hover:shadow-md cursor-pointer flex flex-col justify-between relative"
+                  >
+                    <div>
+                      {/* Top Row: Patient Avatar, Name, Phone & Status Pill */}
+                      <div className="flex items-start justify-between gap-2 mb-2.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center font-bold text-xs bg-blue-50 text-blue-700 border border-blue-100 select-none uppercase shadow-2xs"
+                            aria-hidden="true"
+                          >
+                            {initial}
+                          </span>
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-semibold text-slate-900 group-hover:text-blue-600 transition-colors truncate" title={t.patient_name}>
+                              {t.patient_name}
+                            </h4>
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-0.5">
+                              {patientIdDisplay && (
+                                <span
+                                  className="font-mono text-slate-500 font-medium shrink-0"
+                                  title={`Patient ID: ${t.patient_id}`}
+                                >
+                                  #{patientIdDisplay}
+                                </span>
+                              )}
+                              {t.patient_phone && (
+                                <>
+                                  <span>•</span>
+                                  <span className="truncate max-w-[110px]" title={t.patient_phone}>{t.patient_phone}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <StatusPill
+                          tone={getStatusTone(t.status)}
+                          label={t.status}
+                        />
+                      </div>
+
+                      {/* Prescribed Test Highlight Box */}
+                      <div className="p-2.5 rounded-lg bg-slate-50/80 border border-slate-100 mb-3">
+                        <div className="flex items-start gap-1.5">
+                          <FlaskConical size={13} className="text-blue-600 shrink-0 mt-0.5" />
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs font-semibold text-slate-900 block truncate">
+                              {t.test_name}
+                            </span>
+                            {t.test_category && (
+                              <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100 mt-1">
+                                {t.test_category}
+                              </span>
+                            )}
+                            {t.instructions ? (
+                              <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 italic">
+                                "{t.instructions}"
+                              </p>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 mt-1 block">
+                                Standard lab protocol
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Key Metadata: Doctor & Dates */}
+                      <div className="space-y-1.5 text-xs text-slate-600 mb-3 border-t border-slate-100/80 pt-2.5">
+                        <div className="flex items-center gap-2 text-[11px]">
+                          <Stethoscope size={12} className="text-slate-400 shrink-0" />
+                          <span className="font-medium text-slate-800 truncate">{t.doctor_name}</span>
+                          <span className="text-slate-400 text-[10px] truncate">
+                            ({t.doctor_specialization ?? 'Specialist'})
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] pt-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar
+                              size={12}
+                              className={isTodayTest ? 'text-indigo-500 shrink-0' : 'text-slate-400 shrink-0'}
+                            />
+                            <span className={isTodayTest ? 'text-indigo-600 font-semibold' : 'text-slate-600'}>
+                              {formatDate(t.scheduled_date)}
+                            </span>
+                          </div>
+                          {isTodayTest && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase">
+                              Today
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                          <Clock size={11} className="shrink-0" />
+                          <span>Prescribed: {formatDate(t.prescription_date)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card Footer Actions */}
+                    <div
+                      className="pt-2 border-t border-slate-100 flex items-center gap-1.5 justify-between"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTest(t)}
+                        title="View test & prescription details"
+                        className="h-7.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-blue-600 flex items-center gap-1 text-[11px] font-medium transition-colors shadow-2xs cursor-pointer"
+                      >
+                        <Eye size={12} />
+                        <span>Details</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenUploadModal(t)}
+                        title="Upload lab report for patient"
+                        className="h-7.5 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1 text-[11px] font-semibold transition-colors shadow-2xs cursor-pointer flex-1 justify-center"
+                      >
+                        <UploadCloud size={12} />
+                        <span>Upload Report</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

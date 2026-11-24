@@ -907,6 +907,40 @@ export default function MedicineModal({
             justify-content: flex-end;
             gap: 10px;
           }
+          @media (max-width: 640px) {
+            .medicine-drawer-modal {
+              width: 100vw !important;
+              max-width: 100vw !important;
+              border-radius: 0 !important;
+            }
+            .medicine-drawer-modal .ui-modal-head {
+              padding: 14px 16px !important;
+            }
+            .medicine-drawer-modal .ui-modal-body {
+              padding: 14px 16px !important;
+              gap: 12px !important;
+            }
+            .med-section-card {
+              padding: 14px 14px !important;
+              gap: 12px !important;
+              border-radius: 10px !important;
+            }
+          }
+          @media (max-width: 480px) {
+            .medicine-drawer-modal .ui-modal-foot {
+              padding: 12px 16px !important;
+              flex-direction: column-reverse !important;
+              gap: 8px !important;
+            }
+            .medicine-drawer-modal .ui-modal-foot button {
+              width: 100% !important;
+              min-height: 40px !important;
+              justify-content: center !important;
+            }
+            .med-status-btn {
+              flex: 1 1 100% !important;
+            }
+          }
         `}</style>
 
         <div className="ui-modal-body">

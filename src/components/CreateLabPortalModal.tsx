@@ -28,7 +28,7 @@ export interface LabWithPortal {
     must_change_password: boolean;
     last_login_at?: string | null;
     created_at: string;
-  } | null;
+  } | null | undefined;
 }
 
 interface CreateLabPortalModalProps {
@@ -184,6 +184,7 @@ export default function CreateLabPortalModal({
       open={isOpen}
       onClose={onClose}
       size="md"
+      className="lab-portal-modal"
       title={existingAccount ? 'Lab Client Portal Details' : 'Create Lab Client Portal'}
       description={
         existingAccount
@@ -191,6 +192,35 @@ export default function CreateLabPortalModal({
           : `Set up dedicated portal credentials for ${lab.name}`
       }
     >
+      <style>{`
+        .lab-portal-modal {
+          width: min(540px, 95vw);
+        }
+        @media (max-width: 480px) {
+          .lab-portal-modal {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+          }
+          .lab-portal-modal .ui-modal-foot {
+            flex-direction: column-reverse !important;
+            gap: 8px !important;
+            align-items: stretch !important;
+          }
+          .lab-portal-modal .ui-modal-foot > div {
+            width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 6px !important;
+          }
+          .lab-portal-modal .ui-modal-foot button {
+            width: 100% !important;
+            min-height: 38px !important;
+            justify-content: center !important;
+          }
+        }
+      `}</style>
       {existingAccount ? (
         /* ── Existing Portal Account Information ── */
         <div className="ui-modal-form">

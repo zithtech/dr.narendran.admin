@@ -31,6 +31,7 @@ import Labs from './pages/Labs';
 import LabServices from './pages/LabServices';
 import LinkedMedicals from './pages/LinkedMedicals';
 import Referrals from './pages/Referrals';
+import AllianceDoctorsPage from './pages/AllianceDoctorsPage';
 import ClientPortals from './pages/ClientPortals';
 import Roles from './pages/Roles';
 import StaffManagement from './pages/StaffManagement';
@@ -47,6 +48,7 @@ import LabReportsPage from './pages/client/LabReportsPage';
 import LabUpcomingTestsPage from './pages/client/LabUpcomingTestsPage';
 
 import SupportCenterPage from './features/support/pages/SupportCenterPage';
+import ChatPage from './pages/ChatPage';
 import { ReviewsManagementPage } from './features/reviews/pages/ReviewsManagementPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminAttendancePage from './pages/attendance/AdminAttendancePage';
@@ -182,6 +184,22 @@ function App() {
             }
           />
           <Route path="/referral" element={<Navigate to="/referrals" replace />} />
+          <Route
+            path="/alliances/doctors"
+            element={
+              <ModuleRouteGuard
+                module="ALLIANCE_DOCTORS"
+                fallbackSlugs={['DOCTORS', 'HOSPITALS']}
+                title="Alliances – Doctor Management"
+              >
+                <AllianceDoctorsPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/alliance-doctors"
+            element={<Navigate to="/alliances/doctors" replace />}
+          />
 
           {/* Clinical Modules */}
           <Route
@@ -470,6 +488,22 @@ function App() {
             element={
               <ModuleRouteGuard module="DOCTOR_SUPPORT" title="Doctor Support" fallbackSlugs={['SUPPORT']}>
                 <SupportCenterPage defaultUserType="DOCTOR" />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/support/chat"
+            element={
+              <ModuleRouteGuard module="CHAT" title="Chat" fallbackSlugs={['SUPPORT', 'PATIENT_SUPPORT', 'DOCTOR_SUPPORT']}>
+                <ChatPage />
+              </ModuleRouteGuard>
+            }
+          />
+          <Route
+            path="/chat"
+            element={
+              <ModuleRouteGuard module="CHAT" title="Chat" fallbackSlugs={['SUPPORT', 'PATIENT_SUPPORT', 'DOCTOR_SUPPORT']}>
+                <ChatPage />
               </ModuleRouteGuard>
             }
           />

@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router';
 import { CommonPagination } from '../../../components/ui/CommonTable';
 import { Badge, StatusDot } from '../../../components/ui/primitives';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
+import { ViewModeSwitcher } from '../../../components/ui/ViewModeSwitcher';
 import { DoctorQualificationTable } from '../../../components/DoctorQualificationBadge';
 import { resolveImageUrl } from '../../../utils/doctorAvatar';
 import { usePermission } from '../../../context/PermissionContext';
@@ -33,6 +34,7 @@ export const DoctorLocationsTable: React.FC = () => {
   const [search, setSearch] = useState<string>('');
   const [specializationFilter, setSpecializationFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
 
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
@@ -251,10 +253,163 @@ export const DoctorLocationsTable: React.FC = () => {
                 <X size={12} className="text-slate-500" />
               </button>
             )}
+
+            {/* View Mode Switcher */}
+            <ViewModeSwitcher
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+            />
           </div>
         </div>
 
+        {/* ── Cards View Section ── */}
+        {viewMode === 'cards' && (
+          <div className="p-3 sm:p-4 bg-slate-50/50 min-h-[300px] border-b border-slate-200">
+            {loading && doctors.length === 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {SKELETON_ROWS.map((i) => (
+                  <div
+                    key={i}
+                    className="animate-pulse bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 shrink-0" />
+                      <div className="space-y-1.5 flex-1">
+                        <div className="h-4 bg-slate-100 rounded w-28" />
+                        <div className="h-3 bg-slate-50 rounded w-20" />
+                      </div>
+                    </div>
+                    <div className="h-4 bg-slate-100 rounded w-24" />
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                      <div className="h-6 bg-slate-100 rounded w-20" />
+                      <div className="h-6 bg-slate-100 rounded w-16" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredDoctors.length === 0 ? (
+              <div className="py-12 text-center bg-white rounded-xl border border-slate-200 shadow-2xs">
+                <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
+                  <div className="p-2.5 rounded-full bg-slate-50 text-slate-400">
+                    {hasActiveFilters ? <SearchX size={22} /> : <Building2 size={22} />}
+                  </div>
+                  <strong className="text-xs font-semibold text-slate-700">
+                    {hasActiveFilters ? 'No matching doctors found' : 'No doctors registered yet'}
+                  </strong>
+                  <span className="text-[11px] text-slate-500 max-w-sm">
+                    {hasActiveFilters
+                      ? 'Try adjusting your search criteria or clearing filters.'
+                      : 'Doctor profiles will appear here once registered in the system.'}
+                  </span>
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      className="mt-1.5 inline-flex items-center gap-1.5 h-7 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                      onClick={resetFilters}
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {pageRows.map((doc) => {
+                  const locationCount = Number(doc.locations_count || 0);
+                  const isActive = !doc.status || doc.status.toUpperCase() === 'ACTIVE';
+                  const spec = doc.specialization || doc.specialty || 'General Medicine';
+                  const initials = doc.name
+                    ? doc.name
+                        .replace(/^Dr\.\s*/i, '')
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')
+                        .toUpperCase()
+                        .slice(0, 2)
+                    : 'DR';
+
+                  return (
+                    <div
+                      key={doc.id}
+                      className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 flex flex-col justify-between hover:border-slate-300 transition-all gap-3 cursor-pointer"
+                      onClick={() => navigate(`/locations/${doc.id}`)}
+                    >
+                      {/* Doctor Profile Header */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {doc.profile_image_url ? (
+                            <img
+                              src={resolveImageUrl(doc.profile_image_url) || doc.profile_image_url}
+                              alt={doc.name}
+                              className="w-10 h-10 rounded-full object-cover shrink-0 border border-slate-200"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0 border border-blue-100">
+                              {initials}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <div className="font-semibold text-slate-900 text-sm truncate">
+                              {doc.name.startsWith('Dr.') ? doc.name : `Dr. ${doc.name}`}
+                            </div>
+                            <div className="text-[11px] text-slate-400 truncate">
+                              {doc.phone || doc.email || 'No contact provided'}
+                            </div>
+                          </div>
+                        </div>
+                        <StatusDot active={isActive} label={isActive ? 'Active' : 'Inactive'} />
+                      </div>
+
+                      {/* Doctor Details */}
+                      <div className="flex flex-col gap-1.5 text-xs">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-400 text-[11px]">Specialization:</span>
+                          <span className="font-medium text-slate-700 truncate max-w-[170px]">
+                            {spec}
+                          </span>
+                        </div>
+                        {doc.qualification && (
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-slate-400 text-[11px]">Qualification:</span>
+                            <DoctorQualificationTable qualification={doc.qualification} />
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-400 text-[11px]">Practice Locations:</span>
+                          <Badge tone={locationCount > 0 ? 'blue' : 'neutral'}>
+                            <Building2 size={11} className="mr-1 inline" />
+                            <span>
+                              {locationCount} {locationCount === 1 ? 'Location' : 'Locations'}
+                            </span>
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Action Button */}
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-end">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/locations/${doc.id}`);
+                          }}
+                          aria-label={isLocManageable ? 'Manage Locations' : 'View Locations'}
+                        >
+                          <MapPin size={12} className="text-blue-600 shrink-0" />
+                          <span>{isLocManageable ? 'Manage Locations' : 'View Locations'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Table Section ── */}
+        {viewMode === 'table' && (
         <div className="overflow-x-auto min-h-[300px]">
           <table className="w-full text-left border-collapse" style={{ minWidth: 680 }}>
             <thead>
@@ -414,6 +569,7 @@ export const DoctorLocationsTable: React.FC = () => {
             </tbody>
           </table>
         </div>
+        )}
 
         {/* ── Footer / Pagination (Matching SupportCenterPage & CommonTable) ── */}
         <CommonPagination

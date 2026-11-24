@@ -78,6 +78,13 @@ export default function ClientPortalLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
 
+  const portalJson = localStorage.getItem('clientPortalData');
+  const portal = portalJson ? (JSON.parse(portalJson) as { company_name?: string; name?: string }) : null;
+  const labJson = localStorage.getItem('labClientLab');
+  const lab = labJson ? (JSON.parse(labJson) as { name?: string }) : null;
+  const brandSub = portal?.company_name?.trim() || portal?.name?.trim() || lab?.name?.trim() || 'raj lab';
+  const brandName = 'Client Portal';
+
   const refreshPermissions = useCallback(() => {
     if (!currentRole) return;
     api
@@ -210,8 +217,8 @@ export default function ClientPortalLayout() {
         activeCategory={currentCategory}
         activeModule={activeModule}
         onSelectModule={handleSelectModule}
-        brandName="Client Portal"
-        brandSub={currentRole}
+        brandName={brandName}
+        brandSub={brandSub}
         brandHomePath="/portal"
         onLogout={handleLogout}
       />
@@ -246,8 +253,8 @@ export default function ClientPortalLayout() {
         currentUsername={currentEmail}
         currentRole={currentRole}
         userInitials={userInitials}
-        brandName="Client Portal"
-        brandSub={currentRole}
+        brandName={brandName}
+        brandSub={brandSub}
         onLogout={handleLogout}
       />
     </div>

@@ -145,10 +145,10 @@ export default function MedicineDrawer({
       stats={stats}
       footer={
         isPharmUpdatable ? (
-          <div className="flex w-full items-center justify-between gap-2">
+          <div className="flex w-full flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2">
             <button
               type="button"
-              className="ui-btn"
+              className="ui-btn w-full sm:w-auto justify-center cursor-pointer min-h-[38px]"
               onClick={() => {
                 void handleToggleStatus();
               }}
@@ -163,7 +163,7 @@ export default function MedicineDrawer({
             </button>
             <button
               type="button"
-              className="ui-btn ui-btn-primary"
+              className="ui-btn ui-btn-primary w-full sm:w-auto justify-center cursor-pointer min-h-[38px]"
               onClick={() => {
                 onClose();
                 onEdit(medicine);
@@ -173,7 +173,7 @@ export default function MedicineDrawer({
             </button>
           </div>
         ) : (
-          <button type="button" className="ui-btn" onClick={onClose}>
+          <button type="button" className="ui-btn w-full sm:w-auto justify-center cursor-pointer min-h-[38px]" onClick={onClose}>
             Close
           </button>
         )

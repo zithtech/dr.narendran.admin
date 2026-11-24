@@ -48,10 +48,10 @@ export default function Login({ defaultForgot = false }: { defaultForgot?: boole
   );
   const [logoError, setLogoError] = useState<boolean>(false);
   const [brandFirstName, setBrandFirstName] = useState<string>(
-    () => localStorage.getItem('adminFirstName') || 'Hospital Management System',
+    () => localStorage.getItem('adminFirstName') || 'Annaamalai',
   );
   const [brandLastName, setBrandLastName] = useState<string>(
-    () => localStorage.getItem('adminLastName') || 'Hospital',
+    () => localStorage.getItem('adminLastName') || 'Cancer Center',
   );
 
   React.useEffect(() => {

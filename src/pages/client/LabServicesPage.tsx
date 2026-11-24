@@ -8,6 +8,8 @@ import {
   FileText,
   FlaskConical,
   IndianRupee,
+  LayoutGrid,
+  LayoutList,
   Loader2,
   Plus,
   RefreshCw,
@@ -53,6 +55,20 @@ export default function LabServicesPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>(() => {
+    try {
+      const saved = localStorage.getItem('labClientServicesViewMode');
+      if (saved === 'list' || saved === 'card') return saved;
+    } catch {}
+    return 'list';
+  });
+
+  const handleSetViewMode = (mode: 'list' | 'card') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('labClientServicesViewMode', mode);
+    } catch {}
+  };
 
   // Modal / Drawer State for Add / Edit
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -284,7 +300,7 @@ export default function LabServicesPage() {
   };
 
   return (
-    <div className="ui-page space-y-3">
+    <div className="ui-page space-y-3 pb-8">
       {/* ── Executive Page Header Matching HMS Admin Design ── */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 py-1">
         <div className="flex flex-col min-w-0 flex-1">
@@ -447,8 +463,8 @@ export default function LabServicesPage() {
             </div>
           </div>
 
-          {/* Right Summary & Reset */}
-          <div className="flex items-center gap-2 text-xs text-slate-500">
+          {/* Right Summary & Reset & View Toggle */}
+          <div className="flex items-center gap-2.5 text-xs text-slate-500 flex-wrap">
             <span className="text-[11px] font-medium text-slate-500 hidden sm:inline-block">
               Showing <strong className="text-slate-900 font-bold">{filteredServices.length}</strong> of{' '}
               <strong className="text-slate-900 font-bold">{services.length}</strong> investigations
@@ -468,6 +484,40 @@ export default function LabServicesPage() {
                 <span>Reset</span>
               </button>
             )}
+
+            {/* View Mode Toggle: List / Cards */}
+            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => handleSetViewMode('list')}
+                className={cx(
+                  'inline-flex items-center gap-1.5 h-6.5 px-2.5 rounded-md text-xs font-semibold transition-all cursor-pointer',
+                  viewMode === 'list'
+                    ? 'bg-white text-blue-600 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-800',
+                )}
+                title="Table List View"
+                aria-label="List View"
+              >
+                <LayoutList size={13} />
+                <span>List</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetViewMode('card')}
+                className={cx(
+                  'inline-flex items-center gap-1.5 h-6.5 px-2.5 rounded-md text-xs font-semibold transition-all cursor-pointer',
+                  viewMode === 'card'
+                    ? 'bg-white text-blue-600 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-800',
+                )}
+                title="Grid Card View"
+                aria-label="Card View"
+              >
+                <LayoutGrid size={13} />
+                <span>Cards</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -505,7 +555,7 @@ export default function LabServicesPage() {
               </div>
             )}
           </div>
-        ) : (
+        ) : viewMode === 'list' ? (
           <div className="overflow-x-auto min-h-[260px]">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -628,6 +678,136 @@ export default function LabServicesPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        ) : (
+          <div
+            className="p-3.5 sm:p-4 bg-slate-50/50 min-h-[260px] overflow-y-auto max-h-[calc(100vh-300px)] overscroll-contain transition-all"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#cbd5e1 transparent',
+            }}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 pb-2">
+              {filteredServices.map((service) => (
+                <div
+                  key={service.id}
+                  onClick={() => setViewingService(service)}
+                  className="bg-white border border-slate-200/90 hover:border-blue-300 rounded-xl p-4 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer relative"
+                >
+                  {/* Card Top: Icon, Code & Status */}
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-2xs">
+                          <FlaskConical size={16} />
+                        </div>
+                        {service.service_code && (
+                          <span className="font-mono text-[10px] font-bold text-slate-700 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded truncate max-w-[120px]">
+                            {service.service_code}
+                          </span>
+                        )}
+                      </div>
+
+                      <Badge tone={service.status === 'ACTIVE' ? 'green' : 'neutral'}>
+                        <span className="flex items-center gap-1 font-semibold text-[11px]">
+                          <span
+                            className={cx(
+                              'w-1.5 h-1.5 rounded-full',
+                              service.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400',
+                            )}
+                          />
+                          {service.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                        </span>
+                      </Badge>
+                    </div>
+
+                    {/* Investigation Name */}
+                    <div className="mt-3">
+                      <h3
+                        className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1 leading-snug"
+                        title={service.name}
+                      >
+                        {service.name}
+                      </h3>
+                    </div>
+
+                    {/* Category & Specimen Badges */}
+                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                      {(service.category ?? service.service_category) && (
+                        <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700 truncate max-w-[150px]">
+                          {service.category ?? service.service_category}
+                        </span>
+                      )}
+                      {service.sample_type && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-full">
+                          <TestTube2 size={11} className="text-sky-600 shrink-0" />
+                          <span className="truncate max-w-[130px]">{service.sample_type}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Description Notes */}
+                    <p className="text-[11px] text-slate-500 line-clamp-2 mt-2.5 leading-relaxed min-h-[32px]">
+                      {service.description || (
+                        <span className="text-slate-400 italic">No additional specimen or procedure notes recorded.</span>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Card Bottom: Rate and Action Buttons */}
+                  <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                        Investigation Fee
+                      </span>
+                      <span className="text-sm font-extrabold text-slate-900 font-mono">
+                        {formatPrice(service)}
+                      </span>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setViewingService(service);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                        title="View Details"
+                        aria-label={`View details for ${service.name}`}
+                      >
+                        <Eye size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditModal(service);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                        title="Edit Service"
+                        aria-label={`Edit ${service.name}`}
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingService(service);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                        title="Delete Service"
+                        aria-label={`Delete ${service.name}`}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

@@ -8,7 +8,7 @@ import MedicineStrengthModal from '../components/MedicineStrengthModal';
 import PharmacyImportModal from '../components/PharmacyImportModal';
 import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
 import { addedFacet, statusFacet } from '../components/ui/facets';
-import { ActivityCell, Badge, StatusDot } from '../components/ui/primitives';
+import { ActivityCell, Badge, cx, StatusDot } from '../components/ui/primitives';
 import { useResource } from '../hooks/useResource';
 import { usePermission } from '../context/PermissionContext';
 import { timeAgo } from '../lib/format';
@@ -220,17 +220,192 @@ export default function Pharmacy() {
         facets={FACETS}
         dateOf={(m) => m.created_at}
         columns={columns}
+        minTableWidth={880}
         createLabel="Add Medicine"
         onCreate={() => openEditor(null)}
         onEdit={openEditor}
         onRowClick={openDetails}
         nameOf={(m) => m.medicine_name}
         activeId={viewingId}
+        renderMobileCard={(m, { isSel, toggleRow, onEdit, isUpdateAllowed, showCheckCol }) => {
+          const summary = formatDosageStrengthSummary(m.variants, m.dosage_form, m.strength);
+          const variantCount = m.variants?.length ?? (m.strength ? 1 : 0);
+          const isActive = m.status === 'Active';
+
+          return (
+            <div
+              key={m.id}
+              onClick={() => openDetails(m)}
+              className={cx(
+                'group relative flex flex-col gap-3 rounded-xl border p-4 transition-all duration-200 cursor-pointer',
+                'bg-white hover:border-slate-300 hover:shadow-xs',
+                isSel ? 'border-purple-300 bg-purple-50/20' : 'border-slate-200/80',
+              )}
+            >
+              {/* Header: Medicine Name, Generic, Status, Rx/OTC, Checkbox */}
+              <div className="flex items-start justify-between gap-2.5">
+                <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                  {showCheckCol && (
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${m.medicine_name}`}
+                      checked={isSel}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        toggleRow();
+                      }}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer shrink-0"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[15px] font-bold text-slate-900 group-hover:text-blue-600 leading-snug tracking-tight">
+                        {m.medicine_name}
+                      </span>
+                      <span
+                        className={cx(
+                          'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold shrink-0',
+                          isActive
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200',
+                        )}
+                      >
+                        <span
+                          className={cx(
+                            'w-1.5 h-1.5 rounded-full',
+                            isActive ? 'bg-emerald-500' : 'bg-slate-400',
+                          )}
+                        />
+                        {isActive ? 'Active' : 'Inactive'}
+                      </span>
+                      {m.prescription_required ? (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
+                          Rx
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                          OTC
+                        </span>
+                      )}
+                    </div>
+
+                    {m.generic_name && (
+                      <p className="text-xs text-slate-500 mt-0.5 truncate">
+                        Generic: <span className="font-medium text-slate-700">{m.generic_name}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Dosage Forms & Strengths */}
+              {summary.length > 0 && (
+                <div className="flex flex-col gap-1.5 bg-slate-50/80 p-2.5 rounded-lg border border-slate-100 text-xs">
+                  <div className="flex items-center justify-between text-[11px] font-medium text-slate-500">
+                    <span>Dosage & Strengths</span>
+                    <span className="text-[10.5px] text-slate-400">
+                      {variantCount} {variantCount === 1 ? 'variant' : 'variants'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {summary.map((item, idx) => (
+                      <div key={idx} className="flex flex-wrap items-center gap-1.5">
+                        <span className="font-semibold text-slate-700 text-[11.5px]">{item.form}:</span>
+                        {item.strengths.length > 0 ? (
+                          item.strengths.map((str, sIdx) => (
+                            <span
+                              key={sIdx}
+                              className="inline-block rounded-md border border-teal-200/80 bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-800"
+                            >
+                              {str}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[11px] text-slate-400">Standard</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Category, Manufacturer & Pricing Pills */}
+              <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                {m.therapeutic_category && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200/80">
+                    {m.therapeutic_category}
+                  </span>
+                )}
+                {m.manufacturer && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] text-slate-600 bg-slate-100 border border-slate-200/80">
+                    {m.manufacturer}
+                  </span>
+                )}
+                {m.final_price !== null && m.final_price !== undefined && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200/80 ml-auto">
+                    ₹{Number(m.final_price).toFixed(2)}
+                    {m.mrp && Number(m.mrp) > Number(m.final_price) && (
+                      <span className="line-through text-slate-400 font-normal text-[10px]">
+                        ₹{Number(m.mrp).toFixed(2)}
+                      </span>
+                    )}
+                  </span>
+                )}
+              </div>
+
+              {/* Card Footer: Timestamp and Touch Action Buttons */}
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
+                <span className="text-[11px] text-slate-400">
+                  {m.updated_at ? `Updated ${timeAgo(m.updated_at)}` : `Added ${timeAgo(m.created_at)}`}
+                </span>
+
+                <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  {isPharmCreatable && (
+                    <button
+                      type="button"
+                      onClick={() => setVariantMedicine(m)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors cursor-pointer min-h-[32px]"
+                      title={`Add strength variant for ${m.medicine_name}`}
+                      aria-label={`Add strength variant for ${m.medicine_name}`}
+                    >
+                      <Plus size={12} /> Variant
+                    </button>
+                  )}
+                  {isUpdateAllowed && onEdit && (
+                    <button
+                      type="button"
+                      onClick={onEdit}
+                      aria-label={`Edit ${m.medicine_name}`}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer min-w-[32px] min-h-[32px] flex items-center justify-center"
+                      title={`Edit ${m.medicine_name}`}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  )}
+                  {isPharmUpdatable && (
+                    <button
+                      type="button"
+                      onClick={() => void handleToggleStatus(m)}
+                      aria-label={isActive ? `Deactivate ${m.medicine_name}` : `Activate ${m.medicine_name}`}
+                      className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer min-w-[32px] min-h-[32px] flex items-center justify-center"
+                      title={isActive ? 'Deactivate Medicine' : 'Activate Medicine'}
+                    >
+                      <Power
+                        size={14}
+                        className={isActive ? 'text-emerald-600' : 'text-slate-400'}
+                      />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        }}
         extraActions={
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0"
+              className="inline-flex items-center gap-1.5 h-8 sm:h-7.5 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0"
               onClick={downloadSampleTemplate}
               title="Download standard Excel import template"
             >
@@ -240,7 +415,7 @@ export default function Pharmacy() {
             {isPharmCreatable && (
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0"
+                className="inline-flex items-center gap-1.5 h-8 sm:h-7.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0"
                 onClick={() => setIsImportModalOpen(true)}
                 title="Import medicine records from Excel"
               >

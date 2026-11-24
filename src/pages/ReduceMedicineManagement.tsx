@@ -19,7 +19,7 @@ import { useNavigate } from 'react-router';
 import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
 import { addedFacet } from '../components/ui/facets';
 import { Modal } from '../components/ui/Modal';
-import { ActivityCell, Badge } from '../components/ui/primitives';
+import { ActivityCell, Badge, cx } from '../components/ui/primitives';
 import { SearchableSelect, type SearchableSelectOption } from '../components/ui/SearchableSelect';
 import { usePermission } from '../context/PermissionContext';
 import { useResource } from '../hooks/useResource';
@@ -824,6 +824,7 @@ export default function ReduceMedicineManagement() {
         }}
         dateOf={(m) => m.created_at}
         columns={columns}
+        minTableWidth={880}
         createLabel="Reduce Medicine / Give Tablet"
         onCreate={() => handleOpenGiveTabletDrawer()}
         canCreate={isInvUpdatable}
@@ -831,11 +832,142 @@ export default function ReduceMedicineManagement() {
         canDelete={false}
         onRowClick={(item) => setSelectedReceipt(item)}
         activeId={selectedReceipt?.id ?? null}
+        renderMobileCard={(m, { isSel, toggleRow, showCheckCol }) => {
+          const isReduction = m.quantity_change < 0;
+          const patient = getPatientName(m);
+
+          return (
+            <div
+              key={m.id}
+              onClick={() => setSelectedReceipt(m)}
+              className={cx(
+                'group relative flex flex-col gap-3 rounded-xl border p-4 transition-all duration-200 cursor-pointer',
+                'bg-white hover:border-slate-300 hover:shadow-xs',
+                isSel ? 'border-purple-300 bg-purple-50/20' : 'border-slate-200/80',
+              )}
+            >
+              {/* Header: Medicine Name, Formulation Chip, Checkbox */}
+              <div className="flex items-start justify-between gap-2.5">
+                <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                  {showCheckCol && (
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${m.medicine_name || 'record'}`}
+                      checked={isSel}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        toggleRow();
+                      }}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer shrink-0"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[15px] font-bold text-slate-900 group-hover:text-blue-600 leading-snug tracking-tight">
+                        {m.medicine_name || 'Prescribed Medicine'}
+                      </span>
+                      {m.dosage_form && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10.5px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
+                          {m.dosage_form}
+                        </span>
+                      )}
+                    </div>
+                    {(m.strength || m.generic_name) && (
+                      <p className="text-xs text-slate-500 mt-0.5 truncate">
+                        {m.strength && (
+                          <span className="font-semibold text-slate-700 mr-1.5">
+                            {m.strength} {m.strength_unit}
+                          </span>
+                        )}
+                        {m.generic_name && (
+                          <span className="italic text-slate-400">
+                            Generic: {m.generic_name}
+                          </span>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <Badge tone={isReduction ? 'red' : 'green'}>
+                  {isReduction ? `${m.quantity_change} Units` : `+${m.quantity_change} Units`}
+                </Badge>
+              </div>
+
+              {/* Recipient & Stock Shift */}
+              <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50/70 p-2.5 rounded-lg border border-slate-100">
+                <div>
+                  <span className="text-[10.5px] text-slate-400 block uppercase font-medium">Recipient</span>
+                  <div className="flex items-center gap-1.5 mt-0.5 font-medium text-slate-800 truncate" title={patient}>
+                    <User size={11} className="text-slate-400 shrink-0" />
+                    <span className="truncate">{patient}</span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10.5px] text-slate-400 block uppercase font-medium">Stock Shift</span>
+                  <div className="inline-flex items-center gap-1.5 mt-0.5 font-medium">
+                    <span className="text-slate-500">{m.quantity_before}</span>
+                    <ArrowRight size={11} className="text-slate-400" />
+                    <span className={isReduction ? 'font-bold text-amber-700' : 'font-bold text-emerald-700'}>
+                      {m.quantity_after}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reason, Reference, Notes */}
+              {(m.reason || m.reference_number || (m.notes && !m.notes.startsWith('Patient:'))) && (
+                <div className="text-xs space-y-0.5">
+                  {m.reference_number && (
+                    <span className="font-mono text-[11px] font-semibold text-blue-600 block">
+                      #{m.reference_number}
+                    </span>
+                  )}
+                  {m.reason && (
+                    <div className="text-slate-700 truncate" title={m.reason}>
+                      {m.reason}
+                    </div>
+                  )}
+                  {m.notes && !m.notes.startsWith('Patient:') && (
+                    <div className="text-[11px] text-slate-400 truncate" title={m.notes}>
+                      {m.notes}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Card Footer: Dispensed by, Date & Touch Action */}
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
+                <div className="min-w-0">
+                  <div className="font-medium text-slate-700 truncate text-[11.5px]">
+                    {m.performer_name || 'Staff User'}
+                  </div>
+                  <div className="text-[10.5px] text-slate-400">
+                    {dayjs(m.created_at).format('DD MMM, hh:mm A')}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedReceipt(m)}
+                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer min-h-[32px]"
+                    title="View Printable Dispense Voucher"
+                    aria-label={`View slip for ${m.medicine_name || 'dispense record'}`}
+                  >
+                    <Printer size={12} className="text-slate-500" />
+                    <span>Slip</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        }}
         extraActions={
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 h-8 sm:h-7.5 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0"
               onClick={() => navigate('/inventory')}
               title="View full inventory stock balances"
             >
@@ -846,7 +978,7 @@ export default function ReduceMedicineManagement() {
             {isInvUpdatable && (
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100/70 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 h-8 sm:h-7.5 px-3 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100/70 text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0"
                 onClick={handleOpenPrescriptionModal}
                 title="Dispense from patient prescription on file"
               >
@@ -1025,6 +1157,43 @@ export default function ReduceMedicineManagement() {
               background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
               box-shadow: 0 4px 12px rgba(37, 99, 235, 0.36) !important;
             }
+            @media (max-width: 640px) {
+              .doctor-create-drawer-modal {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                border-radius: 0 !important;
+              }
+              .doctor-create-drawer-modal .ui-modal-head {
+                padding: 14px 16px !important;
+              }
+              .doctor-create-drawer-modal .ui-modal-body {
+                padding: 14px 12px !important;
+                gap: 12px !important;
+              }
+              .doctor-section-card {
+                padding: 14px 12px !important;
+                border-radius: 10px !important;
+              }
+            }
+            @media (max-width: 480px) {
+              .doctor-create-drawer-modal .ui-modal-foot {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 12px !important;
+                padding: 12px 14px !important;
+              }
+              .doctor-create-drawer-modal .ui-modal-foot > div:last-child {
+                display: flex !important;
+                flex-direction: column-reverse !important;
+                width: 100% !important;
+                gap: 8px !important;
+              }
+              .doctor-create-drawer-modal .ui-modal-foot button {
+                width: 100% !important;
+                justify-content: center !important;
+                height: 40px !important;
+              }
+            }
           `}</style>
 
           <div className="ui-modal-body">
@@ -1190,7 +1359,7 @@ export default function ReduceMedicineManagement() {
                   <span>Number of Tablets Given</span>
                   <span style={{ color: '#ef4444' }}>*</span>
                 </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
                   <input
                     type="number"
                     min="1"
@@ -1261,8 +1430,10 @@ export default function ReduceMedicineManagement() {
                       background: '#f8fafc',
                       border: '1px solid #e2e8f0',
                       display: 'flex',
+                      flexWrap: 'wrap',
                       alignItems: 'center',
                       justifyContent: 'space-between',
+                      gap: 8,
                       fontSize: 12,
                       color: '#475569',
                     }}
@@ -1456,26 +1627,26 @@ export default function ReduceMedicineManagement() {
       <Drawer
         open={isPrescriptionModalOpen}
         onClose={() => setIsPrescriptionModalOpen(false)}
-        width="min(880px, 95vw)"
+        width="min(880px, 100vw)"
         destroyOnHidden
         styles={{
           header: {
-            padding: '16px 24px',
+            padding: '16px 20px',
             borderBottom: '1px solid #e2e8f0',
             background: '#ffffff',
           },
           body: {
-            padding: '20px 24px',
+            padding: '16px 16px',
             background: '#f8fafc',
           },
           footer: {
-            padding: '12px 24px',
+            padding: '12px 16px',
             borderTop: '1px solid #e2e8f0',
             background: '#ffffff',
           },
         }}
         title={
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-start sm:items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
               <FileText size={16} />
             </div>
@@ -1490,7 +1661,7 @@ export default function ReduceMedicineManagement() {
           </div>
         }
         footer={
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <div className="text-xs text-slate-500">
               {selectedRx ? (
                 <span>
@@ -1502,11 +1673,11 @@ export default function ReduceMedicineManagement() {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 justify-end flex-wrap">
               <button
                 type="button"
                 onClick={() => setIsPrescriptionModalOpen(false)}
-                className="px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                className="px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer min-h-[36px]"
               >
                 Cancel
               </button>
@@ -1515,7 +1686,7 @@ export default function ReduceMedicineManagement() {
                 type="button"
                 disabled={rxItemsToDispense.filter((i) => i.included).length === 0}
                 onClick={handleGenerateBill}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold text-white shadow-2xs cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold text-white shadow-2xs cursor-pointer disabled:opacity-50 min-h-[36px]"
               >
                 <ClipboardCheck size={14} />
                 <span>Generate Bill</span>
@@ -1548,13 +1719,13 @@ export default function ReduceMedicineManagement() {
 
           {/* Selected Prescription & Patient Summary Badge */}
           {selectedRx && (
-            <div className="p-4 bg-gradient-to-r from-emerald-50/90 via-blue-50/50 to-slate-50 border border-emerald-200/90 rounded-xl flex items-center justify-between gap-4 shadow-2xs">
+            <div className="p-3.5 sm:p-4 bg-gradient-to-r from-emerald-50/90 via-blue-50/50 to-slate-50 border border-emerald-200/90 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 shadow-2xs">
               <div className="flex items-center gap-3.5">
                 <div className="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs">
                   Rx
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-bold text-slate-900">
                       {selectedRx.patient_name || 'Patient'}
                     </span>
@@ -1582,7 +1753,7 @@ export default function ReduceMedicineManagement() {
           {/* Prescribed Medicines Matching & Pricing Table */}
           {selectedRxId && rxItemsToDispense.length > 0 && (
             <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
                 <label className="text-xs font-bold text-slate-800 uppercase tracking-wide">
                   Prescribed Tablets &amp; Inventory Match
                 </label>
@@ -1591,8 +1762,8 @@ export default function ReduceMedicineManagement() {
                 </span>
               </div>
 
-              <div className="border border-slate-200 rounded-lg overflow-hidden">
-                <table className="w-full text-left text-xs">
+              <div className="border border-slate-200 rounded-lg overflow-x-auto">
+                <table className="w-full min-w-[620px] text-left text-xs">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
                       <th className="p-2.5 text-center w-12">Give</th>
@@ -1701,7 +1872,7 @@ export default function ReduceMedicineManagement() {
               </div>
 
               {/* Subtotal & Grand Total Summary Bar */}
-              <div className="mt-2.5 p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs">
+              <div className="mt-2.5 p-3 bg-slate-50 border border-slate-200 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
                 <div className="text-slate-600">
                   Total Selected: <strong className="text-slate-900">{rxItemsToDispense.filter((i) => i.included).length} items</strong> (
                   {rxItemsToDispense.filter((i) => i.included).reduce((sum, i) => sum + i.dispenseQuantity, 0)} units)
@@ -1719,26 +1890,26 @@ export default function ReduceMedicineManagement() {
       <Drawer
         open={Boolean(generatedBill)}
         onClose={() => setGeneratedBill(null)}
-        width="min(860px, 95vw)"
+        width="min(860px, 100vw)"
         destroyOnHidden
         styles={{
           header: {
-            padding: '16px 24px',
+            padding: '16px 20px',
             borderBottom: '1px solid #e2e8f0',
             background: '#ffffff',
           },
           body: {
-            padding: '20px 24px',
+            padding: '16px 16px',
             background: '#f8fafc',
           },
           footer: {
-            padding: '12px 24px',
+            padding: '12px 16px',
             borderTop: '1px solid #e2e8f0',
             background: '#ffffff',
           },
         }}
         title={
-          <div className="flex items-center justify-between pr-4 w-full">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pr-2 sm:pr-4 w-full">
             <div className="flex items-center gap-2.5">
               <div
                 className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-base shrink-0 shadow-2xs ${
@@ -1777,7 +1948,7 @@ export default function ReduceMedicineManagement() {
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs self-start sm:self-auto min-h-[32px]"
             >
               <Printer size={13} />
               <span>{generatedBill?.isDispensed ? 'Print Receipt' : 'Print Draft'}</span>
@@ -1786,30 +1957,30 @@ export default function ReduceMedicineManagement() {
         }
         footer={
           generatedBill && (
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               <div className="text-xs text-slate-500 flex items-center gap-1.5">
                 {generatedBill.isDispensed ? (
                   <>
-                    <CheckCircle2 size={14} className="text-emerald-600" />
+                    <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
                     <span>
                       Stock deducted on <strong>{generatedBill.dispensedAt}</strong> (Ref: {generatedBill.referenceNumber})
                     </span>
                   </>
                 ) : (
                   <>
-                    <AlertCircle size={14} className="text-amber-600" />
+                    <AlertCircle size={14} className="text-amber-600 shrink-0" />
                     <span>Review items below. Stock has <strong>not</strong> been deducted yet.</span>
                   </>
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
                 {!generatedBill.isDispensed ? (
                   <>
                     <button
                       type="button"
                       onClick={handleBackToPrescription}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs min-h-[36px]"
                     >
                       <ArrowLeft size={13} />
                       <span>Back to Prescription</span>
@@ -1818,7 +1989,7 @@ export default function ReduceMedicineManagement() {
                       type="button"
                       disabled={rxSubmitting}
                       onClick={handleConfirmRxDispense}
-                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold text-white shadow-2xs cursor-pointer disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold text-white shadow-2xs cursor-pointer disabled:opacity-50 min-h-[36px]"
                     >
                       <ClipboardCheck size={14} />
                       <span>{rxSubmitting ? 'Deducting Stock…' : 'Confirm Dispense & Deduct Stock'}</span>
@@ -1829,7 +2000,7 @@ export default function ReduceMedicineManagement() {
                     <button
                       type="button"
                       onClick={() => window.print()}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs min-h-[36px]"
                     >
                       <Printer size={13} />
                       <span>Print Receipt</span>
@@ -1837,7 +2008,7 @@ export default function ReduceMedicineManagement() {
                     <button
                       type="button"
                       onClick={() => setGeneratedBill(null)}
-                      className="px-4 py-1.5 rounded-md bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 cursor-pointer"
+                      className="px-4 py-1.5 rounded-md bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 cursor-pointer min-h-[36px]"
                     >
                       Done / Close
                     </button>
@@ -1852,7 +2023,7 @@ export default function ReduceMedicineManagement() {
           <div className="space-y-4">
             {/* Status Information Banner */}
             {!generatedBill.isDispensed ? (
-              <div className="p-3.5 bg-amber-50/90 border border-amber-200/90 rounded-xl flex items-center justify-between text-xs text-amber-950 shadow-2xs">
+              <div className="p-3.5 bg-amber-50/90 border border-amber-200/90 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-2xs">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
                     <AlertCircle size={16} />
@@ -1867,7 +2038,7 @@ export default function ReduceMedicineManagement() {
                 </div>
               </div>
             ) : (
-              <div className="p-3.5 bg-emerald-50/90 border border-emerald-200/90 rounded-xl flex items-center justify-between text-xs text-emerald-950 shadow-2xs">
+              <div className="p-3.5 bg-emerald-50/90 border border-emerald-200/90 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-emerald-950 shadow-2xs">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
                     <CheckCircle2 size={16} />
@@ -1886,7 +2057,7 @@ export default function ReduceMedicineManagement() {
             {/* Printable Official Invoice Card */}
             <div
               id="pharmacy-bill-print-area"
-              className="p-6 border border-slate-200 rounded-2xl bg-white shadow-2xs space-y-5"
+              className="p-4 sm:p-6 border border-slate-200 rounded-2xl bg-white shadow-2xs space-y-5"
             >
               {/* Hospital Clinical Header */}
               <div className="text-center border-b border-dashed border-slate-300 pb-4">
@@ -1906,7 +2077,7 @@ export default function ReduceMedicineManagement() {
               </div>
 
               {/* Invoice Meta Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/70">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 text-xs bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/70">
                 <div>
                   <span className="text-[11px] text-slate-500 block uppercase font-medium">Bill Number</span>
                   <strong className="text-slate-900 font-mono text-[12.5px]">{generatedBill.billNumber}</strong>
@@ -1925,8 +2096,8 @@ export default function ReduceMedicineManagement() {
                   <span className="text-[11px] text-slate-500 block uppercase font-medium">Prescribing Doctor</span>
                   <strong className="text-slate-900">{formatDoctorDisplay(generatedBill.doctorName)}</strong>
                 </div>
-                <div className="col-span-2 md:col-span-4 flex items-center justify-between border-t border-slate-200 pt-2.5 mt-1">
-                  <div className="flex items-center gap-2">
+                <div className="col-span-1 sm:col-span-2 md:col-span-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 border-t border-slate-200 pt-2.5 mt-1">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[11px] text-slate-500 uppercase font-medium">Patient:</span>
                     <strong className="text-slate-900 text-[13px]">{generatedBill.patientName}</strong>
                     {generatedBill.patientId && (
@@ -1943,8 +2114,8 @@ export default function ReduceMedicineManagement() {
               </div>
 
               {/* Itemized Table */}
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs">
+              <div className="border border-slate-200 rounded-xl overflow-x-auto">
+                <table className="w-full min-w-[540px] text-left text-xs">
                   <thead>
                     <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
                       <th className="py-2.5 px-3 w-10 text-center">#</th>
@@ -1987,7 +2158,7 @@ export default function ReduceMedicineManagement() {
               {/* Financial Summary */}
               <div className="border-t-2 border-slate-200 pt-3">
                 <div className="flex justify-end">
-                  <div className="w-72 space-y-2 text-xs">
+                  <div className="w-full sm:w-72 space-y-2 text-xs">
                     <div className="flex justify-between text-slate-600">
                       <span>Subtotal:</span>
                       <span className="font-semibold text-slate-900">₹{generatedBill.subtotal.toFixed(2)}</span>
@@ -2007,12 +2178,12 @@ export default function ReduceMedicineManagement() {
               </div>
 
               {/* Signatures & Certification */}
-              <div className="pt-6 border-t border-dashed border-slate-200 flex justify-between items-end text-[11px] text-slate-500">
+              <div className="pt-6 border-t border-dashed border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 text-[11px] text-slate-500">
                 <div>
                   <div className="font-semibold text-slate-800">Thank you! Get well soon.</div>
                   <div className="text-[10.5px] text-slate-400 mt-0.5">Computer-generated tax receipt. Valid without signature.</div>
                 </div>
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <div className="w-40 border-b border-slate-300 pb-1 mb-1 font-semibold text-slate-700 text-center">
                     Authorized Pharmacist
                   </div>
@@ -2030,14 +2201,14 @@ export default function ReduceMedicineManagement() {
           open={Boolean(selectedReceipt)}
           onCancel={() => setSelectedReceipt(null)}
           footer={null}
-          width={520}
+          width="min(520px, calc(100vw - 24px))"
           title={
-            <div className="flex items-center justify-between pr-6">
+            <div className="flex items-center justify-between gap-2 pr-4 sm:pr-6 flex-wrap">
               <span className="text-sm font-bold text-slate-900">Dispense Receipt Voucher</span>
               <button
                 type="button"
                 onClick={handlePrintReceipt}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer min-h-[30px]"
               >
                 <Printer size={12} />
                 <span>Print Voucher</span>
@@ -2059,7 +2230,7 @@ export default function ReduceMedicineManagement() {
             </div>
 
             {/* Meta */}
-            <div className="grid grid-cols-2 gap-2 text-xs border-b border-dashed border-slate-300 pb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs border-b border-dashed border-slate-300 pb-3">
               <div>
                 <span className="text-slate-500">Date & Time: </span>
                 <strong className="text-slate-900">
@@ -2072,7 +2243,7 @@ export default function ReduceMedicineManagement() {
                   {selectedReceipt.performer_name || 'Pharmacist'}
                 </strong>
               </div>
-              <div className="col-span-2">
+              <div className="col-span-1 sm:col-span-2">
                 <span className="text-slate-500">Recipient / Reason: </span>
                 <strong className="text-slate-900">
                   {selectedReceipt.reason || 'Dispensed to Patient'}

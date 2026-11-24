@@ -37,12 +37,12 @@ export function SubNavbar({
   const firstName =
     brandFirstName && brandFirstName.trim()
       ? brandFirstName.trim()
-      : localStorage.getItem('adminFirstName') || 'HMS Admin';
+      : localStorage.getItem('adminFirstName') || 'Annaamalai';
 
   const lastName =
     brandLastName && brandLastName.trim()
       ? brandLastName.trim()
-      : localStorage.getItem('adminLastName') || 'Hospital';
+      : localStorage.getItem('adminLastName') || 'Cancer Center';
 
   const logoUrl =
     brandLogoUrl !== undefined
