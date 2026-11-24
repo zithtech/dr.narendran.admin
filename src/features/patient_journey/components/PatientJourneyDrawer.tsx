@@ -135,6 +135,8 @@ export function PatientJourneyDrawer({
           current_diagnosis: plan.provisionalDiagnosis,
           differential_diagnosis: plan.differentialDiagnosis || null,
           clinical_observations: plan.clinicalObservations || null,
+          performance_score: plan.performanceScore ?? null,
+          performance_description: plan.performanceDescription || null,
           investigations_ordered: plan.investigationsOrdered,
           treatment_strategy: plan.treatmentStrategy,
           care_goals: plan.careGoals || null,
@@ -407,7 +409,7 @@ export function PatientJourneyDrawer({
 
         {/* STAGE 4: PRESCRIPTION */}
         {activeStep === 'prescription' && patient && (
-          <div style={{ padding: '24px 28px', maxWidth: 1040, margin: '0 auto' }}>
+          <div style={{ padding: '20px 24px', width: '100%', boxSizing: 'border-box' }}>
             {/* Context Summary Banner */}
             <div
               style={{
@@ -576,7 +578,7 @@ export function PatientJourneyDrawer({
 
         {/* STAGE 5: APPOINTMENTS */}
         {activeStep === 'appointment' && patient && (
-          <div style={{ padding: '24px 28px', maxWidth: 1040, margin: '0 auto' }}>
+          <div style={{ padding: '20px 24px', width: '100%', boxSizing: 'border-box' }}>
             <div
               style={{
                 background: '#ffffff',

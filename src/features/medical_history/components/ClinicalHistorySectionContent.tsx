@@ -4,7 +4,6 @@ import {
   AlertCircle,
   Baby,
   Briefcase,
-  Building2,
   Calendar,
   Check,
   ChevronLeft,
@@ -260,12 +259,12 @@ interface StepDef {
 }
 
 const STEPS: StepDef[] = [
-  { key: 'current', stepNum: 1, label: '1. Current Examination & Vitals', shortLabel: 'Examination & Vitals', icon: <HeartPulse size={14} /> },
-  { key: 'previous', stepNum: 2, label: '2. Previous Medical History', shortLabel: 'Previous Diseases & Surgeries', icon: <History size={14} /> },
-  { key: 'family', stepNum: 3, label: '3. Family Medical History', shortLabel: 'Family Medical History', icon: <Users size={14} /> },
-  { key: 'reproductive', stepNum: 4, label: '4. Reproductive & Obstetric', shortLabel: 'Reproductive & Obstetric', icon: <User size={14} /> },
-  { key: 'lifestyle', stepNum: 5, label: '5. Lifestyle History', shortLabel: 'Lifestyle & Habits', icon: <Activity size={14} /> },
-  { key: 'documents', stepNum: 6, label: '6. Medical Documents & Reports', shortLabel: 'Documents & Reports', icon: <FileText size={14} /> },
+  { key: 'previous', stepNum: 1, label: '1. Previous Medical History', shortLabel: 'Previous Diseases & Vitals', icon: <History size={14} /> },
+  { key: 'family', stepNum: 2, label: '2. Family Medical History', shortLabel: 'Family Medical History', icon: <Users size={14} /> },
+  { key: 'reproductive', stepNum: 3, label: '3. Reproductive & Obstetric', shortLabel: 'Reproductive & Obstetric', icon: <User size={14} /> },
+  { key: 'lifestyle', stepNum: 4, label: '4. Lifestyle History', shortLabel: 'Lifestyle & Habits', icon: <Activity size={14} /> },
+  { key: 'documents', stepNum: 5, label: '5. Medical Documents & Reports', shortLabel: 'Documents & Reports', icon: <FileText size={14} /> },
+  { key: 'current', stepNum: 6, label: '6. Current Examination', shortLabel: 'Current Examination', icon: <HeartPulse size={14} /> },
 ];
 
 export const ClinicalHistorySectionContent = forwardRef<
@@ -300,18 +299,18 @@ export const ClinicalHistorySectionContent = forwardRef<
       : staticMessage && typeof staticMessage.error === 'function'
         ? staticMessage
         : {
-            success: (_m: string) => {},
-            error: (_m: string) => {},
-            warning: (_m: string) => {},
-            info: (_m: string) => {},
-          };
+          success: (_m: string) => { },
+          error: (_m: string) => { },
+          warning: (_m: string) => { },
+          info: (_m: string) => { },
+        };
 
-  const [localTab, setLocalTab] = useState<SectionTab>('current');
+  const [localTab, setLocalTab] = useState<SectionTab>('previous');
   const activeTab = controlledTab ?? localTab;
   const setActiveTab = (t: SectionTab) => {
     if (onTabChange) onTabChange(t);
     else setLocalTab(t);
-  };	
+  };
   const [savedHistoryId, setSavedHistoryId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveAction, setSaveAction] = useState<'next' | 'close' | null>(null);
@@ -415,6 +414,9 @@ export const ClinicalHistorySectionContent = forwardRef<
 
   // 2. Previous Medical History
   const [chronicDiseases, setChronicDiseases] = useState<string[]>([]);
+  const [customChronicDiseases, setCustomChronicDiseases] = useState<string[]>([]);
+  const [showAddChronicInput, setShowAddChronicInput] = useState(false);
+  const [newChronicDiseaseName, setNewChronicDiseaseName] = useState('');
   const [previousDiseases, setPreviousDiseases] = useState<PreviousDisease[]>([]);
   const [diabetesHas, setDiabetesHas] = useState<'Yes' | 'No' | 'Unknown'>('No');
   const [diabetesDetails, setDiabetesDetails] = useState('');
@@ -432,7 +434,9 @@ export const ClinicalHistorySectionContent = forwardRef<
   const [surgeries, setSurgeries] = useState<Surgery[]>([]);
   const [admissions, setAdmissions] = useState<HospitalAdmission[]>([]);
   const [injuries, setInjuries] = useState('');
+  const [injuryDate, setInjuryDate] = useState('');
   const [transfusionHas, setTransfusionHas] = useState<'Yes' | 'No' | 'Unknown'>('No');
+  const [transfusionDate, setTransfusionDate] = useState('');
   const [transfusionDetails, setTransfusionDetails] = useState('');
   const [medAllergies, setMedAllergies] = useState('');
   const [foodAllergies, setFoodAllergies] = useState('');
@@ -565,8 +569,29 @@ export const ClinicalHistorySectionContent = forwardRef<
     }
 
     const pmh = safeObj(record.previous_medical_history);
-    setChronicDiseases(Array.isArray(pmh.chronic_diseases) ? pmh.chronic_diseases : []);
-    setPreviousDiseases(Array.isArray(pmh.previous_diseases) ? pmh.previous_diseases : []);
+    const loadedChronic = Array.isArray(pmh.chronic_diseases) ? pmh.chronic_diseases : [];
+    setChronicDiseases(loadedChronic);
+    const customLoaded = loadedChronic.filter((d: string) => !CHRONIC_DISEASE_OPTIONS.includes(d));
+    setCustomChronicDiseases(customLoaded);
+
+    const existingMeds: Medication[] = Array.isArray(pmh.current_medications) ? pmh.current_medications : [];
+    const rawDiseases: any[] = Array.isArray(pmh.previous_diseases) ? pmh.previous_diseases : [];
+    const loadedDiseases: PreviousDisease[] = rawDiseases.map((d: any) => ({
+      disease_name: d.disease_name || '',
+      diagnosis_date: d.diagnosis_date || '',
+      treatment_details: d.treatment_details || '',
+      current_status: d.current_status || 'Resolved',
+      remarks: d.remarks || '',
+      medications: Array.isArray(d.medications) ? d.medications : [],
+    }));
+
+    if (loadedDiseases.length > 0 && existingMeds.length > 0) {
+      const hasAnyNested = loadedDiseases.some((d) => d.medications && d.medications.length > 0);
+      if (!hasAnyNested && loadedDiseases[0]) {
+        loadedDiseases[0].medications = existingMeds;
+      }
+    }
+    setPreviousDiseases(loadedDiseases);
     setDiabetesHas(normalizeYesNoUnknown(pmh.diabetes_history?.has_history));
     setDiabetesDetails(pmh.diabetes_history?.details || pmh.diabetes_history?.current_treatment || '');
     setBpHas(normalizeYesNoUnknown(pmh.blood_pressure_history?.has_history));
@@ -582,6 +607,8 @@ export const ClinicalHistorySectionContent = forwardRef<
 
     setSurgeries(Array.isArray(pmh.surgeries) ? pmh.surgeries : []);
     setAdmissions(Array.isArray(pmh.hospital_admissions) ? pmh.hospital_admissions : []);
+    const firstInjury = Array.isArray(pmh.injuries_accidents) ? pmh.injuries_accidents[0] : null;
+    setInjuryDate(firstInjury?.date || '');
     setInjuries(
       Array.isArray(pmh.injuries_accidents)
         ? pmh.injuries_accidents.map((i: any) => i.description || i).join('\n')
@@ -590,6 +617,7 @@ export const ClinicalHistorySectionContent = forwardRef<
           : '',
     );
     setTransfusionHas(normalizeYesNoUnknown(pmh.blood_transfusions?.had_transfusion));
+    setTransfusionDate(pmh.blood_transfusions?.transfusion_date || '');
     setTransfusionDetails(pmh.blood_transfusions?.reason || '');
     setMedAllergies(pmh.allergies?.medicine_allergies || '');
     setFoodAllergies(pmh.allergies?.food_allergies || '');
@@ -677,6 +705,9 @@ export const ClinicalHistorySectionContent = forwardRef<
     setCustomVitals([]);
 
     setChronicDiseases([]);
+    setCustomChronicDiseases([]);
+    setShowAddChronicInput(false);
+    setNewChronicDiseaseName('');
     setPreviousDiseases([]);
     setDiabetesHas('No');
     setDiabetesDetails('');
@@ -694,7 +725,9 @@ export const ClinicalHistorySectionContent = forwardRef<
     setSurgeries([]);
     setAdmissions([]);
     setInjuries('');
+    setInjuryDate('');
     setTransfusionHas('No');
+    setTransfusionDate('');
     setTransfusionDetails('');
     setMedAllergies('');
     setFoodAllergies('');
@@ -822,12 +855,68 @@ export const ClinicalHistorySectionContent = forwardRef<
   const addDisease = () => {
     setPreviousDiseases((prev) => [
       ...prev,
-      { disease_name: '', diagnosis_date: '', treatment_details: '', current_status: 'Resolved', remarks: '' },
+      {
+        disease_name: '',
+        diagnosis_date: '',
+        treatment_details: '',
+        current_status: 'Resolved',
+        remarks: '',
+        medications: [],
+      },
     ]);
   };
 
   const removeDisease = (idx: number) => {
     setPreviousDiseases((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const addDiseaseMedication = (diseaseIdx: number) => {
+    setPreviousDiseases((prev) =>
+      prev.map((d, i) =>
+        i === diseaseIdx
+          ? {
+            ...d,
+            medications: [
+              ...(d.medications || []),
+              { medicine_name: '', dosage: '', frequency: '', started_date: '', remarks: '' },
+            ],
+          }
+          : d,
+      ),
+    );
+  };
+
+  const updateDiseaseMedication = (
+    diseaseIdx: number,
+    medIdx: number,
+    field: keyof Medication,
+    val: any,
+  ) => {
+    setPreviousDiseases((prev) =>
+      prev.map((d, i) =>
+        i === diseaseIdx
+          ? {
+            ...d,
+            medications: (d.medications || []).map((m, mi) =>
+              mi === medIdx ? { ...m, [field]: val } : m,
+            ),
+          }
+          : d,
+      ),
+    );
+  };
+
+  const removeDiseaseMedication = (diseaseIdx: number, medIdx: number) => {
+    setPreviousDiseases((prev) =>
+      prev.map((d, i) =>
+        i === diseaseIdx
+          ? {
+            ...d,
+            medications: (d.medications || []).filter((_, mi) => mi !== medIdx),
+          }
+          : d,
+      ),
+    );
   };
 
   const addSurgery = () => {
@@ -841,6 +930,7 @@ export const ClinicalHistorySectionContent = forwardRef<
     setSurgeries((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  /* Hospital Admissions commented out per user request
   const addAdmission = () => {
     setAdmissions((prev) => [
       ...prev,
@@ -851,8 +941,10 @@ export const ClinicalHistorySectionContent = forwardRef<
   const removeAdmission = (idx: number) => {
     setAdmissions((prev) => prev.filter((_, i) => i !== idx));
   };
+  */
 
   const addFamilyMember = () => {
+    setHasFamilyHistory('Yes');
     setFamilyMembers((prev) => [
       ...prev,
       { relationship: 'Father', disease_name: '', age_at_diagnosis: null, current_health_status: 'Healthy / Normal', cause_of_death: '', remarks: '' },
@@ -863,16 +955,6 @@ export const ClinicalHistorySectionContent = forwardRef<
     setFamilyMembers((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const addCurrentMed = () => {
-    setCurrentMeds((prev) => [
-      ...prev,
-      { medicine_name: '', dosage: '', frequency: '', started_date: '', is_current: true, prescribed_by: '', remarks: '' },
-    ]);
-  };
-
-  const removeCurrentMed = (idx: number) => {
-    setCurrentMeds((prev) => prev.filter((_, i) => i !== idx));
-  };
 
   const addPreviousMed = () => {
     setPreviousMeds((prev) => [
@@ -889,6 +971,37 @@ export const ClinicalHistorySectionContent = forwardRef<
     setChronicDiseases((prev) =>
       prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item],
     );
+  };
+
+  const allChronicOptions = useMemo(() => {
+    const list: string[] = [];
+    const seen = new Set<string>();
+    [...CHRONIC_DISEASE_OPTIONS, ...customChronicDiseases, ...chronicDiseases].forEach((d) => {
+      const trimmed = d.trim();
+      if (trimmed && !seen.has(trimmed)) {
+        seen.add(trimmed);
+        list.push(trimmed);
+      }
+    });
+    return list;
+  }, [customChronicDiseases, chronicDiseases]);
+
+  const handleAddCustomChronicDisease = () => {
+    const trimmed = newChronicDiseaseName.trim();
+    if (!trimmed) return;
+    if (!customChronicDiseases.includes(trimmed) && !CHRONIC_DISEASE_OPTIONS.includes(trimmed)) {
+      setCustomChronicDiseases((prev) => [...prev, trimmed]);
+    }
+    if (!chronicDiseases.includes(trimmed)) {
+      setChronicDiseases((prev) => [...prev, trimmed]);
+    }
+    setNewChronicDiseaseName('');
+    setShowAddChronicInput(false);
+  };
+
+  const handleRemoveCustomChronicDisease = (disease: string) => {
+    setCustomChronicDiseases((prev) => prev.filter((d) => d !== disease));
+    setChronicDiseases((prev) => prev.filter((d) => d !== disease));
   };
 
   // Safe numeric parsing helpers to prevent NaN serialization issues
@@ -934,7 +1047,16 @@ export const ClinicalHistorySectionContent = forwardRef<
     },
     previous_medical_history: {
       chronic_diseases: chronicDiseases,
-      previous_diseases: previousDiseases.filter((d) => d.disease_name.trim()),
+      previous_diseases: previousDiseases
+        .filter((d) => d.disease_name.trim())
+        .map((d) => ({
+          disease_name: d.disease_name.trim(),
+          diagnosis_date: d.diagnosis_date || null,
+          treatment_details: d.treatment_details?.trim() || null,
+          current_status: d.current_status || 'Resolved',
+          remarks: d.remarks?.trim() || null,
+          medications: (d.medications || []).filter((m) => m.medicine_name && m.medicine_name.trim()),
+        })),
       diabetes_history: {
         has_history: diabetesHas,
         details: diabetesDetails.trim() || null,
@@ -969,9 +1091,13 @@ export const ClinicalHistorySectionContent = forwardRef<
           hospital_name: a.hospital_name.trim() || 'Hospital Admission',
           reason: a.reason.trim() || 'Medical Admission',
         })),
-      injuries_accidents: injuries.trim() ? [{ description: injuries.trim() }] : [],
+      injuries_accidents:
+        injuries.trim() || injuryDate
+          ? [{ description: injuries.trim(), date: injuryDate || null }]
+          : [],
       blood_transfusions: {
         had_transfusion: transfusionHas,
+        transfusion_date: transfusionDate || null,
         reason: transfusionDetails.trim() || null,
       },
       allergies: {
@@ -979,7 +1105,15 @@ export const ClinicalHistorySectionContent = forwardRef<
         food_allergies: foodAllergies.trim() || null,
         other_allergies: otherAllergies.trim() || null,
       },
-      current_medications: currentMeds.filter((m) => m.medicine_name.trim()),
+      current_medications: [
+        ...currentMeds.filter((m) => m.medicine_name.trim()),
+        ...previousDiseases.flatMap((d) =>
+          (d.medications || []).filter((m) => m.medicine_name && m.medicine_name.trim()),
+        ),
+      ].filter(
+        (m, idx, arr) =>
+          arr.findIndex((x) => x.medicine_name === m.medicine_name && x.dosage === m.dosage) === idx,
+      ),
       previous_medications: previousMeds.filter((m) => m.medicine_name.trim()),
       ongoing_treatments: ongoingTreatments.trim() || null,
     },
@@ -1284,7 +1418,12 @@ export const ClinicalHistorySectionContent = forwardRef<
         .clinical-history-section-root input[type="text"],
         .clinical-history-section-root input[type="number"],
         .clinical-history-section-root input[type="date"],
-        .clinical-history-section-root select {
+        .clinical-history-section-root input[type="tel"],
+        .clinical-history-section-root input[type="email"],
+        .clinical-history-section-root select,
+        .clinical-history-section-root .ui-input,
+        .clinical-history-section-root .ui-searchable-trigger,
+        .clinical-history-section-root .bmi-score-box {
           height: 38px !important;
           border-radius: 8px !important;
           border: 1px solid #e2e8f0 !important;
@@ -1295,6 +1434,10 @@ export const ClinicalHistorySectionContent = forwardRef<
           transition: all 0.15s ease !important;
           width: 100% !important;
           box-sizing: border-box !important;
+        }
+        .clinical-history-section-root .ui-searchable-trigger {
+          display: flex !important;
+          align-items: center !important;
         }
         .clinical-history-section-root textarea.patient-form-input,
         .clinical-history-section-root textarea {
@@ -1615,7 +1758,12 @@ export const ClinicalHistorySectionContent = forwardRef<
                 </div>
               </div>
             </div>
+          </div>
+        )}
 
+        {/* TAB 2: PREVIOUS MEDICAL HISTORY */}
+        {activeTab === 'previous' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Physical Vitals Strip & Auto-Calculated BMI */}
             <div className="patient-section-card">
               <div
@@ -1686,27 +1834,41 @@ export const ClinicalHistorySectionContent = forwardRef<
                   />
                 </div>
 
-                {/* Auto BMI Card */}
-                <div
-                  style={{
-                    backgroundColor: bmiInfo ? `${bmiInfo.color}10` : '#f1f5f9',
-                    border: `1px solid ${bmiInfo ? bmiInfo.color : '#cbd5e1'}`,
-                    borderRadius: 6,
-                    padding: '6px 10px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <div style={{ fontSize: 10.5, fontWeight: 600, color: '#64748b' }}>BMI Score</div>
-                  {bmiInfo ? (
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                      <span style={{ fontSize: 15, fontWeight: 800, color: bmiInfo.color }}>{bmiInfo.val}</span>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: bmiInfo.color }}>{bmiInfo.band}</span>
-                    </div>
-                  ) : (
-                    <span style={{ fontSize: 11, color: '#94a3b8' }}>Auto-calc</span>
-                  )}
+                {/* Auto BMI Field (Same size and structure as other vitals fields) */}
+                <div>
+                  <label
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: '#475569',
+                      display: 'block',
+                      marginBottom: 3,
+                    }}
+                  >
+                    BMI Score
+                  </label>
+                  <div
+                    className="patient-form-input bmi-score-box"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      height: 38,
+                      padding: '0 12px',
+                      backgroundColor: bmiInfo ? `${bmiInfo.color}10` : '#f8fafc',
+                      border: `1.5px solid ${bmiInfo ? bmiInfo.color : '#e2e8f0'}`,
+                      borderRadius: 8,
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    {bmiInfo ? (
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                        <span style={{ fontSize: 13.5, fontWeight: 800, color: bmiInfo.color }}>{bmiInfo.val}</span>
+                        <span style={{ fontSize: 11.5, fontWeight: 600, color: bmiInfo.color }}>{bmiInfo.band}</span>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: 12.5, color: '#94a3b8' }}>Auto-calc</span>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -1942,12 +2104,6 @@ export const ClinicalHistorySectionContent = forwardRef<
                 )}
               </div>
             </div>
-          </div>
-        )}
-
-        {/* TAB 2: PREVIOUS MEDICAL HISTORY */}
-        {activeTab === 'previous' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Chronic Diseases Checklist */}
             <div className="patient-section-card">
               <div className="patient-section-header" style={{ justifyContent: 'space-between' }}>
@@ -1962,23 +2118,91 @@ export const ClinicalHistorySectionContent = forwardRef<
                     </Tag>
                   )}
                 </div>
-                {chronicDiseases.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {chronicDiseases.length > 0 && (
+                    <Button
+                      type="text"
+                      size="small"
+                      onClick={() => setChronicDiseases([])}
+                      style={{ fontSize: 11, color: '#64748b' }}
+                    >
+                      Clear All
+                    </Button>
+                  )}
                   <Button
-                    type="text"
+                    type="dashed"
                     size="small"
-                    onClick={() => setChronicDiseases([])}
-                    style={{ fontSize: 11, color: '#64748b' }}
+                    onClick={() => setShowAddChronicInput((prev) => !prev)}
+                    icon={<Plus size={13} />}
+                    data-testid="add-chronic-header-btn"
+                    style={{ display: 'flex', alignItems: 'center', gap: 4, borderRadius: 6, fontWeight: 500 }}
                   >
-                    Clear All
+                    Add
                   </Button>
-                )}
+                </div>
               </div>
               <div style={{ fontSize: 12, color: '#64748b', marginTop: -4 }}>
                 Select any pre-existing chronic conditions diagnosed in the patient.
               </div>
+
+              {/* Add Custom Chronic Disease Input */}
+              {showAddChronicInput && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '8px 12px',
+                    backgroundColor: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: 8,
+                  }}
+                >
+                  <input
+                    type="text"
+                    className="ui-input"
+                    autoFocus
+                    placeholder="Enter condition or chronic disease name..."
+                    value={newChronicDiseaseName}
+                    onChange={(e) => setNewChronicDiseaseName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCustomChronicDisease();
+                      } else if (e.key === 'Escape') {
+                        setShowAddChronicInput(false);
+                        setNewChronicDiseaseName('');
+                      }
+                    }}
+                    style={{ flex: 1, height: 32, fontSize: 12.5 }}
+                  />
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={handleAddCustomChronicDisease}
+                    disabled={!newChronicDiseaseName.trim()}
+                    data-testid="add-chronic-submit-btn"
+                    style={{ height: 32, fontSize: 12, borderRadius: 6 }}
+                  >
+                    Add
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setShowAddChronicInput(false);
+                      setNewChronicDiseaseName('');
+                    }}
+                    style={{ height: 32, fontSize: 12, borderRadius: 6 }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
-                {CHRONIC_DISEASE_OPTIONS.map((disease) => {
+                {allChronicOptions.map((disease) => {
                   const checked = chronicDiseases.includes(disease);
+                  const isCustom = !CHRONIC_DISEASE_OPTIONS.includes(disease);
                   return (
                     <label
                       key={disease}
@@ -2006,9 +2230,67 @@ export const ClinicalHistorySectionContent = forwardRef<
                         {disease}
                       </span>
                       {checked && <Check size={13} style={{ color: '#2563eb', flexShrink: 0 }} />}
+                      {isCustom && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            handleRemoveCustomChronicDisease(disease);
+                          }}
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            cursor: 'pointer',
+                            color: '#94a3b8',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            padding: 2,
+                            borderRadius: 4,
+                            marginLeft: 2,
+                          }}
+                          title="Remove condition"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
                     </label>
                   );
                 })}
+
+                {/* Inline "+ Add Condition" button */}
+                <button
+                  type="button"
+                  onClick={() => setShowAddChronicInput(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    fontSize: 12,
+                    padding: '7px 10px',
+                    backgroundColor: '#fff',
+                    borderRadius: 8,
+                    border: '1.5px dashed #cbd5e1',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    fontWeight: 500,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#3b82f6';
+                    e.currentTarget.style.color = '#2563eb';
+                    e.currentTarget.style.backgroundColor = '#f8fafc';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#cbd5e1';
+                    e.currentTarget.style.color = '#64748b';
+                    e.currentTarget.style.backgroundColor = '#fff';
+                  }}
+                >
+                  <Plus size={13} />
+                  <span>Add Condition</span>
+                </button>
               </div>
             </div>
 
@@ -2306,128 +2588,389 @@ export const ClinicalHistorySectionContent = forwardRef<
                   </div>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {/* Table Column Headers */}
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '2fr 1.1fr 2fr 1.2fr 2fr 36px',
-                      gap: 8,
-                      padding: '0 8px',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: '#64748b',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    <span>Condition / Disease</span>
-                    <span>Diagnosis Date</span>
-                    <span>Treatment Details</span>
-                    <span>Status</span>
-                    <span>Remarks</span>
-                    <span></span>
-                  </div>
-
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {previousDiseases.map((d, idx) => (
                     <div
                       key={idx}
                       style={{
-                        display: 'grid',
-                        gridTemplateColumns: '2fr 1.1fr 2fr 1.2fr 2fr 36px',
-                        gap: 8,
-                        alignItems: 'center',
-                        backgroundColor: '#f8fafc',
-                        padding: '8px 10px',
-                        borderRadius: 8,
+                        backgroundColor: '#fff',
+                        borderRadius: 10,
                         border: '1px solid #e2e8f0',
-                        transition: 'border-color 0.15s ease',
+                        padding: 14,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 12,
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
                       }}
                     >
-                      <input
-                        type="text"
-                        className="patient-form-input"
-                        placeholder="Condition / Disease Name"
-                        value={d.disease_name}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setPreviousDiseases((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, disease_name: val } : item)),
-                          );
-                        }}
-                        style={{ height: 32 }}
-                      />
-                      <input
-                        type="date"
-                        className="patient-form-input"
-                        value={d.diagnosis_date || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setPreviousDiseases((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, diagnosis_date: val } : item)),
-                          );
-                        }}
-                        style={{ height: 32 }}
-                      />
-                      <input
-                        type="text"
-                        className="patient-form-input"
-                        placeholder="Treatment Details"
-                        value={d.treatment_details || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setPreviousDiseases((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, treatment_details: val } : item)),
-                          );
-                        }}
-                        style={{ height: 32 }}
-                      />
-                      <SearchableSelect
-                        size="sm"
-                        searchable={false}
-                        options={DISEASE_STATUS_OPTIONS}
-                        value={d.current_status || 'Resolved'}
-                        onChange={(val) => {
-                          setPreviousDiseases((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, current_status: val } : item)),
-                          );
-                        }}
-                      />
-                      <input
-                        type="text"
-                        className="patient-form-input"
-                        placeholder="Remarks..."
-                        value={d.remarks || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setPreviousDiseases((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, remarks: val } : item)),
-                          );
-                        }}
-                        style={{ height: 32 }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeDisease(idx)}
+                      {/* Item Top Bar with Condition label and Remove button */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#2563eb', backgroundColor: '#eff6ff', padding: '2px 8px', borderRadius: 12, border: '1px solid #dbeafe' }}>
+                            Condition #{idx + 1}
+                          </span>
+                          {d.disease_name && (
+                            <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>
+                              {d.disease_name}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeDisease(idx)}
+                          style={{
+                            background: '#fff',
+                            border: '1px solid #fee2e2',
+                            cursor: 'pointer',
+                            color: '#ef4444',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            fontSize: 11.5,
+                            fontWeight: 500,
+                          }}
+                          title="Delete Condition"
+                        >
+                          <Trash2 size={13} />
+                          <span>Remove</span>
+                        </button>
+                      </div>
+
+                      {/* Row 1: Condition / Disease, Diagnosis Date */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
+                        <div>
+                          <label style={{ fontSize: 11.5, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                            Condition / Disease <span style={{ color: '#ef4444' }}>*</span>
+                          </label>
+                          <input
+                            type="text"
+                            className="patient-form-input"
+                            placeholder="Condition / Disease Name (e.g. Hypothyroidism, Hypertension)"
+                            value={d.disease_name}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setPreviousDiseases((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, disease_name: val } : item)),
+                              );
+                            }}
+                            style={{ height: 38, width: '100%' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 11.5, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                            Diagnosis Date
+                          </label>
+                          <input
+                            type="date"
+                            className="patient-form-input"
+                            value={d.diagnosis_date || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setPreviousDiseases((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, diagnosis_date: val } : item)),
+                              );
+                            }}
+                            style={{ height: 38, width: '100%' }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Row 2: Treatment Details, Status */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
+                        <div>
+                          <label style={{ fontSize: 11.5, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                            Treatment Details
+                          </label>
+                          <input
+                            type="text"
+                            className="patient-form-input"
+                            placeholder="Treatment details, dosage notes, therapy..."
+                            value={d.treatment_details || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setPreviousDiseases((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, treatment_details: val } : item)),
+                              );
+                            }}
+                            style={{ height: 38, width: '100%' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 11.5, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                            Status
+                          </label>
+                          <SearchableSelect
+                            searchable={false}
+                            options={DISEASE_STATUS_OPTIONS}
+                            value={d.current_status || 'Resolved'}
+                            onChange={(val) => {
+                              setPreviousDiseases((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, current_status: val } : item)),
+                              );
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Row 3: Remarks */}
+                      <div>
+                        <label style={{ fontSize: 11.5, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                          Remarks
+                        </label>
+                        <textarea
+                          className="patient-form-input"
+                          rows={2}
+                          placeholder="Remarks, specialist advice, or additional notes..."
+                          value={d.remarks || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setPreviousDiseases((prev) =>
+                              prev.map((item, i) => (i === idx ? { ...item, remarks: val } : item)),
+                            );
+                          }}
+                          style={{ width: '100%', fontSize: 12 }}
+                        />
+                      </div>
+
+                      {/* Nested: Current Medications & Ongoing Treatments for each condition */}
+                      <div
                         style={{
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: '#ef4444',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: 6,
-                          borderRadius: 6,
+                          marginTop: 4,
+                          padding: '12px 14px',
+                          backgroundColor: '#f8fafc',
+                          borderRadius: 8,
+                          border: '1px solid #e2e8f0',
                         }}
-                        title="Delete Condition"
                       >
-                        <Trash2 size={15} />
-                      </button>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Pill size={13} style={{ color: '#059669' }} />
+                            <span style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>
+                              Current Medications &amp; Ongoing Treatments
+                            </span>
+                            {(d.medications?.length || 0) > 0 && (
+                              <Tag color="green" style={{ borderRadius: 10, padding: '0 6px', fontSize: 10.5, fontWeight: 600, margin: 0 }}>
+                                {d.medications?.length} meds
+                              </Tag>
+                            )}
+                          </div>
+                          <Button
+                            type="dashed"
+                            size="small"
+                            onClick={() => addDiseaseMedication(idx)}
+                            icon={<Plus size={11} />}
+                            style={{ fontSize: 11, height: 26, borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4 }}
+                          >
+                            Add Medication
+                          </Button>
+                        </div>
+
+                        {(!d.medications || d.medications.length === 0) ? (
+                          <div
+                            style={{
+                              padding: '12px 14px',
+                              textAlign: 'center',
+                              color: '#94a3b8',
+                              fontSize: 11.5,
+                              backgroundColor: '#fff',
+                              borderRadius: 6,
+                              border: '1px dashed #cbd5e1',
+                            }}
+                          >
+                            No current medications listed for this condition. Click &quot;Add Medication&quot; to log prescriptions.
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {d.medications.map((m, mIdx) => (
+                              <div
+                                key={mIdx}
+                                style={{
+                                  backgroundColor: '#fff',
+                                  padding: '12px 14px',
+                                  borderRadius: 8,
+                                  border: '1px solid #e2e8f0',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: 10,
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <span style={{ fontSize: 11, fontWeight: 700, color: '#059669', backgroundColor: '#ecfdf5', padding: '1px 7px', borderRadius: 10 }}>
+                                    Medication #{mIdx + 1}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeDiseaseMedication(idx, mIdx)}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      color: '#ef4444',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 4,
+                                      padding: '2px 6px',
+                                      borderRadius: 4,
+                                      fontSize: 11,
+                                    }}
+                                    title="Remove Medication"
+                                  >
+                                    <Trash2 size={13} />
+                                    <span>Remove</span>
+                                  </button>
+                                </div>
+
+                                {/* Row 1: Medicine Name, Dosage */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+                                  <div>
+                                    <label style={{ fontSize: 11, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                                      Medicine Name <span style={{ color: '#ef4444' }}>*</span>
+                                    </label>
+                                    <input
+                                      type="text"
+                                      className="patient-form-input"
+                                      placeholder="Medicine Name (e.g. Levothyroxine)"
+                                      value={m.medicine_name}
+                                      onChange={(e) => updateDiseaseMedication(idx, mIdx, 'medicine_name', e.target.value)}
+                                      style={{ height: 38, fontSize: 13, width: '100%' }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: 11, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                                      Dosage
+                                    </label>
+                                    <input
+                                      type="text"
+                                      className="patient-form-input"
+                                      placeholder="e.g. 50mcg"
+                                      value={m.dosage || ''}
+                                      onChange={(e) => updateDiseaseMedication(idx, mIdx, 'dosage', e.target.value)}
+                                      style={{ height: 38, fontSize: 13, width: '100%' }}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Row 2: Frequency, Started Date */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+                                  <div>
+                                    <label style={{ fontSize: 11, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                                      Frequency
+                                    </label>
+                                    <input
+                                      type="text"
+                                      className="patient-form-input"
+                                      placeholder="e.g. Once daily, BD"
+                                      value={m.frequency || ''}
+                                      onChange={(e) => updateDiseaseMedication(idx, mIdx, 'frequency', e.target.value)}
+                                      style={{ height: 38, fontSize: 13, width: '100%' }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: 11, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                                      Started Date
+                                    </label>
+                                    <input
+                                      type="date"
+                                      className="patient-form-input"
+                                      value={m.started_date || ''}
+                                      onChange={(e) => updateDiseaseMedication(idx, mIdx, 'started_date', e.target.value)}
+                                      style={{ height: 38, fontSize: 13, width: '100%' }}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Row 3: Remarks / Prescriber */}
+                                <div>
+                                  <label style={{ fontSize: 11, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                                    Remarks / Prescriber
+                                  </label>
+                                  <textarea
+                                    className="patient-form-input"
+                                    rows={2}
+                                    placeholder="Remarks / Prescriber notes..."
+                                    value={m.remarks || ''}
+                                    onChange={(e) => updateDiseaseMedication(idx, mIdx, 'remarks', e.target.value)}
+                                    style={{ width: '100%', fontSize: 12 }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
+
+              {/* Previous / Discontinued Medications & Ongoing Clinical Therapies */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 14, paddingTop: 14, borderTop: '1px solid #e2e8f0' }}>
+                <div style={{ padding: 12, backgroundColor: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <label style={{ fontSize: 12, fontWeight: 650, color: '#334155', margin: 0 }}>
+                      Previous / Discontinued Medications ({previousMeds.length})
+                    </label>
+                    <Button
+                      type="dashed"
+                      size="small"
+                      onClick={addPreviousMed}
+                      icon={<Plus size={10} />}
+                      style={{ fontSize: 11, height: 24, borderRadius: 5 }}
+                    >
+                      Add Past Med
+                    </Button>
+                  </div>
+                  {previousMeds.length === 0 ? (
+                    <div style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', padding: '6px 0' }}>
+                      No discontinued medications recorded.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {previousMeds.map((pm, idx) => (
+                        <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            className="patient-form-input"
+                            placeholder="Past Med (e.g. Omeprazole 20mg)"
+                            value={pm.medicine_name}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setPreviousMeds((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, medicine_name: val } : item)),
+                              );
+                            }}
+                            style={{ height: 30, fontSize: 11.5, flex: 1 }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removePreviousMed(idx)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 4 }}
+                            title="Remove"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ padding: 12, backgroundColor: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                  <label style={{ fontSize: 12, fontWeight: 650, color: '#334155', display: 'block', marginBottom: 6 }}>
+                    Ongoing Clinical Therapies / Special Treatments
+                  </label>
+                  <textarea
+                    className="patient-form-input"
+                    rows={2}
+                    placeholder="e.g. Physiotherapy twice weekly, CPAP machine, dialysis, chemotherapy..."
+                    value={ongoingTreatments}
+                    onChange={(e) => setOngoingTreatments(e.target.value)}
+                    style={{ width: '100%', fontSize: 11.5 }}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Surgeries & Procedures */}
@@ -2476,312 +3019,358 @@ export const ClinicalHistorySectionContent = forwardRef<
                   </div>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {/* Table Column Headers */}
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '2fr 1.2fr 1.5fr 1.5fr 1.5fr 36px',
-                      gap: 8,
-                      padding: '0 8px',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: '#64748b',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    <span>Surgery / Procedure Name</span>
-                    <span>Date</span>
-                    <span>Hospital / Clinic</span>
-                    <span>Surgeon</span>
-                    <span>Outcome / Remarks</span>
-                    <span></span>
-                  </div>
-
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {surgeries.map((s, idx) => (
                     <div
                       key={idx}
                       style={{
-                        display: 'grid',
-                        gridTemplateColumns: '2fr 1.2fr 1.5fr 1.5fr 1.5fr 36px',
-                        gap: 8,
-                        alignItems: 'center',
                         backgroundColor: '#f8fafc',
-                        padding: '8px 10px',
+                        padding: '12px 14px',
                         borderRadius: 8,
                         border: '1px solid #e2e8f0',
-                        transition: 'border-color 0.15s ease',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 10,
                       }}
                     >
-                      <input
-                        type="text"
-                        className="patient-form-input"
-                        placeholder="Surgery Name (e.g. LSCS, Appendectomy)"
-                        value={s.surgery_name}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setSurgeries((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, surgery_name: val } : item)),
-                          );
-                        }}
-                        style={{ height: 32 }}
-                      />
-                      <input
-                        type="date"
-                        className="patient-form-input"
-                        value={s.surgery_date || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setSurgeries((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, surgery_date: val } : item)),
-                          );
-                        }}
-                        style={{ height: 32 }}
-                      />
-                      <input
-                        type="text"
-                        className="patient-form-input"
-                        placeholder="Hospital Name"
-                        value={s.hospital_name || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setSurgeries((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, hospital_name: val } : item)),
-                          );
-                        }}
-                        style={{ height: 32 }}
-                      />
-                      <input
-                        type="text"
-                        className="patient-form-input"
-                        placeholder="Surgeon"
-                        value={s.surgeon_name || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setSurgeries((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, surgeon_name: val } : item)),
-                          );
-                        }}
-                        style={{ height: 32 }}
-                      />
-                      <input
-                        type="text"
-                        className="patient-form-input"
-                        placeholder="Outcome / Remarks"
-                        value={s.remarks || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setSurgeries((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, remarks: val } : item)),
-                          );
-                        }}
-                        style={{ height: 32 }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeSurgery(idx)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: '#ef4444',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: 6,
-                          borderRadius: 6,
-                        }}
-                        title="Delete Surgery"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>
+                          Procedure #{idx + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeSurgery(idx)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#ef4444',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: 4,
+                            borderRadius: 4,
+                          }}
+                          title="Delete Surgery"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+
+                      {/* Row 1: Surgery / Procedure Name, Date */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                            Surgery / Procedure Name
+                          </label>
+                          <input
+                            type="text"
+                            className="patient-form-input"
+                            placeholder="Surgery Name (e.g. LSCS, Appendectomy)"
+                            value={s.surgery_name}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setSurgeries((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, surgery_name: val } : item)),
+                              );
+                            }}
+                            style={{ height: 38 }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                            Date
+                          </label>
+                          <input
+                            type="date"
+                            className="patient-form-input"
+                            value={s.surgery_date || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setSurgeries((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, surgery_date: val } : item)),
+                              );
+                            }}
+                            style={{ height: 38 }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Row 2: Hospital / Clinic, Surgeon */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                            Hospital / Clinic
+                          </label>
+                          <input
+                            type="text"
+                            className="patient-form-input"
+                            placeholder="Hospital or Clinic Name"
+                            value={s.hospital_name || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setSurgeries((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, hospital_name: val } : item)),
+                              );
+                            }}
+                            style={{ height: 38 }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                            Surgeon
+                          </label>
+                          <input
+                            type="text"
+                            className="patient-form-input"
+                            placeholder="Surgeon Name"
+                            value={s.surgeon_name || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setSurgeries((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, surgeon_name: val } : item)),
+                              );
+                            }}
+                            style={{ height: 38 }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Row 3: Outcome / Remarks */}
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                          Outcome / Remarks
+                        </label>
+                        <textarea
+                          rows={2}
+                          className="patient-form-input"
+                          placeholder="Outcome, complications, recovery notes..."
+                          value={s.remarks || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSurgeries((prev) =>
+                              prev.map((item, i) => (i === idx ? { ...item, remarks: val } : item)),
+                            );
+                          }}
+                          style={{ width: '100%', fontSize: 12 }}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Hospital Admissions & Injuries Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 }}>
-              {/* Admissions */}
-              <div className="patient-section-card" style={{ padding: 16 }}>
-                <div className="patient-section-header" style={{ justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div className="patient-section-badge">
-                      <Building2 size={14} />
-                    </div>
-                    <div className="patient-section-tag">Hospital Admissions ({admissions.length})</div>
+            {/* Hospital Admissions commented out per user request */}
+            {/*
+            <div className="patient-section-card" style={{ padding: 16 }}>
+              <div className="patient-section-header" style={{ justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div className="patient-section-badge">
+                    <Building2 size={14} />
                   </div>
-                  <Button
-                    type="dashed"
-                    size="small"
-                    onClick={addAdmission}
-                    icon={<Plus size={12} />}
-                    style={{ fontSize: 11, borderRadius: 6 }}
-                  >
-                    Add
-                  </Button>
+                  <div className="patient-section-tag">Hospital Admissions ({admissions.length})</div>
                 </div>
-                <div style={{ fontSize: 11.5, color: '#64748b', marginTop: -4 }}>
-                  Inpatient stays, admission reasons, and duration.
-                </div>
-                {admissions.length === 0 ? (
-                  <div
-                    style={{
-                      padding: '16px',
-                      textAlign: 'center',
-                      color: '#94a3b8',
-                      fontSize: 12,
-                      backgroundColor: '#f8fafc',
-                      borderRadius: 6,
-                      border: '1px dashed #e2e8f0',
-                    }}
-                  >
-                    No past admissions recorded.
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {admissions.map((adm, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          padding: 10,
-                          backgroundColor: '#f8fafc',
-                          borderRadius: 8,
-                          border: '1px solid #e2e8f0',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 6,
-                        }}
-                      >
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <input
-                            type="text"
-                            className="patient-form-input"
-                            placeholder="Hospital Name"
-                            value={adm.hospital_name}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setAdmissions((prev) =>
-                                prev.map((item, i) => (i === idx ? { ...item, hospital_name: val } : item)),
-                              );
-                            }}
-                            style={{ height: 30, fontSize: 11.5, flex: 1 }}
-                          />
-                          <input
-                            type="text"
-                            className="patient-form-input"
-                            placeholder="Reason for Admission"
-                            value={adm.reason}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setAdmissions((prev) =>
-                                prev.map((item, i) => (i === idx ? { ...item, reason: val } : item)),
-                              );
-                            }}
-                            style={{ height: 30, fontSize: 11.5, flex: 1 }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeAdmission(idx)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 4 }}
-                            title="Remove Admission"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <div style={{ flex: 1 }}>
-                            <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600, display: 'block', marginBottom: 2 }}>Admission Date</span>
-                            <input
-                              type="date"
-                              className="patient-form-input"
-                              value={adm.admission_date || ''}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setAdmissions((prev) =>
-                                  prev.map((item, i) => (i === idx ? { ...item, admission_date: val } : item)),
-                                );
-                              }}
-                              style={{ height: 28, fontSize: 11 }}
-                            />
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600, display: 'block', marginBottom: 2 }}>Discharge Date</span>
-                            <input
-                              type="date"
-                              className="patient-form-input"
-                              value={adm.discharge_date || ''}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setAdmissions((prev) =>
-                                  prev.map((item, i) => (i === idx ? { ...item, discharge_date: val } : item)),
-                                );
-                              }}
-                              style={{ height: 28, fontSize: 11 }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <Button
+                  type="dashed"
+                  size="small"
+                  onClick={addAdmission}
+                  icon={<Plus size={12} />}
+                  style={{ fontSize: 11, borderRadius: 6 }}
+                >
+                  Add
+                </Button>
               </div>
-
-              {/* Injuries & Transfusion */}
-              <div className="patient-section-card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div className="patient-section-header">
-                  <div className="patient-section-badge" style={{ background: '#fef2f2', color: '#ef4444', borderColor: '#fecaca' }}>
-                    <Droplet size={14} />
-                  </div>
-                  <div className="patient-section-tag">Injuries &amp; Blood Transfusions</div>
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 650, color: '#0f172a', display: 'block', marginBottom: 4 }}>
-                    Previous Injuries &amp; Accidents
-                  </label>
-                  <textarea
-                    className="patient-form-input"
-                    rows={2}
-                    placeholder="Fractures, head injuries, major trauma, residual impairments..."
-                    value={injuries}
-                    onChange={(e) => setInjuries(e.target.value)}
-                    style={{ width: '100%', fontSize: 12 }}
-                  />
-                </div>
-
+              <div style={{ fontSize: 11.5, color: '#64748b', marginTop: -4 }}>
+                Inpatient stays, admission reasons, and duration.
+              </div>
+              {admissions.length === 0 ? (
                 <div
                   style={{
-                    backgroundColor: transfusionHas === 'Yes' ? '#fff1f2' : '#f8fafc',
-                    padding: 10,
-                    borderRadius: 8,
-                    border: `1px solid ${transfusionHas === 'Yes' ? '#fecdd3' : '#e2e8f0'}`,
-                    transition: 'all 0.15s ease',
+                    padding: '16px',
+                    textAlign: 'center',
+                    color: '#94a3b8',
+                    fontSize: 12,
+                    backgroundColor: '#f8fafc',
+                    borderRadius: 6,
+                    border: '1px dashed #e2e8f0',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: transfusionHas === 'Yes' ? 8 : 0 }}>
-                    <span style={{ fontSize: 12, fontWeight: 650, color: '#0f172a' }}>Blood Transfusion History</span>
-                    <SearchableSelect
-                      size="sm"
-                      width={110}
-                      searchable={false}
-                      options={YES_NO_UNKNOWN_OPTIONS}
-                      value={transfusionHas}
-                      onChange={(val) => setTransfusionHas(val as 'Yes' | 'No' | 'Unknown')}
+                  No past admissions recorded.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {admissions.map((adm, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: 10,
+                        backgroundColor: '#f8fafc',
+                        borderRadius: 8,
+                        border: '1px solid #e2e8f0',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 6,
+                      }}
+                    >
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input
+                          type="text"
+                          className="patient-form-input"
+                          placeholder="Hospital Name"
+                          value={adm.hospital_name}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setAdmissions((prev) =>
+                              prev.map((item, i) => (i === idx ? { ...item, hospital_name: val } : item)),
+                            );
+                          }}
+                          style={{ height: 30, fontSize: 11.5, flex: 1 }}
+                        />
+                        <input
+                          type="text"
+                          className="patient-form-input"
+                          placeholder="Reason for Admission"
+                          value={adm.reason}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setAdmissions((prev) =>
+                              prev.map((item, i) => (i === idx ? { ...item, reason: val } : item)),
+                            );
+                          }}
+                          style={{ height: 30, fontSize: 11.5, flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeAdmission(idx)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 4 }}
+                          title="Remove Admission"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600, display: 'block', marginBottom: 2 }}>Admission Date</span>
+                          <input
+                            type="date"
+                            className="patient-form-input"
+                            value={adm.admission_date || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setAdmissions((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, admission_date: val } : item)),
+                              );
+                            }}
+                            style={{ height: 28, fontSize: 11 }}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600, display: 'block', marginBottom: 2 }}>Discharge Date</span>
+                          <input
+                            type="date"
+                            className="patient-form-input"
+                            value={adm.discharge_date || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setAdmissions((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, discharge_date: val } : item)),
+                              );
+                            }}
+                            style={{ height: 28, fontSize: 11 }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            */}
+
+            {/* Injuries & Transfusion */}
+            <div className="patient-section-card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="patient-section-header">
+                <div className="patient-section-badge" style={{ background: '#fef2f2', color: '#ef4444', borderColor: '#fecaca' }}>
+                  <Droplet size={14} />
+                </div>
+                <div className="patient-section-tag">Injuries &amp; Blood Transfusions</div>
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <label style={{ fontSize: 12, fontWeight: 650, color: '#0f172a' }}>
+                    Previous Injuries &amp; Accidents
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Date:</span>
+                    <input
+                      type="date"
+                      className="patient-form-input"
+                      value={injuryDate}
+                      onChange={(e) => setInjuryDate(e.target.value)}
+                      style={{ height: 28, fontSize: 11.5, width: 140 }}
                     />
                   </div>
-                  {transfusionHas === 'Yes' && (
-                    <input
-                      type="text"
-                      className="patient-form-input"
-                      placeholder="Transfusion reason, reactions, units..."
-                      value={transfusionDetails}
-                      onChange={(e) => setTransfusionDetails(e.target.value)}
-                      style={{ height: 30, fontSize: 11.5 }}
-                    />
-                  )}
                 </div>
+                <textarea
+                  className="patient-form-input"
+                  rows={2}
+                  placeholder="Fractures, head injuries, major trauma, residual impairments..."
+                  value={injuries}
+                  onChange={(e) => setInjuries(e.target.value)}
+                  style={{ width: '100%', fontSize: 12 }}
+                />
+              </div>
+
+              <div
+                style={{
+                  backgroundColor: transfusionHas === 'Yes' ? '#fff1f2' : '#f8fafc',
+                  padding: 12,
+                  borderRadius: 8,
+                  border: `1px solid ${transfusionHas === 'Yes' ? '#fecdd3' : '#e2e8f0'}`,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: transfusionHas === 'Yes' ? 10 : 0 }}>
+                  <span style={{ fontSize: 12, fontWeight: 650, color: '#0f172a' }}>Blood Transfusion History</span>
+                  <SearchableSelect
+                    size="sm"
+                    width={110}
+                    searchable={false}
+                    options={YES_NO_UNKNOWN_OPTIONS}
+                    value={transfusionHas}
+                    onChange={(val) => setTransfusionHas(val as 'Yes' | 'No' | 'Unknown')}
+                  />
+                </div>
+                {transfusionHas === 'Yes' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 10 }}>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>
+                        Transfusion Details / Reason
+                      </label>
+                      <input
+                        type="text"
+                        className="patient-form-input"
+                        placeholder="Transfusion reason, reactions, units..."
+                        value={transfusionDetails}
+                        onChange={(e) => setTransfusionDetails(e.target.value)}
+                        style={{ height: 32, fontSize: 11.5 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>
+                        Transfusion Date
+                      </label>
+                      <input
+                        type="date"
+                        className="patient-form-input"
+                        value={transfusionDate}
+                        onChange={(e) => setTransfusionDate(e.target.value)}
+                        style={{ height: 32, fontSize: 11.5, width: '100%' }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -2853,244 +3442,6 @@ export const ClinicalHistorySectionContent = forwardRef<
               </div>
             </div>
 
-            {/* Medications & Treatments */}
-            <div className="patient-section-card">
-              <div className="patient-section-header" style={{ justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div className="patient-section-badge" style={{ background: '#ecfdf5', color: '#059669', borderColor: '#a7f3d0' }}>
-                    <Pill size={14} />
-                  </div>
-                  <div>
-                    <div className="patient-section-tag">
-                      Current Medications &amp; Ongoing Treatments ({currentMeds.length})
-                    </div>
-                  </div>
-                </div>
-                <Button
-                  type="dashed"
-                  size="small"
-                  onClick={addCurrentMed}
-                  icon={<Plus size={12} />}
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, borderRadius: 6, fontWeight: 500 }}
-                >
-                  Add Medication
-                </Button>
-              </div>
-              <div style={{ fontSize: 12, color: '#64748b', marginTop: -4 }}>
-                List all current active prescription medicines, dosages, frequencies, and start dates.
-              </div>
-
-              {currentMeds.length === 0 ? (
-                <div
-                  style={{
-                    padding: '20px 16px',
-                    textAlign: 'center',
-                    color: '#64748b',
-                    fontSize: 12.5,
-                    backgroundColor: '#f8fafc',
-                    borderRadius: 8,
-                    border: '1px dashed #cbd5e1',
-                  }}
-                >
-                  <Pill size={22} style={{ margin: '0 auto 6px', color: '#94a3b8' }} />
-                  <div>No current medications listed.</div>
-                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-                    Click &quot;Add Medication&quot; to log current prescriptions.
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {/* Table Column Headers */}
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '2fr 1fr 1fr 1.1fr 1.5fr 36px',
-                      gap: 6,
-                      padding: '0 8px',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: '#64748b',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    <span>Medicine Name</span>
-                    <span>Dosage</span>
-                    <span>Frequency</span>
-                    <span>Started Date</span>
-                    <span>Remarks / Prescriber</span>
-                    <span></span>
-                  </div>
-
-                  {currentMeds.map((m, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '2fr 1fr 1fr 1.1fr 1.5fr 36px',
-                        gap: 6,
-                        alignItems: 'center',
-                        backgroundColor: '#f8fafc',
-                        padding: '6px 8px',
-                        borderRadius: 8,
-                        border: '1px solid #e2e8f0',
-                        transition: 'border-color 0.15s ease',
-                      }}
-                    >
-                      <input
-                        type="text"
-                        className="patient-form-input"
-                        placeholder="Medicine Name (e.g. Levothyroxine)"
-                        value={m.medicine_name}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setCurrentMeds((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, medicine_name: val } : item)),
-                          );
-                        }}
-                        style={{ height: 32 }}
-                      />
-                      <input
-                        type="text"
-                        className="patient-form-input"
-                        placeholder="Dosage (50mcg)"
-                        value={m.dosage || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setCurrentMeds((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, dosage: val } : item)),
-                          );
-                        }}
-                        style={{ height: 32 }}
-                      />
-                      <input
-                        type="text"
-                        className="patient-form-input"
-                        placeholder="Frequency (OD, BD)"
-                        value={m.frequency || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setCurrentMeds((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, frequency: val } : item)),
-                          );
-                        }}
-                        style={{ height: 32 }}
-                      />
-                      <input
-                        type="date"
-                        className="patient-form-input"
-                        value={m.started_date || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setCurrentMeds((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, started_date: val } : item)),
-                          );
-                        }}
-                        style={{ height: 32 }}
-                      />
-                      <input
-                        type="text"
-                        className="patient-form-input"
-                        placeholder="Remarks / Prescribed By"
-                        value={m.remarks || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setCurrentMeds((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, remarks: val } : item)),
-                          );
-                        }}
-                        style={{ height: 32 }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeCurrentMed(idx)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: '#ef4444',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: 4,
-                          borderRadius: 6,
-                        }}
-                        title="Remove Medication"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Ongoing Treatments & Past Medications */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12, marginTop: 4 }}>
-                <div style={{ padding: 12, backgroundColor: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <label style={{ fontSize: 12, fontWeight: 650, color: '#334155', margin: 0 }}>
-                      Previous / Discontinued Medications ({previousMeds.length})
-                    </label>
-                    <Button
-                      type="dashed"
-                      size="small"
-                      onClick={addPreviousMed}
-                      icon={<Plus size={10} />}
-                      style={{ fontSize: 11, height: 24, borderRadius: 5 }}
-                    >
-                      Add Past Med
-                    </Button>
-                  </div>
-                  {previousMeds.length === 0 ? (
-                    <div style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', padding: '6px 0' }}>
-                      No discontinued medications recorded.
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {previousMeds.map((pm, idx) => (
-                        <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <input
-                            type="text"
-                            className="patient-form-input"
-                            placeholder="Past Med (e.g. Omeprazole 20mg)"
-                            value={pm.medicine_name}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setPreviousMeds((prev) =>
-                                prev.map((item, i) => (i === idx ? { ...item, medicine_name: val } : item)),
-                              );
-                            }}
-                            style={{ height: 30, fontSize: 11.5, flex: 1 }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removePreviousMed(idx)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 4 }}
-                            title="Remove"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ padding: 12, backgroundColor: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                  <label style={{ fontSize: 12, fontWeight: 650, color: '#334155', display: 'block', marginBottom: 6 }}>
-                    Ongoing Clinical Therapies / Special Treatments
-                  </label>
-                  <textarea
-                    className="patient-form-input"
-                    rows={2}
-                    placeholder="e.g. Physiotherapy twice weekly, CPAP machine, dialysis, chemotherapy..."
-                    value={ongoingTreatments}
-                    onChange={(e) => setOngoingTreatments(e.target.value)}
-                    style={{ width: '100%', fontSize: 11.5 }}
-                  />
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
@@ -3134,115 +3485,204 @@ export const ClinicalHistorySectionContent = forwardRef<
               </div>
 
               {familyMembers.length === 0 ? (
-                <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: 12, backgroundColor: '#f8fafc', borderRadius: 6 }}>
-                  No family medical records added. Click &quot;Add Relative&quot; to log family history.
+                <div
+                  style={{
+                    padding: '24px 16px',
+                    textAlign: 'center',
+                    color: '#64748b',
+                    fontSize: 12.5,
+                    backgroundColor: '#f8fafc',
+                    borderRadius: 8,
+                    border: '1px dashed #cbd5e1',
+                  }}
+                >
+                  <Users size={24} style={{ margin: '0 auto 8px', color: '#94a3b8' }} />
+                  <div>No family medical records added.</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                    Click &quot;Add Relative&quot; to log family history.
+                  </div>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {familyMembers.map((fm, idx) => (
                     <div
                       key={idx}
                       style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1.4fr 2fr 1fr 1.3fr 1.5fr 1.5fr auto',
-                        gap: 8,
-                        alignItems: 'center',
-                        backgroundColor: '#f8fafc',
-                        padding: 10,
-                        borderRadius: 6,
+                        backgroundColor: '#fff',
+                        borderRadius: 10,
                         border: '1px solid #e2e8f0',
+                        padding: 14,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 12,
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
                       }}
                     >
-                      <div>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 2 }}>Relationship</label>
-                        <SearchableSelect
-                          size="sm"
-                          searchable={true}
-                          placeholder="Select..."
-                          searchPlaceholder="Search relationship..."
-                          options={FAMILY_RELATIONSHIP_OPTIONS}
-                          value={fm.relationship || 'Father'}
-                          onChange={(val) => {
-                            setFamilyMembers((prev) =>
-                              prev.map((item, i) => (i === idx ? { ...item, relationship: val } : item)),
-                            );
+                      {/* Item Top Bar with Relative badge & Remove button */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          borderBottom: '1px solid #f1f5f9',
+                          paddingBottom: 8,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              color: '#2563eb',
+                              backgroundColor: '#eff6ff',
+                              padding: '2px 8px',
+                              borderRadius: 12,
+                              border: '1px solid #dbeafe',
+                            }}
+                          >
+                            Relative #{idx + 1}
+                          </span>
+                          {fm.relationship && (
+                            <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>
+                              {fm.relationship}
+                              {fm.disease_name ? ` · ${fm.disease_name}` : ''}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFamilyMember(idx)}
+                          style={{
+                            background: '#fff',
+                            border: '1px solid #fee2e2',
+                            cursor: 'pointer',
+                            color: '#ef4444',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            fontSize: 11.5,
+                            fontWeight: 500,
                           }}
-                        />
+                          title="Delete Relative"
+                        >
+                          <Trash2 size={13} />
+                          <span>Remove</span>
+                        </button>
                       </div>
 
+                      {/* Row 1: Relationship, Disease / Condition */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
+                        <div>
+                          <label style={{ fontSize: 11.5, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                            Relationship <span style={{ color: '#ef4444' }}>*</span>
+                          </label>
+                          <SearchableSelect
+                            searchable={true}
+                            placeholder="Select relationship..."
+                            searchPlaceholder="Search relationship..."
+                            options={FAMILY_RELATIONSHIP_OPTIONS}
+                            value={fm.relationship || 'Father'}
+                            onChange={(val) => {
+                              setFamilyMembers((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, relationship: val } : item)),
+                              );
+                            }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: 11.5, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                            Disease / Condition
+                          </label>
+                          <input
+                            type="text"
+                            className="patient-form-input"
+                            placeholder="e.g. Type 2 Diabetes, Breast Cancer, Hypertension"
+                            value={fm.disease_name || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setFamilyMembers((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, disease_name: val } : item)),
+                              );
+                            }}
+                            style={{ height: 38, width: '100%' }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Row 2: Dx Age, Status, Cause of Death */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                        <div>
+                          <label style={{ fontSize: 11.5, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                            Dx Age
+                          </label>
+                          <input
+                            type="number"
+                            className="patient-form-input"
+                            placeholder="e.g. 52"
+                            value={fm.age_at_diagnosis != null ? fm.age_at_diagnosis : ''}
+                            onChange={(e) => {
+                              const val = e.target.value ? parseInt(e.target.value, 10) : null;
+                              setFamilyMembers((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, age_at_diagnosis: val } : item)),
+                              );
+                            }}
+                            style={{ height: 38, width: '100%' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: 11.5, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                            Status
+                          </label>
+                          <SearchableSelect
+                            searchable={false}
+                            options={FAMILY_HEALTH_STATUS_OPTIONS}
+                            value={fm.current_health_status || 'Healthy / Normal'}
+                            onChange={(val) => {
+                              setFamilyMembers((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, current_health_status: val } : item)),
+                              );
+                            }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: 11.5, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                            Cause of Death
+                          </label>
+                          <input
+                            type="text"
+                            className="patient-form-input"
+                            placeholder={fm.current_health_status === 'Deceased' ? 'e.g. Heart attack at 72' : 'N/A'}
+                            disabled={fm.current_health_status !== 'Deceased'}
+                            value={fm.cause_of_death || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setFamilyMembers((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, cause_of_death: val } : item)),
+                              );
+                            }}
+                            style={{
+                              height: 38,
+                              width: '100%',
+                              backgroundColor: fm.current_health_status !== 'Deceased' ? '#f1f5f9' : '#ffffff',
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Row 3: Remarks */}
                       <div>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block' }}>Disease / Condition</label>
-                        <input
-                          type="text"
+                        <label style={{ fontSize: 11.5, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                          Remarks
+                        </label>
+                        <textarea
                           className="patient-form-input"
-                          placeholder="e.g. Type 2 Diabetes, Breast Cancer"
-                          value={fm.disease_name || ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFamilyMembers((prev) =>
-                              prev.map((item, i) => (i === idx ? { ...item, disease_name: val } : item)),
-                            );
-                          }}
-                          style={{ height: 30, fontSize: 11 }}
-                        />
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block' }}>Dx Age</label>
-                        <input
-                          type="number"
-                          className="patient-form-input"
-                          placeholder="Age"
-                          value={fm.age_at_diagnosis != null ? fm.age_at_diagnosis : ''}
-                          onChange={(e) => {
-                            const val = e.target.value ? parseInt(e.target.value, 10) : null;
-                            setFamilyMembers((prev) =>
-                              prev.map((item, i) => (i === idx ? { ...item, age_at_diagnosis: val } : item)),
-                            );
-                          }}
-                          style={{ height: 30, fontSize: 11 }}
-                        />
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 2 }}>Status</label>
-                        <SearchableSelect
-                          size="sm"
-                          searchable={false}
-                          options={FAMILY_HEALTH_STATUS_OPTIONS}
-                          value={fm.current_health_status || 'Healthy / Normal'}
-                          onChange={(val) => {
-                            setFamilyMembers((prev) =>
-                              prev.map((item, i) => (i === idx ? { ...item, current_health_status: val } : item)),
-                            );
-                          }}
-                        />
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block' }}>Cause of Death</label>
-                        <input
-                          type="text"
-                          className="patient-form-input"
-                          placeholder={fm.current_health_status === 'Deceased' ? 'e.g. Heart attack at 72' : 'N/A'}
-                          disabled={fm.current_health_status !== 'Deceased'}
-                          value={fm.cause_of_death || ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFamilyMembers((prev) =>
-                              prev.map((item, i) => (i === idx ? { ...item, cause_of_death: val } : item)),
-                            );
-                          }}
-                          style={{ height: 30, fontSize: 11, backgroundColor: fm.current_health_status !== 'Deceased' ? '#f1f5f9' : '#ffffff' }}
-                        />
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block' }}>Remarks</label>
-                        <input
-                          type="text"
-                          className="patient-form-input"
-                          placeholder="Additional notes..."
+                          rows={2}
+                          placeholder="Additional clinical remarks, disease progression, hereditary notes..."
                           value={fm.remarks || ''}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -3250,18 +3690,8 @@ export const ClinicalHistorySectionContent = forwardRef<
                               prev.map((item, i) => (i === idx ? { ...item, remarks: val } : item)),
                             );
                           }}
-                          style={{ height: 30, fontSize: 11 }}
+                          style={{ width: '100%', resize: 'vertical' }}
                         />
-                      </div>
-
-                      <div style={{ paddingTop: 16 }}>
-                        <button
-                          type="button"
-                          onClick={() => removeFamilyMember(idx)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}
-                        >
-                          <Trash2 size={16} />
-                        </button>
                       </div>
                     </div>
                   ))}
@@ -3560,24 +3990,29 @@ export const ClinicalHistorySectionContent = forwardRef<
                   <div style={{ fontSize: 12, color: '#64748b', marginTop: -4 }}>
                     Screen for hormonal exposure, contraceptive usage, breastfeeding history, and fertility interventions.
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {/* 1. Breastfeeding History */}
                     <div
                       style={{
-                        padding: 12,
+                        padding: 14,
                         backgroundColor: breastfeedingHas === 'Yes' ? '#f0fdf4' : '#f8fafc',
                         borderRadius: 8,
                         border: `1px solid ${breastfeedingHas === 'Yes' ? '#86efac' : '#e2e8f0'}`,
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 8,
+                        gap: 10,
                         transition: 'all 0.15s ease',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 12, fontWeight: 650, color: '#0f172a' }}>Breastfeeding History</span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                        <div>
+                          <span style={{ fontSize: 12.5, fontWeight: 650, color: '#0f172a' }}>Breastfeeding History (Lactation)</span>
+                          <span style={{ fontSize: 11, color: '#64748b', display: 'block', marginTop: 1 }}>
+                            Record breastfeeding practices and nursing history
+                          </span>
+                        </div>
                         <SearchableSelect
-                          size="sm"
-                          width={130}
+                          width={140}
                           searchable={false}
                           options={YES_NO_NA_OPTIONS}
                           value={breastfeedingHas}
@@ -3585,19 +4020,25 @@ export const ClinicalHistorySectionContent = forwardRef<
                         />
                       </div>
                       {breastfeedingHas === 'Yes' && (
-                        <input
-                          type="text"
-                          className="patient-form-input"
-                          placeholder="Duration (e.g. 12 months, exclusive 6 mos)"
-                          value={breastfeedingDuration}
-                          onChange={(e) => setBreastfeedingDuration(e.target.value)}
-                          style={{ height: 32, fontSize: 11.5 }}
-                        />
+                        <div>
+                          <label style={{ fontSize: 11.5, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                            Breastfeeding Duration &amp; Details
+                          </label>
+                          <input
+                            type="text"
+                            className="patient-form-input"
+                            placeholder="Duration (e.g. 12 months, exclusive 6 mos)"
+                            value={breastfeedingDuration}
+                            onChange={(e) => setBreastfeedingDuration(e.target.value)}
+                            style={{ height: 38, fontSize: 13 }}
+                          />
+                        </div>
                       )}
                     </div>
 
-                    <div style={{ padding: 12, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                      <label style={{ fontSize: 11.5, fontWeight: 650, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    {/* 2. Contraceptive Usage */}
+                    <div style={{ padding: 14, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                      <label style={{ fontSize: 12, fontWeight: 650, color: '#334155', display: 'block', marginBottom: 6 }}>
                         Contraceptive Usage
                       </label>
                       <input
@@ -3606,12 +4047,13 @@ export const ClinicalHistorySectionContent = forwardRef<
                         placeholder="e.g. OCPs, IUCD (Copper-T), Barrier, None"
                         value={contraceptiveUsage}
                         onChange={(e) => setContraceptiveUsage(e.target.value)}
-                        style={{ height: 32, fontSize: 11.5 }}
+                        style={{ height: 38, fontSize: 13 }}
                       />
                     </div>
 
-                    <div style={{ padding: 12, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                      <label style={{ fontSize: 11.5, fontWeight: 650, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    {/* 3. Hormone Replacement Therapy (HRT) */}
+                    <div style={{ padding: 14, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                      <label style={{ fontSize: 12, fontWeight: 650, color: '#334155', display: 'block', marginBottom: 6 }}>
                         Hormone Replacement Therapy (HRT)
                       </label>
                       <input
@@ -3620,12 +4062,13 @@ export const ClinicalHistorySectionContent = forwardRef<
                         placeholder="e.g. Estrogen therapy, progesterone, duration"
                         value={hormoneTherapy}
                         onChange={(e) => setHormoneTherapy(e.target.value)}
-                        style={{ height: 32, fontSize: 11.5 }}
+                        style={{ height: 38, fontSize: 13 }}
                       />
                     </div>
 
-                    <div style={{ padding: 12, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                      <label style={{ fontSize: 11.5, fontWeight: 650, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    {/* 4. Infertility Treatment History */}
+                    <div style={{ padding: 14, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                      <label style={{ fontSize: 12, fontWeight: 650, color: '#334155', display: 'block', marginBottom: 6 }}>
                         Infertility Treatment History
                       </label>
                       <input
@@ -3634,7 +4077,7 @@ export const ClinicalHistorySectionContent = forwardRef<
                         placeholder="e.g. Ovulation induction, IUI, IVF, None"
                         value={infertilityTreatment}
                         onChange={(e) => setInfertilityTreatment(e.target.value)}
-                        style={{ height: 32, fontSize: 11.5 }}
+                        style={{ height: 38, fontSize: 13 }}
                       />
                     </div>
                   </div>
