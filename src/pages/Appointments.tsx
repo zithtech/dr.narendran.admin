@@ -577,6 +577,104 @@ export default function Appointments() {
             nameOf={(a) => `${a.patientName} (${a.tokenNumber})`}
             onRowClick={(a) => openDetails(a)}
             activeId={viewingAppointment?.id ?? null}
+            minTableWidth={800}
+            renderMobileCard={(appt) => {
+              const patientInitials = initials(appt.patientName || 'Patient');
+              return (
+                <div
+                  key={appt.id}
+                  data-testid={`appointment-card-${appt.id}`}
+                  className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-2xs space-y-3 cursor-pointer hover:border-slate-300 transition-colors"
+                  onClick={() => openDetails(appt)}
+                >
+                  {/* Header: Patient, Token, Status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-700 font-bold text-xs grid place-items-center shrink-0 border border-slate-200">
+                        {patientInitials}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                          {appt.patientName}
+                        </h4>
+                        <div className="text-[11px] text-slate-500">
+                          {appt.patientPhone || 'No phone'} {appt.patientGender ? `• ${titleCase(appt.patientGender)}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="shrink-0 flex items-center gap-1.5">
+                      <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                        {appt.tokenNumber}
+                      </span>
+                      {renderStatus(appt.status)}
+                    </div>
+                  </div>
+
+                  {/* Doctor & Schedule Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-600 bg-slate-50/70 p-2.5 rounded-lg border border-slate-100">
+                    <div>
+                      <span className="text-slate-400 block text-[10px] font-semibold">Doctor & Specialty</span>
+                      <span className="font-semibold text-slate-800 truncate block">
+                        {appt.doctorName}
+                      </span>
+                      <span className="text-[10.5px] text-slate-500">
+                        {appt.doctorSpecialty || 'General Practitioner'} {appt.branchName ? `• ${appt.branchName}` : ''}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] font-semibold">Date & Time</span>
+                      <span className="font-semibold text-slate-800 flex items-center gap-1">
+                        <Clock size={11} className="text-blue-600 shrink-0" />
+                        {appt.date} at {appt.time}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Purpose / Remarks */}
+                  {appt.purpose && (
+                    <div className="text-[11px] text-slate-700 bg-white p-2 rounded border border-slate-100">
+                      <span className="font-semibold text-slate-500 text-[10px] block">Purpose</span>
+                      <p className="line-clamp-2">{appt.purpose}</p>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div
+                    className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        className="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-md border border-slate-200 inline-flex items-center gap-1 transition-colors cursor-pointer"
+                        onClick={() => openDetails(appt)}
+                        aria-label={`View details for ${appt.patientName}`}
+                      >
+                        <Eye size={12} />
+                        <span>Details</span>
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <Dropdown
+                        menu={{ items: getActionMenuItems(appt) }}
+                        trigger={['click']}
+                        placement="bottomRight"
+                      >
+                        <button
+                          type="button"
+                          className="p-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                          title="Actions"
+                          aria-label={`Card actions for ${appt.patientName}`}
+                        >
+                          <MoreVertical size={14} />
+                        </button>
+                      </Dropdown>
+                    </div>
+                  </div>
+                </div>
+              );
+            }}
             rowActions={(a) => (
               <div
                 onClick={(e) => e.stopPropagation()}

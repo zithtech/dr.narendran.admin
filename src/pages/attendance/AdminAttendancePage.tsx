@@ -38,6 +38,7 @@ import { useSearchParams } from 'react-router';
 import api from '../../utils/api';
 import { CreateDrawer } from '../../components/ui/Drawer';
 import { CommonPageHeader, CommonPagination, StatusPill } from '../../components/ui/CommonTable';
+import { ViewModeSwitcher } from '../../components/ui/ViewModeSwitcher';
 
 interface DeptStyle {
   bar: string;
@@ -1232,32 +1233,10 @@ export default function AdminAttendancePage({
                     )}
                   </button>
 
-                  <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-2xs">
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('cards')}
-                      className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                        viewMode === 'cards'
-                          ? 'bg-blue-50 text-blue-600'
-                          : 'text-slate-400 hover:text-slate-700'
-                      }`}
-                      title="Card View"
-                    >
-                      <LayoutGrid size={15} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('table')}
-                      className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                        viewMode === 'table'
-                          ? 'bg-blue-50 text-blue-600'
-                          : 'text-slate-400 hover:text-slate-700'
-                      }`}
-                      title="Table View"
-                    >
-                      <List size={15} />
-                    </button>
-                  </div>
+                  <ViewModeSwitcher
+                    viewMode={viewMode}
+                    onViewModeChange={setViewMode}
+                  />
 
                   <button
                     type="button"

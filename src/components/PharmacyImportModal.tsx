@@ -238,7 +238,7 @@ export default function PharmacyImportModal({
         aria-labelledby="import-modal-title"
       >
         {/* Modal Header */}
-        <div className="ui-modal-head border-b border-slate-100 bg-white px-8 pt-7 pb-5 flex items-center justify-between shrink-0">
+        <div className="ui-modal-head border-b border-slate-100 bg-white px-4 sm:px-8 pt-5 sm:pt-7 pb-4 sm:pb-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3.5">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700 border border-teal-200/80 shrink-0">
               <FileSpreadsheet size={21} />
@@ -255,7 +255,7 @@ export default function PharmacyImportModal({
           {step !== 'IMPORTING' && (
             <button
               type="button"
-              className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-lg transition-colors cursor-pointer"
+              className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-lg transition-colors cursor-pointer shrink-0"
               onClick={onClose}
               aria-label="Close modal"
             >
@@ -265,7 +265,7 @@ export default function PharmacyImportModal({
         </div>
 
         {/* Modal Content */}
-        <div className="ui-modal-body px-8 py-6 flex flex-col gap-6 overflow-y-auto flex-1 text-slate-700">
+        <div className="ui-modal-body px-4 sm:px-8 py-4 sm:py-6 flex flex-col gap-6 overflow-y-auto flex-1 text-slate-700">
           {/* STEP 1: UPLOAD */}
           {step === 'UPLOAD' && (
             <div className="flex flex-col gap-6">
@@ -763,7 +763,7 @@ export default function PharmacyImportModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="ui-modal-foot border-t border-slate-200/80 bg-slate-50 px-8 py-4 rounded-b-2xl flex items-center justify-between shrink-0">
+        <div className="ui-modal-foot border-t border-slate-200/80 bg-slate-50 px-4 sm:px-8 py-3.5 sm:py-4 rounded-b-2xl flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
           {step === 'UPLOAD' && (
             <>
               <div className="text-xs text-slate-500 font-medium">

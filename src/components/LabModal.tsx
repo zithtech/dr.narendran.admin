@@ -30,6 +30,15 @@ export interface Lab {
   end_time: string | null;
   services?: { id: string; name: string }[];
   status: 'ACTIVE' | 'INACTIVE';
+  portal_account?: {
+    id: string;
+    username: string;
+    email: string;
+    status: string;
+    must_change_password: boolean;
+    last_login_at?: string | null;
+    created_at: string;
+  } | null | undefined;
   created_at: string;
   updated_at: string;
 }
@@ -561,6 +570,40 @@ export default function LabModal({ isOpen, onClose, lab, onSave }: LabModalProps
             align-items: center;
             justify-content: flex-end;
             gap: 10px;
+          }
+          @media (max-width: 640px) {
+            .lab-drawer-modal {
+              width: 100vw !important;
+              max-width: 100vw !important;
+              border-radius: 0 !important;
+            }
+            .lab-drawer-modal .ui-modal-head {
+              padding: 14px 16px !important;
+            }
+            .lab-drawer-modal .ui-modal-body {
+              padding: 14px 12px !important;
+              gap: 12px !important;
+            }
+            .lab-section-card {
+              padding: 14px 12px !important;
+              border-radius: 10px !important;
+            }
+          }
+          @media (max-width: 480px) {
+            .lab-drawer-modal .ui-modal-foot {
+              flex-direction: column-reverse !important;
+              padding: 12px 14px !important;
+              gap: 8px !important;
+            }
+            .lab-drawer-modal .ui-modal-foot button {
+              width: 100% !important;
+              min-height: 40px !important;
+              justify-content: center !important;
+            }
+            .lab-status-btn {
+              flex: 1 1 100% !important;
+              width: 100% !important;
+            }
           }
         `}</style>
 

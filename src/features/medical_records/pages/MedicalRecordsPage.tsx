@@ -6,6 +6,7 @@ import {
   Eye,
   FileSpreadsheet,
   FileText,
+  FolderOpen,
   Pencil,
   Plus,
   RefreshCw,
@@ -21,6 +22,7 @@ import { CommonPagination, exportToCSV } from '../../../components/ui/CommonTabl
 import { ConfirmDialog } from '../../../components/ui/Modal';
 import { Badge } from '../../../components/ui/primitives';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
+import { ViewModeSwitcher } from '../../../components/ui/ViewModeSwitcher';
 import { usePermission } from '../../../context/PermissionContext';
 import { timeAgo } from '../../../lib/format';
 import { EditMedicalRecordModal } from '../components/EditMedicalRecordModal';
@@ -92,6 +94,7 @@ export default function MedicalRecordsPage() {
   const [previewRecord, setPreviewRecord] = useState<MedicalRecord | null>(null);
   const [editingRecord, setEditingRecord] = useState<MedicalRecord | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<MedicalRecord | null>(null);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -491,10 +494,216 @@ export default function MedicalRecordsPage() {
                   <X size={12} className="text-slate-500" />
                 </button>
               )}
+
+              {/* View Mode Switcher */}
+              <ViewModeSwitcher
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+              />
             </div>
           </div>
 
+          {/* ── Cards View Section ── */}
+          {viewMode === 'cards' && (
+            <div className="p-3 sm:p-4 bg-slate-50/50 min-h-[300px] border-b border-slate-200">
+              {loading && records.length === 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {SKELETON_ROWS.map((i) => (
+                    <div
+                      key={i}
+                      className="animate-pulse bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="h-4 bg-slate-100 rounded w-24" />
+                        <div className="h-4 bg-slate-100 rounded w-16" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="h-4 bg-slate-100 rounded w-36" />
+                        <div className="h-3 bg-slate-50 rounded w-24" />
+                      </div>
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                        <div className="h-6 bg-slate-100 rounded w-20" />
+                        <div className="h-6 bg-slate-100 rounded w-16" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : records.length === 0 ? (
+                <div className="py-12 text-center bg-white rounded-xl border border-slate-200 shadow-2xs">
+                  <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
+                    <div className="p-2.5 rounded-full bg-slate-50 text-slate-400">
+                      {hasActiveFilters ? <SearchX size={22} /> : <FileText size={22} />}
+                    </div>
+                    <strong className="text-xs font-semibold text-slate-700">
+                      {hasActiveFilters
+                        ? 'No matching medical records found'
+                        : 'No medical records uploaded yet'}
+                    </strong>
+                    <span className="text-[11px] text-slate-500 max-w-sm">
+                      {hasActiveFilters
+                        ? 'Try clearing filters or search terms.'
+                        : 'Upload patient lab reports, discharge summaries, or clinical documents directly.'}
+                    </span>
+                    <div className="mt-1.5">
+                      {hasActiveFilters ? (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                          onClick={resetFilters}
+                        >
+                          Clear filters
+                        </button>
+                      ) : isRecordCreatable ? (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1.5 h-7 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium cursor-pointer shadow-2xs"
+                          onClick={() => {
+                            setActivePrescribedTest(null);
+                            setIsUploadOpen(true);
+                          }}
+                        >
+                          <Plus size={13} /> Upload Medical Record
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {records.map((rec) => (
+                    <div
+                      key={rec.id}
+                      className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 flex flex-col justify-between hover:border-slate-300 transition-all gap-3"
+                    >
+                      {/* Top Bar: Date & Category Badge */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                          <Calendar size={13} className="text-slate-400" />
+                          <span>{rec.reportDate || '—'}</span>
+                        </div>
+                        <Badge tone={rec.isExternal ? 'violet' : 'blue'}>
+                          {rec.isExternal ? 'External' : 'Prescribed'}
+                        </Badge>
+                      </div>
+
+                      {/* Document Details */}
+                      <div>
+                        <div
+                          className="font-semibold text-sm text-slate-900 hover:text-blue-600 cursor-pointer line-clamp-1"
+                          onClick={() => setPreviewRecord(rec)}
+                          title="Click to preview document"
+                        >
+                          {rec.testName}
+                        </div>
+                        <div className="text-[11px] text-slate-400 mt-0.5 truncate">
+                          {rec.fileName} • {formatFileSize(rec.fileSize)}
+                        </div>
+                        {rec.notes && (
+                          <div
+                            className="text-[11px] text-slate-500 italic mt-1 line-clamp-2"
+                            title={rec.notes}
+                          >
+                            {rec.notes}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Patient & Uploader Meta */}
+                      <div className="pt-2 border-t border-slate-100 flex flex-col gap-1.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400 text-[11px]">Patient:</span>
+                          <span
+                            className="font-semibold text-blue-600 hover:text-blue-700 cursor-pointer truncate max-w-[180px]"
+                            onClick={() => handleSelectPatient(rec.patientId)}
+                            title="Open Dossier"
+                          >
+                            {rec.patientName}
+                          </span>
+                        </div>
+                        {rec.patientPhone && (
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-400">Phone:</span>
+                            <span className="text-slate-600">{rec.patientPhone}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-400">Uploaded By:</span>
+                          <span className="text-slate-600 font-medium truncate max-w-[160px]">
+                            {rec.uploadedBy} {rec.uploaderName ? `(${rec.uploaderName})` : ''}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Card Footer: Dossier & Row Actions */}
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1">
+                        <button
+                          type="button"
+                          className="px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-600 hover:text-white rounded-lg border border-blue-200/70 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                          onClick={() => handleSelectPatient(rec.patientId)}
+                          title="Open Patient Dossier"
+                        >
+                          <FolderOpen size={12} />
+                          <span>Dossier</span>
+                        </button>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            className="p-1.5 rounded-md text-slate-500 hover:text-blue-600 hover:bg-blue-50 border border-slate-200/60 cursor-pointer"
+                            onClick={() => setPreviewRecord(rec)}
+                            title="Preview document"
+                            aria-label={`Preview ${rec.testName}`}
+                          >
+                            <Eye size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            className="p-1.5 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200/60 cursor-pointer"
+                            onClick={() =>
+                              window.open(
+                                getAuthenticatedFileUrl(rec.documentUrl, true),
+                                '_blank',
+                                'noopener,noreferrer',
+                              )
+                            }
+                            title="Download document"
+                            aria-label={`Download ${rec.testName}`}
+                          >
+                            <Download size={13} />
+                          </button>
+                          {isRecordUpdatable && (
+                            <button
+                              type="button"
+                              className="p-1.5 rounded-md text-slate-500 hover:text-amber-600 hover:bg-amber-50 border border-slate-200/60 cursor-pointer"
+                              onClick={() => setEditingRecord(rec)}
+                              title="Edit metadata"
+                              aria-label={`Edit ${rec.testName}`}
+                            >
+                              <Pencil size={13} />
+                            </button>
+                          )}
+                          {isRecordDeletable && (
+                            <button
+                              type="button"
+                              className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200/60 cursor-pointer"
+                              onClick={() => setRecordToDelete(rec)}
+                              title="Delete record"
+                              aria-label={`Delete ${rec.testName}`}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── Table Section ── */}
+          {viewMode === 'table' && (
           <div className="overflow-x-auto min-h-[300px]">
             <table className="w-full text-left border-collapse" style={{ minWidth: 760 }}>
               <thead>
@@ -688,6 +897,7 @@ export default function MedicalRecordsPage() {
               </tbody>
             </table>
           </div>
+          )}
 
           {/* ── Footer / Pagination (Matching SupportCenterPage & CommonTable) ── */}
           <CommonPagination

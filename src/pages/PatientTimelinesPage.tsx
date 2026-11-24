@@ -17,6 +17,7 @@ import { CommonPagination, exportToCSV } from '../components/ui/CommonTable';
 import { PrimaryCell } from '../components/ui/DataView';
 import { Alert, cx, StatusDot } from '../components/ui/primitives';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { ViewModeSwitcher } from '../components/ui/ViewModeSwitcher';
 import { usePermission } from '../context/PermissionContext';
 import { patientTimelinesApi } from '../features/timelines/services/patientTimelinesApi';
 import type { AdminPatientListItem } from '../features/timelines/types/patientTimelines';
@@ -39,6 +40,7 @@ export default function PatientTimelinesPage() {
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
   const [totalCount, setTotalCount] = useState<number>(0);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
 
   // Filters
   const [search, setSearch] = useState<string>('');
@@ -334,10 +336,157 @@ export default function PatientTimelinesPage() {
               <span>Reset</span>
               <X size={12} className="text-slate-500" />
             </button>
+
+            {/* View Mode Switcher */}
+            <ViewModeSwitcher
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+            />
           </div>
         </div>
 
+        {/* ── Cards View Section ── */}
+        {viewMode === 'cards' && (
+          <div className="p-3 sm:p-4 bg-slate-50/50 min-h-[300px] border-b border-slate-200">
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {SKELETON_ROWS.map((i) => (
+                  <div
+                    key={i}
+                    className="animate-pulse bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="h-4 bg-slate-100 rounded w-24" />
+                      <div className="h-4 bg-slate-100 rounded w-16" />
+                    </div>
+                    <div className="h-3.5 bg-slate-100 rounded w-40" />
+                    <div className="h-3 bg-slate-50 rounded w-32" />
+                  </div>
+                ))}
+              </div>
+            ) : patients.length === 0 ? (
+              <div className="py-12 text-center">
+                <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
+                  <div className="p-2.5 rounded-full bg-slate-50 text-slate-400">
+                    <SearchX size={22} />
+                  </div>
+                  <strong className="text-xs font-semibold text-slate-700">
+                    No matching patients found
+                  </strong>
+                  <span className="text-[11px] text-slate-500 max-w-sm">
+                    Try a different search term or remove filters to explore patient timelines.
+                  </span>
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      className="mt-1.5 inline-flex items-center gap-1.5 h-7 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                      onClick={resetFilters}
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {patients.map((patient) => {
+                  const ageDisplay = formatPatientAge(patient.date_of_birth);
+                  const isActive = patient.status === 'ACTIVE';
+
+                  return (
+                    <div
+                      key={patient.id}
+                      data-testid={`patient-timeline-card-${patient.id}`}
+                      className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-2xs space-y-3 cursor-pointer hover:border-slate-300 transition-colors flex flex-col justify-between"
+                      onClick={() => navigate(`/patient-timelines/${patient.id}`)}
+                    >
+                      <div className="space-y-3">
+                        {/* Header: MRN, Avatar, Name & Status */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-9 h-9 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 text-white font-bold text-xs grid place-items-center shrink-0 overflow-hidden border border-slate-200">
+                              {patient.profile_image_url ? (
+                                <img
+                                  src={patient.profile_image_url}
+                                  alt={patient.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                (patient.name || 'PT').slice(0, 2).toUpperCase()
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                                {formatPatientDisplayName(patient.name, patient.patient_id)}
+                              </h4>
+                              <span className="text-[10.5px] font-mono font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                {patient.patient_id || `#${patient.id.slice(0, 8).toUpperCase()}`}
+                              </span>
+                            </div>
+                          </div>
+                          <StatusDot active={isActive} />
+                        </div>
+
+                        {/* Demographics & Hospital */}
+                        <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600 bg-slate-50/70 p-2 rounded-lg border border-slate-100">
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Age & Gender</span>
+                            <span className="font-medium text-slate-800">
+                              {ageDisplay || 'Age N/A'} {patient.gender ? `• ${titleCase(patient.gender)}` : ''}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Hospital</span>
+                            <span className="font-medium text-slate-800 truncate block">
+                              {patient.hospital_name || patient.branch_name || 'Dr. Narendran Hospital'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Contact info */}
+                        <div className="flex flex-col gap-1 text-[11px] text-slate-600">
+                          {patient.phone && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-400">Phone:</span>
+                              <span className="font-medium text-slate-700">{patient.phone}</span>
+                            </div>
+                          )}
+                          {patient.email && (
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className="text-slate-400">Email:</span>
+                              <span className="truncate text-slate-700">{patient.email}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Footer & Action */}
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <span className="text-[10.5px] text-slate-400">
+                          {patient.created_at ? `Reg ${formatDate(patient.created_at)}` : ''}
+                        </span>
+                        <button
+                          type="button"
+                          className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-lg border border-indigo-200/70 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/patient-timelines/${patient.id}`);
+                          }}
+                        >
+                          <span>View Timeline</span>
+                          <ChevronRight size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Table Section ── */}
+        {viewMode === 'table' && (
         <div className="overflow-x-auto min-h-[300px]">
           <table className="w-full text-left border-collapse" style={{ minWidth: 720 }}>
             <thead>
@@ -524,6 +673,7 @@ export default function PatientTimelinesPage() {
             </tbody>
           </table>
         </div>
+        )}
 
         {/* ── Footer / Pagination (Matching SupportCenterPage & CommonTable) ── */}
         <CommonPagination

@@ -1,11 +1,11 @@
 import { App } from 'antd';
-import { Building2 } from 'lucide-react';
+import { Building2, Clock, Mail, MapPin, Pencil, Phone, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import HospitalModal, { type Hospital } from '../components/HospitalModal';
 import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
 import { addedFacet, statusFacet } from '../components/ui/facets';
-import { ActivityCell, Badge, StatusDot } from '../components/ui/primitives';
+import { ActivityCell, Badge, cx, StatusDot } from '../components/ui/primitives';
 import { usePermission } from '../context/PermissionContext';
 import { useResource } from '../hooks/useResource';
 import { tenure, timeAgo } from '../lib/format';
@@ -146,6 +146,139 @@ export default function Dashboard() {
         onDelete={(h) => api.delete(`hospitals/${h.id}`)}
         nameOf={(h) => h.name}
         deleteWarning="Branches, doctors and patients linked to it may be affected."
+        minTableWidth={720}
+        renderMobileCard={(h, { isSel, toggleRow, onEdit, onDelete, isUpdateAllowed, isDeleteAllowed, showCheckCol }) => {
+          const fullAddr =
+            [h.address_line_1, h.address_line_2, h.city, h.state, h.pincode]
+              .filter(Boolean)
+              .join(', ') || h.address;
+          return (
+            <div
+              key={h.id}
+              className={cx(
+                'bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 sm:p-4 flex flex-col gap-2.5 transition-all text-xs',
+                isSel ? 'border-blue-400 bg-blue-50/20 ring-1 ring-blue-300' : 'hover:border-slate-300',
+              )}
+              data-testid={`hospital-card-${h.id}`}
+            >
+              {/* Card Header: Checkbox + Icon + Name + Code + Status & Actions */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                  {showCheckCol && (
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer mt-0.5 shrink-0"
+                      checked={isSel}
+                      onChange={toggleRow}
+                      aria-label={`Select ${h.name}`}
+                    />
+                  )}
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                    <Building2 size={16} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={isUpdatable ? () => openEditor(h) : undefined}
+                        className={cx(
+                          'font-semibold text-slate-900 text-sm tracking-tight text-left leading-snug',
+                          isUpdatable ? 'hover:text-blue-600 cursor-pointer' : 'cursor-default',
+                        )}
+                      >
+                        {h.name}
+                      </button>
+                      <Badge tone="green" mono>
+                        {h.hospital_code}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status & Actions */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <StatusDot active={h.status === 'ACTIVE'} />
+                  {isUpdateAllowed && onEdit && (
+                    <button
+                      type="button"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer border border-transparent hover:border-blue-200"
+                      onClick={onEdit}
+                      aria-label={`Edit ${h.name}`}
+                      title="Edit Hospital"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  )}
+                  {isDeleteAllowed && onDelete && (
+                    <button
+                      type="button"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer border border-transparent hover:border-rose-200"
+                      onClick={onDelete}
+                      aria-label={`Delete ${h.name}`}
+                      title="Delete Hospital"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Contact Information */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 text-slate-600 border-t border-slate-100">
+                {h.phone && (
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Phone size={13} className="text-slate-400 shrink-0" />
+                    <a
+                      href={`tel:${h.phone}`}
+                      className="text-slate-700 hover:text-blue-600 font-medium truncate"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {h.phone}
+                    </a>
+                  </div>
+                )}
+                {h.email && (
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Mail size={13} className="text-slate-400 shrink-0" />
+                    <a
+                      href={`mailto:${h.email}`}
+                      className="text-slate-700 hover:text-blue-600 font-medium break-all"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {h.email}
+                    </a>
+                  </div>
+                )}
+                {!h.phone && !h.email && (
+                  <div className="text-slate-400 italic text-[11px]">No contact details provided</div>
+                )}
+              </div>
+
+              {/* Address */}
+              <div className="flex items-start gap-1.5 text-slate-600 bg-slate-50/70 p-2 rounded-lg border border-slate-100">
+                <MapPin size={13} className="text-slate-400 shrink-0 mt-0.5" />
+                <span className="text-[11.5px] leading-relaxed text-slate-700">
+                  {fullAddr || <span className="text-slate-400 italic">No address provided</span>}
+                </span>
+              </div>
+
+              {/* Card Footer: Tenure & Activity */}
+              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100 flex-wrap gap-2">
+                <div className="flex items-center gap-1 text-slate-500">
+                  <Clock size={12} className="text-slate-400 shrink-0" />
+                  <span>Member for {tenure(h.created_at, 'New hospital')}</span>
+                </div>
+                <div className="text-slate-400">
+                  {h.updated_at && h.updated_at !== h.created_at ? (
+                    <ActivityCell label="Profile updated" when={timeAgo(h.updated_at)} />
+                  ) : (
+                    <ActivityCell label="Hospital added" when={timeAgo(h.created_at)} />
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        }}
       />
 
       <HospitalModal
