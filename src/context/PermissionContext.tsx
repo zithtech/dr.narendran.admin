@@ -188,6 +188,7 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
           'MEDICAL_RECORDS',
           'PRESCRIPTIONS',
           'DOCTOR_SUPPORT',
+          'CHAT',
           'SUPPORT',
           'REVIEWS',
         ];
@@ -323,6 +324,7 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
           'PRESCRIPTIONS',
           'LOCATIONS',
           'DOCTOR_SUPPORT',
+          'CHAT',
           'SUPPORT',
           'REVIEWS',
         ];

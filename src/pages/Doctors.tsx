@@ -8,6 +8,7 @@ import {
   MapPin,
   Pencil,
   Phone,
+  Settings,
   Stethoscope,
   Trash2,
 } from 'lucide-react';
@@ -17,11 +18,12 @@ import { useNavigate } from 'react-router';
 import DoctorAvailabilityModal from '../components/DoctorAvailabilityModal';
 import DoctorDrawer from '../components/DoctorDrawer';
 import DoctorModal, { type Doctor } from '../components/DoctorModal';
+import DoctorSettingsDrawer from '../components/DoctorSettingsDrawer';
 import { DoctorQualificationTable } from '../components/DoctorQualificationBadge';
 import { type Column, DataView, type Facet, PrimaryCell } from '../components/ui/DataView';
 import { Drawer } from '../components/ui/Drawer';
 import { addedFacet, statusFacet } from '../components/ui/facets';
-import { ActivityCell, Badge, StatusDot } from '../components/ui/primitives';
+import { Badge, StatusDot } from '../components/ui/primitives';
 import { useResource } from '../hooks/useResource';
 import { isDoctorRole, usePermission } from '../context/PermissionContext';
 import { timeAgo } from '../lib/format';
@@ -62,6 +64,7 @@ const FACETS: Facet<Doctor>[] = [
 
 export default function Doctors() {
   const navigate = useNavigate();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const resource = useResource<Doctor>('doctors', 'doctors');
   const { message } = App.useApp();
   const { canView, canCreate, canUpdate, roleName, hasRole } = usePermission();
@@ -101,8 +104,22 @@ export default function Doctors() {
 
   const columns: Column<Doctor>[] = [
     {
+      id: 'doctor_code',
+      header: 'Doctor Code',
+      sort: (d) => (d.doctor_code || '').toLowerCase(),
+      cell: (d) => (
+        <span
+          className="font-mono text-xs font-bold text-blue-700 bg-blue-50/80 px-2.5 py-1 rounded-md border border-blue-200/70 inline-block cursor-pointer hover:bg-blue-100 transition-colors"
+          onClick={() => openDetails(d)}
+          title={`View details for ${d.doctor_code || d.name}`}
+        >
+          {d.doctor_code || '—'}
+        </span>
+      ),
+    },
+    {
       id: 'name',
-      header: 'Doctor',
+      header: 'Doctor Name',
       sort: (d) => d.name.toLowerCase(),
       cell: (d) => (
         <PrimaryCell
@@ -126,45 +143,56 @@ export default function Doctors() {
       cell: (d) => <Badge tone="green">{d.specialization || 'General'}</Badge>,
     },
     {
-      id: 'hospital',
-      header: 'Hospital & branch',
-      sort: (d) => (d.hospital_name ?? '').toLowerCase(),
-      cell: (d) => (
-        <div>
-          <div style={{ fontWeight: 500, color: 'var(--ui-text)' }}>
-            {d.hospital_name || 'Unknown'}
-          </div>
-          <div className="ui-cell-sub">{d.branch_name || 'No specific branch'}</div>
-        </div>
-      ),
-    },
-    {
-      id: 'experience',
-      header: 'Experience',
-      sort: (d) => d.years_of_experience ?? -1,
+      id: 'email',
+      header: 'Email',
+      sort: (d) => (d.email || '').toLowerCase(),
       cell: (d) =>
-        d.years_of_experience !== undefined && d.years_of_experience !== null ? (
-          `${d.years_of_experience} ${d.years_of_experience === 1 ? 'year' : 'years'}`
+        d.email ? (
+          <span className="text-xs text-slate-700 font-medium truncate block max-w-[170px]" title={d.email}>
+            {d.email}
+          </span>
         ) : (
           <span className="ui-muted">—</span>
         ),
+    },
+    {
+      id: 'phone',
+      header: 'Phone Number',
+      sort: (d) => (d.phone || '').toLowerCase(),
+      cell: (d) =>
+        d.phone ? (
+          <span className="text-xs text-slate-700 font-medium font-mono">
+            {d.phone}
+          </span>
+        ) : (
+          <span className="ui-muted">—</span>
+        ),
+    },
+    {
+      id: 'hospital',
+      header: 'Hospital',
+      sort: (d) => (d.hospital_name || '').toLowerCase(),
+      cell: (d) => (
+        <span className="text-xs font-medium text-slate-800">
+          {d.hospital_name || '—'}
+        </span>
+      ),
+    },
+    {
+      id: 'branch',
+      header: 'Branch',
+      sort: (d) => (d.branch_name || '').toLowerCase(),
+      cell: (d) => (
+        <span className="text-xs text-slate-600">
+          {d.branch_name || 'No specific branch'}
+        </span>
+      ),
     },
     {
       id: 'status',
       header: 'Status',
       sort: (d) => d.status,
       cell: (d) => <StatusDot active={d.status === 'ACTIVE'} />,
-    },
-    {
-      id: 'activity',
-      header: 'Last activity',
-      sort: (d) => new Date(d.updated_at || d.created_at).getTime(),
-      cell: (d) =>
-        d.updated_at && d.updated_at !== d.created_at ? (
-          <ActivityCell label="Profile updated" when={timeAgo(d.updated_at)} />
-        ) : (
-          <ActivityCell label="Doctor added" when={timeAgo(d.created_at)} />
-        ),
     },
   ];
 
@@ -178,8 +206,9 @@ export default function Doctors() {
         noun="doctor"
         nounPlural="doctors"
         resource={resource}
-        searchPlaceholder="Search name, specialization, hospital…"
+        searchPlaceholder="Search name, Code, specialization, hospital…"
         searchFields={(d) => [
+          d.doctor_code,
           d.name,
           d.specialization,
           d.hospital_name,
@@ -243,6 +272,9 @@ export default function Doctors() {
                       {d.name}
                     </h4>
                     <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      <span className="font-mono text-[11px] font-bold text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded border border-blue-200/70">
+                        {d.doctor_code || '—'}
+                      </span>
                       <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200/60">
                         {d.specialization || 'General Specialist'}
                       </span>
@@ -365,18 +397,30 @@ export default function Doctors() {
           );
         }}
         extraActions={
-          canView('AVAILABILITY') ? (
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              className="ui-btn ui-btn-pill ui-btn-soft text-xs"
-              onClick={() => void navigate('/availability')}
-              title="Manage Doctor Availability & Appointment Slots"
+              className="inline-flex items-center gap-1.5 h-8 sm:h-7.5 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              onClick={() => setIsSettingsOpen(true)}
+              title="Configure Doctor Code generation"
+              aria-label="Doctor Settings"
             >
-              <CalendarClock size={15} className="shrink-0" />
-              <span className="hidden sm:inline">Availability &amp; Slots</span>
-              <span className="sm:hidden">Availability</span>
+              <Settings size={13.5} className="text-slate-500" />
+              <span>Doctor Settings</span>
             </button>
-          ) : null
+            {canView('AVAILABILITY') ? (
+              <button
+                type="button"
+                className="ui-btn ui-btn-pill ui-btn-soft text-xs"
+                onClick={() => void navigate('/availability')}
+                title="Manage Doctor Availability & Appointment Slots"
+              >
+                <CalendarClock size={15} className="shrink-0" />
+                <span className="hidden sm:inline">Availability &amp; Slots</span>
+                <span className="sm:hidden">Availability</span>
+              </button>
+            ) : null}
+          </div>
         }
         keepDefaultActions
         rowActions={(d) => (
@@ -470,6 +514,12 @@ export default function Doctors() {
           scheduleVersion={scheduleVersion}
         />
       </ErrorBoundary>
+
+      <DoctorSettingsDrawer
+        open={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSettingsSaved={() => void resource.refresh()}
+      />
     </>
   );
 }

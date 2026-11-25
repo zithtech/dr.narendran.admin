@@ -108,6 +108,7 @@ const MODULE_NOUNS: Record<string, { singular: string; plural: string }> = {
   REVIEWS: { singular: 'review', plural: 'reviews' },
   PATIENT_SUPPORT: { singular: 'patient ticket', plural: 'patient support' },
   DOCTOR_SUPPORT: { singular: 'doctor ticket', plural: 'doctor support' },
+  CHAT: { singular: 'chat message', plural: 'chat' },
   SUPPORT: { singular: 'support ticket', plural: 'support' },
 };
 
@@ -167,6 +168,7 @@ const DEFAULT_CATEGORIES: Record<string, string> = {
   REVIEWS: 'Support & Reviews',
   PATIENT_SUPPORT: 'Support & Reviews',
   DOCTOR_SUPPORT: 'Support & Reviews',
+  CHAT: 'Support & Reviews',
   SUPPORT: 'Support & Reviews',
 };
 
@@ -196,6 +198,8 @@ export const INITIAL_MODULES: ModuleDef[] = [
   { slug: 'REVIEWS', name: 'Ratings & Reviews', category: 'Support & Reviews', description: 'Patient reviews and feedback' },
   { slug: 'PATIENT_SUPPORT', name: 'Patient Support', category: 'Support & Reviews', description: 'Patient support tickets and chat' },
   { slug: 'DOCTOR_SUPPORT', name: 'Doctor Support', category: 'Support & Reviews', description: 'Doctor inquiry and clinical support' },
+  { slug: 'CHAT', name: 'Chat', category: 'Support & Reviews', description: 'Direct messaging and real-time communication' },
+  { slug: 'SUPPORT', name: 'General Support', category: 'Support & Reviews', description: 'System-wide support ticketing and inquiry help desk' },
 ];
 
 export default function RoleModal({ isOpen, onClose, role, onSave }: RoleModalProps) {
