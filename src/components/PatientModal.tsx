@@ -11,7 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  Code2,
   FileText,
   HeartPulse,
   History,
@@ -27,6 +26,7 @@ import {
   ShieldCheck,
   Stethoscope,
   User,
+  UserCheck,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -48,6 +48,7 @@ import {
   type SectionTab,
 } from '../features/medical_history/components/ClinicalHistorySectionContent';
 import type { PatientMedicalHistoryRecord } from '../features/medical_history/types/medicalHistory.types';
+import type { AllianceDoctor } from '../types/allianceDoctor';
 import { PlanOfManagementStep } from '../features/patient_journey/components/PlanOfManagementStep';
 import type { PlanOfManagementData } from '../features/patient_journey/types/patientJourney.types';
 import { medicalHistoryApi } from '../features/medical_history/services/medicalHistoryApi';
@@ -95,6 +96,10 @@ export interface Patient {
   body_temperature?: string | null;
   custom_vitals?: CustomVitalField[] | any | null;
   marital_status?: string | null;
+  referred_by?: 'REFERRAL' | 'DOCTOR' | 'ALLIANCE' | string | null;
+  referral_id?: string | null;
+  referral_doctor_id?: string | null;
+  alliance_doctor_id?: string | null;
   emergency_contacts?: any | null;
   profile_image_url?: string | null;
   is_active?: boolean | null;
@@ -123,12 +128,13 @@ export const ALL_DRAWER_STEPS: Array<{
   shortLabel: string;
   icon: React.ReactNode;
 }> = [
-  { key: 'personal', stepNum: 1, label: '1. Basic Details', shortLabel: 'Basic Details', icon: <User size={13} /> },
-  { key: 'history', stepNum: 2, label: '2. Past Medical History', shortLabel: 'Medical History', icon: <History size={13} /> },
-  { key: 'plan', stepNum: 3, label: '3. Plan of Management', shortLabel: 'Care Plan', icon: <Stethoscope size={13} /> },
-  { key: 'prescription', stepNum: 4, label: '4. Prescription', shortLabel: 'Prescription', icon: <Pill size={13} /> },
-  { key: 'appointment', stepNum: 5, label: '5. Appointments', shortLabel: 'Appointments', icon: <Calendar size={13} /> },
-];
+    { key: 'personal', stepNum: 1, label: '1. Basic Details', shortLabel: 'Basic Details', icon: <User size={13} /> },
+    { key: 'history', stepNum: 2, label: '2. Past Medical History', shortLabel: 'Medical History', icon: <History size={13} /> },
+    { key: 'current', stepNum: 3, label: '3. Current Examination', shortLabel: 'Current Examination', icon: <HeartPulse size={13} /> },
+    { key: 'plan', stepNum: 4, label: '4. Plan of Management', shortLabel: 'Care Plan', icon: <Stethoscope size={13} /> },
+    { key: 'prescription', stepNum: 5, label: '5. Prescription', shortLabel: 'Prescription', icon: <Pill size={13} /> },
+    { key: 'appointment', stepNum: 6, label: '6. Appointments', shortLabel: 'Appointments', icon: <Calendar size={13} /> },
+  ];
 
 export interface PatientModalProps {
   isOpen: boolean;
@@ -417,11 +423,11 @@ export default function PatientModal({
       : staticMessage && typeof staticMessage.error === 'function'
         ? staticMessage
         : {
-            success: (_m: string) => {},
-            error: (_m: string) => {},
-            warning: (_m: string) => {},
-            info: (_m: string) => {},
-          };
+          success: (_m: string) => { },
+          error: (_m: string) => { },
+          warning: (_m: string) => { },
+          info: (_m: string) => { },
+        };
 
   const [activeStep, setActiveStep] = useState<PatientModalStep>(initialStep || 'personal');
   const [activePatient, setActivePatient] = useState<Patient | null>(patient);
@@ -472,6 +478,8 @@ export default function PatientModal({
               provisionalDiagnosis: cmi.current_diagnosis || '',
               differentialDiagnosis: cmi.differential_diagnosis || undefined,
               clinicalObservations: cmi.clinical_observations || undefined,
+              performanceScore: (cmi as any).performance_score ?? null,
+              performanceDescription: (cmi as any).performance_description || '',
               investigationsOrdered: tests,
               treatmentStrategy: cmi.treatment_strategy || '',
               careGoals: cmi.care_goals || undefined,
@@ -563,6 +571,8 @@ export default function PatientModal({
           current_diagnosis: plan.provisionalDiagnosis,
           differential_diagnosis: plan.differentialDiagnosis || null,
           clinical_observations: plan.clinicalObservations || null,
+          performance_score: plan.performanceScore ?? null,
+          performance_description: plan.performanceDescription || null,
           investigations_ordered: plan.investigationsOrdered,
           treatment_strategy: plan.treatmentStrategy,
           care_goals: plan.careGoals || null,
@@ -642,6 +652,28 @@ export default function PatientModal({
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
+  const [ageInput, setAgeInput] = useState('');
+
+  const handleAgeChange = (val: string) => {
+    setAgeInput(val);
+    const parsed = parseInt(val.replace(/[^0-9]/g, ''), 10);
+    if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 130) {
+      const currentYear = new Date().getFullYear();
+      const birthYear = currentYear - parsed;
+      if (dateOfBirth) {
+        const parts = dateOfBirth.split('-');
+        if (parts.length === 3) {
+          setDateOfBirth(`${birthYear}-${parts[1]}-${parts[2]}`);
+          return;
+        }
+      }
+      setDateOfBirth(`${birthYear}-01-01`);
+    } else if (val === '') {
+      setDateOfBirth('');
+      setAgeInput('');
+      setAgeInput('');
+    }
+  };
   const [gender, setGender] = useState('');
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
@@ -662,7 +694,6 @@ export default function PatientModal({
   const [emergencyName, setEmergencyName] = useState('');
   const [emergencyPhone, setEmergencyPhone] = useState('');
   const [emergencyRelation, setEmergencyRelation] = useState('');
-  const [showRawJson, setShowRawJson] = useState(false);
   const [profileImageUrl, setProfileImageUrl] = useState('');
   const [isActive, setIsActive] = useState<boolean>(true);
 
@@ -680,6 +711,37 @@ export default function PatientModal({
 
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
+  const [referredByType, setReferredByType] = useState<'REFERRAL' | 'DOCTOR' | 'ALLIANCE' | ''>('');
+  const [referralId, setReferralId] = useState<string>('');
+  const [referralDoctorId, setReferralDoctorId] = useState<string>('');
+  const [referralAllianceDoctorId, setReferralAllianceDoctorId] = useState<string>('');
+  const [referralList, setReferralList] = useState<
+    Array<{
+      id: string;
+      name: string;
+      phone?: string | null;
+      email?: string | null;
+      gender?: string | null;
+      occupation?: string | null;
+      city?: string | null;
+      state?: string | null;
+      status: string;
+    }>
+  >([]);
+  const [doctorList, setDoctorList] = useState<
+    Array<{
+      id: string;
+      name: string;
+      phone?: string | null;
+      email?: string | null;
+      specialization?: string | null;
+      hospital_name?: string | null;
+      branch_name?: string | null;
+      status: string;
+    }>
+  >([]);
+  const [allianceDoctorList, setAllianceDoctorList] = useState<AllianceDoctor[]>([]);
+
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [users, setUsers] = useState<UserAccount[]>([]);
@@ -690,15 +752,30 @@ export default function PatientModal({
     if (isOpen) {
       const fetchData = async () => {
         try {
-          const [hRes, bRes, uRes] = await Promise.all([
+          const [hRes, bRes, uRes, docRes, refRes, allianceRes] = await Promise.all([
             api.get('hospitals'),
             api.get('branches'),
             api.get('user-accounts'),
+            api.get('doctors').catch(() => ({ data: [] })),
+            api.get('referrals').catch(() => ({ data: [] })),
+            api.get('alliances/doctors?limit=1000').catch(() => ({ data: [] })),
           ]);
           setHospitals(hRes.data);
           setBranches(bRes.data);
           const allUsers: UserAccount[] = uRes.data;
           setUsers(allUsers.filter((u) => u.role === 'PATIENT' && u.status === 'ACTIVE'));
+          const rawDocs = docRes.data;
+          setDoctorList(Array.isArray(rawDocs) ? rawDocs : Array.isArray(rawDocs?.data) ? rawDocs.data : []);
+          const rawRefs = refRes.data;
+          setReferralList(Array.isArray(rawRefs) ? rawRefs : Array.isArray(rawRefs?.data) ? rawRefs.data : []);
+          const rawAlliance = allianceRes.data;
+          setAllianceDoctorList(
+            Array.isArray(rawAlliance)
+              ? rawAlliance
+              : Array.isArray(rawAlliance?.data)
+                ? rawAlliance.data
+                : [],
+          );
         } catch (err) {
           console.error('Failed to fetch required data for patient modal', err);
         }
@@ -715,11 +792,16 @@ export default function PatientModal({
       setUserAccountId(patient.user_account_id || '');
       setPhone(patient.phone || '');
       setEmail(patient.email || '');
-      setDateOfBirth(
-        patient.date_of_birth
-          ? new Date(patient.date_of_birth).toISOString().split('T')[0] || ''
-          : '',
-      );
+      const dobVal = patient.date_of_birth
+        ? new Date(patient.date_of_birth).toISOString().split('T')[0] || ''
+        : '';
+      setDateOfBirth(dobVal);
+      if (dobVal) {
+        const formatted = formatPatientAge(dobVal);
+        setAgeInput(formatted !== 'DOB not set' ? formatted : '');
+      } else {
+        setAgeInput('');
+      }
       setGender(patient.gender || '');
       setAddressLine1(patient.address_line_1 || patient.address || '');
       setAddressLine2(patient.address_line_2 || '');
@@ -783,10 +865,29 @@ export default function PatientModal({
         setEmergencyRelation('');
       }
 
-      setShowRawJson(false);
       setProfileImageUrl(patient.profile_image_url || '');
       setIsActive(
         patient.is_active !== undefined && patient.is_active !== null ? patient.is_active : true,
+      );
+      if (patient.referred_by === 'ALLIANCE') {
+        setReferredByType('ALLIANCE');
+        setReferralAllianceDoctorId(
+          patient.alliance_doctor_id || patient.referral_doctor_id || patient.referral_id || '',
+        );
+      } else if (patient.referred_by === 'DOCTOR' || patient.referral_doctor_id) {
+        setReferredByType('DOCTOR');
+        setReferralDoctorId(patient.referral_doctor_id || '');
+      } else if (patient.referred_by === 'REFERRAL' || patient.referral_id) {
+        setReferredByType('REFERRAL');
+        setReferralId(patient.referral_id || '');
+      } else {
+        setReferredByType((patient.referred_by as any) || '');
+      }
+      setReferralId(patient.referral_id || '');
+      setReferralDoctorId(patient.referral_doctor_id || '');
+      setReferralAllianceDoctorId(
+        patient.alliance_doctor_id ||
+        (patient.referred_by === 'ALLIANCE' ? patient.referral_doctor_id || patient.referral_id || '' : ''),
       );
     } else {
       setName('');
@@ -796,6 +897,7 @@ export default function PatientModal({
       setPhone('');
       setEmail('');
       setDateOfBirth('');
+      setAgeInput('');
       setGender('');
       setAddressLine1('');
       setAddressLine2('');
@@ -816,9 +918,12 @@ export default function PatientModal({
       setEmergencyName('');
       setEmergencyPhone('');
       setEmergencyRelation('');
-      setShowRawJson(false);
       setProfileImageUrl('');
       setIsActive(true);
+      setReferredByType('');
+      setReferralId('');
+      setReferralDoctorId('');
+      setReferralAllianceDoctorId('');
     }
     setError('');
     setErrors({});
@@ -868,6 +973,24 @@ export default function PatientModal({
     return opts;
   }, [users]);
 
+  const selectedReferral = useMemo(
+    () => (referredByType === 'REFERRAL' && referralId ? referralList.find((r) => r.id === referralId) : null),
+    [referredByType, referralId, referralList],
+  );
+
+  const selectedDoctor = useMemo(
+    () => (referredByType === 'DOCTOR' && referralDoctorId ? doctorList.find((d) => d.id === referralDoctorId) : null),
+    [referredByType, referralDoctorId, doctorList],
+  );
+
+  const selectedAllianceDoctor = useMemo(
+    () =>
+      referredByType === 'ALLIANCE' && referralAllianceDoctorId
+        ? allianceDoctorList.find((d) => d.id === referralAllianceDoctorId)
+        : null,
+    [referredByType, referralAllianceDoctorId, allianceDoctorList],
+  );
+
   const handlePrimaryEmergencyChange = (nameVal: string, phoneVal: string, relVal: string) => {
     setEmergencyName(nameVal);
     setEmergencyPhone(phoneVal);
@@ -887,7 +1010,7 @@ export default function PatientModal({
     }
   };
 
-    const buildPatientPayload = () => {
+  const buildPatientPayload = () => {
     const normalizeUrl = (val: string) => {
       const trimmed = val.trim();
       if (!trimmed) return null;
@@ -898,15 +1021,7 @@ export default function PatientModal({
     };
 
     let parsedContacts: any = null;
-    if (showRawJson) {
-      if (emergencyContacts.trim()) {
-        try {
-          parsedContacts = JSON.parse(emergencyContacts);
-        } catch {
-          // ignore
-        }
-      }
-    } else if (emergencyName.trim() || emergencyPhone.trim() || emergencyRelation.trim()) {
+    if (emergencyName.trim() || emergencyPhone.trim() || emergencyRelation.trim()) {
       parsedContacts = [
         {
           name: emergencyName.trim() || undefined,
@@ -958,6 +1073,15 @@ export default function PatientModal({
       emergency_contacts: parsedContacts,
       profile_image_url: normalizeUrl(profileImageUrl),
       is_active: isActive,
+      referred_by: referredByType || null,
+      referral_id: (referredByType === 'REFERRAL' ? referralId : null) || null,
+      referral_doctor_id:
+        (referredByType === 'DOCTOR'
+          ? referralDoctorId
+          : referredByType === 'ALLIANCE'
+            ? referralAllianceDoctorId
+            : null) || null,
+      alliance_doctor_id: (referredByType === 'ALLIANCE' ? referralAllianceDoctorId : null) || null,
     };
   };
 
@@ -1081,12 +1205,12 @@ export default function PatientModal({
       try {
         await ensurePatientSaved();
         setIsRxDrawerOpen(true);
-      } catch {}
+      } catch { }
     } else if (stepKey === 'appointment') {
       try {
         await ensurePatientSaved();
         setIsApptDrawerOpen(true);
-      } catch {}
+      } catch { }
     }
   };
 
@@ -1184,9 +1308,24 @@ export default function PatientModal({
       isComplete: isHistoryComplete,
     },
     {
+      id: 'tab-examination',
+      step: 'current' as const,
+      num: '03',
+      title: 'Current Examination',
+      subtitle: 'Presenting complaints, symptoms, and systemic clinical observations.',
+      required: false,
+      icon: <HeartPulse size={16} />,
+      isComplete: Boolean(
+        cmh?.chief_complaint ||
+        cmh?.blood_pressure ||
+        cmh?.pulse_rate ||
+        (initialVitalsMemo && (initialVitalsMemo.bloodPressure || initialVitalsMemo.bloodSugar))
+      ),
+    },
+    {
       id: 'tab-plan',
       step: 'plan' as const,
-      num: '03',
+      num: '04',
       title: 'Plan of Management',
       subtitle: 'Provisional diagnosis, clinical assessment, and therapeutic strategy.',
       required: false,
@@ -1196,7 +1335,7 @@ export default function PatientModal({
     {
       id: 'tab-prescription',
       step: 'prescription' as const,
-      num: '04',
+      num: '05',
       title: 'Prescription',
       subtitle: 'Medication orders, dosages, and pharmacy instructions.',
       required: false,
@@ -1206,7 +1345,7 @@ export default function PatientModal({
     {
       id: 'tab-appointment',
       step: 'appointment' as const,
-      num: '05',
+      num: '06',
       title: 'Appointments',
       subtitle: 'Clinical consultations, scheduling, and upcoming visits.',
       required: false,
@@ -1217,33 +1356,19 @@ export default function PatientModal({
 
   const isHistoryActive =
     activeStep === 'history' ||
-    ['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep);
+    ['previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep);
 
-  const activeSubStep = (['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)
+  const activeSubStep = (['previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)
     ? activeStep
-    : 'current') as SectionTab;
+    : 'previous') as SectionTab;
 
   const HISTORY_SUB_SECTIONS = [
     {
-      id: 'subtab-current',
-      step: 'current' as const,
-      num: '2.1',
-      title: 'Current Examination & Vitals',
-      shortTitle: 'Examination & Vitals',
-      icon: <HeartPulse size={16} />,
-      isComplete: Boolean(
-        cmh?.chief_complaint ||
-        cmh?.blood_pressure ||
-        cmh?.pulse_rate ||
-        (initialVitalsMemo && (initialVitalsMemo.bloodPressure || initialVitalsMemo.bloodSugar))
-      ),
-    },
-    {
       id: 'subtab-previous',
       step: 'previous' as const,
-      num: '2.2',
+      num: '2.1',
       title: 'Previous Medical History',
-      shortTitle: 'Previous Diseases & Surgeries',
+      shortTitle: 'Previous Diseases & Vitals',
       icon: <History size={16} />,
       isComplete: Boolean(
         (pmh?.previous_diseases && pmh.previous_diseases.length > 0) ||
@@ -1255,7 +1380,7 @@ export default function PatientModal({
     {
       id: 'subtab-family',
       step: 'family' as const,
-      num: '2.3',
+      num: '2.2',
       title: 'Family Medical History',
       shortTitle: 'Family History',
       icon: <Users size={16} />,
@@ -1264,7 +1389,7 @@ export default function PatientModal({
     {
       id: 'subtab-reproductive',
       step: 'reproductive' as const,
-      num: '2.4',
+      num: '2.3',
       title: 'Reproductive History',
       shortTitle: 'Reproductive & Obstetric',
       icon: <User size={16} />,
@@ -1273,7 +1398,7 @@ export default function PatientModal({
     {
       id: 'subtab-lifestyle',
       step: 'lifestyle' as const,
-      num: '2.5',
+      num: '2.4',
       title: 'Lifestyle History',
       shortTitle: 'Lifestyle & Habits',
       icon: <Activity size={16} />,
@@ -1282,7 +1407,7 @@ export default function PatientModal({
     {
       id: 'subtab-documents',
       step: 'documents' as const,
-      num: '2.6',
+      num: '2.5',
       title: 'Medical Documents',
       shortTitle: 'Documents & Reports',
       icon: <FileText size={16} />,
@@ -1318,6 +1443,8 @@ export default function PatientModal({
         display: 'flex',
         flexDirection: 'column',
         gap: 10,
+        width: 300,
+        boxSizing: 'border-box',
       }}
     >
       {/* Patient Readiness / History Readiness Header */}
@@ -1519,6 +1646,7 @@ export default function PatientModal({
             const isCurrentActive =
               (sec.step === 'personal' && activeStep === 'personal') ||
               (sec.step === 'history' && isHistoryActive) ||
+              (sec.step === 'current' && activeStep === 'current') ||
               (sec.step === 'plan' && activeStep === 'plan') ||
               (sec.step === 'prescription' && activeStep === 'prescription') ||
               (sec.step === 'appointment' && activeStep === 'appointment');
@@ -1691,7 +1819,7 @@ export default function PatientModal({
           })}
 
           {/* Hidden alias buttons for legacy test compatibility */}
-          {['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].map((subKey) => (
+          {['previous', 'family', 'reproductive', 'lifestyle', 'documents'].map((subKey) => (
             <button
               key={subKey}
               type="button"
@@ -1705,66 +1833,59 @@ export default function PatientModal({
       )}
 
       <style>{`
-          @media (max-width: 992px) {
-            .patient-page-grid {
-              grid-template-columns: 1fr !important;
-            }
-            .patient-readiness-sidebar {
-              position: static !important;
-            }
-          }
-          @media (max-width: 640px) {
-            .patient-create-drawer-modal {
-              width: 100vw !important;
-              max-width: 100vw !important;
-              border-radius: 0 !important;
-            }
-            .patient-create-drawer-modal .ui-modal-head {
-              padding: 12px 16px !important;
-            }
-            .patient-create-drawer-modal .ui-modal-body {
-              padding: 12px 14px !important;
-            }
-            .patient-section-card {
-              padding: 16px 14px !important;
-              border-radius: 12px !important;
-            }
-            .patient-page-header {
-              padding: 12px 16px !important;
-              flex-wrap: wrap !important;
-              gap: 10px !important;
-            }
-            .patient-page-grid {
-              padding: 14px 14px 40px 14px !important;
-            }
-            .patient-page-fixed-footer > div {
-              padding: 10px 14px !important;
-              flex-direction: column !important;
-              align-items: stretch !important;
-              gap: 10px !important;
-            }
-            .patient-page-fixed-footer > div > div:last-child {
-              flex-wrap: wrap !important;
-              justify-content: flex-end !important;
-            }
-          }
-          @media (max-width: 480px) {
-            .patient-page-fixed-footer > div > div:last-child {
-              flex-direction: column-reverse !important;
-            }
-            .patient-page-fixed-footer > div > div:last-child button {
-              width: 100% !important;
-              justify-content: center !important;
-            }
+          .patient-page-layout {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            min-width: 768px;
+            box-sizing: border-box !important;
           }
           .patient-page-layout.patient-create-drawer-modal {
             width: 100% !important;
             max-width: 100% !important;
+            margin: 0 !important;
             box-shadow: none !important;
             border-radius: 0 !important;
             border: none !important;
             height: auto !important;
             background: #f8fafc !important;
+          }
+          .patient-page-grid {
+            display: grid !important;
+            grid-template-columns: 300px minmax(0, 1fr) !important;
+            gap: 20px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 16px 20px 40px 20px !important;
+            box-sizing: border-box !important;
+          }
+          .patient-readiness-sidebar {
+            position: sticky !important;
+            top: 84px !important;
+            width: 300px !important;
+            box-sizing: border-box !important;
+          }
+          .patient-page-header {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 14px 20px !important;
+            box-sizing: border-box !important;
+          }
+          .patient-page-fixed-footer {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .patient-page-fixed-footer > div {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 12px 20px !important;
+            box-sizing: border-box !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
           }
           .patient-page-layout .ui-modal-body {
             max-width: 100% !important;
@@ -1866,7 +1987,10 @@ export default function PatientModal({
           .patient-create-drawer-modal input[type="email"],
           .patient-create-drawer-modal input[type="number"],
           .patient-create-drawer-modal input[type="date"],
-          .patient-create-drawer-modal select {
+          .patient-create-drawer-modal select,
+          .patient-form-input,
+          input.patient-form-input {
+            width: 100% !important;
             border-radius: 8px !important;
             border: 1.5px solid #e2e8f0 !important;
             font-size: 13.5px !important;
@@ -1875,18 +1999,22 @@ export default function PatientModal({
             transition: all 0.15s ease !important;
             box-sizing: border-box !important;
           }
-          .patient-create-drawer-modal .ui-input:not(.patient-input-with-icon),
+          .patient-create-drawer-modal .ui-input,
           .patient-create-drawer-modal .ui-select,
-          .patient-create-drawer-modal input.patient-form-input:not(.patient-input-with-icon),
+          .patient-create-drawer-modal input.patient-form-input,
           .patient-create-drawer-modal select.patient-form-input,
-          .patient-create-drawer-modal input[type="text"]:not([style*="height"]):not(.patient-input-with-icon),
-          .patient-create-drawer-modal input[type="tel"]:not([style*="height"]):not(.patient-input-with-icon),
-          .patient-create-drawer-modal input[type="email"]:not([style*="height"]):not(.patient-input-with-icon),
-          .patient-create-drawer-modal input[type="number"]:not([style*="height"]),
-          .patient-create-drawer-modal input[type="date"]:not([style*="height"]):not(.patient-input-with-icon),
-          .patient-create-drawer-modal select:not([style*="height"]) {
-            height: 42px !important;
-            padding: 0 14px;
+          .patient-create-drawer-modal input[type="text"],
+          .patient-create-drawer-modal input[type="tel"],
+          .patient-create-drawer-modal input[type="email"],
+          .patient-create-drawer-modal input[type="number"],
+          .patient-create-drawer-modal input[type="date"],
+          .patient-create-drawer-modal select,
+          .patient-create-drawer-modal .ui-searchable-trigger {
+            height: 38px !important;
+            padding: 0 12px !important;
+            font-size: 13px !important;
+            border-radius: 8px !important;
+            box-sizing: border-box !important;
           }
           .patient-input-icon-left {
             position: absolute !important;
@@ -1903,8 +2031,10 @@ export default function PatientModal({
           .patient-create-drawer-modal input[type="email"].patient-input-with-icon,
           .patient-create-drawer-modal input[type="date"].patient-input-with-icon,
           input.patient-input-with-icon {
+            height: 38px !important;
             padding-left: 42px !important;
             padding-right: 14px !important;
+            box-sizing: border-box !important;
           }
           .patient-create-drawer-modal input[type="date"].patient-input-with-icon::-webkit-datetime-edit,
           input[type="date"].patient-input-with-icon::-webkit-datetime-edit {
@@ -1913,7 +2043,9 @@ export default function PatientModal({
           .patient-create-drawer-modal .ui-textarea,
           .patient-create-drawer-modal textarea.patient-form-input,
           .patient-create-drawer-modal textarea {
-            padding: 12px 14px !important;
+            height: auto !important;
+            min-height: 76px;
+            padding: 10px 14px !important;
           }
           .patient-create-drawer-modal .ui-input:focus,
           .patient-create-drawer-modal .ui-select:focus,
@@ -1973,297 +2105,68 @@ export default function PatientModal({
         `}</style>
 
       {activeStep === 'personal' ? (
-      <form
-        id="patient-main-form"
-        onSubmit={(e) => {
-          void handleSubmit(e);
-        }}
-        className="ui-modal-form"
-        noValidate
-      >
-        
+        <form
+          id="patient-main-form"
+          onSubmit={(e) => {
+            void handleSubmit(e);
+          }}
+          className="ui-modal-form"
+          noValidate
+        >
 
-        <div className="ui-modal-body">
-          {error && <Alert>{error}</Alert>}
 
-          {/* Section 1: Basic Information */}
-          <div id="sec-basic" className="patient-section-card">
-            <div className="patient-section-header">
-              <div className="patient-section-badge">
-                <User size={18} />
-              </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>01</span>
-                  <span className="patient-section-tag">Basic Information</span>
+          <div className="ui-modal-body">
+            {error && <Alert>{error}</Alert>}
+
+            {/* Section 1: Basic Information */}
+            <div id="sec-basic" className="patient-section-card">
+              <div className="patient-section-header">
+                <div className="patient-section-badge">
+                  <User size={18} />
                 </div>
-                <div style={{ color: '#64748b', fontSize: 12.5, marginTop: 2, fontWeight: 400, textTransform: 'none' }}>
-                  Enter demographic records, contact details, and identifiers.
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>01</span>
+                    <span className="patient-section-tag">Basic Information</span>
+                  </div>
+                  <div style={{ color: '#64748b', fontSize: 12.5, marginTop: 2, fontWeight: 400, textTransform: 'none' }}>
+                    Enter demographic records, contact details, and identifiers.
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {(patient?.patient_code || patient?.patient_id) && (
-              <div>
-                <label
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: '#334155',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    marginBottom: 5,
-                  }}
-                >
-                  <span>Patient Code</span>
-                  <span style={{ fontSize: 11, fontWeight: 500, color: '#0284c7', background: '#e0f2fe', padding: '1px 6px', borderRadius: 4 }}>
-                    Unique Identifier
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  value={patient.patient_code || patient.patient_id || ''}
-                  readOnly
-                  disabled
-                  className="ui-input"
-                  style={{ background: '#f8fafc', color: '#0f172a', fontWeight: 600, cursor: 'not-allowed', width: '100%' }}
-                />
-              </div>
-            )}
-
-            <div>
-              <label
-                htmlFor="patient-name"
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: '#334155',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  marginBottom: 5,
-                }}
-              >
-                <span>Full Name</span>
-                <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <div style={{ position: 'relative' }}>
-                <User
-                  size={15}
-                  className="patient-input-icon-left"
-                  style={{
-                    color: errors.name ? '#ef4444' : '#94a3b8',
-                  }}
-                />
-                <input
-                  id="patient-name"
-                  className="ui-input patient-input-with-icon"
-                  style={{
-                    paddingLeft: 42,
-                    borderColor: errors.name ? '#ef4444' : undefined,
-                    boxShadow: errors.name ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                  }}
-                  type="text"
-                  value={name}
-                  onChange={(e) => {
-                    const sanitized = e.target.value.replace(/[^a-zA-Z\s._-]/g, '').slice(0, 100);
-                    setName(sanitized);
-                    setErrors((prev) => ({ ...prev, name: validatePatientName(sanitized) }));
-                  }}
-                  required
-                  placeholder="e.g. John Doe"
-                />
-              </div>
-              {errors.name && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
-                  <AlertCircle size={12} style={{ flexShrink: 0 }} />
-                  <span>{errors.name}</span>
+              {(patient?.patient_code || patient?.patient_id) && (
+                <div>
+                  <label
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      marginBottom: 5,
+                    }}
+                  >
+                    <span>Patient Code</span>
+                    <span style={{ fontSize: 11, fontWeight: 500, color: '#0284c7', background: '#e0f2fe', padding: '1px 6px', borderRadius: 4 }}>
+                      Unique Identifier
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    value={patient.patient_code || patient.patient_id || ''}
+                    readOnly
+                    disabled
+                    className="ui-input"
+                    style={{ background: '#f8fafc', color: '#0f172a', fontWeight: 600, cursor: 'not-allowed', width: '100%' }}
+                  />
                 </div>
               )}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-              <div>
-                <label
-                  htmlFor="patient-dob"
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: '#334155',
-                    display: 'block',
-                    marginBottom: 5,
-                  }}
-                >
-                  Date of Birth
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <Calendar
-                    size={15}
-                    className="patient-input-icon-left"
-                    style={{
-                      color: '#94a3b8',
-                    }}
-                  />
-                  <input
-                    id="patient-dob"
-                    className="ui-input patient-input-with-icon"
-                    style={{ paddingLeft: 42 }}
-                    type="date"
-                    value={dateOfBirth}
-                    onChange={(e) => setDateOfBirth(e.target.value)}
-                  />
-                </div>
-              </div>
 
               <div>
                 <label
-                  htmlFor="patient-gender"
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: '#334155',
-                    display: 'block',
-                    marginBottom: 5,
-                  }}
-                >
-                  Gender
-                </label>
-                <SearchableSelect
-                  id="patient-gender"
-                  value={gender}
-                  onChange={(val) => setGender(val)}
-                  options={GENDER_OPTIONS}
-                  placeholder="Select gender..."
-                  searchable={false}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-              <div>
-                <label
-                  htmlFor="patient-marital"
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: '#334155',
-                    display: 'block',
-                    marginBottom: 5,
-                  }}
-                >
-                  Marital Status
-                </label>
-                <SearchableSelect
-                  id="patient-marital"
-                  value={maritalStatus}
-                  onChange={(val) => setMaritalStatus(val)}
-                  options={MARITAL_STATUS_OPTIONS}
-                  placeholder="Select marital status..."
-                  searchable={false}
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="patient-blood"
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: '#334155',
-                    display: 'block',
-                    marginBottom: 5,
-                  }}
-                >
-                  Blood Group
-                </label>
-                <SearchableSelect
-                  id="patient-blood"
-                  value={bloodGroup}
-                  onChange={(val) => setBloodGroup(val)}
-                  options={BLOOD_GROUP_OPTIONS}
-                  placeholder="Select blood group..."
-                  searchPlaceholder="Search blood group..."
-                  searchable={true}
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="patient-occupation"
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: '#334155',
-                    display: 'block',
-                    marginBottom: 5,
-                  }}
-                >
-                  Occupation
-                </label>
-                <input
-                  id="patient-occupation"
-                  type="text"
-                  className="patient-form-input"
-                  placeholder="e.g. Teacher, Engineer, Self-employed..."
-                  value={occupation}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setOccupation(val);
-                    setErrors((prev) => ({
-                      ...prev,
-                      occupation: validatePatientOccupation(val),
-                    }));
-                  }}
-                  maxLength={150}
-                />
-                {errors.occupation && (
-                  <p style={{ color: '#ef4444', fontSize: 11, marginTop: 4 }}>
-                    {errors.occupation}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <ImageUploadField
-              id="patient-image-upload"
-              label="Profile Photo"
-              value={profileImageUrl}
-              onChange={(url) => {
-                setProfileImageUrl(url);
-                setErrors((prev) => ({
-                  ...prev,
-                  profileImageUrl: validatePatientImageUrl(url),
-                }));
-              }}
-              name={name || 'Patient'}
-              folder="patient-profiles"
-              error={errors.profileImageUrl}
-              helperText="Upload patient photo (JPG, PNG, WEBP up to 10MB)"
-            />
-          </div>
-
-          {/* Section 2: Hospital & Branch Assignment */}
-          <div id="sec-hospital" className="patient-section-card">
-            <div className="patient-section-header">
-              <div className="patient-section-badge">
-                <Building2 size={18} />
-              </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>02</span>
-                  <span className="patient-section-tag">Hospital &amp; Branch Assignment</span>
-                </div>
-                <div style={{ color: '#64748b', fontSize: 12.5, marginTop: 2, fontWeight: 400, textTransform: 'none' }}>
-                  Assign patient to clinical organization and primary care facility.
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-              <div>
-                <label
-                  htmlFor="patient-hospital"
+                  htmlFor="patient-name"
                   style={{
                     fontSize: 12,
                     fontWeight: 600,
@@ -2274,448 +2177,1074 @@ export default function PatientModal({
                     marginBottom: 5,
                   }}
                 >
-                  <span>Assigned Hospital</span>
+                  <span>Full Name</span>
                   <span style={{ color: '#ef4444' }}>*</span>
                 </label>
-                <SearchableSelect
-                  id="patient-hospital"
-                  value={hospitalId}
-                  onChange={(val) => {
-                    setHospitalId(val);
-                    setBranchId('');
-                    setErrors((prev) => ({ ...prev, hospitalId: validatePatientHospital(val) }));
-                  }}
-                  options={hospitalOptions}
-                  placeholder="Select hospital…"
-                  searchPlaceholder="Search hospital by name or code..."
-                  required
-                  searchable={true}
-                  className={errors.hospitalId ? 'has-error' : ''}
-                />
-                {errors.hospitalId && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
-                    <AlertCircle size={12} style={{ flexShrink: 0 }} />
-                    <span>{errors.hospitalId}</span>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label
-                  htmlFor="patient-branch"
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: '#334155',
-                    display: 'block',
-                    marginBottom: 5,
-                  }}
-                >
-                  Branch Location
-                </label>
-                <SearchableSelect
-                  id="patient-branch"
-                  value={branchId}
-                  onChange={(val) => setBranchId(val)}
-                  disabled={hospitalId === ''}
-                  options={branchOptions}
-                  placeholder={hospitalId === '' ? 'Select hospital first…' : 'Select branch location…'}
-                  searchPlaceholder="Search branch..."
-                  searchable={true}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Section 3: Contact & Address */}
-          <div id="sec-contact" className="patient-section-card">
-            <div className="patient-section-header">
-              <div className="patient-section-badge">
-                <MapPin size={18} />
-              </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>03</span>
-                  <span className="patient-section-tag">Contact &amp; Address</span>
-                </div>
-                <div style={{ color: '#64748b', fontSize: 12.5, marginTop: 2, fontWeight: 400, textTransform: 'none' }}>
-                  Primary contact phone, email, and verified residential address details.
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-              <div>
-                <label
-                  htmlFor="patient-phone"
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: '#334155',
-                    display: 'block',
-                    marginBottom: 5,
-                  }}
-                >
-                  Phone Number
-                </label>
                 <div style={{ position: 'relative' }}>
-                  <Phone
+                  <User
                     size={15}
                     className="patient-input-icon-left"
                     style={{
-                      color: errors.phone ? '#ef4444' : '#94a3b8',
+                      color: errors.name ? '#ef4444' : '#94a3b8',
                     }}
                   />
                   <input
-                    id="patient-phone"
+                    id="patient-name"
                     className="ui-input patient-input-with-icon"
                     style={{
                       paddingLeft: 42,
-                      borderColor: errors.phone ? '#ef4444' : undefined,
-                      boxShadow: errors.phone ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      borderColor: errors.name ? '#ef4444' : undefined,
+                      boxShadow: errors.name ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
                     }}
-                    type="tel"
-                    value={phone}
+                    type="text"
+                    value={name}
                     onChange={(e) => {
-                      const sanitized = e.target.value.replace(/[^0-9+\s-]/g, '').slice(0, 16);
-                      setPhone(sanitized);
-                      setErrors((prev) => ({ ...prev, phone: validatePatientPhone(sanitized) }));
+                      const sanitized = e.target.value.replace(/[^a-zA-Z\s._-]/g, '').slice(0, 100);
+                      setName(sanitized);
+                      setErrors((prev) => ({ ...prev, name: validatePatientName(sanitized) }));
                     }}
-                    placeholder="e.g. +91 98765 43210"
+                    required
+                    placeholder="e.g. John Doe"
                   />
                 </div>
-                {errors.phone && (
+                {errors.name && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
                     <AlertCircle size={12} style={{ flexShrink: 0 }} />
-                    <span>{errors.phone}</span>
+                    <span>{errors.name}</span>
                   </div>
                 )}
               </div>
 
-              <div>
-                <label
-                  htmlFor="patient-email"
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: '#334155',
-                    display: 'block',
-                    marginBottom: 5,
-                  }}
-                >
-                  Email Address
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <Mail
-                    size={15}
-                    className="patient-input-icon-left"
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+                <div>
+                  <label
+                    htmlFor="patient-dob"
                     style={{
-                      color: errors.email ? '#ef4444' : '#94a3b8',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'block',
+                      marginBottom: 5,
                     }}
-                  />
+                  >
+                    Date of Birth
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Calendar
+                      size={15}
+                      className="patient-input-icon-left"
+                      style={{
+                        color: '#94a3b8',
+                      }}
+                    />
+                    <input
+                      id="patient-dob"
+                      className="ui-input patient-input-with-icon"
+                      style={{ paddingLeft: 42 }}
+                      type="date"
+                      value={dateOfBirth}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setDateOfBirth(val);
+                        if (val) {
+                          const calculated = formatPatientAge(val);
+                          setAgeInput(calculated !== 'DOB not set' ? calculated : '');
+                        } else {
+                          setAgeInput('');
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="patient-age"
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'block',
+                      marginBottom: 5,
+                    }}
+                  >
+                    Age
+                  </label>
                   <input
-                    id="patient-email"
-                    className="ui-input patient-input-with-icon"
-                    style={{
-                      paddingLeft: 42,
-                      borderColor: errors.email ? '#ef4444' : undefined,
-                      boxShadow: errors.email ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                    }}
-                    type="email"
-                    value={email}
-                    onChange={(e) => {
-                      const val = e.target.value.slice(0, 150);
-                      setEmail(val);
-                      setErrors((prev) => ({ ...prev, email: validatePatientEmail(val) }));
-                    }}
-                    placeholder="e.g. patient@example.com"
+                    id="patient-age"
+                    className="ui-input"
+                    type="text"
+                    value={ageInput}
+                    onChange={(e) => handleAgeChange(e.target.value)}
+                    placeholder="e.g. 35 yrs"
                   />
                 </div>
-                {errors.email && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
-                    <AlertCircle size={12} style={{ flexShrink: 0 }} />
-                    <span>{errors.email}</span>
-                  </div>
-                )}
-              </div>
-            </div>
 
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: '#334155',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  marginBottom: 8,
+                <div>
+                  <label
+                    htmlFor="patient-gender"
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'block',
+                      marginBottom: 5,
+                    }}
+                  >
+                    Gender
+                  </label>
+                  <SearchableSelect
+                    id="patient-gender"
+                    value={gender}
+                    onChange={(val) => setGender(val)}
+                    options={GENDER_OPTIONS}
+                    placeholder="Select gender..."
+                    searchable={false}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr)', gap: 12 }}>
+                <div>
+                  <label
+                    htmlFor="patient-marital"
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'block',
+                      marginBottom: 5,
+                    }}
+                  >
+                    Marital Status
+                  </label>
+                  <SearchableSelect
+                    id="patient-marital"
+                    value={maritalStatus}
+                    onChange={(val) => setMaritalStatus(val)}
+                    options={MARITAL_STATUS_OPTIONS}
+                    placeholder="Select marital status..."
+                    searchable={false}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="patient-blood"
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'block',
+                      marginBottom: 5,
+                    }}
+                  >
+                    Blood Group
+                  </label>
+                  <SearchableSelect
+                    id="patient-blood"
+                    value={bloodGroup}
+                    onChange={(val) => setBloodGroup(val)}
+                    options={BLOOD_GROUP_OPTIONS}
+                    placeholder="Select blood group..."
+                    searchPlaceholder="Search blood group..."
+                    searchable={true}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="patient-occupation"
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'block',
+                      marginBottom: 5,
+                    }}
+                  >
+                    Occupation
+                  </label>
+                  <input
+                    id="patient-occupation"
+                    type="text"
+                    className="ui-input patient-form-input"
+                    style={{ width: '100%' }}
+                    placeholder="e.g. Teacher, Engineer, Self-employed..."
+                    value={occupation}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setOccupation(val);
+                      setErrors((prev) => ({
+                        ...prev,
+                        occupation: validatePatientOccupation(val),
+                      }));
+                    }}
+                    maxLength={150}
+                  />
+                  {errors.occupation && (
+                    <p style={{ color: '#ef4444', fontSize: 11, marginTop: 4 }}>
+                      {errors.occupation}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <ImageUploadField
+                id="patient-image-upload"
+                label="Profile Photo"
+                value={profileImageUrl}
+                onChange={(url) => {
+                  setProfileImageUrl(url);
+                  setErrors((prev) => ({
+                    ...prev,
+                    profileImageUrl: validatePatientImageUrl(url),
+                  }));
                 }}
-              >
-                <MapPin size={13} style={{ color: '#64748b' }} />
-                <span>Residential Address</span>
-              </label>
+                name={name || 'Patient'}
+                folder="patient-profiles"
+                error={errors.profileImageUrl}
+                helperText="Upload patient photo (JPG, PNG, WEBP up to 10MB)"
+              />
+            </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                    gap: 12,
-                  }}
-                >
-                  <div>
-                    <label
-                      htmlFor="patient-address-line-1"
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: '#334155',
-                        display: 'block',
-                        marginBottom: 5,
-                      }}
-                    >
-                      Address Line 1
-                    </label>
-                    <input
-                      id="patient-address-line-1"
-                      className="ui-input"
-                      style={{
-                        borderColor: errors.addressLine1 ? '#ef4444' : undefined,
-                        boxShadow: errors.addressLine1 ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                      }}
-                      type="text"
-                      value={addressLine1}
-                      onChange={(e) => {
-                        const sanitized = e.target.value.replace(/[^a-zA-Z0-9\s,./#&-]/g, '').slice(0, 255);
-                        setAddressLine1(sanitized);
-                        setErrors((prev) => ({
-                          ...prev,
-                          addressLine1: validatePatientAddressLine(sanitized, 'Address line 1'),
-                        }));
-                      }}
-                      placeholder="e.g. Flat 4B, Green Meadows Apartment"
-                    />
-                    {errors.addressLine1 && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
-                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
-                        <span>{errors.addressLine1}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="patient-address-line-2"
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: '#334155',
-                        display: 'block',
-                        marginBottom: 5,
-                      }}
-                    >
-                      Address Line 2 (Optional)
-                    </label>
-                    <input
-                      id="patient-address-line-2"
-                      className="ui-input"
-                      style={{
-                        borderColor: errors.addressLine2 ? '#ef4444' : undefined,
-                        boxShadow: errors.addressLine2 ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                      }}
-                      type="text"
-                      value={addressLine2}
-                      onChange={(e) => {
-                        const sanitized = e.target.value.replace(/[^a-zA-Z0-9\s,./#&-]/g, '').slice(0, 255);
-                        setAddressLine2(sanitized);
-                        setErrors((prev) => ({
-                          ...prev,
-                          addressLine2: validatePatientAddressLine(sanitized, 'Address line 2'),
-                        }));
-                      }}
-                      placeholder="e.g. 1st Cross Street, Gandhi Nagar"
-                    />
-                    {errors.addressLine2 && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
-                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
-                        <span>{errors.addressLine2}</span>
-                      </div>
-                    )}
-                  </div>
+            {/* Section 2: Referrals */}
+            <div id="sec-referrals" className="patient-section-card">
+              <div className="patient-section-header">
+                <div className="patient-section-badge">
+                  <UserCheck size={18} />
                 </div>
-
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                    gap: 12,
-                  }}
-                >
-                  <div>
-                    <label
-                      htmlFor="patient-city"
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: '#334155',
-                        display: 'block',
-                        marginBottom: 5,
-                      }}
-                    >
-                      City / Town
-                    </label>
-                    <input
-                      id="patient-city"
-                      className="ui-input"
-                      style={{
-                        borderColor: errors.city ? '#ef4444' : undefined,
-                        boxShadow: errors.city ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                      }}
-                      type="text"
-                      value={city}
-                      onChange={(e) => {
-                        const sanitized = e.target.value.replace(/[^a-zA-Z\s-]/g, '').slice(0, 100);
-                        setCity(sanitized);
-                        setErrors((prev) => ({ ...prev, city: validatePatientCity(sanitized) }));
-                      }}
-                      placeholder="e.g. Chennai"
-                    />
-                    {errors.city && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
-                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
-                        <span>{errors.city}</span>
-                      </div>
-                    )}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>02</span>
+                    <span className="patient-section-tag">Referrals</span>
                   </div>
-
-                  <div>
-                    <label
-                      htmlFor="patient-state"
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: '#334155',
-                        display: 'block',
-                        marginBottom: 5,
-                      }}
-                    >
-                      State / Province
-                    </label>
-                    <input
-                      id="patient-state"
-                      className="ui-input"
-                      style={{
-                        borderColor: errors.state ? '#ef4444' : undefined,
-                        boxShadow: errors.state ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                      }}
-                      type="text"
-                      value={state}
-                      onChange={(e) => {
-                        const sanitized = e.target.value.replace(/[^a-zA-Z\s-]/g, '').slice(0, 100);
-                        setState(sanitized);
-                        setErrors((prev) => ({ ...prev, state: validatePatientState(sanitized) }));
-                      }}
-                      placeholder="e.g. Tamil Nadu"
-                    />
-                    {errors.state && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
-                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
-                        <span>{errors.state}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="patient-pincode"
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: '#334155',
-                        display: 'block',
-                        marginBottom: 5,
-                      }}
-                    >
-                      Pincode / Postal Code
-                    </label>
-                    <input
-                      id="patient-pincode"
-                      className="ui-input"
-                      style={{
-                        borderColor: errors.pincode ? '#ef4444' : undefined,
-                        boxShadow: errors.pincode ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
-                      }}
-                      type="text"
-                      value={pincode}
-                      onChange={(e) => {
-                        const sanitized = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
-                        setPincode(sanitized);
-                        setErrors((prev) => ({ ...prev, pincode: validatePatientPincode(sanitized) }));
-                      }}
-                      placeholder="e.g. 600020"
-                    />
-                    {errors.pincode && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
-                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
-                        <span>{errors.pincode}</span>
-                      </div>
-                    )}
+                  <div style={{ color: '#64748b', fontSize: 12.5, marginTop: 2, fontWeight: 400, textTransform: 'none' }}>
+                    Specify patient referral channel and referring doctor or partner.
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Section 4: Emergency Contacts */}
-          <div id="sec-emergency" className="patient-section-card">
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingBottom: 16,
-                marginBottom: 18,
-                borderBottom: '1px solid #f1f5f9',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+                {/* Dropdown 1: Referred By */}
+                <div>
+                  <label
+                    htmlFor="patient-referred-by"
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      marginBottom: 5,
+                    }}
+                  >
+                    <span>Referred by</span>
+                  </label>
+                  <SearchableSelect
+                    id="patient-referred-by"
+                    value={referredByType}
+                    onChange={(val) => {
+                      const nextType = val as 'ALLIANCE' | 'REFERRAL' | 'DOCTOR' | '';
+                      setReferredByType(nextType);
+                      if (nextType !== 'REFERRAL') setReferralId('');
+                      if (nextType !== 'DOCTOR') setReferralDoctorId('');
+                      if (nextType !== 'ALLIANCE') setReferralAllianceDoctorId('');
+                    }}
+                    options={[
+                      {
+                        value: 'ALLIANCE',
+                        label: 'Alliances',
+                        sublabel: 'Alliance doctors & specialist network',
+                        icon: <UserCheck size={14} />,
+                      },
+                      {
+                        value: 'REFERRAL',
+                        label: 'Referrals',
+                        sublabel: 'Partner clinic, external provider, or medical referral',
+                        icon: <UserCheck size={14} />,
+                      },
+                      {
+                        value: 'DOCTOR',
+                        label: 'Doctor',
+                        sublabel: 'Registered consulting doctor or physician',
+                        icon: <Stethoscope size={14} />,
+                      },
+                    ]}
+                    placeholder="Select referral source..."
+                    searchable={false}
+                    clearable
+                  />
+                </div>
+
+                {/* Dropdown 2: Referrals / Doctor details */}
+                <div>
+                  <label
+                    htmlFor="patient-referral-target"
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      marginBottom: 5,
+                    }}
+                  >
+                    <span>
+                      {referredByType === 'ALLIANCE'
+                        ? 'Alliances'
+                        : referredByType === 'DOCTOR'
+                          ? 'Doctor'
+                          : 'Referrals'}
+                    </span>
+                  </label>
+                  {referredByType === 'ALLIANCE' ? (
+                    <SearchableSelect
+                      id="patient-referral-target"
+                      value={referralAllianceDoctorId}
+                      onChange={(val) => setReferralAllianceDoctorId(val)}
+                      options={allianceDoctorList.map((doc) => {
+                        const docName = doc.name.startsWith('Dr.') ? doc.name : `Dr. ${doc.name}`;
+                        const subParts = [
+                          doc.specialization,
+                          doc.hospital_clinic_name,
+                          doc.category,
+                          doc.city,
+                        ].filter(Boolean);
+                        return {
+                          value: doc.id,
+                          label: docName,
+                          sublabel: subParts.join(' · '),
+                          badge: doc.status === 'ACTIVE' ? 'Active' : 'Inactive',
+                          badgeTone: doc.status === 'ACTIVE' ? 'green' : 'neutral',
+                          icon: <UserCheck size={14} />,
+                        };
+                      })}
+                      placeholder="Select alliance doctor…"
+                      searchPlaceholder="Search alliance doctors by name, specialization, clinic, city..."
+                      searchable
+                      clearable
+                    />
+                  ) : referredByType === 'REFERRAL' ? (
+                    <SearchableSelect
+                      id="patient-referral-target"
+                      value={referralId}
+                      onChange={(val) => setReferralId(val)}
+                      options={referralList.map((ref) => ({
+                        value: ref.id,
+                        label: ref.name,
+                        sublabel: [ref.occupation, ref.phone, ref.city].filter(Boolean).join(' · '),
+                        badge: ref.status === 'ACTIVE' ? 'Active' : 'Inactive',
+                        badgeTone: ref.status === 'ACTIVE' ? 'green' : 'neutral',
+                        icon: <UserCheck size={14} />,
+                      }))}
+                      placeholder="Select referral partner…"
+                      searchPlaceholder="Search referrals by name, occupation, phone, city..."
+                      searchable
+                      clearable
+                    />
+                  ) : referredByType === 'DOCTOR' ? (
+                    <SearchableSelect
+                      id="patient-referral-target"
+                      value={referralDoctorId}
+                      onChange={(val) => setReferralDoctorId(val)}
+                      options={doctorList.map((doc) => ({
+                        value: doc.id,
+                        label: doc.name,
+                        sublabel: [doc.specialization, doc.hospital_name, doc.branch_name].filter(Boolean).join(' · '),
+                        badge: doc.status === 'ACTIVE' ? 'Active' : 'Inactive',
+                        badgeTone: doc.status === 'ACTIVE' ? 'green' : 'neutral',
+                        icon: <Stethoscope size={14} />,
+                      }))}
+                      placeholder="Select doctor…"
+                      searchPlaceholder="Search doctors by name, specialization, hospital..."
+                      searchable
+                      clearable
+                    />
+                  ) : (
+                    <SearchableSelect
+                      id="patient-referral-target"
+                      value=""
+                      onChange={() => { }}
+                      disabled
+                      placeholder="Choose 'Referred by' first (Alliances, Referrals, or Doctor)"
+                      searchable={false}
+                      options={[]}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Selected alliance doctor preview details */}
+              {selectedAllianceDoctor && (
+                <div
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 8,
+                    padding: '12px 14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    marginTop: 2,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: '50%',
+                        background: '#eff6ff',
+                        color: '#1d4ed8',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontWeight: 700,
+                        fontSize: 13,
+                        flexShrink: 0,
+                        border: '1px solid #bfdbfe',
+                      }}
+                    >
+                      <UserCheck size={16} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>
+                        {selectedAllianceDoctor.name.startsWith('Dr.')
+                          ? selectedAllianceDoctor.name
+                          : `Dr. ${selectedAllianceDoctor.name}`}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>
+                        {[
+                          selectedAllianceDoctor.specialization,
+                          selectedAllianceDoctor.hospital_clinic_name,
+                          selectedAllianceDoctor.category,
+                          selectedAllianceDoctor.city,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {selectedAllianceDoctor.mobile_number && (
+                      <span style={{ fontSize: 11, color: '#475569', background: '#ffffff', padding: '3px 8px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                        {selectedAllianceDoctor.mobile_number}
+                      </span>
+                    )}
+                    {selectedAllianceDoctor.email && (
+                      <span style={{ fontSize: 11, color: '#475569', background: '#ffffff', padding: '3px 8px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                        {selectedAllianceDoctor.email}
+                      </span>
+                    )}
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: selectedAllianceDoctor.status === 'ACTIVE' ? '#16a34a' : '#64748b',
+                        background: selectedAllianceDoctor.status === 'ACTIVE' ? '#f0fdf4' : '#f1f5f9',
+                        padding: '3px 8px',
+                        borderRadius: 6,
+                        border: `1px solid ${selectedAllianceDoctor.status === 'ACTIVE' ? '#bbf7d0' : '#e2e8f0'}`,
+                      }}
+                    >
+                      {selectedAllianceDoctor.status === 'ACTIVE' ? 'Active Alliance Doctor' : 'Inactive'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Selected referral partner preview details */}
+              {selectedReferral && (
+                <div
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 8,
+                    padding: '12px 14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    marginTop: 2,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: '50%',
+                        background: '#eff6ff',
+                        color: '#2563eb',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontWeight: 700,
+                        fontSize: 13,
+                        flexShrink: 0,
+                        border: '1px solid #bfdbfe',
+                      }}
+                    >
+                      {selectedReferral.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>
+                        {selectedReferral.name}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>
+                        {[selectedReferral.occupation, selectedReferral.city, selectedReferral.phone]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {selectedReferral.email && (
+                      <span style={{ fontSize: 11, color: '#475569', background: '#ffffff', padding: '3px 8px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                        {selectedReferral.email}
+                      </span>
+                    )}
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: selectedReferral.status === 'ACTIVE' ? '#16a34a' : '#64748b',
+                        background: selectedReferral.status === 'ACTIVE' ? '#f0fdf4' : '#f1f5f9',
+                        padding: '3px 8px',
+                        borderRadius: 6,
+                        border: `1px solid ${selectedReferral.status === 'ACTIVE' ? '#bbf7d0' : '#e2e8f0'}`,
+                      }}
+                    >
+                      {selectedReferral.status === 'ACTIVE' ? 'Active Referral' : 'Inactive'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Selected doctor preview details */}
+              {selectedDoctor && (
+                <div
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 8,
+                    padding: '12px 14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    marginTop: 2,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: '50%',
+                        background: '#f5f3ff',
+                        color: '#7c3aed',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontWeight: 700,
+                        fontSize: 13,
+                        flexShrink: 0,
+                        border: '1px solid #ddd6fe',
+                      }}
+                    >
+                      <Stethoscope size={16} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>
+                        {selectedDoctor.name}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>
+                        {[selectedDoctor.specialization, selectedDoctor.hospital_name, selectedDoctor.branch_name]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {selectedDoctor.phone && (
+                      <span style={{ fontSize: 11, color: '#475569', background: '#ffffff', padding: '3px 8px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                        {selectedDoctor.phone}
+                      </span>
+                    )}
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: selectedDoctor.status === 'ACTIVE' ? '#16a34a' : '#64748b',
+                        background: selectedDoctor.status === 'ACTIVE' ? '#f0fdf4' : '#f1f5f9',
+                        padding: '3px 8px',
+                        borderRadius: 6,
+                        border: `1px solid ${selectedDoctor.status === 'ACTIVE' ? '#bbf7d0' : '#e2e8f0'}`,
+                      }}
+                    >
+                      {selectedDoctor.status === 'ACTIVE' ? 'Active Doctor' : 'Inactive'}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Section 3: Hospital & Branch Assignment */}
+            <div id="sec-hospital" className="patient-section-card">
+              <div className="patient-section-header">
                 <div className="patient-section-badge">
-                  <PhoneCall size={18} />
+                  <Building2 size={18} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>03</span>
+                    <span className="patient-section-tag">Hospital &amp; Branch Assignment</span>
+                  </div>
+                  <div style={{ color: '#64748b', fontSize: 12.5, marginTop: 2, fontWeight: 400, textTransform: 'none' }}>
+                    Assign patient to clinical organization and primary care facility.
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+                <div>
+                  <label
+                    htmlFor="patient-hospital"
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      marginBottom: 5,
+                    }}
+                  >
+                    <span>Assigned Hospital</span>
+                    <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <SearchableSelect
+                    id="patient-hospital"
+                    value={hospitalId}
+                    onChange={(val) => {
+                      setHospitalId(val);
+                      setBranchId('');
+                      setErrors((prev) => ({ ...prev, hospitalId: validatePatientHospital(val) }));
+                    }}
+                    options={hospitalOptions}
+                    placeholder="Select hospital…"
+                    searchPlaceholder="Search hospital by name or code..."
+                    required
+                    searchable={true}
+                    className={errors.hospitalId ? 'has-error' : ''}
+                  />
+                  {errors.hospitalId && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.hospitalId}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="patient-branch"
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'block',
+                      marginBottom: 5,
+                    }}
+                  >
+                    Branch Location
+                  </label>
+                  <SearchableSelect
+                    id="patient-branch"
+                    value={branchId}
+                    onChange={(val) => setBranchId(val)}
+                    disabled={hospitalId === ''}
+                    options={branchOptions}
+                    placeholder={hospitalId === '' ? 'Select hospital first…' : 'Select branch location…'}
+                    searchPlaceholder="Search branch..."
+                    searchable={true}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 4: Contact & Address */}
+            <div id="sec-contact" className="patient-section-card">
+              <div className="patient-section-header">
+                <div className="patient-section-badge">
+                  <MapPin size={18} />
                 </div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>04</span>
-                    <span className="patient-section-tag">Emergency Contact</span>
+                    <span className="patient-section-tag">Contact &amp; Address</span>
                   </div>
                   <div style={{ color: '#64748b', fontSize: 12.5, marginTop: 2, fontWeight: 400, textTransform: 'none' }}>
-                    Designate next-of-kin or emergency contact for urgent clinical outreach.
+                    Primary contact phone, email, and verified residential address details.
                   </div>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowRawJson(!showRawJson)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#2563eb',
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
-              >
-                <Code2 size={13} />
-                <span>{showRawJson ? 'Standard Form View' : 'Raw JSON Editor'}</span>
-              </button>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+                <div>
+                  <label
+                    htmlFor="patient-phone"
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'block',
+                      marginBottom: 5,
+                    }}
+                  >
+                    Phone Number
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Phone
+                      size={15}
+                      className="patient-input-icon-left"
+                      style={{
+                        color: errors.phone ? '#ef4444' : '#94a3b8',
+                      }}
+                    />
+                    <input
+                      id="patient-phone"
+                      className="ui-input patient-input-with-icon"
+                      style={{
+                        paddingLeft: 42,
+                        borderColor: errors.phone ? '#ef4444' : undefined,
+                        boxShadow: errors.phone ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => {
+                        const sanitized = e.target.value.replace(/[^0-9+\s-]/g, '').slice(0, 16);
+                        setPhone(sanitized);
+                        setErrors((prev) => ({ ...prev, phone: validatePatientPhone(sanitized) }));
+                      }}
+                      placeholder="e.g. +91 98765 43210"
+                    />
+                  </div>
+                  {errors.phone && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.phone}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="patient-email"
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#334155',
+                      display: 'block',
+                      marginBottom: 5,
+                    }}
+                  >
+                    Email Address
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Mail
+                      size={15}
+                      className="patient-input-icon-left"
+                      style={{
+                        color: errors.email ? '#ef4444' : '#94a3b8',
+                      }}
+                    />
+                    <input
+                      id="patient-email"
+                      className="ui-input patient-input-with-icon"
+                      style={{
+                        paddingLeft: 42,
+                        borderColor: errors.email ? '#ef4444' : undefined,
+                        boxShadow: errors.email ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                      }}
+                      type="email"
+                      value={email}
+                      onChange={(e) => {
+                        const val = e.target.value.slice(0, 150);
+                        setEmail(val);
+                        setErrors((prev) => ({ ...prev, email: validatePatientEmail(val) }));
+                      }}
+                      placeholder="e.g. patient@example.com"
+                    />
+                  </div>
+                  {errors.email && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                      <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                      <span>{errors.email}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#334155',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    marginBottom: 8,
+                  }}
+                >
+                  <MapPin size={13} style={{ color: '#64748b' }} />
+                  <span>Residential Address</span>
+                </label>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                      gap: 12,
+                    }}
+                  >
+                    <div>
+                      <label
+                        htmlFor="patient-address-line-1"
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: '#334155',
+                          display: 'block',
+                          marginBottom: 5,
+                        }}
+                      >
+                        Address Line 1
+                      </label>
+                      <input
+                        id="patient-address-line-1"
+                        className="ui-input"
+                        style={{
+                          borderColor: errors.addressLine1 ? '#ef4444' : undefined,
+                          boxShadow: errors.addressLine1 ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                        }}
+                        type="text"
+                        value={addressLine1}
+                        onChange={(e) => {
+                          const sanitized = e.target.value.replace(/[^a-zA-Z0-9\s,./#&-]/g, '').slice(0, 255);
+                          setAddressLine1(sanitized);
+                          setErrors((prev) => ({
+                            ...prev,
+                            addressLine1: validatePatientAddressLine(sanitized, 'Address line 1'),
+                          }));
+                        }}
+                        placeholder="e.g. Flat 4B, Green Meadows Apartment"
+                      />
+                      {errors.addressLine1 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                          <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                          <span>{errors.addressLine1}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="patient-address-line-2"
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: '#334155',
+                          display: 'block',
+                          marginBottom: 5,
+                        }}
+                      >
+                        Address Line 2 (Optional)
+                      </label>
+                      <input
+                        id="patient-address-line-2"
+                        className="ui-input"
+                        style={{
+                          borderColor: errors.addressLine2 ? '#ef4444' : undefined,
+                          boxShadow: errors.addressLine2 ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                        }}
+                        type="text"
+                        value={addressLine2}
+                        onChange={(e) => {
+                          const sanitized = e.target.value.replace(/[^a-zA-Z0-9\s,./#&-]/g, '').slice(0, 255);
+                          setAddressLine2(sanitized);
+                          setErrors((prev) => ({
+                            ...prev,
+                            addressLine2: validatePatientAddressLine(sanitized, 'Address line 2'),
+                          }));
+                        }}
+                        placeholder="e.g. 1st Cross Street, Gandhi Nagar"
+                      />
+                      {errors.addressLine2 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                          <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                          <span>{errors.addressLine2}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                      gap: 12,
+                    }}
+                  >
+                    <div>
+                      <label
+                        htmlFor="patient-city"
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: '#334155',
+                          display: 'block',
+                          marginBottom: 5,
+                        }}
+                      >
+                        City / Town
+                      </label>
+                      <input
+                        id="patient-city"
+                        className="ui-input"
+                        style={{
+                          borderColor: errors.city ? '#ef4444' : undefined,
+                          boxShadow: errors.city ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                        }}
+                        type="text"
+                        value={city}
+                        onChange={(e) => {
+                          const sanitized = e.target.value.replace(/[^a-zA-Z\s-]/g, '').slice(0, 100);
+                          setCity(sanitized);
+                          setErrors((prev) => ({ ...prev, city: validatePatientCity(sanitized) }));
+                        }}
+                        placeholder="e.g. Chennai"
+                      />
+                      {errors.city && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                          <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                          <span>{errors.city}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="patient-state"
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: '#334155',
+                          display: 'block',
+                          marginBottom: 5,
+                        }}
+                      >
+                        State / Province
+                      </label>
+                      <input
+                        id="patient-state"
+                        className="ui-input"
+                        style={{
+                          borderColor: errors.state ? '#ef4444' : undefined,
+                          boxShadow: errors.state ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                        }}
+                        type="text"
+                        value={state}
+                        onChange={(e) => {
+                          const sanitized = e.target.value.replace(/[^a-zA-Z\s-]/g, '').slice(0, 100);
+                          setState(sanitized);
+                          setErrors((prev) => ({ ...prev, state: validatePatientState(sanitized) }));
+                        }}
+                        placeholder="e.g. Tamil Nadu"
+                      />
+                      {errors.state && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                          <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                          <span>{errors.state}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="patient-pincode"
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: '#334155',
+                          display: 'block',
+                          marginBottom: 5,
+                        }}
+                      >
+                        Pincode / Postal Code
+                      </label>
+                      <input
+                        id="patient-pincode"
+                        className="ui-input"
+                        style={{
+                          borderColor: errors.pincode ? '#ef4444' : undefined,
+                          boxShadow: errors.pincode ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : undefined,
+                        }}
+                        type="text"
+                        value={pincode}
+                        onChange={(e) => {
+                          const sanitized = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                          setPincode(sanitized);
+                          setErrors((prev) => ({ ...prev, pincode: validatePatientPincode(sanitized) }));
+                        }}
+                        placeholder="e.g. 600020"
+                      />
+                      {errors.pincode && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, color: '#dc2626', fontSize: 11 }}>
+                          <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                          <span>{errors.pincode}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {!showRawJson ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+            {/* Section 4: Emergency Contacts */}
+            <div id="sec-emergency" className="patient-section-card">
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingBottom: 16,
+                  marginBottom: 18,
+                  borderBottom: '1px solid #f1f5f9',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="patient-section-badge">
+                    <PhoneCall size={18} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>05</span>
+                      <span className="patient-section-tag">Emergency Contact</span>
+                    </div>
+                    <div style={{ color: '#64748b', fontSize: 12.5, marginTop: 2, fontWeight: 400, textTransform: 'none' }}>
+                      Designate next-of-kin or emergency contact for urgent clinical outreach.
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
                 <div>
                   <label
                     htmlFor="emergency-name"
@@ -2836,10 +3365,28 @@ export default function PatientModal({
                   )}
                 </div>
               </div>
-            ) : (
+            </div>
+
+            {/* Section 5: Access & Profile Status */}
+            <div id="sec-access" className="patient-section-card">
+              <div className="patient-section-header">
+                <div className="patient-section-badge">
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>06</span>
+                    <span className="patient-section-tag">Access &amp; System Status</span>
+                  </div>
+                  <div style={{ color: '#64748b', fontSize: 12.5, marginTop: 2, fontWeight: 400, textTransform: 'none' }}>
+                    Manage user credentials link and patient activation status.
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label
-                  htmlFor="emergency-json"
+                  htmlFor="patient-user-account"
                   style={{
                     fontSize: 12,
                     fontWeight: 600,
@@ -2848,218 +3395,175 @@ export default function PatientModal({
                     marginBottom: 5,
                   }}
                 >
-                  Emergency Contacts JSON Array
+                  Linked User Account
                 </label>
-                <textarea
-                  id="emergency-json"
-                  className="ui-textarea"
-                  rows={4}
-                  value={emergencyContacts}
-                  onChange={(e) => setEmergencyContacts(e.target.value)}
-                  placeholder='[{"name": "Jane Doe", "phone": "1234567890", "relation": "Spouse"}]'
-                  style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12 }}
+                <SearchableSelect
+                  id="patient-user-account"
+                  value={userAccountId}
+                  onChange={(val) => setUserAccountId(val)}
+                  options={userAccountOptions}
+                  placeholder="No account linked (Walk-in / Offline)"
+                  searchPlaceholder="Search username..."
+                  searchable={true}
+                />
+                <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                  Only active patient user credentials are listed.
+                </div>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#334155',
+                    display: 'block',
+                    marginBottom: 6,
+                  }}
+                >
+                  Patient Profile Status
+                </label>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    type="button"
+                    className={`patient-status-btn ${status === 'ACTIVE' ? 'is-active' : ''}`}
+                    onClick={() => setStatus('ACTIVE')}
+                  >
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: '#22c55e',
+                        marginTop: 4,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 650,
+                          color: status === 'ACTIVE' ? '#1d4ed8' : '#334155',
+                        }}
+                      >
+                        Active
+                      </div>
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>
+                        Patient is active and can receive appointments & care.
+                      </div>
+                    </div>
+                    {status === 'ACTIVE' && (
+                      <CheckCircle2 size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`patient-status-btn ${status === 'INACTIVE' ? 'is-active' : ''}`}
+                    onClick={() => setStatus('INACTIVE')}
+                  >
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: '#94a3b8',
+                        marginTop: 4,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 650,
+                          color: status === 'INACTIVE' ? '#1d4ed8' : '#334155',
+                        }}
+                      >
+                        Inactive
+                      </div>
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>
+                        Suspended from booking new appointments.
+                      </div>
+                    </div>
+                    {status === 'INACTIVE' && (
+                      <CheckCircle2 size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ paddingTop: 4 }}>
+                <SwitchRow
+                  checked={isActive}
+                  onChange={setIsActive}
+                  title="Active in system"
+                  description="Allow this patient to book appointments and sign in."
                 />
               </div>
-            )}
+            </div>
           </div>
 
-          {/* Section 5: Access & Profile Status */}
-          <div id="sec-access" className="patient-section-card">
-            <div className="patient-section-header">
-              <div className="patient-section-badge">
-                <ShieldCheck size={18} />
-              </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ color: '#64748b', fontWeight: 700, fontSize: 15 }}>05</span>
-                  <span className="patient-section-tag">Access &amp; System Status</span>
-                </div>
-                <div style={{ color: '#64748b', fontSize: 12.5, marginTop: 2, fontWeight: 400, textTransform: 'none' }}>
-                  Manage user credentials link and patient activation status.
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor="patient-user-account"
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: '#334155',
-                  display: 'block',
-                  marginBottom: 5,
-                }}
-              >
-                Linked User Account
-              </label>
-              <SearchableSelect
-                id="patient-user-account"
-                value={userAccountId}
-                onChange={(val) => setUserAccountId(val)}
-                options={userAccountOptions}
-                placeholder="No account linked (Walk-in / Offline)"
-                searchPlaceholder="Search username..."
-                searchable={true}
-              />
-              <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
-                Only active patient user credentials are listed.
-              </div>
-            </div>
-
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: '#334155',
-                  display: 'block',
-                  marginBottom: 6,
-                }}
-              >
-                Patient Profile Status
-              </label>
-              <div style={{ display: 'flex', gap: 10 }}>
+          {!isPage && (
+            <div className="patient-drawer-footer">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <button
                   type="button"
-                  className={`patient-status-btn ${status === 'ACTIVE' ? 'is-active' : ''}`}
-                  onClick={() => setStatus('ACTIVE')}
+                  onClick={onClose}
+                  className="patient-footer-btn patient-footer-btn-cancel"
                 >
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      background: '#22c55e',
-                      marginTop: 4,
-                      flexShrink: 0,
-                    }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 650,
-                        color: status === 'ACTIVE' ? '#1d4ed8' : '#334155',
-                      }}
-                    >
-                      Active
-                    </div>
-                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>
-                      Patient is active and can receive appointments & care.
-                    </div>
-                  </div>
-                  {status === 'ACTIVE' && (
-                    <CheckCircle2 size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
+                  Cancel
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b' }}>
+                  <span style={{ fontWeight: 600, color: '#0f172a' }}>Step 1 of 5</span>
+                  <span style={{ color: '#cbd5e1' }}>•</span>
+                  <span>Fields marked with <span style={{ color: '#ef4444' }}>*</span> are required</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="patient-footer-btn patient-footer-btn-secondary"
+                >
+                  {loading ? (
+                    'Saving…'
+                  ) : activePatient || patient ? (
+                    <>
+                      <Pencil size={14} />
+                      <span>Save Changes</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus size={14} />
+                      <span>Register Patient</span>
+                    </>
                   )}
                 </button>
-
                 <button
                   type="button"
-                  className={`patient-status-btn ${status === 'INACTIVE' ? 'is-active' : ''}`}
-                  onClick={() => setStatus('INACTIVE')}
+                  onClick={() => setActiveStep('history')}
+                  data-testid="next-from-personal"
+                  className="patient-footer-btn patient-footer-btn-neutral"
                 >
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      background: '#94a3b8',
-                      marginTop: 4,
-                      flexShrink: 0,
-                    }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 650,
-                        color: status === 'INACTIVE' ? '#1d4ed8' : '#334155',
-                      }}
-                    >
-                      Inactive
-                    </div>
-                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>
-                      Suspended from booking new appointments.
-                    </div>
-                  </div>
-                  {status === 'INACTIVE' && (
-                    <CheckCircle2 size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
-                  )}
+                  <span>Next</span>
+                  <ChevronRight size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveAndNextFromStep1}
+                  disabled={loading}
+                  data-testid="save-and-next-from-personal"
+                  className="patient-footer-btn patient-footer-btn-primary"
+                >
+                  <span>{loading ? 'Saving…' : 'Save & Next'}</span>
+                  <ChevronRight size={15} />
                 </button>
               </div>
             </div>
-
-            <div style={{ paddingTop: 4 }}>
-              <SwitchRow
-                checked={isActive}
-                onChange={setIsActive}
-                title="Active in system"
-                description="Allow this patient to book appointments and sign in."
-              />
-            </div>
-          </div>
-        </div>
-
-        {!isPage && (
-          <div className="patient-drawer-footer">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <button
-                type="button"
-                onClick={onClose}
-                className="patient-footer-btn patient-footer-btn-cancel"
-              >
-                Cancel
-              </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b' }}>
-                <span style={{ fontWeight: 600, color: '#0f172a' }}>Step 1 of 5</span>
-                <span style={{ color: '#cbd5e1' }}>•</span>
-                <span>Fields marked with <span style={{ color: '#ef4444' }}>*</span> are required</span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button
-                type="submit"
-                disabled={loading}
-                className="patient-footer-btn patient-footer-btn-secondary"
-              >
-                {loading ? (
-                  'Saving…'
-                ) : activePatient || patient ? (
-                  <>
-                    <Pencil size={14} />
-                    <span>Save Changes</span>
-                  </>
-                ) : (
-                  <>
-                    <UserPlus size={14} />
-                    <span>Register Patient</span>
-                  </>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveStep('history')}
-                data-testid="next-from-personal"
-                className="patient-footer-btn patient-footer-btn-neutral"
-              >
-                <span>Next</span>
-                <ChevronRight size={15} />
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveAndNextFromStep1}
-                disabled={loading}
-                data-testid="save-and-next-from-personal"
-                className="patient-footer-btn patient-footer-btn-primary"
-              >
-                <span>{loading ? 'Saving…' : 'Save & Next'}</span>
-                <ChevronRight size={15} />
-              </button>
-            </div>
-          </div>
-        )}
-      </form>
+          )}
+        </form>
       ) : activeStep === 'history' || ['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep) ? (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
           <ClinicalHistorySectionContent
@@ -3071,14 +3575,26 @@ export default function PatientModal({
             patientAge={activePatient?.date_of_birth ? formatPatientAge(activePatient.date_of_birth) : (dateOfBirth ? formatPatientAge(dateOfBirth) : undefined)}
             patientBloodGroup={activePatient?.blood_group || patient?.blood_group || bloodGroup}
             initialData={latestMedicalHistory}
-            activeTab={(['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep) ? activeStep : 'current') as SectionTab}
+            activeTab={
+              activeStep === 'current'
+                ? 'current'
+                : (['previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)
+                  ? activeStep
+                  : 'previous') as SectionTab
+            }
             onTabChange={(t) => setActiveStep(t)}
             onPreviousToPersonal={() => setActiveStep('personal')}
             onClose={onClose}
             onSuccess={(saved) => {
               setLatestMedicalHistory(saved);
             }}
-            onFinish={() => setActiveStep('plan')}
+            onFinish={() => {
+              if (activeStep === 'current') {
+                setActiveStep('plan');
+              } else {
+                setActiveStep('current');
+              }
+            }}
             ensurePatientSaved={ensurePatientSaved}
             initialVitals={initialVitalsMemo}
             hideStepperHeader={isPage}
@@ -3555,12 +4071,12 @@ export default function PatientModal({
         preselectedPatient={
           activePatient || patient
             ? {
-                id: (activePatient || patient)!.id,
-                name: (activePatient || patient)!.name,
-                phone: (activePatient || patient)!.phone || undefined,
-                gender: (activePatient || patient)!.gender || undefined,
-                date_of_birth: (activePatient || patient)!.date_of_birth || undefined,
-              }
+              id: (activePatient || patient)!.id,
+              name: (activePatient || patient)!.name,
+              phone: (activePatient || patient)!.phone || undefined,
+              gender: (activePatient || patient)!.gender || undefined,
+              date_of_birth: (activePatient || patient)!.date_of_birth || undefined,
+            }
             : undefined
         }
         initialDiagnosis={managementPlan?.provisionalDiagnosis}
@@ -3608,10 +4124,10 @@ export default function PatientModal({
       >
         <div
           style={{
-            maxWidth: 1440,
             width: '100%',
-            margin: '0 auto',
-            padding: '12px 28px',
+            maxWidth: '100%',
+            margin: 0,
+            padding: '12px 20px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -3623,38 +4139,39 @@ export default function PatientModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: '#64748b' }}>
             <span style={{ fontWeight: 700, color: '#0f172a' }}>
               {activeStep === 'personal'
-                ? 'Step 1 of 5'
-                : activeStep === 'history' || ['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)
-                ? 'Step 2 of 5'
-                : activeStep === 'plan'
-                ? 'Step 3 of 5'
-                : activeStep === 'prescription'
-                ? 'Step 4 of 5'
-                : 'Step 5 of 5'}
+                ? 'Step 1 of 6'
+                : activeStep === 'history' || ['previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)
+                  ? 'Step 2 of 6'
+                  : activeStep === 'current'
+                    ? 'Step 3 of 6'
+                    : activeStep === 'plan'
+                      ? 'Step 4 of 6'
+                      : activeStep === 'prescription'
+                        ? 'Step 5 of 6'
+                        : 'Step 6 of 6'}
             </span>
             <span style={{ color: '#cbd5e1' }}>•</span>
             <span style={{ fontWeight: 600, color: '#334155' }}>
               {activeStep === 'personal'
                 ? 'Basic Information'
-                : activeStep === 'history' || ['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)
-                ? `Past Medical History · ${
-                    activeSubStep === 'current'
-                      ? 'Current Examination & Vitals'
-                      : activeSubStep === 'previous'
-                      ? 'Previous Medical History'
-                      : activeSubStep === 'family'
+                : activeStep === 'history' || ['previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)
+                  ? `Past Medical History · ${activeSubStep === 'previous'
+                    ? 'Previous Medical History'
+                    : activeSubStep === 'family'
                       ? 'Family Medical History'
                       : activeSubStep === 'reproductive'
-                      ? 'Reproductive History'
-                      : activeSubStep === 'lifestyle'
-                      ? 'Lifestyle History'
-                      : 'Medical Documents'
+                        ? 'Reproductive History'
+                        : activeSubStep === 'lifestyle'
+                          ? 'Lifestyle History'
+                          : 'Medical Documents'
                   }`
-                : activeStep === 'plan'
-                ? 'Plan of Management'
-                : activeStep === 'prescription'
-                ? 'Prescriptions'
-                : 'Appointments'}
+                  : activeStep === 'current'
+                    ? 'Current Examination'
+                    : activeStep === 'plan'
+                      ? 'Plan of Management'
+                      : activeStep === 'prescription'
+                        ? 'Prescriptions'
+                        : 'Appointments'}
             </span>
             {activeStep === 'personal' && (
               <>
@@ -3719,108 +4236,162 @@ export default function PatientModal({
             )}
 
             {(activeStep === 'history' ||
-              ['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)) && (() => {
-              const subKeys: SectionTab[] = ['current', 'previous', 'family', 'reproductive', 'lifestyle', 'documents'];
-              const currentSubIdx = subKeys.indexOf(activeSubStep);
-              return (
-                <>
-                  {currentSubIdx > 0 && subKeys[currentSubIdx - 1] ? (
+              ['previous', 'family', 'reproductive', 'lifestyle', 'documents'].includes(activeStep)) && (() => {
+                const subKeys: SectionTab[] = ['previous', 'family', 'reproductive', 'lifestyle', 'documents'];
+                const currentSubIdx = subKeys.indexOf(activeSubStep);
+                return (
+                  <>
+                    {currentSubIdx > 0 && subKeys[currentSubIdx - 1] ? (
+                      <button
+                        type="button"
+                        onClick={() => setActiveStep(subKeys[currentSubIdx - 1] as PatientModalStep)}
+                        className="patient-footer-btn patient-footer-btn-secondary"
+                        style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      >
+                        <ChevronLeft size={15} />
+                        <span>Previous</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setActiveStep('personal')}
+                        data-testid="prev-step-btn"
+                        className="patient-footer-btn patient-footer-btn-secondary"
+                        style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      >
+                        <ChevronLeft size={15} />
+                        <span>Previous: Basic Details</span>
+                      </button>
+                    )}
+
+                    {/* Standalone Save Progress button for any Medical History sub-tab */}
                     <button
                       type="button"
-                      onClick={() => setActiveStep(subKeys[currentSubIdx - 1] as PatientModalStep)}
+                      onClick={handleSaveMedicalHistoryProgress}
+                      disabled={savingHistory}
                       className="patient-footer-btn patient-footer-btn-secondary"
                       style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                     >
-                      <ChevronLeft size={15} />
-                      <span>Previous</span>
+                      <Save size={14} />
+                      <span>{savingHistory ? 'Saving…' : 'Save Progress'}</span>
                     </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setActiveStep('personal')}
-                      className="patient-footer-btn patient-footer-btn-secondary"
-                      style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                    >
-                      <ChevronLeft size={15} />
-                      <span>Previous: Basic Details</span>
-                    </button>
-                  )}
 
-                  {/* Standalone Save Progress button for any Medical History sub-tab */}
-                  <button
-                    type="button"
-                    onClick={handleSaveMedicalHistoryProgress}
-                    disabled={savingHistory}
-                    className="patient-footer-btn patient-footer-btn-secondary"
-                    style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                  >
-                    <Save size={14} />
-                    <span>{savingHistory ? 'Saving…' : 'Save Progress'}</span>
-                  </button>
+                    {currentSubIdx < subKeys.length - 1 && subKeys[currentSubIdx + 1] ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveAndNextHistorySubStep(subKeys[currentSubIdx + 1] as PatientModalStep)}
+                          disabled={savingHistory}
+                          data-testid="next-step-btn"
+                          className="patient-footer-btn patient-footer-btn-neutral"
+                          style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                        >
+                          <span>Next</span>
+                          <ChevronRight size={15} />
+                        </button>
 
-                  {currentSubIdx < subKeys.length - 1 && subKeys[currentSubIdx + 1] ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => handleSaveAndNextHistorySubStep(subKeys[currentSubIdx + 1] as PatientModalStep)}
-                        disabled={savingHistory}
-                        className="patient-footer-btn patient-footer-btn-neutral"
-                        style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                      >
-                        <span>Next</span>
-                        <ChevronRight size={15} />
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveAndNextHistorySubStep(subKeys[currentSubIdx + 1] as PatientModalStep)}
+                          disabled={savingHistory}
+                          data-testid="save-and-next-btn"
+                          className="patient-footer-btn patient-footer-btn-primary"
+                          style={{ padding: '7px 20px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                        >
+                          <span>{savingHistory ? 'Saving…' : 'Save & Next'}</span>
+                          <ChevronRight size={15} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveAndNextHistorySubStep('current')}
+                          disabled={savingHistory}
+                          data-testid="next-step-btn"
+                          className="patient-footer-btn patient-footer-btn-neutral"
+                          style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                        >
+                          <span>Next: Current Examination</span>
+                          <ChevronRight size={15} />
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => handleSaveAndNextHistorySubStep(subKeys[currentSubIdx + 1] as PatientModalStep)}
-                        disabled={savingHistory}
-                        className="patient-footer-btn patient-footer-btn-primary"
-                        style={{ padding: '7px 20px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                      >
-                        <span>{savingHistory ? 'Saving…' : 'Save & Next'}</span>
-                        <ChevronRight size={15} />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={handleContinueToPlan}
-                        disabled={savingHistory}
-                        className="patient-footer-btn patient-footer-btn-neutral"
-                        style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                      >
-                        <span>Next</span>
-                        <ChevronRight size={15} />
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveAndNextHistorySubStep('current')}
+                          disabled={savingHistory}
+                          data-testid="save-and-next-btn"
+                          className="patient-footer-btn patient-footer-btn-primary"
+                          style={{ padding: '7px 20px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                        >
+                          <span>{savingHistory ? 'Saving…' : 'Save & Next'}</span>
+                          <ChevronRight size={15} />
+                        </button>
+                      </>
+                    )}
+                  </>
+                );
+              })()}
 
-                      <button
-                        type="button"
-                        onClick={handleContinueToPlan}
-                        disabled={savingHistory}
-                        className="patient-footer-btn patient-footer-btn-primary"
-                        style={{ padding: '7px 20px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                      >
-                        <span>{savingHistory ? 'Saving…' : 'Save & Next'}</span>
-                        <ChevronRight size={15} />
-                      </button>
-                    </>
-                  )}
-                </>
-              );
-            })()}
+            {activeStep === 'current' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveStep('history')}
+                  data-testid="prev-step-btn"
+                  className="patient-footer-btn patient-footer-btn-secondary"
+                  style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  <ChevronLeft size={15} />
+                  <span>Previous: Past Medical History</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveMedicalHistoryProgress}
+                  disabled={savingHistory}
+                  className="patient-footer-btn patient-footer-btn-secondary"
+                  style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Save size={14} />
+                  <span>{savingHistory ? 'Saving…' : 'Save Progress'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveStep('plan')}
+                  data-testid="next-step-btn"
+                  className="patient-footer-btn patient-footer-btn-neutral"
+                  style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  <span>Next: Plan of Management</span>
+                  <ChevronRight size={15} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleContinueToPlan}
+                  disabled={savingHistory}
+                  data-testid="save-and-next-btn"
+                  className="patient-footer-btn patient-footer-btn-primary"
+                  style={{ padding: '7px 20px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  <span>{savingHistory ? 'Saving…' : 'Save & Next'}</span>
+                  <ChevronRight size={15} />
+                </button>
+              </>
+            )}
 
             {activeStep === 'plan' && (
               <>
                 <button
                   type="button"
-                  onClick={() => setActiveStep('history')}
+                  onClick={() => setActiveStep('current')}
                   className="patient-footer-btn patient-footer-btn-secondary"
                   style={{ padding: '7px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 >
                   <ChevronLeft size={15} />
-                  <span>Previous: Medical History</span>
+                  <span>Previous: Current Examination</span>
                 </button>
                 <button
                   type="button"
@@ -3936,12 +4507,14 @@ export default function PatientModal({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '16px 28px',
+            padding: '14px 20px',
             background: '#ffffff',
             borderBottom: '1px solid #e2e8f0',
             position: 'sticky',
             top: 0,
             zIndex: 40,
+            width: '100%',
+            boxSizing: 'border-box',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -4006,16 +4579,16 @@ export default function PatientModal({
           </button>
         </div>
 
-        {/* 2-Column Responsive Layout Matching UI Reference */}
+        {/* 2-Column Consistent Layout Matching UI Reference Across All Screen Sizes */}
         <div
           className="patient-page-grid"
           style={{
-            maxWidth: 1440,
             width: '100%',
-            margin: '0 auto',
-            padding: '20px 28px 40px 28px',
+            maxWidth: '100%',
+            margin: 0,
+            padding: '16px 20px 40px 20px',
             display: 'grid',
-            gridTemplateColumns: '240px 1fr',
+            gridTemplateColumns: '300px minmax(0, 1fr)',
             gap: 20,
             alignItems: 'start',
             boxSizing: 'border-box',

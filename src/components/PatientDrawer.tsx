@@ -1152,24 +1152,21 @@ export default function PatientDrawer({ patient, onClose, onEdit }: PatientDrawe
                           {c.name ?? 'Unnamed Contact'}
                         </div>
                         <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>
-                          {[c.relation, c.phone].filter(Boolean).join(' · ')}
+                          {c.relation || 'Relation not specified'}
                         </div>
                       </div>
                     </div>
                     {c.phone && (
-                      <a
-                        className="ui-btn ui-btn-xs"
-                        href={`tel:${c.phone}`}
+                      <span
                         style={{
-                          color: '#2563eb',
-                          background: '#eff6ff',
-                          border: '1px solid #dbeafe',
-                          textDecoration: 'none',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: '#0f172a',
                           flexShrink: 0,
                         }}
                       >
-                        Call
-                      </a>
+                        {c.phone}
+                      </span>
                     )}
                   </div>
                 ))}

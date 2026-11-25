@@ -1,6 +1,7 @@
 import { Button, Spin } from 'antd';
 import type { Dayjs } from 'dayjs';
 import {
+  Activity,
   AlertCircle,
   ArrowLeft,
   Building2,
@@ -19,6 +20,7 @@ import {
   Phone,
   Pill,
   Plus,
+  Printer,
   RefreshCw,
   ShieldCheck,
   Stethoscope,
@@ -42,7 +44,9 @@ import type {
   TimelineEvent,
   TimelineFilterType,
 } from '../features/timelines/types/patientTimelines';
+import { PatientCurrentPlanTab } from '../features/medical_history/components/PatientCurrentPlanTab';
 import { PatientMedicalHistoryTab } from '../features/medical_history/components/PatientMedicalHistoryTab';
+import { PatientSummaryPdfModal } from '../features/medical_history/components/PatientSummaryPdfModal';
 import { formatDate, formatPatientAge, formatPatientDisplayName, timeAgo, titleCase } from '../lib/format';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
@@ -85,6 +89,7 @@ function bmiOf(heightCm: number | null | undefined, weightKg: number | null | un
 type PatientTab =
   | 'overview'
   | 'medical-history'
+  | 'current-plan'
   | 'prescriptions'
   | 'appointments'
   | 'documents'
@@ -109,6 +114,7 @@ export default function PatientDetailPage() {
   const [isCreateRxOpen, setIsCreateRxOpen] = useState(false);
   const [viewingRx, setViewingRx] = useState<Prescription | null>(null);
   const [previewRecord, setPreviewRecord] = useState<MedicalRecord | null>(null);
+  const [isSummaryPdfModalOpen, setIsSummaryPdfModalOpen] = useState(false);
 
   // Reset img error on patient change
   useEffect(() => {
@@ -389,6 +395,27 @@ export default function PatientDetailPage() {
           <button
             type="button"
             className="ui-btn ui-btn-neutral"
+            onClick={() => setIsSummaryPdfModalOpen(true)}
+            title="Export full patient clinical record & management plan to PDF with prescription letterhead"
+            style={{
+              height: 34,
+              fontSize: 12.5,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              color: '#67358f',
+              borderColor: '#ddd6fe',
+              background: '#fdf4ff',
+              fontWeight: 650,
+            }}
+          >
+            <Printer size={13.5} />
+            <span>Export Clinical PDF</span>
+          </button>
+
+          <button
+            type="button"
+            className="ui-btn ui-btn-neutral"
             onClick={() => {
               void loadPatient();
               void loadPrescriptions();
@@ -649,6 +676,15 @@ export default function PatientDetailPage() {
 
             <button
               type="button"
+              className={`patient-tab-btn ${activeTab === 'current-plan' ? 'is-active' : ''}`}
+              onClick={() => setActiveTab('current-plan')}
+            >
+              <Activity size={14} />
+              <span>Current Medical Info &amp; Plan of Management</span>
+            </button>
+
+            <button
+              type="button"
               className={`patient-tab-btn ${activeTab === 'prescriptions' ? 'is-active' : ''}`}
               onClick={() => setActiveTab('prescriptions')}
             >
@@ -787,9 +823,9 @@ export default function PatientDetailPage() {
                             </div>
                           </div>
                           {c.phone ? (
-                            <a href={`tel:${c.phone}`} className="patient-contact-call-btn">
-                              <Phone size={11} /> Call
-                            </a>
+                            <span style={{ fontSize: 12.5, fontWeight: 600, color: '#0f172a' }}>
+                              {c.phone}
+                            </span>
                           ) : null}
                         </div>
                       ))}
@@ -844,6 +880,11 @@ export default function PatientDetailPage() {
             {/* ── TAB: MEDICAL HISTORY ── */}
             {activeTab === 'medical-history' && (
               <PatientMedicalHistoryTab patient={patient} isEditable={isPatientEditable} />
+            )}
+
+            {/* ── TAB: CURRENT MEDICAL INFO & PLAN OF MANAGEMENT ── */}
+            {activeTab === 'current-plan' && (
+              <PatientCurrentPlanTab patient={patient} isEditable={isPatientEditable} />
             )}
 
             {/* ── TAB 2: PRESCRIPTIONS ── */}
@@ -1287,6 +1328,15 @@ export default function PatientDetailPage() {
         open={Boolean(previewRecord)}
         onClose={() => setPreviewRecord(null)}
       />
+
+      {/* Comprehensive Patient Dossier / Clinical Summary PDF Preview Modal */}
+      {patient && (
+        <PatientSummaryPdfModal
+          isOpen={isSummaryPdfModalOpen}
+          onClose={() => setIsSummaryPdfModalOpen(false)}
+          patient={patient}
+        />
+      )}
 
       {/* ── Scoped Styling Matching Doctor View Reference Layout ── */}
       <style>{`

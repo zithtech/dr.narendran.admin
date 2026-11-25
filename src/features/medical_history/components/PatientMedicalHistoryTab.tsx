@@ -4,7 +4,6 @@ import {
   AlertCircle,
   Eye,
   FileText,
-  HeartPulse,
   History,
   Pencil,
   Plus,
@@ -31,7 +30,10 @@ interface PatientMedicalHistoryTabProps {
   isEditable?: boolean;
 }
 
-export function PatientMedicalHistoryTab({ patient, isEditable = true }: PatientMedicalHistoryTabProps) {
+export function PatientMedicalHistoryTab({
+  patient,
+  isEditable = true,
+}: PatientMedicalHistoryTabProps) {
   const { message } = App.useApp();
 
   const [histories, setHistories] = useState<PatientMedicalHistoryRecord[]>([]);
@@ -125,6 +127,69 @@ export function PatientMedicalHistoryTab({ patient, isEditable = true }: Patient
     return { val: bmi.toFixed(1), band, color };
   }, [heightVal, weightVal]);
 
+  const renderVitalsRibbon = () => (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+        gap: 10,
+        marginBottom: 14,
+      }}
+    >
+      <div className="patient-kpi-card">
+        <div className="patient-kpi-label">Height</div>
+        <div className="patient-kpi-val">{heightVal ? `${heightVal} cm` : '—'}</div>
+        <div className="patient-kpi-sub">Stature</div>
+      </div>
+
+      <div className="patient-kpi-card">
+        <div className="patient-kpi-label">Weight</div>
+        <div className="patient-kpi-val">{weightVal ? `${weightVal} kg` : '—'}</div>
+        <div className="patient-kpi-sub">Body Mass</div>
+      </div>
+
+      <div className="patient-kpi-card">
+        <div className="patient-kpi-label">BMI Score</div>
+        <div className="patient-kpi-val" style={{ color: bmiScore?.color || '#1d4ed8' }}>
+          {bmiScore?.val || '—'}
+        </div>
+        <div className="patient-kpi-sub">{bmiScore?.band || 'No data'}</div>
+      </div>
+
+      <div className="patient-kpi-card">
+        <div className="patient-kpi-label">Blood Pressure</div>
+        <div className="patient-kpi-val" style={{ color: '#b91c1c' }}>
+          {currentRecord?.current_medical_info?.blood_pressure || patient.blood_pressure || '—'}
+        </div>
+        <div className="patient-kpi-sub">mmHg</div>
+      </div>
+
+      <div className="patient-kpi-card">
+        <div className="patient-kpi-label">Pulse Rate</div>
+        <div className="patient-kpi-val" style={{ color: '#7c3aed' }}>
+          {currentRecord?.current_medical_info?.pulse_rate ? `${currentRecord.current_medical_info.pulse_rate} bpm` : '—'}
+        </div>
+        <div className="patient-kpi-sub">Heart Rate</div>
+      </div>
+
+      <div className="patient-kpi-card">
+        <div className="patient-kpi-label">Body Temp</div>
+        <div className="patient-kpi-val" style={{ color: '#c2410c' }}>
+          {currentRecord?.current_medical_info?.temperature || patient.body_temperature ? `${currentRecord?.current_medical_info?.temperature || patient.body_temperature} °F` : '—'}
+        </div>
+        <div className="patient-kpi-sub">Oral / Axillary</div>
+      </div>
+
+      <div className="patient-kpi-card">
+        <div className="patient-kpi-label">Oxygen SpO2</div>
+        <div className="patient-kpi-val" style={{ color: '#047857' }}>
+          {currentRecord?.current_medical_info?.oxygen_saturation ? `${currentRecord.current_medical_info.oxygen_saturation}%` : '—'}
+        </div>
+        <div className="patient-kpi-sub">Pulse Oximetry</div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="patient-tab-content" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       {/* ── Top Bar: Historical Record Selector & Actions ── */}
@@ -210,136 +275,22 @@ export function PatientMedicalHistoryTab({ patient, isEditable = true }: Patient
         </div>
       ) : (
         <>
-          {/* ══════════════ 1. CURRENT MEDICAL INFORMATION & VITALS ══════════════ */}
-          <div className="patient-card-block">
-            <div className="patient-card-block-header">
-              <div className="patient-card-block-badge">
-                <HeartPulse size={15} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="patient-card-block-title">1. Current Medical Information &amp; Clinical Vitals</div>
-                <div className="patient-card-block-subtitle">
-                  Present complaints, symptoms, pain score, diagnosis, and biometric measurements
-                </div>
-              </div>
-            </div>
-
-            {/* Vitals Ribbon */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-                gap: 10,
-                marginBottom: 14,
-              }}
-            >
-              <div className="patient-kpi-card">
-                <div className="patient-kpi-label">Height</div>
-                <div className="patient-kpi-val">{heightVal ? `${heightVal} cm` : '—'}</div>
-                <div className="patient-kpi-sub">Stature</div>
-              </div>
-
-              <div className="patient-kpi-card">
-                <div className="patient-kpi-label">Weight</div>
-                <div className="patient-kpi-val">{weightVal ? `${weightVal} kg` : '—'}</div>
-                <div className="patient-kpi-sub">Body Mass</div>
-              </div>
-
-              <div className="patient-kpi-card">
-                <div className="patient-kpi-label">BMI Score</div>
-                <div className="patient-kpi-val" style={{ color: bmiScore?.color || '#1d4ed8' }}>
-                  {bmiScore?.val || '—'}
-                </div>
-                <div className="patient-kpi-sub">{bmiScore?.band || 'No data'}</div>
-              </div>
-
-              <div className="patient-kpi-card">
-                <div className="patient-kpi-label">Blood Pressure</div>
-                <div className="patient-kpi-val" style={{ color: '#b91c1c' }}>
-                  {currentRecord?.current_medical_info?.blood_pressure || patient.blood_pressure || '—'}
-                </div>
-                <div className="patient-kpi-sub">mmHg</div>
-              </div>
-
-              <div className="patient-kpi-card">
-                <div className="patient-kpi-label">Pulse Rate</div>
-                <div className="patient-kpi-val" style={{ color: '#7c3aed' }}>
-                  {currentRecord?.current_medical_info?.pulse_rate ? `${currentRecord.current_medical_info.pulse_rate} bpm` : '—'}
-                </div>
-                <div className="patient-kpi-sub">Heart Rate</div>
-              </div>
-
-              <div className="patient-kpi-card">
-                <div className="patient-kpi-label">Body Temp</div>
-                <div className="patient-kpi-val" style={{ color: '#c2410c' }}>
-                  {currentRecord?.current_medical_info?.temperature || patient.body_temperature ? `${currentRecord?.current_medical_info?.temperature || patient.body_temperature} °F` : '—'}
-                </div>
-                <div className="patient-kpi-sub">Oral / Axillary</div>
-              </div>
-
-              <div className="patient-kpi-card">
-                <div className="patient-kpi-label">Oxygen SpO2</div>
-                <div className="patient-kpi-val" style={{ color: '#047857' }}>
-                  {currentRecord?.current_medical_info?.oxygen_saturation ? `${currentRecord.current_medical_info.oxygen_saturation}%` : '—'}
-                </div>
-                <div className="patient-kpi-sub">Pulse Oximetry</div>
-              </div>
-            </div>
-
-            {/* Complaints, Symptoms, Pain level & Diagnosis */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
-              <div style={{ padding: 12, backgroundColor: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                <span className="patient-info-label">Chief Complaint &amp; Duration</span>
-                <div style={{ fontWeight: 650, fontSize: 13.5, color: '#0f172a', marginTop: 2 }}>
-                  {currentRecord?.current_medical_info?.chief_complaint || 'No acute chief complaint noted.'}
-                </div>
-                {currentRecord?.current_medical_info?.duration_of_symptoms && (
-                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 3 }}>
-                    Duration: {currentRecord.current_medical_info.duration_of_symptoms}
-                  </div>
-                )}
-                {currentRecord?.current_medical_info?.current_symptoms && (
-                  <div style={{ fontSize: 12.5, color: '#334155', marginTop: 6 }}>
-                    Symptoms: {currentRecord.current_medical_info.current_symptoms}
-                  </div>
-                )}
-              </div>
-
-              <div style={{ padding: 12, backgroundColor: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span className="patient-info-label">Pain Level Scale (0–10)</span>
-                  <Tag color={Number(currentRecord?.current_medical_info?.pain_level) > 5 ? 'red' : 'blue'}>
-                    Level {currentRecord?.current_medical_info?.pain_level ?? 0} / 10
-                  </Tag>
-                </div>
-                <div style={{ marginTop: 6 }}>
-                  <span className="patient-info-label">Current Diagnosis / Assessment</span>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b', marginTop: 2 }}>
-                    {currentRecord?.current_medical_info?.current_diagnosis || 'No formal diagnosis recorded on this entry.'}
-                  </div>
-                </div>
-                {currentRecord?.current_medical_info?.clinical_observations && (
-                  <div style={{ fontSize: 12, color: '#475569', marginTop: 6 }}>
-                    Observations: {currentRecord.current_medical_info.clinical_observations}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* ══════════════ 2. PREVIOUS MEDICAL HISTORY ══════════════ */}
+          {/* ══════════════ 1. PREVIOUS MEDICAL HISTORY & CHRONIC DISEASES ══════════════ */}
           <div className="patient-card-block">
             <div className="patient-card-block-header">
               <div className="patient-card-block-badge">
                 <History size={15} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="patient-card-block-title">2. Previous Medical History &amp; Chronic Diseases</div>
+                <div className="patient-card-block-title">1. Previous Medical History &amp; Chronic Diseases</div>
                 <div className="patient-card-block-subtitle">
-                  Chronic conditions, previous illnesses, surgeries, admissions, allergies, and medications
+                  Physical vitals, chronic conditions, previous illnesses, surgeries, blood transfusions, allergies, and medications
                 </div>
               </div>
             </div>
+
+            {/* Vitals Ribbon at the top of Chronic & Medical History */}
+            {renderVitalsRibbon()}
 
             {/* Chronic Conditions Tags */}
             <div style={{ marginBottom: 14 }}>
@@ -436,10 +387,10 @@ export function PatientMedicalHistoryTab({ patient, isEditable = true }: Patient
               )}
             </div>
 
-            {/* Surgeries & Admissions Tables */}
+            {/* Surgeries & Blood Transfusion (Hospital Admissions REMOVED per user request) */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 }}>
               {/* Surgeries */}
-              <div style={{ padding: 10, backgroundColor: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+              <div style={{ padding: 12, backgroundColor: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
                 <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>
                   Previous Surgeries &amp; Operations
                 </div>
@@ -464,34 +415,47 @@ export function PatientMedicalHistoryTab({ patient, isEditable = true }: Patient
                 )}
               </div>
 
-              {/* Admissions & Transfusion */}
-              <div style={{ padding: 10, backgroundColor: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+              {/* Blood Transfusions (Hospital Admissions REMOVED per user request) */}
+              <div style={{ padding: 12, backgroundColor: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
                 <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>
-                  Hospital Admissions &amp; Transfusions
+                  Blood Transfusion History
                 </div>
-                {currentRecord?.previous_medical_history?.hospital_admissions &&
-                currentRecord.previous_medical_history.hospital_admissions.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {currentRecord.previous_medical_history.hospital_admissions.map((a, i) => (
-                      <div key={i} style={{ padding: 8, backgroundColor: '#fff', borderRadius: 6, border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontWeight: 600, fontSize: 12.5 }}>{a.reason}</div>
-                        <div style={{ fontSize: 11.5, color: '#64748b' }}>{a.hospital_name}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <span style={{ fontSize: 12, color: '#64748b' }}>Received Transfusion?</span>
+                  <Tag color={currentRecord?.previous_medical_history?.blood_transfusions?.had_transfusion === 'Yes' ? 'volcano' : 'default'}>
+                    {currentRecord?.previous_medical_history?.blood_transfusions?.had_transfusion || 'No'}
+                  </Tag>
+                </div>
+                {currentRecord?.previous_medical_history?.blood_transfusions?.had_transfusion === 'Yes' ? (
+                  <div style={{ padding: 8, backgroundColor: '#fff', borderRadius: 6, border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                      <span style={{ fontWeight: 600, color: '#475569' }}>Transfusion Date:</span>
+                      <span style={{ fontWeight: 600, color: '#0f172a' }}>
+                        {currentRecord.previous_medical_history.blood_transfusions.transfusion_date
+                          ? formatDate(currentRecord.previous_medical_history.blood_transfusions.transfusion_date)
+                          : 'Not recorded'}
+                      </span>
+                    </div>
+                    {currentRecord.previous_medical_history.blood_transfusions.number_of_units && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                        <span style={{ color: '#64748b' }}>Units Transfused:</span>
+                        <span style={{ fontWeight: 600, color: '#0f172a' }}>
+                          {currentRecord.previous_medical_history.blood_transfusions.number_of_units} units
+                        </span>
                       </div>
-                    ))}
+                    )}
+                    {currentRecord.previous_medical_history.blood_transfusions.reason && (
+                      <div style={{ fontSize: 11.5, color: '#475569', marginTop: 2 }}>
+                        <span style={{ fontWeight: 600 }}>Reason: </span>
+                        {currentRecord.previous_medical_history.blood_transfusions.reason}
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div style={{ fontSize: 11.5, color: '#94a3b8', fontStyle: 'italic' }}>No hospital admissions recorded.</div>
+                  <div style={{ fontSize: 11.5, color: '#94a3b8', fontStyle: 'italic' }}>
+                    No blood transfusions reported on record.
+                  </div>
                 )}
-
-                <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #e2e8f0', fontSize: 12 }}>
-                  <span style={{ fontWeight: 600, color: '#475569' }}>Blood Transfusion: </span>
-                  <span>{currentRecord?.previous_medical_history?.blood_transfusions?.had_transfusion || 'No'}</span>
-                  {currentRecord?.previous_medical_history?.blood_transfusions?.reason && (
-                    <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 2 }}>
-                      {currentRecord.previous_medical_history.blood_transfusions.reason}
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
 
@@ -521,14 +485,14 @@ export function PatientMedicalHistoryTab({ patient, isEditable = true }: Patient
             </div>
           </div>
 
-          {/* ══════════════ 3. FAMILY MEDICAL HISTORY ══════════════ */}
+          {/* ══════════════ 2. FAMILY MEDICAL HISTORY ══════════════ */}
           <div className="patient-card-block">
             <div className="patient-card-block-header">
               <div className="patient-card-block-badge">
                 <Users size={15} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="patient-card-block-title">3. Family Medical History</div>
+                <div className="patient-card-block-title">2. Family Medical History</div>
                 <div className="patient-card-block-subtitle">
                   Hereditary disease risks across parents, siblings, grandparents, and direct relatives
                 </div>
@@ -579,7 +543,7 @@ export function PatientMedicalHistoryTab({ patient, isEditable = true }: Patient
             )}
           </div>
 
-          {/* ══════════════ 4. REPRODUCTIVE & OBSTETRIC HISTORY ══════════════ */}
+          {/* ══════════════ 3. REPRODUCTIVE & OBSTETRIC HISTORY ══════════════ */}
           {(currentRecord?.reproductive_history?.is_applicable !== false || (patient.gender || '').toUpperCase() === 'FEMALE') && (
             <div className="patient-card-block">
               <div className="patient-card-block-header">
@@ -587,7 +551,7 @@ export function PatientMedicalHistoryTab({ patient, isEditable = true }: Patient
                   <User size={15} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="patient-card-block-title">4. Reproductive &amp; Obstetric History</div>
+                  <div className="patient-card-block-title">3. Reproductive &amp; Obstetric History</div>
                   <div className="patient-card-block-subtitle">
                     Menstrual, obstetric (gravida/para), childbirth, breastfeeding, and contraceptive history
                   </div>
@@ -653,14 +617,14 @@ export function PatientMedicalHistoryTab({ patient, isEditable = true }: Patient
             </div>
           )}
 
-          {/* ══════════════ 5. LIFESTYLE HISTORY ══════════════ */}
+          {/* ══════════════ 4. LIFESTYLE HISTORY ══════════════ */}
           <div className="patient-card-block">
             <div className="patient-card-block-header">
               <div className="patient-card-block-badge">
                 <Activity size={15} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="patient-card-block-title">5. Lifestyle History &amp; Habits</div>
+                <div className="patient-card-block-title">4. Lifestyle History &amp; Habits</div>
                 <div className="patient-card-block-subtitle">
                   Smoking, alcohol consumption, tobacco usage, diet, physical activity, and occupational environment
                 </div>
@@ -725,7 +689,7 @@ export function PatientMedicalHistoryTab({ patient, isEditable = true }: Patient
             </div>
           </div>
 
-          {/* ══════════════ 6. MEDICAL DOCUMENTS & REPORTS ══════════════ */}
+          {/* ══════════════ 5. MEDICAL DOCUMENTS & REPORTS ══════════════ */}
           <div className="patient-card-block">
             <div className="patient-card-block-header">
               <div className="patient-card-block-badge">
@@ -733,7 +697,7 @@ export function PatientMedicalHistoryTab({ patient, isEditable = true }: Patient
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="patient-card-block-title">
-                  6. Medical Documents &amp; Reports ({documents.length})
+                  5. Medical Documents &amp; Reports ({documents.length})
                 </div>
                 <div className="patient-card-block-subtitle">
                   Lab reports, scans, X-rays, discharge summaries, prescriptions, and external medical records

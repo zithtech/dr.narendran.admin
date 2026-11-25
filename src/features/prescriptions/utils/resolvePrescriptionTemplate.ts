@@ -207,13 +207,9 @@ export function resolvePrescriptionTemplate(
   const pat = context.patient ?? {};
   const rx = context.prescription ?? {};
 
-  // Clean doctor name
+  // Clean doctor name (strip any leading "Dr." or multiple "Dr." prefixes)
   let cleanDocName = (doc.name || '').trim();
-  if (cleanDocName.toLowerCase().startsWith('dr.')) {
-    cleanDocName = cleanDocName.substring(3).trim();
-  } else if (cleanDocName.toLowerCase().startsWith('dr ')) {
-    cleanDocName = cleanDocName.substring(3).trim();
-  }
+  cleanDocName = cleanDocName.replace(/^(\s*dr\.?\s*)+/i, '').trim();
 
   // Doctor signature HTML
   const signatureHtml = doc.signature_url
@@ -335,6 +331,17 @@ export function resolvePrescriptionTemplate(
   };
 
   let rendered = templateHtml;
+
+  // Header normalization: ensure white-space: nowrap is never applied to doctor credentials and split name/qualifications cleanly
+  rendered = rendered.replace(
+    /\.rx-doctor-name\s*\{([^}]*?)white-space:\s*nowrap;?/gi,
+    '.rx-doctor-name {$1white-space: normal; word-wrap: break-word; overflow-wrap: break-word;'
+  );
+  rendered = rendered.replace(
+    /<div\s+class=["']rx-doctor-name["']>\s*Dr\.\s*\{\{doctor_name\}\},\s*\{\{doctor_qualification\}\}\s*<\/div>\s*<div\s+class=["']rx-doctor-qualification["']>\s*\{\{doctor_specialization\}\}\s*<\/div>/i,
+    `<div class="rx-doctor-name">Dr. {{doctor_name}}</div>\n          <div class="rx-doctor-qualification">{{doctor_qualification}}</div>\n          <div class="rx-doctor-specialization">{{doctor_specialization}}</div>`
+  );
+
   const resolvedKeys: string[] = [];
 
   // Conditional blocks (loop to support nested blocks)
@@ -374,6 +381,9 @@ export function resolvePrescriptionTemplate(
   const remainingMatches = rendered.match(/\{\{([a-zA-Z0-9_]+)\}\}/g) || [];
   const unresolvedPlaceholders = Array.from(new Set(remainingMatches.map((m) => m.replace(/[{}]/g, ''))));
   rendered = rendered.replace(/\{\{\/?#?[a-zA-Z0-9_]+\}\}/g, '');
+
+  // Safeguard against any double "Dr. Dr."
+  rendered = rendered.replace(/\bDr\.?\s+Dr\.?\s+/gi, 'Dr. ');
 
   return {
     renderedHtml: rendered,

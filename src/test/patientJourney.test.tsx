@@ -122,7 +122,6 @@ describe('Patient Journey Flow Integration Suite', () => {
 
     // Now in Step 3 (Plan of Management)
     await waitFor(() => {
-      expect(screen.getByText(/Phase 3 · Clinical Assessment & Care Strategy/i)).toBeInTheDocument();
       expect(screen.getByText(/1\. Doctor's Clinical Diagnosis/i)).toBeInTheDocument();
       expect(screen.getByText(/2\. Recommended Investigations & Diagnostic Labs/i)).toBeInTheDocument();
       expect(screen.getByText(/3\. Overall Treatment Strategy & Care Plan/i)).toBeInTheDocument();
@@ -156,6 +155,38 @@ describe('Patient Journey Flow Integration Suite', () => {
       expect(screen.getByText(/Active Clinical Assessment \(From Plan of Management\)/i)).toBeInTheDocument();
       expect(screen.getAllByText('Type 2 Diabetes Mellitus').length).toBeGreaterThanOrEqual(1);
     });
+  });
+
+  it('renders Performance Status card with 0 to 10 score selection and description textarea', async () => {
+    renderWithProviders(
+      <PatientJourneyDrawer
+        isOpen={true}
+        onClose={vi.fn()}
+        initialPatient={mockPatient}
+        initialStep="plan"
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/1\. Doctor's Clinical Diagnosis/i)).toBeInTheDocument();
+      expect(screen.getByText('Performance Status')).toBeInTheDocument();
+    });
+
+    // Verify 0 to 10 number selection buttons exist
+    for (let i = 0; i <= 10; i++) {
+      expect(screen.getByTestId(`performance-score-btn-${i}`)).toBeInTheDocument();
+    }
+
+    // Click score 3
+    const score3Btn = screen.getByTestId('performance-score-btn-3');
+    fireEvent.click(score3Btn);
+    expect(screen.getByText(/Selected: Score 3 \/ 10/i)).toBeInTheDocument();
+
+    // Verify description textarea
+    const descTextarea = screen.getByPlaceholderText(/Enter performance status description/i);
+    expect(descTextarea).toBeInTheDocument();
+    fireEvent.change(descTextarea, { target: { value: 'Ambulatory, capable of self-care but requires daytime rest.' } });
+    expect(descTextarea).toHaveValue('Ambulatory, capable of self-care but requires daytime rest.');
   });
 
   it('opens appointment scheduling modal on Appointments step', async () => {

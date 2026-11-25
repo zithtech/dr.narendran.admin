@@ -275,13 +275,15 @@ describe('Patient Medical History Integration Suite', { timeout: 25000 }, () => 
     // Wait for the Medical History content to load
     await waitFor(() => {
       expect(screen.queryByText(/Personal & Demographic Profile/i)).not.toBeInTheDocument();
-      expect(screen.getByText('1. Current Medical Information & Clinical Vitals')).toBeInTheDocument();
-      expect(screen.getByText('2. Previous Medical History & Chronic Diseases')).toBeInTheDocument();
-      expect(screen.getByText('3. Family Medical History')).toBeInTheDocument();
-      expect(screen.getByText('4. Reproductive & Obstetric History')).toBeInTheDocument();
-      expect(screen.getByText('5. Lifestyle History & Habits')).toBeInTheDocument();
-      expect(screen.getByText(/6. Medical Documents & Reports/i)).toBeInTheDocument();
+      expect(screen.getByText('1. Previous Medical History & Chronic Diseases')).toBeInTheDocument();
+      expect(screen.getByText('2. Family Medical History')).toBeInTheDocument();
+      expect(screen.getByText('3. Reproductive & Obstetric History')).toBeInTheDocument();
+      expect(screen.getByText('4. Lifestyle History & Habits')).toBeInTheDocument();
+      expect(screen.getByText(/5. Medical Documents & Reports/i)).toBeInTheDocument();
     });
+
+    // Ensure Hospital Admissions is removed from view per user requirement
+    expect(screen.queryByText(/Hospital Admissions/i)).not.toBeInTheDocument();
 
     // Verify Personal Information section contains Occupation and Age
     expect(screen.getAllByText('Senior Lecturer').length).toBeGreaterThanOrEqual(1);
@@ -291,7 +293,6 @@ describe('Patient Medical History Integration Suite', { timeout: 25000 }, () => 
     expect(screen.getByText(/22\.[89]/)).toBeInTheDocument();
     expect(screen.getAllByText(/Healthy/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('118/76')).toBeInTheDocument();
-    expect(screen.getByText('Intermittent tension headaches')).toBeInTheDocument();
 
     // Verify Previous Medical History details
     expect(screen.getByText('Thyroid Disorder')).toBeInTheDocument();
@@ -317,6 +318,22 @@ describe('Patient Medical History Integration Suite', { timeout: 25000 }, () => 
     // Verify Medical Documents
     expect(screen.getByText('Thyroid Function Test (TSH, FT3, FT4)')).toBeInTheDocument();
     expect(screen.getByText('Thyroid Ultrasound Scan')).toBeInTheDocument();
+
+    // Verify Current Medical Info & Plan of Management is kept separate (not inside Medical History tab)
+    expect(screen.queryByRole('button', { name: /^Past Medical History$/i })).not.toBeInTheDocument();
+
+    // Click the separate top-level tab for Current Medical Info & Plan of Management
+    const currentPlanTabBtn = screen.getByRole('button', { name: /current medical info & plan of management/i });
+    expect(currentPlanTabBtn).toBeInTheDocument();
+    fireEvent.click(currentPlanTabBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Current Medical Information & Clinical Examination')).toBeInTheDocument();
+      expect(screen.getByText('Plan of Management & Care Strategy')).toBeInTheDocument();
+      expect(screen.getByText(/1\. Doctor's Clinical Diagnosis/i)).toBeInTheDocument();
+      expect(screen.getByText(/Performance Status Assessment/i)).toBeInTheDocument();
+      expect(screen.getByText(/Intermittent tension headaches/i)).toBeInTheDocument();
+    });
   }, 15000);
 
   it('allows opening Record Medical History modal to record or edit intake', async () => {
@@ -338,11 +355,11 @@ describe('Patient Medical History Integration Suite', { timeout: 25000 }, () => 
     // Drawer opens
     await waitFor(() => {
       expect(screen.getByText('Record Complete Medical History')).toBeInTheDocument();
-      expect(screen.getByText('1. Current Examination & Vitals')).toBeInTheDocument();
-      expect(screen.getByText('2. Previous Medical History')).toBeInTheDocument();
-      expect(screen.getAllByText('3. Family Medical History').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getByText('4. Reproductive & Obstetric')).toBeInTheDocument();
-      expect(screen.getByText('5. Lifestyle History')).toBeInTheDocument();
+      expect(screen.getByText('1. Previous Medical History')).toBeInTheDocument();
+      expect(screen.getAllByText('2. Family Medical History').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('3. Reproductive & Obstetric')).toBeInTheDocument();
+      expect(screen.getByText('4. Lifestyle History')).toBeInTheDocument();
+      expect(screen.getByText('6. Current Examination')).toBeInTheDocument();
     });
 
     // Test BMI auto-calculation in drawer
@@ -386,24 +403,20 @@ describe('Patient Medical History Integration Suite', { timeout: 25000 }, () => 
 
     fireEvent.click(screen.getByText('Record New History'));
 
-    // Verify Drawer opens on Step 1
+    // Verify Drawer opens on Step 1 (Previous Medical History)
     await waitFor(() => {
       expect(screen.getByText('Record Complete Medical History')).toBeInTheDocument();
-      expect(screen.getByText('Presenting Complaints & Symptoms')).toBeInTheDocument();
+      expect(screen.getByText('Common Chronic Diseases')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /save & next/i })).toBeInTheDocument();
     });
-
-    // Fill Chief Complaint
-    const complaintInput = screen.getByPlaceholderText(/intermittent tension headaches/i);
-    fireEvent.change(complaintInput, { target: { value: 'Severe migraine with aura' } });
 
     // Click Save & Next
     const saveAndNextBtn = screen.getByTestId('save-and-next-btn');
     fireEvent.click(saveAndNextBtn);
 
-    // Should transition to Step 2 (Previous Medical History)
+    // Should transition to Step 2 (Family Medical History)
     await waitFor(() => {
-      expect(screen.getByText('Common Chronic Diseases')).toBeInTheDocument();
+      expect(screen.getByText('Family History of Hereditary / Chronic Diseases')).toBeInTheDocument();
       expect(screen.getByTestId('prev-step-btn')).toBeInTheDocument();
     });
 
@@ -411,7 +424,7 @@ describe('Patient Medical History Integration Suite', { timeout: 25000 }, () => 
     fireEvent.click(screen.getByTestId('prev-step-btn'));
 
     await waitFor(() => {
-      expect(screen.getByText('Presenting Complaints & Symptoms')).toBeInTheDocument();
+      expect(screen.getByText('Common Chronic Diseases')).toBeInTheDocument();
     });
   }, 20000);
 
@@ -466,17 +479,8 @@ describe('Patient Medical History Integration Suite', { timeout: 25000 }, () => 
     // Drawer should open and fields should be populated from mockHistoryRecords[0]
     await waitFor(() => {
       expect(screen.getByText('Edit Patient Medical History')).toBeInTheDocument();
+      expect(screen.getByText('Common Chronic Diseases')).toBeInTheDocument();
     });
-
-    // Check Current Medical Info fields populated from mockHistoryRecords[0]
-    const complaintInput = screen.getByPlaceholderText(/intermittent tension headaches/i) as HTMLInputElement;
-    expect(complaintInput.value).toBe('Intermittent tension headaches');
-
-    const symptomsInput = screen.getByPlaceholderText(/describe symptoms/i) as HTMLTextAreaElement;
-    expect(symptomsInput.value).toBe('Bilateral throbbing headache on stressful days');
-
-    const durationInput = screen.getByPlaceholderText(/e\.g\. 3 weeks/i) as HTMLInputElement;
-    expect(durationInput.value).toBe('3 weeks');
 
     const bpInput = screen.getByPlaceholderText('e.g. 120/80') as HTMLInputElement;
     expect(bpInput.value).toBe('118/76');
@@ -490,19 +494,29 @@ describe('Patient Medical History Integration Suite', { timeout: 25000 }, () => 
     // BMI auto-calculated and visible: 60 / (1.62^2) = 22.9
     expect(screen.getAllByText('22.9').length).toBeGreaterThanOrEqual(1);
 
-    // Check Previous Medical History step
-    fireEvent.click(screen.getByRole('button', { name: /save & next/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText('Common Chronic Diseases')).toBeInTheDocument();
-    });
-
     // Previous diseases list should contain Hypothyroidism from initialData
     expect(screen.getByDisplayValue('Hypothyroidism')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Levothyroxine 50mcg daily')).toBeInTheDocument();
 
     // Surgery should contain Cesarean Section
     expect(screen.getByDisplayValue('Cesarean Section (LSCS)')).toBeInTheDocument();
+
+    // Switch to Current Examination step to verify complaint & symptoms
+    const currentStepBtn = screen.getByRole('button', { name: /current examination/i });
+    fireEvent.click(currentStepBtn);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/intermittent tension headaches/i)).toBeInTheDocument();
+    });
+
+    const complaintInput = screen.getByPlaceholderText(/intermittent tension headaches/i) as HTMLInputElement;
+    expect(complaintInput.value).toBe('Intermittent tension headaches');
+
+    const symptomsInput = screen.getByPlaceholderText(/describe symptoms/i) as HTMLTextAreaElement;
+    expect(symptomsInput.value).toBe('Bilateral throbbing headache on stressful days');
+
+    const durationInput = screen.getByPlaceholderText(/e\.g\. 3 weeks/i) as HTMLInputElement;
+    expect(durationInput.value).toBe('3 weeks');
 
     // Check Lifestyle History step auto-population
     const lifestyleStepBtn = screen.getByRole('button', { name: /lifestyle/i });
@@ -517,4 +531,130 @@ describe('Patient Medical History Integration Suite', { timeout: 25000 }, () => 
     expect(screen.getByDisplayValue('Normal office / teaching environment')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Yoga thrice a week')).toBeInTheDocument();
   }, 25000);
+
+  it('allows adding a custom chronic condition to Common Chronic Diseases', async () => {
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: 'Meenakshi Sundaram' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /medical history/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Record New History')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Record New History'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Common Chronic Diseases')).toBeInTheDocument();
+    });
+
+    // Find and click the Add button in Common Chronic Diseases
+    const addConditionBtn = screen.getByRole('button', { name: /add condition/i });
+    fireEvent.click(addConditionBtn);
+
+    // Enter custom condition name
+    const input = screen.getByPlaceholderText(/enter condition or chronic disease name/i);
+    fireEvent.change(input, { target: { value: 'Chronic Migraine' } });
+
+    // Click Add
+    const addSubmitBtn = screen.getByTestId('add-chronic-submit-btn');
+    fireEvent.click(addSubmitBtn);
+
+    // Verify 'Chronic Migraine' is added and checked
+    expect(screen.getByText('Chronic Migraine')).toBeInTheDocument();
+  }, 20000);
+
+  it('renders Previous Medical Conditions with 3 structured rows and nested Current Medications for each item', async () => {
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: 'Meenakshi Sundaram' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /medical history/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Record New History')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Record New History'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Previous Medical Conditions & Illnesses/i)).toBeInTheDocument();
+    });
+
+    // Click Add Disease
+    fireEvent.click(screen.getByRole('button', { name: /add disease/i }));
+
+    // Verify Row 1: Condition / Disease & Diagnosis Date
+    expect(screen.getAllByText(/^Condition \/ Disease/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/^Diagnosis Date$/i).length).toBeGreaterThanOrEqual(1);
+
+    // Verify Row 2: Treatment Details & Status
+    expect(screen.getAllByText(/^Treatment Details$/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/^Status$/i).length).toBeGreaterThanOrEqual(1);
+
+    // Verify Row 3: Remarks
+    expect(screen.getAllByText(/^Remarks$/i).length).toBeGreaterThanOrEqual(1);
+
+    // Verify nested Current Medications section inside the condition item
+    expect(screen.getAllByText('Current Medications & Ongoing Treatments').length).toBeGreaterThanOrEqual(1);
+
+    // Click nested Add Medication button
+    const addMedBtns = screen.getAllByRole('button', { name: /add medication/i });
+    expect(addMedBtns[0]).toBeDefined();
+    fireEvent.click(addMedBtns[0]!);
+
+    // Verify medication fields appeared
+    expect(screen.getByPlaceholderText(/Medicine Name/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/e\.g\. 50mcg/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/e\.g\. Once daily/i)).toBeInTheDocument();
+  }, 20000);
+
+  it('renders Family Medical History with 3 structured rows (Relationship/Condition, Dx Age/Status/Cause of Death, Remarks textarea)', async () => {
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: 'Meenakshi Sundaram' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /medical history/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Record New History')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Record New History'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Record Complete Medical History')).toBeInTheDocument();
+    });
+
+    // Navigate to Family Medical History step
+    const familyStepBtn = screen.getByRole('button', { name: /family/i });
+    fireEvent.click(familyStepBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Family History of Hereditary / Chronic Diseases')).toBeInTheDocument();
+    });
+
+    // Click Add Relative
+    const addRelativeBtn = screen.getByRole('button', { name: /add relative/i });
+    fireEvent.click(addRelativeBtn);
+
+    // Verify Row 1: Relationship & Disease / Condition
+    expect(screen.getAllByText(/^Relationship/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/^Disease \/ Condition/i).length).toBeGreaterThanOrEqual(1);
+
+    // Verify Row 2: Dx Age, Status, Cause of Death
+    expect(screen.getAllByText(/^Dx Age/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/^Status/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/^Cause of Death/i).length).toBeGreaterThanOrEqual(1);
+
+    // Verify Row 3: Remarks textarea
+    expect(screen.getByPlaceholderText(/Additional clinical remarks, disease progression, hereditary notes/i)).toBeInTheDocument();
+  }, 20000);
 });

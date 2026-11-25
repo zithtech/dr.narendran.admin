@@ -22,6 +22,28 @@ const mockBranches = [
   { id: 'branch-1', hospital_id: 'hosp-1', name: 'Greams Road Branch', code: 'GRM', status: 'ACTIVE' },
 ];
 
+const mockDoctors = [
+  { id: 'doc-001', name: 'Dr. Ramesh Kumar', specialization: 'Cardiology', hospital_name: 'Apollo Hospitals', status: 'ACTIVE' },
+];
+
+const mockReferrals = [
+  { id: 'ref-001', name: 'Dr. Sarah Connor', occupation: 'Cardiologist', phone: '9876543210', city: 'Chennai', status: 'ACTIVE' },
+];
+
+const mockAllianceDoctors = [
+  {
+    id: 'alliance-doc-001',
+    name: 'Dr. Suresh Varma',
+    specialization: 'Oncology',
+    hospital_clinic_name: 'Metro Care Clinic',
+    category: 'Surgical Partner',
+    city: 'Coimbatore',
+    mobile_number: '+91 94433 22110',
+    email: 'suresh.varma@metrocare.com',
+    status: 'ACTIVE',
+  },
+];
+
 const mockPatient: Patient = {
   id: 'pat-001',
   user_account_id: null,
@@ -57,6 +79,9 @@ describe('Patient Create/Edit Modal - Residential Address fields', () => {
       if (url === 'hospitals') return Promise.resolve({ data: mockHospitals });
       if (url === 'branches') return Promise.resolve({ data: mockBranches });
       if (url === 'user-accounts') return Promise.resolve({ data: [] });
+      if (url === 'doctors') return Promise.resolve({ data: mockDoctors });
+      if (url === 'referrals') return Promise.resolve({ data: mockReferrals });
+      if (url.startsWith('alliances/doctors')) return Promise.resolve({ data: mockAllianceDoctors });
       return Promise.resolve({ data: [] });
     });
   });
@@ -172,6 +197,87 @@ describe('Patient Create/Edit Modal - Residential Address fields', () => {
         }),
       );
       expect(handleSave).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('renders Age field in Basic Information and auto-calculates age by default when Date of Birth is selected', async () => {
+    renderWithProviders(
+      <PatientModal isOpen={true} onClose={vi.fn()} patient={null} onSave={vi.fn()} />,
+    );
+
+    const dobInput = screen.getByLabelText('Date of Birth') as HTMLInputElement;
+    const ageInput = screen.getByLabelText('Age') as HTMLInputElement;
+
+    expect(dobInput).toBeInTheDocument();
+    expect(ageInput).toBeInTheDocument();
+    expect(ageInput.value).toBe('');
+
+    // Select Date of Birth (e.g. 1995-05-12)
+    fireEvent.change(dobInput, { target: { value: '1995-05-12' } });
+
+    // Age field should automatically show the calculated age by default
+    expect(ageInput.value).toMatch(/\d+\s+yrs/);
+
+    // Existing patient with DOB should automatically display calculated age
+    renderWithProviders(
+      <PatientModal isOpen={true} onClose={vi.fn()} patient={mockPatient} onSave={vi.fn()} />,
+    );
+    const existingAgeInputs = screen.getAllByLabelText('Age') as HTMLInputElement[];
+    const lastAgeInput = existingAgeInputs[existingAgeInputs.length - 1];
+    expect(lastAgeInput?.value).toMatch(/\d+\s+yrs/);
+  });
+
+  it('renders Referrals card after Basic Information with 2 dropdowns, supporting Referrals and Doctor', async () => {
+    renderWithProviders(
+      <PatientModal isOpen={true} onClose={vi.fn()} patient={null} onSave={vi.fn()} />,
+    );
+
+    // Check Referrals card exists
+    expect(screen.getAllByText('Referrals').length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getByText('Specify patient referral channel and referring doctor or partner.'),
+    ).toBeInTheDocument();
+
+    // Check dropdowns
+    expect(screen.getByLabelText('Referred by')).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/Choose 'Referred by' first/).length,
+    ).toBeGreaterThanOrEqual(1);
+  });
+
+  it('loads referral partner details for existing patient with referral record', async () => {
+    const patientWithReferral: Patient = {
+      ...mockPatient,
+      referred_by: 'REFERRAL',
+      referral_id: 'ref-001',
+    };
+
+    renderWithProviders(
+      <PatientModal isOpen={true} onClose={vi.fn()} patient={patientWithReferral} onSave={vi.fn()} />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Dr. Sarah Connor').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Active Referral')).toBeInTheDocument();
+    });
+  });
+
+  it('loads alliance doctor details for existing patient with alliance referral record', async () => {
+    const patientWithAlliance: Patient = {
+      ...mockPatient,
+      referred_by: 'ALLIANCE',
+      referral_doctor_id: 'alliance-doc-001',
+      alliance_doctor_id: 'alliance-doc-001',
+    };
+
+    renderWithProviders(
+      <PatientModal isOpen={true} onClose={vi.fn()} patient={patientWithAlliance} onSave={vi.fn()} />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Dr. Suresh Varma').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Active Alliance Doctor')).toBeInTheDocument();
+      expect(screen.getByText('+91 94433 22110')).toBeInTheDocument();
     });
   });
 });
