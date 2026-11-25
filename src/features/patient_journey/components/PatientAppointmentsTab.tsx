@@ -283,9 +283,9 @@ export function PatientAppointmentsTab({
     <div
       className="patient-appointments-tab-root"
       style={{
-        padding: '24px 28px',
-        maxWidth: 1040,
-        margin: '0 auto',
+        padding: '20px 24px',
+        width: '100%',
+        boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
         gap: 20,

@@ -149,9 +149,9 @@ describe('Unified Register New Patient Drawer with Save & Next Workflow', () => 
       );
     });
 
-    // Drawer should transition to Step 2 (Examination & Vitals) in the same drawer
+    // Drawer should transition to Step 2 (Past Medical History) in the same drawer
     await waitFor(() => {
-      expect(screen.getByText(/Presenting Complaints/i)).toBeInTheDocument();
+      expect(screen.getByText('Common Chronic Diseases')).toBeInTheDocument();
       expect(screen.getByText(/Physical Vitals & Biometrics/i)).toBeInTheDocument();
     });
 
@@ -167,12 +167,11 @@ describe('Unified Register New Patient Drawer with Save & Next Workflow', () => 
       expect(screen.getByDisplayValue('Ramesh Sundaram')).toBeInTheDocument();
     });
 
-    // Free stepper jump: click Step 3 (Previous Medical History)
-    fireEvent.click(screen.getByTestId('drawer-step-previous'));
+    // Free stepper jump: click Step 3 (Current Examination)
+    fireEvent.click(screen.getByTestId('drawer-step-current'));
 
     await waitFor(() => {
-      expect(screen.getByText('Common Chronic Diseases')).toBeInTheDocument();
-      expect(screen.getAllByText(/Previous Surgeries/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText(/Presenting Complaints/i)).toBeInTheDocument();
     });
   });
 
@@ -193,9 +192,10 @@ describe('Unified Register New Patient Drawer with Save & Next Workflow', () => 
     // Click Next without saving
     fireEvent.click(nextBtnStep1);
 
-    // Should transition to Step 2 (Examination & Vitals) without calling api
+    // Should transition to Step 2 (Past Medical History) without calling api
     await waitFor(() => {
-      expect(screen.getByText(/Presenting Complaints/i)).toBeInTheDocument();
+      expect(screen.getByText('Common Chronic Diseases')).toBeInTheDocument();
+      expect(screen.getByText(/Physical Vitals & Biometrics/i)).toBeInTheDocument();
     });
     expect(api).not.toHaveBeenCalled();
 
@@ -206,9 +206,9 @@ describe('Unified Register New Patient Drawer with Save & Next Workflow', () => 
     // Click Next on Step 2
     fireEvent.click(nextBtnStep2);
 
-    // Should transition to Step 3 (Previous Medical History) without calling api.post
+    // Should transition to Step 3 (Family Medical History or next sub-step) without calling api.post
     await waitFor(() => {
-      expect(screen.getByText('Common Chronic Diseases')).toBeInTheDocument();
+      expect(screen.getAllByText(/Family Medical History/i).length).toBeGreaterThanOrEqual(1);
     });
     expect((api as any).post).not.toHaveBeenCalled();
   });

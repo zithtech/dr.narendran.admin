@@ -195,6 +195,15 @@ export const NAVIGATION_CATEGORIES: NavCategory[] = [
         description: 'Affiliated clinics, dispensaries & healthcare hubs',
       },
       {
+        name: 'Referrals',
+        path: '/referrals',
+        icon: UserCheck,
+        slug: 'REFERRALS',
+        fallbackSlugs: ['HOSPITALS', 'DOCTORS'],
+        description: 'Referral partners, specialists, and medical directory',
+        aliases: ['/referral'],
+      },
+      {
         name: 'Alliances – Doctor Management',
         path: '/alliances/doctors',
         icon: UserCheck,

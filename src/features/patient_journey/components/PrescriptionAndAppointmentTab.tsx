@@ -341,7 +341,7 @@ export function PrescriptionAndAppointmentTab({
   }));
 
   return (
-    <div className="prescription-appointment-tab-root" style={{ padding: '24px 28px', maxWidth: 1040, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="prescription-appointment-tab-root" style={{ padding: '20px 24px', width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* ── Patient Context & Assessment Banner ── */}
       <div
         style={{

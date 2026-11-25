@@ -4,6 +4,7 @@ export interface PreviousDisease {
   treatment_details?: string | null;
   current_status?: string | null;
   remarks?: string | null;
+  medications?: Medication[];
 }
 
 export interface Surgery {
@@ -145,6 +146,9 @@ export interface CurrentMedicalInfo {
   treatment_strategy?: string | null;
   investigations_ordered?: string[] | string | null;
   care_goals?: string | null;
+  dietary_advice?: string | null;
+  performance_score?: number | string | null;
+  performance_description?: string | null;
   clinical_observations?: string | null;
   height_cm?: number | string | null;
   weight_kg?: number | string | null;
