@@ -13,7 +13,7 @@ import { StatusPill } from './ui/CommonTable';
 import { Badge } from './ui/primitives';
 
 interface ViewPackageModalProps {
-  pkg: MedicinePackage | null;
+  pkg: MedicinePackage | null | undefined;
   open: boolean;
   onClose: () => void;
   onEdit?: (pkg: MedicinePackage) => void;
@@ -54,6 +54,7 @@ export default function ViewPackageModal({
       open={open}
       onClose={onClose}
       width="min(1080px, 94vw)"
+      className="responsive-package-drawer"
       destroyOnHidden
       styles={{
         header: {
@@ -73,16 +74,16 @@ export default function ViewPackageModal({
         },
       }}
       title={
-        <div className="flex items-center justify-between pr-6">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 pr-6 sm:pr-8">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
               <Package size={18} />
             </div>
-            <div>
-              <div className="text-[16px] font-bold text-slate-900 leading-snug">
+            <div className="min-w-0 flex-1">
+              <div className="text-[15px] sm:text-[16px] font-bold text-slate-900 leading-snug truncate">
                 {pkg.name}
               </div>
-              <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5 font-normal">
+              <div className="text-xs text-slate-500 flex items-center gap-1.5 sm:gap-2 mt-0.5 font-normal flex-wrap">
                 <span className="font-mono font-semibold text-blue-600">
                   #{pkg.id.slice(0, 8).toUpperCase()}
                 </span>
@@ -107,11 +108,11 @@ export default function ViewPackageModal({
         </div>
       }
       footer={
-        <div className="flex justify-between items-center">
-          <div className="text-xs text-slate-500">
+        <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-2.5">
+          <div className="text-xs text-slate-500 text-center sm:text-left">
             {medicines.length} item(s) grouped under this package
           </div>
-          <div className="flex gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-1 sm:flex-initial">
             {onEdit && (
               <button
                 type="button"
@@ -119,7 +120,7 @@ export default function ViewPackageModal({
                   onClose();
                   onEdit(pkg);
                 }}
-                className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-semibold transition-colors cursor-pointer"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 min-h-[40px] sm:min-h-[32px] px-3.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-semibold transition-colors cursor-pointer"
               >
                 <Pencil size={13} /> Edit Package
               </button>
@@ -127,7 +128,7 @@ export default function ViewPackageModal({
             <button
               type="button"
               onClick={onClose}
-              className="h-8 px-3.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer"
+              className="flex-1 sm:flex-initial min-h-[40px] sm:min-h-[32px] px-3.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer text-center"
             >
               Close
             </button>
@@ -137,7 +138,7 @@ export default function ViewPackageModal({
     >
       <div
         ref={scrollRef}
-        className="package-modal-scroll flex flex-col gap-4"
+        className="package-modal-scroll flex flex-col gap-3.5 sm:gap-4"
         style={{
           maxHeight: 'calc(85vh - 70px)',
           overflowY: 'auto',
@@ -157,6 +158,21 @@ export default function ViewPackageModal({
           }
           .package-modal-scroll::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
+          }
+          @media (max-width: 640px) {
+            .responsive-package-drawer .ant-drawer-content-wrapper {
+              width: 100vw !important;
+              max-width: 100vw !important;
+            }
+            .responsive-package-drawer .ant-drawer-header {
+              padding: 12px 16px !important;
+            }
+            .responsive-package-drawer .ant-drawer-body {
+              padding: 14px 14px 28px 14px !important;
+            }
+            .responsive-package-drawer .ant-drawer-footer {
+              padding: 12px 14px !important;
+            }
           }
         `}</style>
         {/* Description Callout */}
@@ -213,7 +229,8 @@ export default function ViewPackageModal({
             </span>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Desktop Table View (sm+) */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200/90 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
@@ -306,6 +323,84 @@ export default function ViewPackageModal({
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Medicine Cards View (<sm) */}
+          <div className="sm:hidden flex flex-col gap-2.5 p-3 divide-y divide-slate-100">
+            {medicines.map((m, idx) => {
+              const strengthDisplay = [m.strength, m.strength_unit].filter(Boolean).join(' ');
+              const categoryDisplay = [m.therapeutic_category, m.sub_category].filter(Boolean).join(' · ');
+              return (
+                <div key={m.id || idx} className={idx > 0 ? 'pt-2.5 flex flex-col gap-2' : 'flex flex-col gap-2'}>
+                  {/* Medicine Name, Rx badge, Status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-slate-900 text-xs">{m.medicine_name}</span>
+                        {m.prescription_required ? (
+                          <Badge tone="amber">Rx</Badge>
+                        ) : (
+                          <Badge tone="green">OTC</Badge>
+                        )}
+                      </div>
+                      {m.generic_name && (
+                        <div className="text-[11px] text-slate-500 mt-0.5 truncate">
+                          Generic: {m.generic_name}
+                        </div>
+                      )}
+                      {m.medicine_code && (
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          Code: {m.medicine_code}
+                        </div>
+                      )}
+                    </div>
+                    <div className="shrink-0">
+                      <StatusPill
+                        active={m.status !== 'Inactive'}
+                        label={m.status || 'Active'}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Form, Strength, Brand */}
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-600 bg-slate-50/70 p-2 rounded-md border border-slate-100">
+                    <span className="font-semibold text-slate-800">{m.dosage_form || 'Tablet'}</span>
+                    {strengthDisplay && (
+                      <span className="text-blue-600 font-medium">({strengthDisplay})</span>
+                    )}
+                    {m.manufacturer && (
+                      <>
+                        <span className="text-slate-300">•</span>
+                        <span className="text-slate-500 truncate">{m.manufacturer}</span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Price & Category */}
+                  <div className="flex items-center justify-between text-xs pt-0.5">
+                    <span className="text-[11px] text-slate-500 truncate max-w-[170px]">
+                      {categoryDisplay || 'General'}
+                    </span>
+                    <div className="shrink-0 text-right">
+                      {m.final_price != null ? (
+                        <span className="font-bold text-slate-900">
+                          ₹{Number(m.final_price).toFixed(2)}
+                          {m.mrp != null && Number(m.mrp) > Number(m.final_price) && (
+                            <span className="text-[10px] text-slate-400 line-through ml-1">
+                              ₹{Number(m.mrp).toFixed(2)}
+                            </span>
+                          )}
+                        </span>
+                      ) : m.mrp != null ? (
+                        <span className="font-bold text-slate-900">₹{Number(m.mrp).toFixed(2)}</span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

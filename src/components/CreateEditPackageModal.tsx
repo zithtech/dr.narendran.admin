@@ -20,7 +20,7 @@ interface CreateEditPackageModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: (pkg: MedicinePackage) => void;
-  editingPackage?: MedicinePackage | null;
+  editingPackage?: MedicinePackage | null | undefined;
 }
 
 export default function CreateEditPackageModal({
@@ -270,6 +270,7 @@ export default function CreateEditPackageModal({
       open={open}
       onClose={onClose}
       width="min(1150px, 95vw)"
+      className="responsive-package-drawer"
       destroyOnHidden
       styles={{
         header: {
@@ -289,32 +290,32 @@ export default function CreateEditPackageModal({
         },
       }}
       title={
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-start sm:items-center gap-2.5 pr-6 sm:pr-8">
           <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
             <Package size={18} />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <div className="text-[15px] font-bold text-slate-900 leading-snug">
               {editingPackage ? 'Edit Medicine Package' : 'Create Medicine Package'}
             </div>
-            <div className="text-xs text-slate-500 font-normal">
+            <div className="text-xs text-slate-500 font-normal leading-normal">
               Group multiple pharmacy medicines together into one reusable package
             </div>
           </div>
         </div>
       }
       footer={
-        <div className="flex justify-between items-center">
-          <div className="text-xs text-slate-500">
+        <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-2.5">
+          <div className="text-xs text-slate-500 text-center sm:text-left">
             <strong className={selectedIds.length > 0 ? 'text-blue-600' : 'text-slate-400'}>
               {selectedIds.length}
             </strong>{' '}
             medicine(s) selected
           </div>
-          <div className="flex gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-1 sm:flex-initial">
             <button
               type="button"
-              className="h-8 px-3.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
+              className="flex-1 sm:flex-initial min-h-[40px] sm:min-h-[32px] px-3.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50 text-center"
               onClick={onClose}
               disabled={submitting}
             >
@@ -322,7 +323,7 @@ export default function CreateEditPackageModal({
             </button>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 min-h-[40px] sm:min-h-[32px] px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               onClick={handleSave}
               disabled={submitting}
             >
@@ -347,7 +348,6 @@ export default function CreateEditPackageModal({
           maxHeight: 'calc(88vh - 70px)',
           overflowY: 'auto',
           overflowX: 'hidden',
-          padding: '20px 24px',
           boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
@@ -381,6 +381,21 @@ export default function CreateEditPackageModal({
           .package-table-scroll::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
           }
+          @media (max-width: 640px) {
+            .responsive-package-drawer .ant-drawer-content-wrapper {
+              width: 100vw !important;
+              max-width: 100vw !important;
+            }
+            .responsive-package-drawer .ant-drawer-header {
+              padding: 12px 16px !important;
+            }
+            .responsive-package-drawer .ant-drawer-body {
+              padding: 14px 14px 28px 14px !important;
+            }
+            .responsive-package-drawer .ant-drawer-footer {
+              padding: 12px 14px !important;
+            }
+          }
         `}</style>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         {/* Section 1: Package Basic Information */}
@@ -391,10 +406,12 @@ export default function CreateEditPackageModal({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label htmlFor="package-name-input" className="block text-xs font-semibold text-slate-700 mb-1">
                 Package Name <span className="text-rose-500">*</span>
               </label>
               <Input
+                id="package-name-input"
+                aria-label="Package Name"
                 placeholder="e.g. Post-Surgery Recovery Pack, Fever & Cold Relief"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -405,11 +422,13 @@ export default function CreateEditPackageModal({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label htmlFor="package-desc-input" className="block text-xs font-semibold text-slate-700 mb-1">
                 Description / Clinical Purpose{' '}
                 <span className="text-slate-400 font-normal">(Optional)</span>
               </label>
               <TextArea
+                id="package-desc-input"
+                aria-label="Description / Clinical Purpose"
                 placeholder="e.g. Recommended combination for routine viral flu symptoms and body aches"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -550,28 +569,118 @@ export default function CreateEditPackageModal({
                 />
               </div>
             ) : (
-              <table className="w-full text-left border-collapse">
-                <thead className="sticky top-0 z-10 bg-[#f8fafc] border-b border-slate-200/90 text-[11px] font-semibold text-slate-600">
-                  <tr>
-                    <th className="px-3.5 py-2 w-11 text-center">
-                      <Checkbox
-                        checked={allFilteredSelected}
-                        indeterminate={
-                          !allFilteredSelected &&
-                          filteredMedicines.some((m) => selectedIds.includes(m.id))
-                        }
-                        onChange={toggleSelectAllFiltered}
-                      />
-                    </th>
-                    <th className="px-3.5 py-2 whitespace-nowrap">Medicine Name</th>
-                    <th className="px-3.5 py-2 whitespace-nowrap">Brand / Manufacturer</th>
-                    <th className="px-3.5 py-2 whitespace-nowrap">Category</th>
-                    <th className="px-3.5 py-2 whitespace-nowrap">Dosage Form & Strength</th>
-                    <th className="px-3.5 py-2 whitespace-nowrap">Price</th>
-                    <th className="px-3.5 py-2 whitespace-nowrap text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs text-slate-600">
+              <>
+                {/* Desktop Table View (sm+) */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 z-10 bg-[#f8fafc] border-b border-slate-200/90 text-[11px] font-semibold text-slate-600">
+                      <tr>
+                        <th className="px-3.5 py-2 w-11 text-center">
+                          <Checkbox
+                            checked={allFilteredSelected}
+                            indeterminate={
+                              !allFilteredSelected &&
+                              filteredMedicines.some((m) => selectedIds.includes(m.id))
+                            }
+                            onChange={toggleSelectAllFiltered}
+                          />
+                        </th>
+                        <th className="px-3.5 py-2 whitespace-nowrap">Medicine Name</th>
+                        <th className="px-3.5 py-2 whitespace-nowrap">Brand / Manufacturer</th>
+                        <th className="px-3.5 py-2 whitespace-nowrap">Category</th>
+                        <th className="px-3.5 py-2 whitespace-nowrap">Dosage Form & Strength</th>
+                        <th className="px-3.5 py-2 whitespace-nowrap">Price</th>
+                        <th className="px-3.5 py-2 whitespace-nowrap text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs text-slate-600">
+                      {filteredMedicines.map((m) => {
+                        const isSelected = selectedIds.includes(m.id);
+                        const strengthDisplay = [m.strength, m.strength_unit].filter(Boolean).join(' ');
+                        const categoryDisplay = [m.therapeutic_category, m.sub_category]
+                          .filter(Boolean)
+                          .join(' · ');
+
+                        return (
+                          <tr
+                            key={m.id}
+                            onClick={() => toggleMedicine(m.id)}
+                            className={`transition-colors duration-100 cursor-pointer ${
+                              isSelected ? 'bg-blue-50/60' : 'hover:bg-slate-50/70 bg-white'
+                            }`}
+                          >
+                            <td
+                              className="px-3.5 py-2 text-center align-middle"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Checkbox
+                                checked={isSelected}
+                                onChange={() => toggleMedicine(m.id)}
+                              />
+                            </td>
+                            <td className="px-3.5 py-2 align-middle">
+                              <div
+                                className={`font-semibold ${
+                                  isSelected ? 'text-blue-700' : 'text-slate-900'
+                                }`}
+                              >
+                                {m.medicine_name}
+                              </div>
+                              {m.generic_name && (
+                                <div className="text-[11px] text-slate-500">
+                                  Generic: {m.generic_name}
+                                </div>
+                              )}
+                              {m.medicine_code && (
+                                <div className="text-[10.5px] text-slate-400 font-mono">
+                                  Code: {m.medicine_code}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-3.5 py-2 align-middle text-slate-700">
+                              {m.manufacturer || <span className="text-slate-300">—</span>}
+                            </td>
+                            <td className="px-3.5 py-2 align-middle text-slate-600">
+                              {categoryDisplay || <span className="text-slate-400">General</span>}
+                            </td>
+                            <td className="px-3.5 py-2 align-middle">
+                              <div className="font-semibold text-slate-800">
+                                {m.dosage_form || 'Tablet'}
+                              </div>
+                              {strengthDisplay && (
+                                <div className="text-[11px] text-blue-600 font-medium">
+                                  {strengthDisplay}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-3.5 py-2 align-middle tabular-nums">
+                              {m.final_price != null ? (
+                                <span className="font-semibold text-slate-900">
+                                  ₹{Number(m.final_price).toFixed(2)}
+                                </span>
+                              ) : m.mrp != null ? (
+                                <span className="font-semibold text-slate-900">
+                                  ₹{Number(m.mrp).toFixed(2)}
+                                </span>
+                              ) : (
+                                <span className="text-slate-300">—</span>
+                              )}
+                            </td>
+                            <td className="px-3.5 py-2 align-middle text-center">
+                              <StatusPill
+                                active={m.status !== 'Inactive'}
+                                label={m.status || 'Active'}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Selectable Cards View (<sm) */}
+                <div className="sm:hidden flex flex-col gap-2 p-2.5">
                   {filteredMedicines.map((m) => {
                     const isSelected = selectedIds.includes(m.id);
                     const strengthDisplay = [m.strength, m.strength_unit].filter(Boolean).join(' ');
@@ -580,81 +689,86 @@ export default function CreateEditPackageModal({
                       .join(' · ');
 
                     return (
-                      <tr
+                      <div
                         key={m.id}
                         onClick={() => toggleMedicine(m.id)}
-                        className={`transition-colors duration-100 cursor-pointer ${
-                          isSelected ? 'bg-blue-50/60' : 'hover:bg-slate-50/70 bg-white'
+                        className={`p-3 rounded-lg border transition-all duration-100 cursor-pointer flex items-start gap-2.5 ${
+                          isSelected
+                            ? 'border-blue-300 bg-blue-50/70 shadow-2xs'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
                         }`}
                       >
-                        <td
-                          className="px-3.5 py-2 text-center align-middle"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                        <div className="pt-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={isSelected}
                             onChange={() => toggleMedicine(m.id)}
+                            aria-label={`Select ${m.medicine_name}`}
                           />
-                        </td>
-                        <td className="px-3.5 py-2 align-middle">
-                          <div
-                            className={`font-semibold ${
-                              isSelected ? 'text-blue-700' : 'text-slate-900'
-                            }`}
-                          >
-                            {m.medicine_name}
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div
+                                className={`font-bold text-xs leading-snug ${
+                                  isSelected ? 'text-blue-700' : 'text-slate-900'
+                                }`}
+                              >
+                                {m.medicine_name}
+                              </div>
+                              {m.generic_name && (
+                                <div className="text-[11px] text-slate-500 truncate">
+                                  Generic: {m.generic_name}
+                                </div>
+                              )}
+                              {m.medicine_code && (
+                                <div className="text-[10px] text-slate-400 font-mono">
+                                  Code: {m.medicine_code}
+                                </div>
+                              )}
+                            </div>
+                            <div className="shrink-0">
+                              <StatusPill
+                                active={m.status !== 'Inactive'}
+                                label={m.status || 'Active'}
+                              />
+                            </div>
                           </div>
-                          {m.generic_name && (
-                            <div className="text-[11px] text-slate-500">
-                              Generic: {m.generic_name}
-                            </div>
-                          )}
-                          {m.medicine_code && (
-                            <div className="text-[10.5px] text-slate-400 font-mono">
-                              Code: {m.medicine_code}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-3.5 py-2 align-middle text-slate-700">
-                          {m.manufacturer || <span className="text-slate-300">—</span>}
-                        </td>
-                        <td className="px-3.5 py-2 align-middle text-slate-600">
-                          {categoryDisplay || <span className="text-slate-400">General</span>}
-                        </td>
-                        <td className="px-3.5 py-2 align-middle">
-                          <div className="font-semibold text-slate-800">
-                            {m.dosage_form || 'Tablet'}
+
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-600 bg-slate-50 p-1.5 rounded border border-slate-100">
+                            <span className="font-semibold text-slate-800">
+                              {m.dosage_form || 'Tablet'}
+                            </span>
+                            {strengthDisplay && (
+                              <span className="text-blue-600 font-medium">({strengthDisplay})</span>
+                            )}
+                            {m.manufacturer && (
+                              <>
+                                <span className="text-slate-300">•</span>
+                                <span className="text-slate-500 truncate">{m.manufacturer}</span>
+                              </>
+                            )}
                           </div>
-                          {strengthDisplay && (
-                            <div className="text-[11px] text-blue-600 font-medium">
-                              {strengthDisplay}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-3.5 py-2 align-middle tabular-nums">
-                          {m.final_price != null ? (
-                            <span className="font-semibold text-slate-900">
-                              ₹{Number(m.final_price).toFixed(2)}
+
+                          <div className="flex items-center justify-between text-xs pt-0.5">
+                            <span className="text-[11px] text-slate-500 truncate max-w-[160px]">
+                              {categoryDisplay || 'General'}
                             </span>
-                          ) : m.mrp != null ? (
-                            <span className="font-semibold text-slate-900">
-                              ₹{Number(m.mrp).toFixed(2)}
+                            <span className="font-bold text-slate-900">
+                              {m.final_price != null ? (
+                                `₹${Number(m.final_price).toFixed(2)}`
+                              ) : m.mrp != null ? (
+                                `₹${Number(m.mrp).toFixed(2)}`
+                              ) : (
+                                '—'
+                              )}
                             </span>
-                          ) : (
-                            <span className="text-slate-300">—</span>
-                          )}
-                        </td>
-                        <td className="px-3.5 py-2 align-middle text-center">
-                          <StatusPill
-                            active={m.status !== 'Inactive'}
-                            label={m.status || 'Active'}
-                          />
-                        </td>
-                      </tr>
+                          </div>
+                        </div>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
+                </div>
+              </>
             )}
           </div>
         </div>

@@ -1295,7 +1295,7 @@ export default function CreatePrescriptionModal({
         },
       }}
       title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
           <div
             style={{
               width: 38,
@@ -1313,18 +1313,18 @@ export default function CreatePrescriptionModal({
           >
             <Stethoscope size={19} />
           </div>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 16.5, fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em' }}>
               {editingPrescription ? 'Edit Prescription' : 'Create Prescription'}
             </div>
-            <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
-              Integrated with Pharmacy Medicines & Linked Diagnostic Labs
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }} className="truncate">
+              Integrated with Pharmacy Medicines &amp; Linked Diagnostic Labs
             </div>
           </div>
         </div>
       }
       footer={
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="rx-footer-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <div style={{ fontSize: 12.5, color: '#64748b' }}>
             <span style={{ fontWeight: 700, color: '#0f172a' }}>
               {medicines.filter((m) => m.name.trim()).length}
@@ -1335,7 +1335,7 @@ export default function CreatePrescriptionModal({
             </span>{' '}
             investigation(s)
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
+          <div className="rx-footer-actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button
               type="button"
               className="ui-btn ui-btn-neutral"
@@ -1399,6 +1399,38 @@ export default function CreatePrescriptionModal({
       }
     >
       <style>{`
+        @media (max-width: 640px) {
+          .rx-drawer .ant-drawer-content-wrapper {
+            width: 100vw !important;
+            max-width: 100vw !important;
+          }
+          .rx-drawer .ant-drawer-header {
+            padding: 12px 14px !important;
+          }
+          .rx-drawer .ant-drawer-body {
+            padding: 14px 10px 32px 10px !important;
+          }
+          .rx-drawer .ant-drawer-footer {
+            padding: 12px 14px !important;
+          }
+          .rx-section-card {
+            padding: 14px 12px !important;
+          }
+          .rx-footer-container {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+          }
+          .rx-footer-actions {
+            flex-direction: column !important;
+            width: 100% !important;
+          }
+          .rx-footer-actions button {
+            width: 100% !important;
+            justify-content: center !important;
+            min-height: 40px !important;
+          }
+        }
         .rx-section-card {
           background: #ffffff;
           border: 1px solid #e2e8f0;
@@ -1566,7 +1598,7 @@ export default function CreatePrescriptionModal({
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))',
               gap: 18,
               alignItems: 'start',
             }}
@@ -1858,7 +1890,7 @@ export default function CreatePrescriptionModal({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))',
                 gap: 12,
               }}
             >
@@ -2505,7 +2537,7 @@ export default function CreatePrescriptionModal({
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))',
                       gap: 12,
                       alignItems: 'start',
                     }}
@@ -3004,7 +3036,7 @@ export default function CreatePrescriptionModal({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 20 }}>
             {/* General instructions */}
             <div>
               <label className="rx-label">

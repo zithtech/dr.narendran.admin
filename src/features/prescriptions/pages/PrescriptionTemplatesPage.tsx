@@ -104,6 +104,23 @@ export const PrescriptionTemplatesPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-3 w-full">
+      <style>{`
+        @media (max-width: 640px) {
+          .responsive-template-drawer .ant-drawer-content-wrapper {
+            width: 100vw !important;
+            max-width: 100vw !important;
+          }
+          .responsive-template-drawer .ant-drawer-header {
+            padding: 12px 14px !important;
+          }
+          .responsive-template-drawer .ant-drawer-body {
+            padding: 14px 12px !important;
+          }
+          .responsive-template-drawer .ant-drawer-footer {
+            padding: 12px 14px !important;
+          }
+        }
+      `}</style>
       {/* Compact Header Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-200/80">
         <div className="min-w-0">
@@ -317,6 +334,7 @@ export const PrescriptionTemplatesPage: React.FC = () => {
         onClose={() => setIsEditing(false)}
         width="min(880px, 95vw)"
         destroyOnHidden
+        className="responsive-template-drawer"
         title={
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
@@ -334,11 +352,11 @@ export const PrescriptionTemplatesPage: React.FC = () => {
           </div>
         }
         footer={
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 flex-wrap">
             <button
               type="button"
               onClick={() => setIsEditing(false)}
-              className="h-8 px-3.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+              className="h-8 px-3.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer min-h-[36px]"
             >
               Cancel
             </button>
@@ -346,7 +364,7 @@ export const PrescriptionTemplatesPage: React.FC = () => {
               type="button"
               onClick={() => void handleSaveTemplate()}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-60 min-h-[36px]"
             >
               {saving ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
               <span>Save to Database</span>
@@ -368,6 +386,7 @@ export const PrescriptionTemplatesPage: React.FC = () => {
         onClose={() => setShowVariablesGuide(false)}
         width="min(760px, 94vw)"
         destroyOnHidden
+        className="responsive-template-drawer"
         title={
           <div className="flex items-center gap-2">
             <Code2 size={17} className="text-blue-600" />

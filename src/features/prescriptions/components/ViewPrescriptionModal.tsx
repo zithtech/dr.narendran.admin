@@ -342,6 +342,7 @@ export default function ViewPrescriptionModal({
       onClose={onClose}
       width="min(1000px, 96vw)"
       destroyOnHidden
+      className="responsive-rx-drawer"
       styles={{
         header: {
           padding: '16px 24px',
@@ -360,16 +361,16 @@ export default function ViewPrescriptionModal({
         },
       }}
       title={
-        <div className="flex items-center justify-between pr-4 w-full">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pr-2 sm:pr-4 w-full">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0 shadow-2xs">
               <FileText size={20} />
             </div>
-            <div>
-              <div className="text-[16px] font-bold text-slate-900 leading-snug">
+            <div className="min-w-0">
+              <div className="text-[15px] sm:text-[16px] font-bold text-slate-900 leading-snug">
                 Prescription Preview
               </div>
-              <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5 font-normal flex-wrap">
+              <div className="text-xs text-slate-500 flex items-center gap-1.5 sm:gap-2 mt-0.5 font-normal flex-wrap">
                 <span className="font-mono font-bold text-blue-600">
                   #{activeRx.prescription_number || activeRx.id.slice(0, 8).toUpperCase()}
                 </span>
@@ -381,17 +382,17 @@ export default function ViewPrescriptionModal({
                 {activeRx.patient_name && (
                   <>
                     <span>•</span>
-                    <span className="inline-flex items-center gap-1 font-medium text-slate-700">
-                      <User size={12} className="text-slate-400" />
+                    <span className="inline-flex items-center gap-1 font-medium text-slate-700 truncate max-w-[150px] sm:max-w-none">
+                      <User size={12} className="text-slate-400 shrink-0" />
                       {activeRx.patient_name}
                     </span>
                   </>
                 )}
                 {activeRx.doctor?.name && (
                   <>
-                    <span>•</span>
-                    <span className="inline-flex items-center gap-1 text-slate-600">
-                      <Stethoscope size={12} className="text-slate-400" />
+                    <span className="hidden sm:inline">•</span>
+                    <span className="inline-flex items-center gap-1 text-slate-600 truncate max-w-[150px] sm:max-w-none">
+                      <Stethoscope size={12} className="text-slate-400 shrink-0" />
                       {activeRx.doctor.name}
                     </span>
                   </>
@@ -399,27 +400,29 @@ export default function ViewPrescriptionModal({
               </div>
             </div>
           </div>
-          <StatusPill
-            label={titleCase(activeRx.status)}
-            tone={
-              activeRx.status === 'active'
-                ? 'green'
-                : activeRx.status === 'completed'
-                  ? 'blue'
-                  : activeRx.status === 'cancelled'
-                    ? 'red'
-                    : 'gray'
-            }
-          />
+          <div className="self-start sm:self-center shrink-0">
+            <StatusPill
+              label={titleCase(activeRx.status)}
+              tone={
+                activeRx.status === 'active'
+                  ? 'green'
+                  : activeRx.status === 'completed'
+                    ? 'blue'
+                    : activeRx.status === 'cancelled'
+                      ? 'red'
+                      : 'gray'
+              }
+            />
+          </div>
         </div>
       }
       footer={
-        <div className="flex items-center justify-between w-full">
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 w-full">
           <div>
             {activeRx.status === 'active' && onEdit && (
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 sm:py-2 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors cursor-pointer min-h-[40px] sm:min-h-[34px]"
                 onClick={() => {
                   onClose();
                   onEdit(activeRx);
@@ -429,24 +432,24 @@ export default function ViewPrescriptionModal({
               </button>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <button
               type="button"
-              className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2.5 sm:py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors cursor-pointer min-h-[40px] sm:min-h-[34px]"
               onClick={onClose}
             >
               Close
             </button>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 sm:py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors cursor-pointer min-h-[40px] sm:min-h-[34px]"
               onClick={handlePrint}
             >
               <Printer size={13} /> Print
             </button>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 border border-blue-600 rounded-lg shadow-2xs transition-colors cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 border border-blue-600 rounded-lg shadow-2xs transition-colors cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed min-h-[40px] sm:min-h-[34px]"
               onClick={() => {
                 void handleDownloadPdf();
               }}
@@ -458,9 +461,26 @@ export default function ViewPrescriptionModal({
         </div>
       }
     >
+      <style>{`
+        @media (max-width: 640px) {
+          .responsive-rx-drawer .ant-drawer-content-wrapper {
+            width: 100vw !important;
+            max-width: 100vw !important;
+          }
+          .responsive-rx-drawer .ant-drawer-header {
+            padding: 12px 14px !important;
+          }
+          .responsive-rx-drawer .ant-drawer-body {
+            padding: 12px 10px 24px 10px !important;
+          }
+          .responsive-rx-drawer .ant-drawer-footer {
+            padding: 12px 14px !important;
+          }
+        }
+      `}</style>
       <div className="flex flex-col items-center justify-start w-full">
         {/* Paper Container Header Ribbon */}
-        <div className="w-full max-w-[820px] mb-3 flex items-center justify-between px-1">
+        <div className="w-full max-w-[820px] mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
               <FileCheck size={13} className="text-blue-600" />
@@ -474,7 +494,7 @@ export default function ViewPrescriptionModal({
             <button
               type="button"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-colors cursor-pointer min-h-[32px]"
               title="Print letterhead"
             >
               <Printer size={12} />
@@ -486,7 +506,7 @@ export default function ViewPrescriptionModal({
                 void handleDownloadPdf();
               }}
               disabled={downloadingPdf}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 shadow-2xs transition-colors cursor-pointer disabled:opacity-60"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 shadow-2xs transition-colors cursor-pointer disabled:opacity-60 min-h-[32px]"
               title="Download PDF"
             >
               <Download size={12} />
@@ -496,8 +516,8 @@ export default function ViewPrescriptionModal({
         </div>
 
         {/* Realistic A4 Document Paper Canvas */}
-        <div className="w-full flex justify-center items-start">
-          <div className="w-full max-w-[820px] bg-white rounded-lg shadow-xl border border-slate-300/80 overflow-hidden transition-all duration-200">
+        <div className="w-full flex justify-center items-start overflow-x-auto">
+          <div className="w-full max-w-[820px] min-w-[320px] bg-white rounded-lg shadow-xl border border-slate-300/80 overflow-hidden transition-all duration-200">
             <iframe
               ref={iframeRef}
               title="Prescription PDF Preview"
