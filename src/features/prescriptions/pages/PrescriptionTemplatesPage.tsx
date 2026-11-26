@@ -1,368 +1,592 @@
-import { Drawer } from 'antd';
+import { Drawer, message, Popconfirm, Tooltip } from 'antd';
 import {
+  Building2,
   CheckCircle2,
   Code2,
-  Edit3,
+  Copy,
   Eye,
   FileText,
   HelpCircle,
+  History,
+  Palette,
+  Plus,
   RefreshCw,
-  Save,
-  Shield,
+  Search,
+  Trash2,
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { usePermission } from '../../../context/PermissionContext';
 import api from '../../../utils/api';
+import { PrescriptionTemplateBuilderModal } from '../components/builder/PrescriptionTemplateBuilderModal';
 import { PrescriptionPreviewModal } from '../components/PrescriptionPreviewModal';
+import { TemplateCreationSelectionModal } from '../components/TemplateCreationSelectionModal';
+import { prescriptionTemplatesApi } from '../services/prescriptionTemplatesApi';
 import {
   SAMPLE_ADMIN_PREVIEW_DATA,
   STANDARD_PRESCRIPTION_TEMPLATE,
 } from '../templates/templateData';
-import type { PrescriptionTemplate } from '../types/template';
+import type { PrescriptionTemplate, TemplateLayoutConfig } from '../types/template';
+
+interface HospitalOption {
+  id: string;
+  name: string;
+  code?: string;
+}
 
 export const PrescriptionTemplatesPage: React.FC = () => {
-  const { canUpdate } = usePermission();
+  const { canCreate, canUpdate, canDelete } = usePermission();
+  const isTemplateCreatable = canCreate('PRESCRIPTIONS');
   const isTemplateUpdatable = canUpdate('PRESCRIPTIONS');
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [showVariablesGuide, setShowVariablesGuide] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [template, setTemplate] = useState<PrescriptionTemplate>(
-    STANDARD_PRESCRIPTION_TEMPLATE,
-  );
-  const [editHtml, setEditHtml] = useState<string>('');
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const isTemplateDeletable = canDelete('PRESCRIPTIONS');
 
-  const fetchActiveTemplate = async () => {
+  // State
+  const [hospitals, setHospitals] = useState<HospitalOption[]>([]);
+  const [selectedHospitalId, setSelectedHospitalId] = useState<string>('all');
+  const [templates, setTemplates] = useState<PrescriptionTemplate[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  // Modals & Drawers
+  const [creationSelectionOpen, setCreationSelectionOpen] = useState(false);
+  const [builderCreationMode, setBuilderCreationMode] = useState<'default' | 'blank'>('default');
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<PrescriptionTemplate | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<PrescriptionTemplate | null>(null);
+  const [showVariablesGuide, setShowVariablesGuide] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
+  const handleSelectCreationMode = (mode: 'default' | 'blank') => {
+    setCreationSelectionOpen(false);
+    setBuilderCreationMode(mode);
+    setEditingTemplate(null);
+    setBuilderOpen(true);
+  };
+
+  // Fetch Hospitals List
+  const fetchHospitals = async () => {
+    try {
+      const res = await api.get('hospitals');
+      const hospList: HospitalOption[] = Array.isArray(res.data)
+        ? res.data
+        : res.data?.data || [];
+      setHospitals(hospList);
+      if (hospList.length > 0 && hospList[0]?.id && selectedHospitalId === 'all') {
+        setSelectedHospitalId(hospList[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to load hospitals:', err);
+    }
+  };
+
+  // Fetch Templates for Selected Hospital
+  const fetchTemplates = async () => {
     try {
       setLoading(true);
-      setError(null);
-      const res = await api.get('prescription-templates/active');
-      if (res.data) {
-        setTemplate({
-          id: res.data.id || 'template-001',
-          name: res.data.name || 'Standard Prescription',
-          description: res.data.description || 'A4 Standard Layout',
-          html_content: res.data.html_content,
-          status: (res.data.status || 'ACTIVE') as 'ACTIVE' | 'INACTIVE',
-          version: res.data.version || 1,
-          updated_at: res.data.updated_at,
-          created_at: res.data.created_at || new Date().toISOString(),
-        });
-        setEditHtml(res.data.html_content);
-      }
-    } catch (err: unknown) {
-      console.error('Failed to fetch template:', err);
-      setError('Failed to fetch template from server. Showing local fallback.');
+      const targetHospital = selectedHospitalId === 'all' ? null : selectedHospitalId;
+      const data = await prescriptionTemplatesApi.getAllTemplates({
+        hospitalId: targetHospital,
+      });
+      setTemplates(data);
+    } catch (err: any) {
+      console.error('Failed to fetch templates:', err);
+      message.error('Failed to load prescription templates');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    void fetchActiveTemplate();
+    void fetchHospitals();
   }, []);
 
-  const handleSaveTemplate = async () => {
-    if (!isTemplateUpdatable || !editHtml.trim()) return;
+  useEffect(() => {
+    void fetchTemplates();
+  }, [selectedHospitalId]);
+
+  // Selected Hospital Name
+  const selectedHospitalName = useMemo(() => {
+    if (selectedHospitalId === 'all') return 'All Hospitals';
+    return hospitals.find((h) => h.id === selectedHospitalId)?.name || 'Active Hospital';
+  }, [hospitals, selectedHospitalId]);
+
+  // Separate Active Template and Others
+  const activeTemplate = useMemo(() => {
+    return templates.find((t) => t.status === 'ACTIVE') || STANDARD_PRESCRIPTION_TEMPLATE;
+  }, [templates]);
+
+  const filteredTemplates = useMemo(() => {
+    return templates.filter((t) => {
+      const matchesSearch =
+        t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (t.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus =
+        statusFilter === 'all' || t.status.toLowerCase() === statusFilter.toLowerCase();
+      return matchesSearch && matchesStatus;
+    });
+  }, [templates, searchTerm, statusFilter]);
+
+  // Save / Update in Builder
+  const handleSaveFromBuilder = async (payload: {
+    id?: string;
+    name: string;
+    description: string;
+    html_content: string;
+    layout_config?: TemplateLayoutConfig;
+    status: 'ACTIVE' | 'DRAFT';
+    hospital_id?: string | null;
+  }) => {
     try {
-      setSaving(true);
-      setError(null);
-      const res = await api.put('prescription-templates/active', {
-        id: template.id,
-        name: template.name,
-        description: template.description,
-        html_content: editHtml,
-        status: 'ACTIVE',
-      });
-
-      const updated = res.data?.data || res.data;
-      setTemplate((prev) => ({
-        ...prev,
-        html_content: updated.html_content || editHtml,
-        version: updated.version || (prev.version ? prev.version + 1 : 1),
-        updated_at: updated.updated_at || new Date().toISOString(),
-      }));
-
-      setSaveSuccess(true);
-      setIsEditing(false);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      setSavingTemplate(true);
+      if (payload.id && payload.id !== 'default-standard-a4') {
+        await prescriptionTemplatesApi.updateTemplate(payload.id, payload);
+        message.success(
+          payload.status === 'ACTIVE'
+            ? 'Template updated & activated successfully!'
+            : 'Template draft saved successfully!'
+        );
+      } else {
+        await prescriptionTemplatesApi.createTemplate(payload);
+        message.success(
+          payload.status === 'ACTIVE'
+            ? 'New template created & activated!'
+            : 'New draft template created!'
+        );
+      }
+      setBuilderOpen(false);
+      setEditingTemplate(null);
+      await fetchTemplates();
     } catch (err: any) {
       console.error('Failed to save template:', err);
-      setError(
-        err?.response?.data?.error ||
-          err?.message ||
-          'Failed to save template to server.',
-      );
+      message.error(err?.response?.data?.error || err?.message || 'Failed to save template');
     } finally {
-      setSaving(false);
+      setSavingTemplate(false);
+    }
+  };
+
+  // Activate Template
+  const handleActivateTemplate = async (templateId: string) => {
+    try {
+      setLoading(true);
+      await prescriptionTemplatesApi.activateTemplate(
+        templateId,
+        selectedHospitalId === 'all' ? null : selectedHospitalId
+      );
+      message.success('Prescription template activated! Consulting doctors will now use this design.');
+      await fetchTemplates();
+    } catch (err: any) {
+      console.error('Failed to activate template:', err);
+      message.error(err?.response?.data?.error || err?.message || 'Failed to activate template');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Duplicate Template
+  const handleDuplicateTemplate = async (templateId: string) => {
+    try {
+      setLoading(true);
+      await prescriptionTemplatesApi.duplicateTemplate(
+        templateId,
+        selectedHospitalId === 'all' ? null : selectedHospitalId
+      );
+      message.success('Template duplicated as draft for editing.');
+      await fetchTemplates();
+    } catch (err: any) {
+      console.error('Failed to duplicate template:', err);
+      message.error(err?.response?.data?.error || err?.message || 'Failed to duplicate template');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Delete Template
+  const handleDeleteTemplate = async (templateId: string) => {
+    try {
+      setLoading(true);
+      await prescriptionTemplatesApi.deleteTemplate(templateId);
+      message.success('Template deleted successfully.');
+      await fetchTemplates();
+    } catch (err: any) {
+      console.error('Failed to delete template:', err);
+      message.error(err?.response?.data?.error || err?.message || 'Failed to delete template');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-3 w-full">
-      {/* Compact Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-200/80">
-        <div className="min-w-0">
+    <div className="flex flex-col gap-4 w-full">
+      {/* Top Header Row with Hospital Selector */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+        <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-base font-bold text-slate-900 tracking-tight m-0">
-              Prescription Templates
+              Prescription Template Builder
             </h2>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Database Architecture
+              Multi-Tenant Architecture
             </span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600">
-              A4 Standard Layout
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+              A4 Print Ready
             </span>
-            {template.version && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                v{template.version}
-              </span>
-            )}
           </div>
-          <p className="text-xs text-slate-500 mt-0.5 m-0 truncate">
-            Single source of truth in{' '}
-            <code className="text-blue-600 font-mono font-semibold">
-              prescription_templates
-            </code>{' '}
-            for Preview and PDF Generation.
+          <p className="text-xs text-slate-500 mt-0.5 m-0">
+            Design hospital letterheads, customize doctor credentials, and configure consultation prescription layouts.
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+        {/* Header Actions & Hospital Selector */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Hospital Filter Dropdown */}
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1">
+            <Building2 size={13} className="text-slate-500" />
+            <select
+              value={selectedHospitalId}
+              onChange={(e) => setSelectedHospitalId(e.target.value)}
+              className="text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+            >
+              <option value="all">All Hospitals (System Default)</option>
+              {hospitals.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.name} {h.code ? `(${h.code})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <button
             type="button"
-            onClick={() => void fetchActiveTemplate()}
+            onClick={() => void fetchTemplates()}
             disabled={loading}
-            className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 shadow-2xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-            title="Refresh from Database"
+            className="h-8 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 shadow-2xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+            title="Refresh Templates"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin text-blue-600' : ''} />
-            <span>Refresh</span>
+            <span className="hidden sm:inline">Refresh</span>
           </button>
 
           <button
             type="button"
             onClick={() => setShowVariablesGuide(true)}
-            className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 shadow-2xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+            className="h-8 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 shadow-2xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
           >
             <HelpCircle size={13} />
             <span>Placeholders</span>
           </button>
 
-          {isTemplateUpdatable && (
+          {isTemplateCreatable && (
             <button
               type="button"
               onClick={() => {
-                setEditHtml(template.html_content);
-                setIsEditing(true);
+                setCreationSelectionOpen(true);
               }}
-              className="h-7.5 px-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 shadow-2xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+              className="h-8 px-3.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-2xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
             >
-              <Edit3 size={13} />
-              <span>Edit HTML Template</span>
+              <Plus size={14} />
+              <span>Create Template</span>
             </button>
           )}
-
-          <button
-            type="button"
-            onClick={() => setIsPreviewOpen(true)}
-            className="h-7.5 px-3 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-2xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-          >
-            <Eye size={13} />
-            <span>Preview Design</span>
-          </button>
         </div>
       </div>
 
-      {saveSuccess && (
-        <div className="px-3.5 py-2 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2 text-emerald-800 text-xs font-semibold">
-          <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-          <span>
-            Prescription template updated in the database! The Doctor App will automatically use this updated template.
-          </span>
-        </div>
-      )}
-
-      {error && (
-        <div className="px-3.5 py-2 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs font-medium">
-          {error}
-        </div>
-      )}
-
-      {/* Compact Template Architecture Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-950 rounded-xl px-4 py-3 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-slate-700/50 shadow-2xs">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-300 flex items-center justify-center font-mono text-xs font-bold border border-blue-400/30 shrink-0">
-            &lt;/&gt;
-          </div>
-          <div className="min-w-0">
-            <h3 className="font-bold text-xs text-white m-0">
-              Database Single Source of Truth
-            </h3>
-            <p className="text-[11px] text-slate-300 mt-0.5 m-0 leading-snug">
-              Stored in{' '}
-              <code className="text-blue-300 font-mono">prescription_templates</code>{' '}
-              and fetched dynamically at runtime for instant preview and PDF creation.
-            </p>
-          </div>
-        </div>
-
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[11px] font-semibold rounded-md shrink-0 self-start sm:self-center">
-          <Shield size={12} />
-          Single Source of Truth
-        </span>
-      </div>
-
-      {/* Compact Active Template Card */}
-      <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
-        <div className="p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-slate-100">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                <FileText size={20} />
+      {/* Featured Active Template Card for Selected Hospital */}
+      <div className="bg-gradient-to-br from-white via-slate-50 to-blue-50/30 rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
+        <div className="p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-slate-200/70">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                <FileText size={22} />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-sm font-bold text-slate-900 m-0">
-                    {template.name}
+                    {activeTemplate.name}
                   </h3>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <CheckCircle2 size={11} className="text-emerald-500" />
-                    {template.status}
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    <CheckCircle2 size={12} className="text-emerald-600" />
+                    CURRENTLY ACTIVE
                   </span>
-                  {template.version && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                      Version {template.version}
+                  {activeTemplate.version && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                      v{activeTemplate.version}
+                    </span>
+                  )}
+                  {activeTemplate.is_default && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                      System Default
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5 m-0 truncate">
-                  {template.description}
+                <p className="text-xs text-slate-500 mt-1 m-0 truncate">
+                  {activeTemplate.description || 'Active prescription layout used for all consultations.'}
                 </p>
               </div>
             </div>
 
+            {/* Actions for Active Template */}
             <div className="flex items-center gap-2 shrink-0">
-              {isTemplateUpdatable && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditHtml(template.html_content);
-                    setIsEditing(true);
-                  }}
-                  className="h-8 px-3 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 shadow-2xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Edit3 size={13} />
-                  <span>Edit Template</span>
-                </button>
-              )}
               <button
                 type="button"
-                onClick={() => setIsPreviewOpen(true)}
-                className="h-8 px-3 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 shadow-2xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                onClick={() => setPreviewTemplate(activeTemplate)}
+                className="h-8 px-3 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 shadow-2xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
               >
                 <Eye size={13} />
                 <span>Preview</span>
               </button>
+
+              {isTemplateUpdatable && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingTemplate(activeTemplate);
+                    setBuilderOpen(true);
+                  }}
+                  className="h-8 px-3 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-2xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Palette size={13} />
+                  <span>Design in Studio</span>
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Details Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3.5">
-            <div className="px-3 py-2.5 bg-slate-50 rounded-lg border border-slate-100">
+          {/* Active Template Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3.5 text-xs">
+            <div className="px-3.5 py-2.5 bg-white rounded-lg border border-slate-200/80">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
-                Layout Format
+                Hospital Scope
               </span>
-              <span className="text-xs font-bold text-slate-800">
+              <span className="font-bold text-slate-800 truncate block">
+                {selectedHospitalName}
+              </span>
+            </div>
+
+            <div className="px-3.5 py-2.5 bg-white rounded-lg border border-slate-200/80">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+                Layout Engine
+              </span>
+              <span className="font-bold text-slate-800 block">
                 A4 Portrait (Print &amp; PDF Optimized)
               </span>
             </div>
 
-            <div className="px-3 py-2.5 bg-slate-50 rounded-lg border border-slate-100">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
-                Database Record
-              </span>
-              <span className="text-xs font-mono font-medium text-slate-700 truncate block">
-                prescription_templates (ACTIVE)
-              </span>
-            </div>
-
-            <div className="px-3 py-2.5 bg-slate-50 rounded-lg border border-slate-100">
+            <div className="px-3.5 py-2.5 bg-white rounded-lg border border-slate-200/80">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
                 Last Updated
               </span>
-              <span className="text-xs font-bold text-slate-800">
-                {template.updated_at
-                  ? new Date(template.updated_at).toLocaleString()
-                  : 'Recently'}
+              <span className="font-bold text-slate-800 block">
+                {activeTemplate.updated_at
+                  ? new Date(activeTemplate.updated_at).toLocaleDateString('en-GB', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : 'System Default'}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Card Footer */}
-        <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-          <span>Used automatically when doctors generate prescriptions.</span>
-          <span className="font-mono text-slate-400">ID: {template.id}</span>
+        <div className="px-4 py-2 bg-slate-100/70 border-t border-slate-200/70 flex items-center justify-between text-[11px] text-slate-500">
+          <span>Doctors automatically prescribe using this design. Changes reflect immediately.</span>
+          <span className="font-mono text-slate-400 text-[10px]">ID: {activeTemplate.id}</span>
         </div>
       </div>
 
-      {/* Live HTML Editor Drawer (keeps main Template view single-screen without page scroll) */}
-      <Drawer
-        open={isEditing}
-        onClose={() => setIsEditing(false)}
-        width="min(880px, 95vw)"
-        destroyOnHidden
-        title={
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
-              <Code2 size={16} />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-slate-900">
-                Live Prescription HTML Template Editor
-              </div>
-              <div className="text-xs text-slate-500 font-normal">
-                Ensure placeholders like {'{{patient_name}}'}, {'{{medicines_table}}'}, and{' '}
-                {'{{doctor_signature}}'} are retained.
-              </div>
-            </div>
+      {/* Catalog & Version History Section */}
+      <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
+        {/* Filter bar */}
+        <div className="p-3.5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2">
+            <History size={16} className="text-slate-500" />
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider m-0">
+              Templates Catalog &amp; Versions ({filteredTemplates.length})
+            </h3>
           </div>
-        }
-        footer={
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setIsEditing(false)}
-              className="h-8 px-3.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleSaveTemplate()}
-              disabled={saving}
-              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-60"
-            >
-              {saving ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
-              <span>Save to Database</span>
-            </button>
-          </div>
-        }
-      >
-        <textarea
-          value={editHtml}
-          onChange={(e) => setEditHtml(e.target.value)}
-          className="w-full h-[calc(100vh-190px)] font-mono text-xs p-4 bg-slate-900 text-slate-100 rounded-xl border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 leading-relaxed resize-none"
-          placeholder="<html>...</html>"
-        />
-      </Drawer>
 
-      {/* Contract Placeholders Drawer */}
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search templates..."
+                className="pl-8 pr-3 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 w-48"
+              />
+            </div>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="text-xs py-1 px-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none cursor-pointer"
+            >
+              <option value="all">All Statuses</option>
+              <option value="active">Active Only</option>
+              <option value="draft">Drafts Only</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Templates Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+              <tr>
+                <th className="py-2.5 px-4">Template Name</th>
+                <th className="py-2.5 px-4">Status</th>
+                <th className="py-2.5 px-4">Version</th>
+                <th className="py-2.5 px-4">Hospital / Scope</th>
+                <th className="py-2.5 px-4">Last Updated</th>
+                <th className="py-2.5 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredTemplates.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-slate-400">
+                    No prescription templates found. Click <strong>Create Template</strong> to build one.
+                  </td>
+                </tr>
+              ) : (
+                filteredTemplates.map((tpl) => {
+                  const isActive = tpl.status === 'ACTIVE';
+                  const isDefault = Boolean(tpl.is_default);
+
+                  return (
+                    <tr key={tpl.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-slate-900">{tpl.name}</div>
+                        <div className="text-[11px] text-slate-400 truncate max-w-xs">
+                          {tpl.description || 'A4 prescription template'}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                            isActive
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : tpl.status === 'DRAFT'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {isActive && <CheckCircle2 size={10} />}
+                          {tpl.status}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-4 font-mono font-semibold text-slate-700">
+                        v{tpl.version || 1}
+                      </td>
+
+                      <td className="py-3 px-4">
+                        {isDefault && !tpl.hospital_id ? (
+                          <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-semibold border border-purple-200">
+                            Global Default
+                          </span>
+                        ) : (
+                          <span className="text-slate-700 font-medium">
+                            {hospitals.find((h) => h.id === tpl.hospital_id)?.name || 'Hospital Custom'}
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-4 text-slate-500 text-[11px]">
+                        {tpl.updated_at ? new Date(tpl.updated_at).toLocaleDateString() : 'System'}
+                      </td>
+
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* Preview */}
+                          <Tooltip title="Preview A4 Layout">
+                            <button
+                              type="button"
+                              onClick={() => setPreviewTemplate(tpl)}
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 cursor-pointer"
+                            >
+                              <Eye size={14} />
+                            </button>
+                          </Tooltip>
+
+                          {/* Design / Edit */}
+                          {isTemplateUpdatable && (
+                            <Tooltip title="Open in Visual Studio Builder">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingTemplate(tpl);
+                                  setBuilderOpen(true);
+                                }}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 cursor-pointer"
+                              >
+                                <Palette size={14} />
+                              </button>
+                            </Tooltip>
+                          )}
+
+                          {/* Duplicate */}
+                          {isTemplateCreatable && (
+                            <Tooltip title="Duplicate as new Draft">
+                              <button
+                                type="button"
+                                onClick={() => void handleDuplicateTemplate(tpl.id)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-purple-600 hover:bg-purple-50 cursor-pointer"
+                              >
+                                <Copy size={14} />
+                              </button>
+                            </Tooltip>
+                          )}
+
+                          {/* Activate */}
+                          {!isActive && isTemplateUpdatable && (
+                            <Tooltip title="Set as Active for this hospital">
+                              <button
+                                type="button"
+                                onClick={() => void handleActivateTemplate(tpl.id)}
+                                className="px-2 py-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 cursor-pointer"
+                              >
+                                Activate
+                              </button>
+                            </Tooltip>
+                          )}
+
+                          {/* Delete (only for non-default drafts/archived) */}
+                          {!isActive && !isDefault && isTemplateDeletable && (
+                            <Popconfirm
+                              title="Delete template?"
+                              description="Are you sure you want to delete this template record?"
+                              onConfirm={() => void handleDeleteTemplate(tpl.id)}
+                              okText="Delete"
+                              okType="danger"
+                            >
+                              <button
+                                type="button"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                title="Delete Template"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </Popconfirm>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Contract Placeholders Guide Drawer */}
       <Drawer
         open={showVariablesGuide}
         onClose={() => setShowVariablesGuide(false)}
@@ -419,9 +643,8 @@ export const PrescriptionTemplatesPage: React.FC = () => {
               <li>{'{{patient_age}}'}</li>
               <li>{'{{patient_gender}}'}</li>
               <li>{'{{patient_phone}}'}</li>
+              <li>{'{{vitals_html}}'}</li>
               <li>{'{{diagnosis}}'}</li>
-              <li>{'{{symptoms}}'}</li>
-              <li>{'{{clinical_notes}}'}</li>
               <li>{'{{medicines_table}}'}</li>
               <li>{'{{lab_tests}}'}</li>
               <li>{'{{additional_notes}}'}</li>
@@ -431,13 +654,40 @@ export const PrescriptionTemplatesPage: React.FC = () => {
         </div>
       </Drawer>
 
-      {/* Preview Modal */}
-      <PrescriptionPreviewModal
-        isOpen={isPreviewOpen}
-        onClose={() => setIsPreviewOpen(false)}
-        template={template}
-        customData={SAMPLE_ADMIN_PREVIEW_DATA}
+      {/* Template Creation Selection Modal */}
+      <TemplateCreationSelectionModal
+        isOpen={creationSelectionOpen}
+        onClose={() => setCreationSelectionOpen(false)}
+        onSelectOption={handleSelectCreationMode}
+        hospitalName={selectedHospitalName}
       />
+
+      {/* Visual Studio Builder Modal */}
+      {builderOpen && (
+        <PrescriptionTemplateBuilderModal
+          isOpen={builderOpen}
+          onClose={() => {
+            setBuilderOpen(false);
+            setEditingTemplate(null);
+          }}
+          template={editingTemplate}
+          initialMode={editingTemplate ? 'default' : builderCreationMode}
+          hospitalId={selectedHospitalId === 'all' ? null : selectedHospitalId}
+          hospitalName={selectedHospitalName}
+          onSave={handleSaveFromBuilder}
+          saving={savingTemplate}
+        />
+      )}
+
+      {/* Preview Modal */}
+      {previewTemplate && (
+        <PrescriptionPreviewModal
+          isOpen={Boolean(previewTemplate)}
+          onClose={() => setPreviewTemplate(null)}
+          template={previewTemplate}
+          customData={SAMPLE_ADMIN_PREVIEW_DATA}
+        />
+      )}
     </div>
   );
 };

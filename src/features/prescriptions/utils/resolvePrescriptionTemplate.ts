@@ -1,3 +1,5 @@
+import { resolveImageUrl } from '../../../utils/doctorAvatar';
+import { DEFAULT_ANNAAMALAI_LOGO_BASE64 } from '../templates/defaultLogo';
 import type {
   LabTestItem,
   LetterPadDataContext,
@@ -6,13 +8,39 @@ import type {
   TemplateResolutionResult,
 } from '../types/template';
 
+export interface MedicinesTableRenderOptions {
+  showDosage?: boolean;
+  showFrequency?: boolean;
+  showDuration?: boolean;
+  showInstructions?: boolean;
+}
+
 /**
  * Generates clean, professional print table for medicines on doctor letterhead
  */
-export function renderMedicinesTableHtml(medicines?: MedicineItem[]): string {
+export function renderMedicinesTableHtml(
+  medicines?: MedicineItem[],
+  options?: MedicinesTableRenderOptions
+): string {
   if (!medicines || medicines.length === 0) {
     return `<div style="padding: 6px 0; color: #64748b; font-style: italic; font-size: 11.5px;">No medications prescribed.</div>`;
   }
+
+  const showDosage = options?.showDosage ?? true;
+  const showFrequency = options?.showFrequency ?? true;
+  const showDuration = options?.showDuration ?? true;
+  const showInstructions = options?.showInstructions ?? true;
+
+  const ths = [
+    '<th style="width: 28px; text-align: center;">#</th>',
+    '<th>Medicine</th>',
+    showDosage ? '<th>Dosage</th>' : '',
+    showFrequency ? '<th>Frequency</th>' : '',
+    showDuration ? '<th>Duration</th>' : '',
+    showInstructions ? '<th>Instructions</th>' : '',
+  ]
+    .filter(Boolean)
+    .join('');
 
   const rows = medicines
     .map((med, index) => {
@@ -20,16 +48,18 @@ export function renderMedicinesTableHtml(medicines?: MedicineItem[]): string {
       const instructionsText = [timing, med.instructions].filter(Boolean).join(' • ') || '-';
       const dosageStr = [med.strength, med.dosage].filter(Boolean).join(' - ') || med.dosage || med.strength || '-';
 
-      return `
-      <tr>
-        <td style="width: 28px; text-align: center;">${index + 1}</td>
-        <td><strong>${escapeHtml(med.name)}</strong></td>
-        <td>${escapeHtml(dosageStr)}</td>
-        <td>${escapeHtml(med.frequency || '-')}</td>
-        <td>${escapeHtml(med.duration || '-')}</td>
-        <td>${escapeHtml(instructionsText)}</td>
-      </tr>
-    `.trim();
+      const tds = [
+        `<td style="width: 28px; text-align: center;">${index + 1}</td>`,
+        `<td><strong>${escapeHtml(med.name)}</strong></td>`,
+        showDosage ? `<td>${escapeHtml(dosageStr)}</td>` : '',
+        showFrequency ? `<td>${escapeHtml(med.frequency || '-')}</td>` : '',
+        showDuration ? `<td>${escapeHtml(med.duration || '-')}</td>` : '',
+        showInstructions ? `<td>${escapeHtml(instructionsText)}</td>` : '',
+      ]
+        .filter(Boolean)
+        .join('');
+
+      return `<tr>${tds}</tr>`;
     })
     .join('\n');
 
@@ -37,12 +67,7 @@ export function renderMedicinesTableHtml(medicines?: MedicineItem[]): string {
     <table class="rx-medicine-table">
       <thead>
         <tr>
-          <th>#</th>
-          <th>Medicine</th>
-          <th>Dosage</th>
-          <th>Frequency</th>
-          <th>Duration</th>
-          <th>Instructions</th>
+          ${ths}
         </tr>
       </thead>
       <tbody>
@@ -212,9 +237,27 @@ export function resolvePrescriptionTemplate(
   cleanDocName = cleanDocName.replace(/^(\s*dr\.?\s*)+/i, '').trim();
 
   // Doctor signature HTML
-  const signatureHtml = doc.signature_url
-    ? `<img src="${escapeHtml(doc.signature_url)}" alt="Signature" class="rx-sig-img" />`
+  const rawSigUrl = doc.signature_url?.trim();
+  const resolvedSigUrl = rawSigUrl ? (resolveImageUrl(rawSigUrl) || rawSigUrl) : '';
+  const signatureHtml = resolvedSigUrl
+    ? `<img src="${escapeHtml(resolvedSigUrl)}" alt="Signature" class="rx-sig-img" />`
     : `<div class="rx-sig-art">${escapeHtml(cleanDocName || 'Narendran')}</div>`;
+
+  // Hospital logo HTML
+  let resolvedHospitalLogo = '';
+  const rawHospLogo = hosp.logo_url?.trim();
+  if (rawHospLogo) {
+    const resolvedUrl = resolveImageUrl(rawHospLogo) || rawHospLogo;
+    resolvedHospitalLogo = `<img class="rx-logo-img" src="${escapeHtml(resolvedUrl)}" alt="${escapeHtml(hosp.name || 'Hospital')} Logo" onerror="this.removeAttribute('onerror'); this.src='${DEFAULT_ANNAAMALAI_LOGO_BASE64}';" style="max-width: 77mm; max-height: 32mm; width: auto; height: auto; object-fit: contain; object-position: left center; display: block;" />`;
+  } else if (!hosp.name || hosp.name.toLowerCase().includes('annaamalai')) {
+    resolvedHospitalLogo = `<img class="rx-logo-img" src="${DEFAULT_ANNAAMALAI_LOGO_BASE64}" alt="Annaamalai Cancer Center Logo" style="max-width: 77mm; max-height: 32mm; width: auto; height: auto; object-fit: contain; object-position: left center; display: block;" />`;
+  } else {
+    resolvedHospitalLogo = `
+<div class="rx-logo-placeholder">
+  <div class="rx-logo-placeholder-name">${escapeHtml(hosp.name)}</div>
+  <div class="rx-logo-placeholder-sub">Hospital Letterhead</div>
+</div>`.trim();
+  }
 
   // Format Additional Notes as list items if multiline
   let additionalNotesHtml = rx.additional_notes || rx.general_instructions || '';
@@ -254,7 +297,8 @@ export function resolvePrescriptionTemplate(
     hospital_phone: hosp.phone || '+91 84380 56883',
     hospital_email: hosp.email || 'narenonco@gmail.com',
     hospital_website: hosp.website || 'www.drnarendranoncologist.com',
-    hospital_logo: '',
+    hospital_logo: resolvedHospitalLogo,
+    HOSPITAL_LOGO: resolvedHospitalLogo,
 
     branch_name: branch.name || '',
     branch_address: branch.address || '',
@@ -287,6 +331,9 @@ export function resolvePrescriptionTemplate(
     patient_height: heightStr,
     patient_weight: weightStr,
     patient_bmi: bmiStr,
+    pulse_rate: (pat.pulse_rate || pat.vitals?.pulse_rate || '72 bpm').trim(),
+    spo2: (pat.spo2 || pat.vitals?.spo2 || '99%').trim(),
+    respiratory_rate: (pat.respiratory_rate || pat.vitals?.respiratory_rate || '18 breaths/min').trim(),
 
     prescription_id: rx.prescription_id || rx.id || 'PRS-2026-00123',
     prescription_date: rx.prescription_date ? formatDate(rx.prescription_date) : formatDate(new Date().toISOString()),
@@ -326,6 +373,17 @@ export function resolvePrescriptionTemplate(
     e_signature: signatureHtml,
     E_SIGN: signatureHtml,
     e_sign: signatureHtml,
+
+    ...(pat.custom_vitals && Array.isArray(pat.custom_vitals)
+      ? Object.fromEntries(
+          pat.custom_vitals
+            .filter((c) => c && c.label && c.value)
+            .map((c) => [c.label.toLowerCase().replace(/[^a-z0-9_]+/g, '_'), String(c.value)])
+        )
+      : {}),
+    ...(pat.custom_vitals && !Array.isArray(pat.custom_vitals) && typeof pat.custom_vitals === 'object'
+      ? pat.custom_vitals
+      : {}),
 
     ...(context.custom_data || {}),
   };
@@ -385,12 +443,134 @@ export function resolvePrescriptionTemplate(
   // Safeguard against any double "Dr. Dr."
   rendered = rendered.replace(/\bDr\.?\s+Dr\.?\s+/gi, 'Dr. ');
 
+  // Sanitize and enhance all hospital logo and img tags with proxy routing, aspect fit and error fallback
+  rendered = sanitizePrescriptionHtml(
+    rendered,
+    hosp.logo_url || (hosp.name && !hosp.name.toLowerCase().includes('annaamalai') ? '' : DEFAULT_ANNAAMALAI_LOGO_BASE64),
+    hosp.name || 'Annaamalai Cancer Center'
+  );
+
   return {
     renderedHtml: rendered,
     resolvedPlaceholders: Array.from(new Set(resolvedKeys)),
     unresolvedPlaceholders,
     missingRequiredFields: [],
   };
+}
+
+/**
+ * Post-processes rendered or backend prescription HTML to ensure all hospital logos
+ * and images have resolved proxy URLs, correct aspect-ratio fitting styles,
+ * and graceful onerror fallback preventing any broken image icons.
+ */
+export function sanitizePrescriptionHtml(
+  html: string,
+  fallbackLogoUrl: string = DEFAULT_ANNAAMALAI_LOGO_BASE64,
+  hospitalName: string = 'Annaamalai Cancer Center',
+): string {
+  if (!html) return '';
+
+  let sanitized = html;
+
+  const effectiveFallback = fallbackLogoUrl || DEFAULT_ANNAAMALAI_LOGO_BASE64;
+  const resolvedFallback = resolveImageUrl(effectiveFallback) || effectiveFallback;
+
+  // 1. Resolve any remaining unreplaced {{hospital_logo}} or {{HOSPITAL_LOGO}} tokens
+  if (sanitized.includes('{{hospital_logo}}') || sanitized.includes('{{HOSPITAL_LOGO}}')) {
+    const fallbackLogoHtml = `<img class="rx-logo-img" src="${escapeHtml(resolvedFallback)}" alt="${escapeHtml(hospitalName)} Logo" onerror="this.removeAttribute('onerror'); this.src='${DEFAULT_ANNAAMALAI_LOGO_BASE64}';" style="max-width: 77mm; max-height: 32mm; width: auto; height: auto; object-fit: contain; object-position: left center; display: block;" />`;
+    sanitized = sanitized
+      .replace(/\{\{hospital_logo\}\}/gi, fallbackLogoHtml)
+      .replace(/\{\{HOSPITAL_LOGO\}\}/gi, fallbackLogoHtml);
+  }
+
+  // 2. Normalize and proxy unsigned AWS S3 URLs in any img src
+  sanitized = sanitized.replace(
+    /(<img[^>]*\ssrc=["'])(https?:\/\/[^"']*amazonaws\.com[^"']*)(["'][^>]*>)/gi,
+    (full, prefix, rawUrl, suffix) => {
+      const resolved = resolveImageUrl(rawUrl);
+      return resolved ? `${prefix}${resolved}${suffix}` : full;
+    }
+  );
+
+  // 3. Normalize and proxy bare upload or branding keys in img src tags
+  sanitized = sanitized.replace(
+    /(<img[^>]*\ssrc=["'])((?:uploads|branding|prescriptions|doctors)\/[^"']+)(["'][^>]*>)/gi,
+    (full, prefix, rawKey, suffix) => {
+      const resolved = resolveImageUrl(rawKey);
+      return resolved ? `${prefix}${resolved}${suffix}` : full;
+    }
+  );
+
+  // 4. Normalize localhost backend urls to relative /uploads or /api so Vite dev server proxies them
+  sanitized = sanitized.replace(
+    /(<img[^>]*\ssrc=["'])(https?:\/\/localhost:\d+\/(?:uploads|api|branding)\/[^"']+)(["'][^>]*>)/gi,
+    (full, prefix, rawUrl, suffix) => {
+      const resolved = resolveImageUrl(rawUrl);
+      return resolved ? `${prefix}${resolved}${suffix}` : full;
+    }
+  );
+
+  // 5. Inspect and enhance header logo img tags (rx-logo, rx-logo-img, or alt containing Hospital Logo)
+  sanitized = sanitized.replace(
+    /<img\b([^>]*?)>/gi,
+    (fullImgTag, attributes: string) => {
+      const isHeaderLogo =
+        attributes.includes('rx-logo') ||
+        attributes.includes('rx-logo-img') ||
+        /alt=["'][^"']*hospital\s*logo[^"']*["']/i.test(attributes) ||
+        /alt=["'][^"']*logo[^"']*["']/i.test(attributes);
+
+      if (!isHeaderLogo) {
+        return fullImgTag;
+      }
+
+      // Extract existing src
+      const srcMatch = attributes.match(/src=["']([^"']*)["']/i);
+      let srcVal = srcMatch && srcMatch[1] ? srcMatch[1].trim() : '';
+
+      // If src is empty, 'null', 'undefined', or unresolved token
+      if (!srcVal || srcVal === 'null' || srcVal === 'undefined' || srcVal.includes('{{')) {
+        srcVal = resolvedFallback;
+      } else {
+        const resolved = resolveImageUrl(srcVal);
+        if (resolved) {
+          srcVal = resolved;
+        }
+      }
+
+      // Rebuild attributes with valid src
+      let newAttrs = attributes;
+      if (srcMatch) {
+        newAttrs = newAttrs.replace(/src=["'][^"']*["']/i, `src="${srcVal}"`);
+      } else {
+        newAttrs += ` src="${srcVal}"`;
+      }
+
+      // Ensure onerror attribute exists for graceful fallback
+      if (!newAttrs.includes('onerror=')) {
+        newAttrs += ` onerror="this.removeAttribute('onerror'); this.src='${DEFAULT_ANNAAMALAI_LOGO_BASE64}';"`;
+      }
+
+      // Ensure aspect-ratio and dimension style is present
+      const aspectStyle = 'max-width: 77mm; max-height: 32mm; width: auto; height: auto; object-fit: contain; object-position: left center; display: block;';
+      if (newAttrs.includes('style=')) {
+        newAttrs = newAttrs.replace(/style=["']([^"']*)["']/i, (_m, existingStyle: string) => {
+          let s = existingStyle.trim();
+          if (!s.endsWith(';')) s += ';';
+          if (!s.includes('object-fit')) s += ' object-fit: contain;';
+          if (!s.includes('max-height')) s += ' max-height: 32mm;';
+          if (!s.includes('max-width')) s += ' max-width: 77mm;';
+          return `style="${s}"`;
+        });
+      } else {
+        newAttrs += ` style="${aspectStyle}"`;
+      }
+
+      return `<img ${newAttrs.trim()}>`;
+    }
+  );
+
+  return sanitized;
 }
 
 function escapeHtml(str: string): string {
