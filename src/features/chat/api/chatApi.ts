@@ -90,19 +90,84 @@ export const chatApi = {
    */
   getOtherUsers: async (search?: string): Promise<ChatRecipient[]> => {
     try {
-      const res = await api.get('user-accounts', { params: { search } });
-      const data = res.data?.data || res.data?.users || res.data || [];
-      return (Array.isArray(data) ? data : []).map((u: any) => ({
-        id: u.id,
-        name: u.username || u.name || 'User',
-        role: (u.role || 'ADMIN').toUpperCase(),
-        subtitle: `${u.role || 'Admin'} Account`,
-        email: u.email,
-        phone: u.phone,
-        is_online: false,
-        user_account_id: u.id,
-        status: u.status || 'ACTIVE',
-      }));
+      const res = await api.get('chat/others', { params: { search } });
+      const data = res.data?.data || res.data?.users || res.data?.others || res.data || [];
+      if (Array.isArray(data) && data.length > 0) {
+        return data.map((u: any) => ({
+          id: u.id,
+          name: u.name || u.username || 'Admin User',
+          role: (u.role || 'ADMIN').toUpperCase(),
+          subtitle: `${u.role || 'Admin'} Account`,
+          email: u.email,
+          phone: u.phone,
+          avatar_url: u.avatar_url || u.profile_image_url,
+          is_online: Boolean(u.is_online || u.online_status === 'online'),
+          unread_count: u.unread_count || 0,
+          last_message: u.last_message,
+          last_message_at: u.last_message_at,
+          user_account_id: u.user_account_id || u.id,
+          status: u.status || 'ACTIVE',
+        }));
+      }
+    } catch {
+      // Fallback below
+    }
+
+    // Fallback: query user-accounts and staff
+    try {
+      const [usersRes, staffRes] = await Promise.allSettled([
+        api.get('user-accounts', { params: { search } }),
+        api.get('staff', { params: { search } }),
+      ]);
+      const usersList =
+        usersRes.status === 'fulfilled'
+          ? usersRes.value.data?.data || usersRes.value.data?.users || usersRes.value.data || []
+          : [];
+      const staffList =
+        staffRes.status === 'fulfilled'
+          ? staffRes.value.data?.data || staffRes.value.data?.staff || staffRes.value.data || []
+          : [];
+
+      const combined: ChatRecipient[] = [];
+      const seen = new Set<string>();
+
+      (Array.isArray(usersList) ? usersList : []).forEach((u: any) => {
+        if (!u || !u.id) return;
+        const key = String(u.username || u.email || u.id).toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        combined.push({
+          id: u.id,
+          name: u.username || u.name || 'User',
+          role: (u.role || 'ADMIN').toUpperCase(),
+          subtitle: `${u.role || 'Admin'} Account`,
+          email: u.email,
+          phone: u.phone,
+          is_online: false,
+          user_account_id: u.id,
+          status: u.status || 'ACTIVE',
+        });
+      });
+
+      (Array.isArray(staffList) ? staffList : []).forEach((s: any) => {
+        if (!s || !s.id) return;
+        const key = String(s.email || s.name || s.id).toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        combined.push({
+          id: s.id,
+          name: s.name || 'Staff Member',
+          role: (s.role || 'STAFF').toUpperCase(),
+          subtitle: s.department || s.role || 'Hospital Staff',
+          email: s.email,
+          phone: s.phone,
+          is_online: false,
+          user_account_id: s.user_account_id || s.id,
+          status: s.status || 'ACTIVE',
+        });
+      });
+
+      return combined;
     } catch {
       return [];
     }

@@ -109,6 +109,7 @@ const MODULE_NOUNS: Record<string, { singular: string; plural: string }> = {
   PATIENT_SUPPORT: { singular: 'patient ticket', plural: 'patient support' },
   DOCTOR_SUPPORT: { singular: 'doctor ticket', plural: 'doctor support' },
   SUPPORT: { singular: 'support ticket', plural: 'support' },
+  CHAT: { singular: 'chat conversation', plural: 'chat conversations' },
 };
 
 function getModuleNouns(mod: ModuleDef): { singular: string; plural: string } {
@@ -168,6 +169,7 @@ const DEFAULT_CATEGORIES: Record<string, string> = {
   PATIENT_SUPPORT: 'Support & Reviews',
   DOCTOR_SUPPORT: 'Support & Reviews',
   SUPPORT: 'Support & Reviews',
+  CHAT: 'Support & Reviews',
 };
 
 export const INITIAL_MODULES: ModuleDef[] = [
@@ -196,6 +198,7 @@ export const INITIAL_MODULES: ModuleDef[] = [
   { slug: 'REVIEWS', name: 'Ratings & Reviews', category: 'Support & Reviews', description: 'Patient reviews and feedback' },
   { slug: 'PATIENT_SUPPORT', name: 'Patient Support', category: 'Support & Reviews', description: 'Patient support tickets and chat' },
   { slug: 'DOCTOR_SUPPORT', name: 'Doctor Support', category: 'Support & Reviews', description: 'Doctor inquiry and clinical support' },
+  { slug: 'CHAT', name: 'Chat', category: 'Support & Reviews', description: 'Direct messaging and real-time communication with doctors, patients, and staff.' },
 ];
 
 export default function RoleModal({ isOpen, onClose, role, onSave }: RoleModalProps) {
@@ -219,7 +222,16 @@ export default function RoleModal({ isOpen, onClose, role, onSave }: RoleModalPr
             ? (res.data as any).data
             : [];
         if (data.length > 0) {
-          setModules(data);
+          // Normalize existing slugs in backend data (case-insensitive check)
+          const existingSlugs = new Set(
+            data.map((m: ModuleDef) => (m.slug || '').toUpperCase())
+          );
+          // Preserve any system modules defined in INITIAL_MODULES (such as CHAT)
+          // that are not yet seeded or returned by the backend database
+          const missingModules = INITIAL_MODULES.filter(
+            (im) => !existingSlugs.has((im.slug || '').toUpperCase())
+          );
+          setModules([...data, ...missingModules]);
         }
       } catch (err) {
         console.error('Failed to fetch RBAC modules', err);
@@ -234,7 +246,10 @@ export default function RoleModal({ isOpen, onClose, role, onSave }: RoleModalPr
       const permMap: Record<string, NormalizedPermission> = {};
       role.permissions?.forEach((p) => {
         if (p?.module_slug) {
-          permMap[p.module_slug] = normalizeModulePermission(p, p.module_slug);
+          const norm = normalizeModulePermission(p, p.module_slug);
+          permMap[p.module_slug] = norm;
+          permMap[p.module_slug.toUpperCase()] = norm;
+          permMap[p.module_slug.toLowerCase()] = norm;
         }
       });
       setPermissions(permMap);
@@ -251,10 +266,18 @@ export default function RoleModal({ isOpen, onClose, role, onSave }: RoleModalPr
 
   // Compute resolved modules with fallback categories
   const resolvedModules = useMemo(() => {
-    return modules.map((m) => ({
-      ...m,
-      category: m.category || DEFAULT_CATEGORIES[m.slug] || 'General',
-    }));
+    return modules.map((m) => {
+      const upperSlug = (m.slug || '').toUpperCase();
+      const defaultCategory =
+        DEFAULT_CATEGORIES[m.slug] || DEFAULT_CATEGORIES[upperSlug];
+      return {
+        ...m,
+        category:
+          (m.category && m.category !== 'General' ? m.category : defaultCategory) ||
+          m.category ||
+          'General',
+      };
+    });
   }, [modules]);
 
   // Unique list of categories
@@ -921,7 +944,12 @@ export default function RoleModal({ isOpen, onClose, role, onSave }: RoleModalPr
                     {/* 5-Option Module Permission Cards */}
                     <div className="p-3 space-y-3 bg-slate-50/40">
                       {catModules.map((m) => {
-                        const perm = normalizeModulePermission(permissions[m.slug], m.slug);
+                        const perm = normalizeModulePermission(
+                          permissions[m.slug] ||
+                            permissions[(m.slug || '').toUpperCase()] ||
+                            permissions[(m.slug || '').toLowerCase()],
+                          m.slug,
+                        );
                         const nouns = getModuleNouns(m);
                         const selectedCount =
                           (perm.can_create ? 1 : 0) +
