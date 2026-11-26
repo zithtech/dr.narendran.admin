@@ -244,4 +244,46 @@ export const chatApi = {
       // Ignore background read receipt failure
     }
   },
+
+  /**
+   * Upload an attachment to a conversation
+   */
+  uploadAttachment: async (
+    conversationId: string,
+    file: File,
+    caption?: string,
+    replyToMessageId?: string,
+  ): Promise<ChatMessage> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (caption && caption.trim()) {
+      formData.append('caption', caption.trim());
+      formData.append('message', caption.trim());
+    }
+    if (replyToMessageId) {
+      formData.append('replyToMessageId', replyToMessageId);
+      formData.append('reply_to_message_id', replyToMessageId);
+    }
+
+    const res = await api.post(`chat/conversations/${conversationId}/attachments`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return res.data?.data || res.data;
+  },
+
+  /**
+   * Get fresh signed download URL for an attachment
+   */
+  getAttachmentDownloadUrl: async (
+    conversationId: string,
+    messageId: string,
+  ): Promise<{ downloadUrl: string; fileName: string; mimeType: string }> => {
+    const res = await api.get(
+      `chat/conversations/${conversationId}/messages/${messageId}/attachment`,
+    );
+    return res.data?.data || res.data;
+  },
 };

@@ -46,6 +46,26 @@ function formatConversationTime(dateString?: string | null): string {
   }
 }
 
+function getMessagePreviewText(msg: any): string {
+  const hasAttachment = Boolean(
+    msg.attachment_url ||
+      msg.attachmentUrl ||
+      msg.file_name ||
+      msg.fileName ||
+      ['IMAGE', 'PDF', 'DOCUMENT', 'SPREADSHEET'].includes(msg.message_type) ||
+      ['IMAGE', 'PDF', 'DOCUMENT', 'SPREADSHEET'].includes(msg.messageType),
+  );
+  const text = msg.message || msg.content || '';
+  if (hasAttachment) {
+    const fileName = msg.file_name || msg.fileName || '';
+    if (!text || text === fileName) {
+      return `📎 ${fileName || 'Attachment'}`;
+    }
+    return `📎 ${text}`;
+  }
+  return text;
+}
+
 function getInitials(name: string): string {
   const clean = name.replace(/^Dr\.\s*/i, '').trim();
   const parts = clean.split(/\s+/).filter(Boolean);
@@ -204,7 +224,7 @@ export function ChatPage() {
       setConversations((prev) => {
         const index = prev.findIndex((c) => c.id === convId);
         const now = msg.sent_at || msg.sentAt || new Date().toISOString();
-        const msgText = msg.message || msg.content || '';
+        const msgText = getMessagePreviewText(msg);
 
         if (index !== -1) {
           const current = prev[index]!;
@@ -350,7 +370,7 @@ export function ChatPage() {
     setConversations((prev) => {
       const index = prev.findIndex((c) => c.id === convId);
       const now = msg.sent_at || msg.sentAt || new Date().toISOString();
-      const msgText = msg.message || msg.content || '';
+      const msgText = getMessagePreviewText(msg);
 
       if (index !== -1) {
         const current = prev[index]!;
