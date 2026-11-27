@@ -223,7 +223,16 @@ export default function RoleModal({ isOpen, onClose, role, onSave }: RoleModalPr
             ? (res.data as any).data
             : [];
         if (data.length > 0) {
-          setModules(data);
+          // Normalize existing slugs in backend data (case-insensitive check)
+          const existingSlugs = new Set(
+            data.map((m: ModuleDef) => (m.slug || '').toUpperCase())
+          );
+          // Preserve any system modules defined in INITIAL_MODULES (such as CHAT)
+          // that are not yet seeded or returned by the backend database
+          const missingModules = INITIAL_MODULES.filter(
+            (im) => !existingSlugs.has((im.slug || '').toUpperCase())
+          );
+          setModules([...data, ...missingModules]);
         }
       } catch (err) {
         console.error('Failed to fetch RBAC modules', err);
@@ -238,7 +247,10 @@ export default function RoleModal({ isOpen, onClose, role, onSave }: RoleModalPr
       const permMap: Record<string, NormalizedPermission> = {};
       role.permissions?.forEach((p) => {
         if (p?.module_slug) {
-          permMap[p.module_slug] = normalizeModulePermission(p, p.module_slug);
+          const norm = normalizeModulePermission(p, p.module_slug);
+          permMap[p.module_slug] = norm;
+          permMap[p.module_slug.toUpperCase()] = norm;
+          permMap[p.module_slug.toLowerCase()] = norm;
         }
       });
       setPermissions(permMap);
@@ -255,10 +267,18 @@ export default function RoleModal({ isOpen, onClose, role, onSave }: RoleModalPr
 
   // Compute resolved modules with fallback categories
   const resolvedModules = useMemo(() => {
-    return modules.map((m) => ({
-      ...m,
-      category: m.category || DEFAULT_CATEGORIES[m.slug] || 'General',
-    }));
+    return modules.map((m) => {
+      const upperSlug = (m.slug || '').toUpperCase();
+      const defaultCategory =
+        DEFAULT_CATEGORIES[m.slug] || DEFAULT_CATEGORIES[upperSlug];
+      return {
+        ...m,
+        category:
+          (m.category && m.category !== 'General' ? m.category : defaultCategory) ||
+          m.category ||
+          'General',
+      };
+    });
   }, [modules]);
 
   // Unique list of categories
@@ -925,7 +945,12 @@ export default function RoleModal({ isOpen, onClose, role, onSave }: RoleModalPr
                     {/* 5-Option Module Permission Cards */}
                     <div className="p-3 space-y-3 bg-slate-50/40">
                       {catModules.map((m) => {
-                        const perm = normalizeModulePermission(permissions[m.slug], m.slug);
+                        const perm = normalizeModulePermission(
+                          permissions[m.slug] ||
+                          permissions[(m.slug || '').toUpperCase()] ||
+                          permissions[(m.slug || '').toLowerCase()],
+                          m.slug,
+                        );
                         const nouns = getModuleNouns(m);
                         const selectedCount =
                           (perm.can_create ? 1 : 0) +
@@ -943,64 +968,61 @@ export default function RoleModal({ isOpen, onClose, role, onSave }: RoleModalPr
                           sub: string;
                           checked: boolean;
                         }> = [
-                          {
-                            field: 'can_create',
-                            label: 'Create',
-                            sub: `Create ${nouns.plural}`,
-                            checked: perm.can_create,
-                          },
-                          {
-                            field: 'can_delete',
-                            label: 'Delete',
-                            sub: `Delete ${nouns.plural}`,
-                            checked: perm.can_delete,
-                          },
-                          {
-                            field: 'can_manage',
-                            label: 'Manage',
-                            sub: `Full ${nouns.singular} management`,
-                            checked: perm.can_manage,
-                          },
-                          {
-                            field: 'can_read',
-                            label: 'Read',
-                            sub: `View ${nouns.plural}`,
-                            checked: perm.can_read,
-                          },
-                          {
-                            field: 'can_update',
-                            label: 'Update',
-                            sub: `Edit ${nouns.plural}`,
-                            checked: perm.can_update,
-                          },
-                        ];
+                            {
+                              field: 'can_create',
+                              label: 'Create',
+                              sub: `Create ${nouns.plural}`,
+                              checked: perm.can_create,
+                            },
+                            {
+                              field: 'can_delete',
+                              label: 'Delete',
+                              sub: `Delete ${nouns.plural}`,
+                              checked: perm.can_delete,
+                            },
+                            {
+                              field: 'can_manage',
+                              label: 'Manage',
+                              sub: `Full ${nouns.singular} management`,
+                              checked: perm.can_manage,
+                            },
+                            {
+                              field: 'can_read',
+                              label: 'Read',
+                              sub: `View ${nouns.plural}`,
+                              checked: perm.can_read,
+                            },
+                            {
+                              field: 'can_update',
+                              label: 'Update',
+                              sub: `Edit ${nouns.plural}`,
+                              checked: perm.can_update,
+                            },
+                          ];
 
                         return (
                           <div
                             key={m.slug}
-                            className={`rounded-xl border transition-colors overflow-hidden bg-white ${
-                              hasAny ? 'border-purple-200 shadow-2xs' : 'border-slate-200'
-                            }`}
+                            className={`rounded-xl border transition-colors overflow-hidden bg-white ${hasAny ? 'border-purple-200 shadow-2xs' : 'border-slate-200'
+                              }`}
                           >
                             {/* Card Header matching screenshot layout */}
                             <div
-                              className={`flex items-center justify-between px-4 py-2.5 border-b ${
-                                hasAny
+                              className={`flex items-center justify-between px-4 py-2.5 border-b ${hasAny
                                   ? 'bg-purple-50/35 border-purple-100'
                                   : 'bg-slate-50/70 border-slate-200/80'
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
                                 <button
                                   type="button"
                                   onClick={() => handleToggleModuleAll(m.slug)}
-                                  className={`w-4 h-4 rounded flex items-center justify-center border text-[10px] font-bold shrink-0 transition-colors cursor-pointer ${
-                                    hasAll
+                                  className={`w-4 h-4 rounded flex items-center justify-center border text-[10px] font-bold shrink-0 transition-colors cursor-pointer ${hasAll
                                       ? 'bg-purple-600 border-purple-600 text-white'
                                       : hasAny
                                         ? 'bg-purple-100 border-purple-400 text-purple-700'
                                         : 'border-slate-300 hover:border-slate-400 bg-white text-transparent'
-                                  }`}
+                                    }`}
                                   title={
                                     hasAll
                                       ? `Clear all 5 permissions for ${m.name}`
@@ -1039,13 +1061,12 @@ export default function RoleModal({ isOpen, onClose, role, onSave }: RoleModalPr
                               </div>
 
                               <span
-                                className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${
-                                  hasAll
+                                className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${hasAll
                                     ? 'bg-purple-600 text-white border-purple-600'
                                     : hasAny
                                       ? 'bg-purple-50 text-purple-700 border-purple-200'
                                       : 'bg-slate-100 text-slate-600 border-slate-200'
-                                }`}
+                                  }`}
                               >
                                 {selectedCount} / 5
                               </span>
@@ -1061,11 +1082,10 @@ export default function RoleModal({ isOpen, onClose, role, onSave }: RoleModalPr
                                   {actionItems.map((item) => (
                                     <label
                                       key={item.field}
-                                      className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 cursor-pointer select-none transition-all ${
-                                        item.checked
+                                      className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 cursor-pointer select-none transition-all ${item.checked
                                           ? 'border-purple-300 bg-purple-50/50 shadow-2xs'
                                           : 'border-transparent hover:border-slate-200 hover:bg-slate-50/80'
-                                      }`}
+                                        }`}
                                     >
                                       <input
                                         type="checkbox"
