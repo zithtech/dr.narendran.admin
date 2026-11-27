@@ -21,6 +21,7 @@ export interface ChatConversationDrawerProps {
   initialConversationId?: string | null;
   currentUserId?: string;
   currentUserRole?: string;
+  canSend?: boolean;
 }
 
 function formatMessageTime(dateString?: string): string {
@@ -52,6 +53,7 @@ export const ChatConversationDrawer: React.FC<ChatConversationDrawerProps> = ({
   initialConversationId,
   currentUserId = '',
   currentUserRole = 'ADMIN',
+  canSend = true,
 }) => {
   const [conversationId, setConversationId] = useState<string | null>(initialConversationId || null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -103,7 +105,7 @@ export const ChatConversationDrawer: React.FC<ChatConversationDrawerProps> = ({
       if (convId) {
         // Fetch message history
         const history = await chatApi.getMessages(convId);
-        setMessages(history);
+        setMessages(Array.isArray(history) ? history : (history as any)?.messages || []);
 
         // Connect socket & join room
         chatSocket.connect();
@@ -201,6 +203,7 @@ export const ChatConversationDrawer: React.FC<ChatConversationDrawerProps> = ({
 
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (!canSend) return;
     const trimmed = inputText.trim();
     if (!trimmed || sending || !conversationId) return;
 
@@ -318,7 +321,7 @@ export const ChatConversationDrawer: React.FC<ChatConversationDrawerProps> = ({
                   className="w-10 h-10 rounded-full object-cover border border-slate-200"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 text-white font-semibold text-sm grid place-items-center">
+                <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-blue-600 text-white font-semibold text-sm grid place-items-center">
                   {getInitials(recipient.name)}
                 </div>
               )}
@@ -343,6 +346,11 @@ export const ChatConversationDrawer: React.FC<ChatConversationDrawerProps> = ({
                 <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
                   {recipient.role}
                 </span>
+                {!canSend && (
+                  <span className="px-2 py-0.5 text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 rounded-md">
+                    Read-only
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 truncate">
                 {recipient.subtitle || recipient.specialization || recipient.email || recipient.phone || 'Available for chat'}
@@ -374,7 +382,7 @@ export const ChatConversationDrawer: React.FC<ChatConversationDrawerProps> = ({
         <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
           {loading ? (
             <div className="h-full flex flex-col items-center justify-center gap-2 text-slate-500 py-16">
-              <Loader2 size={28} className="animate-spin text-indigo-600" />
+              <Loader2 size={28} className="animate-spin text-blue-600" />
               <span className="text-xs">Loading conversation history...</span>
             </div>
           ) : error ? (
@@ -394,7 +402,7 @@ export const ChatConversationDrawer: React.FC<ChatConversationDrawerProps> = ({
             </div>
           ) : messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-8 text-slate-400">
-              <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-500 grid place-items-center mb-3">
+              <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 grid place-items-center mb-3">
                 <MessageSquare size={24} />
               </div>
               <p className="text-sm font-medium text-slate-700">No messages yet</p>
@@ -416,19 +424,19 @@ export const ChatConversationDrawer: React.FC<ChatConversationDrawerProps> = ({
                   <div
                     className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm shadow-xs break-words ${
                       mine
-                        ? 'bg-linear-to-r from-indigo-600 to-indigo-700 text-white rounded-br-xs'
+                        ? 'bg-blue-600 text-white rounded-br-xs'
                         : 'bg-white border border-slate-200/80 text-slate-800 rounded-bl-xs'
                     }`}
                   >
                     {!mine && (
-                      <span className="block text-[11px] font-semibold text-indigo-600 mb-0.5">
+                      <span className="block text-[11px] font-semibold text-blue-600 mb-0.5">
                         {recipient.name}
                       </span>
                     )}
                     <p className="whitespace-pre-wrap leading-relaxed">{text}</p>
                     <div
                       className={`flex items-center justify-end gap-1 text-[10px] mt-1 ${
-                        mine ? 'text-indigo-200' : 'text-slate-400'
+                        mine ? 'text-blue-100' : 'text-slate-400'
                       }`}
                     >
                       <span>{time}</span>
@@ -453,15 +461,19 @@ export const ChatConversationDrawer: React.FC<ChatConversationDrawerProps> = ({
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`Message ${recipient.name}...`}
-            disabled={loading || Boolean(error)}
-            className="flex-1 bg-slate-100 border border-slate-200 rounded-full px-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all disabled:opacity-50"
+            placeholder={
+              !canSend
+                ? 'You have read-only access to this chat.'
+                : `Message ${recipient.name}...`
+            }
+            disabled={!canSend || loading || Boolean(error)}
+            className="flex-1 bg-slate-100 border border-slate-200 rounded-full px-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all disabled:opacity-50"
           />
           <button
             type="submit"
-            disabled={!inputText.trim() || sending || loading || Boolean(error)}
-            className="w-10 h-10 rounded-full bg-indigo-600 text-white grid place-items-center hover:bg-indigo-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm shrink-0"
-            title="Send message"
+            disabled={!canSend || !inputText.trim() || sending || loading || Boolean(error)}
+            className="w-10 h-10 rounded-full bg-blue-600 text-white grid place-items-center hover:bg-blue-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm shrink-0"
+            title={!canSend ? 'Read-only access' : 'Send message'}
           >
             {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
           </button>

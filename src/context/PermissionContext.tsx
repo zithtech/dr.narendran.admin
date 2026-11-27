@@ -79,6 +79,12 @@ export function isDoctorRole(roleName?: string | null): boolean {
   );
 }
 
+export function isPatientRole(roleName?: string | null): boolean {
+  if (!roleName) return false;
+  const upper = roleName.trim().toUpperCase();
+  return upper === 'PATIENT' || upper.includes('PATIENT');
+}
+
 function loadCachedPermissions(): Record<string, PermissionRecord> {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
@@ -190,6 +196,7 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
           'DOCTOR_SUPPORT',
           'CHAT',
           'SUPPORT',
+          'CHAT',
           'REVIEWS',
         ];
         defaultDoctorSlugs.forEach((slug) => {
@@ -201,6 +208,28 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
             can_create: true,
             can_update: true,
             can_manage: slug === 'AVAILABILITY' || slug === 'APPOINTMENTS' || slug === 'TODAYS_SCHEDULE',
+          };
+        });
+      }
+
+      // If the role is a Patient role and permissions dictionary is empty or unconfigured,
+      // fallback to default patient support and chat permissions
+      if (isPatientRole(upperRole) && Object.keys(permMap).length === 0) {
+        const defaultPatientSlugs = [
+          'CHAT',
+          'SUPPORT',
+          'PATIENT_SUPPORT',
+          'REVIEWS',
+        ];
+        defaultPatientSlugs.forEach((slug) => {
+          permMap[slug] = {
+            module_slug: slug,
+            can_read: true,
+            can_write: true,
+            can_delete: false,
+            can_create: true,
+            can_update: true,
+            can_manage: false,
           };
         });
       }
@@ -326,11 +355,35 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
           'DOCTOR_SUPPORT',
           'CHAT',
           'SUPPORT',
+          'CHAT',
           'REVIEWS',
         ];
         if (
           doctorAllowedModules.includes(key) ||
           fallbackSlugs?.some((fb) => doctorAllowedModules.includes(fb.toUpperCase()))
+        ) {
+          if (
+            field === 'can_read' ||
+            field === 'can_create' ||
+            field === 'can_update' ||
+            field === 'can_write'
+          ) {
+            return true;
+          }
+        }
+      }
+
+      // Built-in patient privilege fallback for patient portal / chat modules:
+      if (isPatientRole(roleName)) {
+        const patientAllowedModules = [
+          'CHAT',
+          'SUPPORT',
+          'PATIENT_SUPPORT',
+          'REVIEWS',
+        ];
+        if (
+          patientAllowedModules.includes(key) ||
+          fallbackSlugs?.some((fb) => patientAllowedModules.includes(fb.toUpperCase()))
         ) {
           if (
             field === 'can_read' ||
