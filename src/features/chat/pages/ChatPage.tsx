@@ -1,24 +1,64 @@
 import {
+  ChevronDown,
+  ChevronRight,
+  Hash,
   HeartPulse,
   MessageSquare,
-  Phone,
+  PanelLeft,
+  Plus,
   RefreshCw,
   Search,
   Shield,
+  SquarePen,
   Stethoscope,
   Users,
+  X,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { usePermission } from '../../../context/PermissionContext';
 import { chatApi } from '../api/chatApi';
-import { ChatConversationDrawer } from '../components/ChatConversationDrawer';
-import type { ChatRecipient } from '../types/chat';
+import { ChatConversationView } from '../components/ChatConversationView';
+import { ChatEmptyState } from '../components/ChatEmptyState';
+import { chatSocket } from '../services/chatSocket';
+import type { ChatConversation, ChatMessage, ChatRecipient } from '../types/chat';
 
 export type ChatTabType = 'doctors' | 'patients' | 'others';
 
+function formatConversationTime(dateString?: string | null): string {
+  if (!dateString) return '';
+  try {
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '';
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    if (isToday) {
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    const yesterday = new Date();
+    yesterday.setDate(now.getDate() - 1);
+    if (d.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    }
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  } catch {
+    return '';
+  }
+}
+
+function getInitials(name: string): string {
+  const clean = name.replace(/^Dr\.\s*/i, '').trim();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  const first = parts[0];
+  const second = parts[1];
+  if (first && second && first[0] && second[0]) {
+    return `${first[0]}${second[0]}`.toUpperCase();
+  }
+  return clean.slice(0, 2).toUpperCase() || 'U';
+}
+
 export function ChatPage() {
-  const { roleName } = usePermission();
+  const { roleName, isSystemAdmin, canView, canCreate, hasPermission } = usePermission();
 
   // Normalize role
   const effectiveRole = useMemo(() => {
@@ -31,6 +71,19 @@ export function ChatPage() {
     }
     return 'ADMIN';
   }, [roleName]);
+
+  // RBAC permissions for chat actions
+  const canSendMessage = useMemo(() => {
+    if (isSystemAdmin) return true;
+    return (
+      canCreate('CHAT', ['SUPPORT', 'PATIENT_SUPPORT', 'DOCTOR_SUPPORT']) ||
+      hasPermission('CHAT', 'write', ['SUPPORT', 'PATIENT_SUPPORT', 'DOCTOR_SUPPORT'])
+    );
+  }, [isSystemAdmin, canCreate, hasPermission]);
+
+  const canViewPatientsTab = useMemo(() => {
+    return isSystemAdmin || canView('PATIENTS');
+  }, [isSystemAdmin, canView]);
 
   const currentUserId = useMemo(() => {
     return (
@@ -49,84 +102,142 @@ export function ChatPage() {
     );
   }, []);
 
-  // Determine available tabs based on user role:
-  // Admin: Doctors, Patients, Others
-  // Doctor: Doctors, Others / Admins
-  // Patient: Doctors, Others / Admins
+  // Category Tabs
   const tabs = useMemo<{ key: ChatTabType; label: string; icon: React.ReactNode }[]>(() => {
     if (effectiveRole === 'ADMIN') {
-      return [
-        { key: 'doctors', label: 'Doctors', icon: <Stethoscope size={16} /> },
-        { key: 'patients', label: 'Patients', icon: <HeartPulse size={16} /> },
-        { key: 'others', label: 'Others', icon: <Users size={16} /> },
+      const tabList: { key: ChatTabType; label: string; icon: React.ReactNode }[] = [
+        { key: 'doctors', label: 'Doctors', icon: <Stethoscope size={15} /> },
       ];
+      if (canViewPatientsTab) {
+        tabList.push({ key: 'patients', label: 'Patients', icon: <HeartPulse size={15} /> });
+      }
+      tabList.push({ key: 'others', label: 'Others', icon: <Users size={15} /> });
+      return tabList;
     }
     return [
-      { key: 'doctors', label: 'Doctors', icon: <Stethoscope size={16} /> },
-      { key: 'others', label: 'Others / Admins', icon: <Shield size={16} /> },
+      { key: 'doctors', label: 'Doctors', icon: <Stethoscope size={15} /> },
+      { key: 'others', label: 'Others / Admins', icon: <Shield size={15} /> },
     ];
-  }, [effectiveRole]);
+  }, [effectiveRole, canViewPatientsTab]);
 
   const [activeTab, setActiveTab] = useState<ChatTabType>('doctors');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Lists state
+  // Directory lists
   const [doctors, setDoctors] = useState<ChatRecipient[]>([]);
   const [patients, setPatients] = useState<ChatRecipient[]>([]);
   const [otherUsers, setOtherUsers] = useState<ChatRecipient[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadingDirectory, setLoadingDirectory] = useState(false);
 
-  // Active chat drawer state
+  // Conversations (Direct Messages) list
+  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(false);
+
+  // Section collapse states in sidebar
+  const [isCategorySectionOpen, setIsCategorySectionOpen] = useState(true);
+  const [isChannelsOpen, setIsChannelsOpen] = useState(true);
+  const [isDirectMessagesOpen, setIsDirectMessagesOpen] = useState(true);
+
+  // Active chat state (integrated conversation in main chat area)
   const [selectedRecipient, setSelectedRecipient] = useState<ChatRecipient | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // Fetch directory data
+  const loadDirectory = useCallback(async () => {
+    setLoadingDirectory(true);
     try {
       if (effectiveRole === 'ADMIN') {
         const [docs, pts, others] = await Promise.all([
           chatApi.getDoctors(),
-          chatApi.getPatients(),
+          canViewPatientsTab ? chatApi.getPatients() : Promise.resolve([]),
           chatApi.getOtherUsers(),
         ]);
-        setDoctors(docs);
-        setPatients(pts);
-        setOtherUsers(others);
+        setDoctors(Array.isArray(docs) ? docs : []);
+        setPatients(Array.isArray(pts) ? pts : []);
+        setOtherUsers(Array.isArray(others) ? others : []);
       } else {
         const [docs, others] = await Promise.all([
           chatApi.getDoctors(),
           chatApi.getOtherUsers(),
         ]);
-        setDoctors(docs);
-        setOtherUsers(others);
+        setDoctors(Array.isArray(docs) ? docs : []);
+        setOtherUsers(Array.isArray(others) ? others : []);
       }
-    } catch (err: any) {
-      setError(err?.message || 'Failed to load recipients list.');
+    } catch (err) {
+      console.error('Failed to load chat directories', err);
     } finally {
-      setLoading(false);
+      setLoadingDirectory(false);
     }
-  }, [effectiveRole]);
+  }, [effectiveRole, canViewPatientsTab]);
+
+  // Fetch active conversations list
+  const loadConversations = useCallback(async () => {
+    setLoadingConversations(true);
+    try {
+      const convs = await chatApi.getConversations();
+      // Sort with most recently messaged/updated at top
+      const sorted = (Array.isArray(convs) ? convs : []).slice().sort((a, b) => {
+        const timeA = new Date(a.last_message_at || a.updated_at || a.created_at).getTime();
+        const timeB = new Date(b.last_message_at || b.updated_at || b.created_at).getTime();
+        return timeB - timeA;
+      });
+      setConversations(sorted);
+    } catch (err) {
+      console.error('Failed to load chat conversations', err);
+    } finally {
+      setLoadingConversations(false);
+    }
+  }, []);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    void loadDirectory();
+    void loadConversations();
+    chatSocket.connect();
+  }, [loadDirectory, loadConversations]);
 
-  // Make sure active tab stays valid if role changes
+  // Global socket listener for real-time conversation reordering
   useEffect(() => {
-    if (!tabs.some((t) => t.key === activeTab)) {
-      setActiveTab('doctors');
-    }
-  }, [tabs, activeTab]);
+    const handleIncomingMessage = (msg: any) => {
+      const convId = msg.conversation_id || msg.conversationId;
+      if (!convId) return;
 
-  // Recipient filtering based on logged in user and search query
-  const displayedRecipients = useMemo(() => {
+      setConversations((prev) => {
+        const index = prev.findIndex((c) => c.id === convId);
+        const now = msg.sent_at || msg.sentAt || new Date().toISOString();
+        const msgText = msg.message || msg.content || '';
+
+        if (index !== -1) {
+          const current = prev[index]!;
+          const isViewingThis = activeConversationId === convId;
+          const updatedConv: ChatConversation = {
+            ...current,
+            last_message: msgText,
+            last_message_at: now,
+            unread_count: isViewingThis ? 0 : (current.unread_count || 0) + 1,
+          };
+          // Move to top of the list!
+          const rest = prev.filter((_, i) => i !== index);
+          return [updatedConv, ...rest];
+        }
+
+        // New conversation arrived: refresh list
+        void loadConversations();
+        return prev;
+      });
+    };
+
+    chatSocket.on('chat:message', handleIncomingMessage);
+    return () => {
+      chatSocket.off('chat:message', handleIncomingMessage);
+    };
+  }, [activeConversationId, loadConversations]);
+
+  // Filter directory users
+  const displayedDirectoryUsers = useMemo(() => {
     let sourceList: ChatRecipient[] = [];
 
     if (activeTab === 'doctors') {
       sourceList = doctors;
-      // If logged in as doctor, exclude self
       if (effectiveRole === 'DOCTOR') {
         sourceList = sourceList.filter((d) => {
           if (currentUserId && (d.id === currentUserId || d.user_account_id === currentUserId)) {
@@ -142,7 +253,7 @@ export function ChatPage() {
       sourceList = patients;
     } else if (activeTab === 'others') {
       sourceList = otherUsers;
-      // If logged in as admin or staff, exclude self from Others list
+      // Exclude logged in user
       sourceList = sourceList.filter((u) => {
         if (currentUserId && (u.id === currentUserId || u.user_account_id === currentUserId)) {
           return false;
@@ -169,262 +280,477 @@ export function ChatPage() {
     });
   }, [activeTab, doctors, patients, otherUsers, effectiveRole, currentUserId, currentUsername, searchQuery]);
 
-  const handleOpenChat = (recipient: ChatRecipient) => {
-    setSelectedRecipient(recipient);
-    setIsDrawerOpen(true);
-  };
+  // Handle clicking a user from Category Tabs
+  const handleSelectUser = async (user: ChatRecipient) => {
+    setSelectedRecipient(user);
 
-  const handleCloseChat = () => {
-    setIsDrawerOpen(false);
-    setSelectedRecipient(null);
-  };
+    // Check if an existing conversation exists in loaded list
+    const existing = conversations.find((c) => {
+      const otherId = c.recipient_id || c.recipientId || (c.doctor_id === user.id ? c.doctor_id : c.patient_id);
+      return otherId === user.id || c.doctor_name === user.name || c.patient_name === user.name;
+    });
 
-  const getInitials = (name: string): string => {
-    const clean = name.replace(/^Dr\.\s*/i, '').trim();
-    const parts = clean.split(/\s+/).filter(Boolean);
-    const first = parts[0];
-    const second = parts[1];
-    if (first && second && first[0] && second[0]) {
-      return `${first[0]}${second[0]}`.toUpperCase();
+    if (existing) {
+      setActiveConversationId(existing.id);
+    } else {
+      setActiveConversationId(null);
     }
-    return clean.slice(0, 2).toUpperCase() || 'U';
+  };
+
+  // Handle clicking a conversation in Direct Messages
+  const handleSelectConversation = (conv: ChatConversation) => {
+    setActiveConversationId(conv.id);
+
+    // Resolve recipient details from conversation
+    const recipientName =
+      conv.recipient_name ||
+      conv.other_participant_name ||
+      conv.name ||
+      (conv.doctor_name && conv.doctor_name !== 'Doctor' ? conv.doctor_name : conv.patient_name) ||
+      'User';
+
+    const recipientId =
+      conv.recipient_id ||
+      conv.recipientId ||
+      conv.doctor_id ||
+      conv.patient_id ||
+      conv.id;
+
+    const role =
+      conv.role ||
+      (conv.doctor_name && conv.doctor_name === recipientName
+        ? 'DOCTOR'
+        : conv.patient_name === recipientName
+          ? 'PATIENT'
+          : 'ADMIN');
+
+    const recipient: ChatRecipient = {
+      id: recipientId,
+      name: recipientName,
+      role,
+      avatar_url: conv.avatar_url || conv.recipient_avatar || conv.doctor_avatar || conv.patient_avatar,
+      is_online: Boolean(conv.is_online || conv.doctor_online || conv.patient_online),
+      specialization: conv.specialization,
+    };
+
+    setSelectedRecipient(recipient);
+
+    // Reset unread count locally
+    setConversations((prev) =>
+      prev.map((c) => (c.id === conv.id ? { ...c, unread_count: 0 } : c)),
+    );
+  };
+
+  // When a message is sent from ChatConversationView:
+  // Move or add this conversation to the top of Direct Messages!
+  const handleMessageSent = (msg: ChatMessage) => {
+    const convId = msg.conversation_id || msg.conversationId || activeConversationId;
+    if (!convId || !selectedRecipient) return;
+
+    setConversations((prev) => {
+      const index = prev.findIndex((c) => c.id === convId);
+      const now = msg.sent_at || msg.sentAt || new Date().toISOString();
+      const msgText = msg.message || msg.content || '';
+
+      if (index !== -1) {
+        const current = prev[index]!;
+        const updated: ChatConversation = {
+          ...current,
+          last_message: msgText,
+          last_message_at: now,
+          unread_count: 0,
+        };
+        const rest = prev.filter((_, i) => i !== index);
+        return [updated, ...rest];
+      }
+
+      // Add newly initiated conversation to the top
+      const newConv: ChatConversation = {
+        id: convId,
+        conversation_id: convId,
+        conversationId: convId,
+        status: 'ACTIVE',
+        last_message: msgText,
+        last_message_at: now,
+        created_at: now,
+        updated_at: now,
+        recipient_id: selectedRecipient.id,
+        recipientId: selectedRecipient.id,
+        recipient_name: selectedRecipient.name,
+        name: selectedRecipient.name,
+        avatar_url: selectedRecipient.avatar_url,
+        role: selectedRecipient.role,
+        is_online: selectedRecipient.is_online,
+        unread_count: 0,
+      };
+
+      return [newConv, ...prev];
+    });
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/60 pb-16">
-      {/* Top Page Header */}
-      <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-5">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
-                <MessageSquare size={20} />
-              </span>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                Chat
-              </h1>
+    <div className="flex-1 w-full h-[calc(100vh-4rem)] bg-slate-100 flex overflow-hidden border-t border-slate-200">
+      {/* ======================================================== */}
+      {/* 1. Chat Sidebar / Conversation Panel (ZithConnect Style) */}
+      {/* ======================================================== */}
+      <div
+        className={`w-full md:w-80 lg:w-96 bg-white border-r border-slate-200 flex flex-col shrink-0 h-full overflow-hidden transition-all duration-200 ${selectedRecipient ? 'hidden md:flex' : 'flex'
+          }`}
+      >
+        {/* Sidebar Header: App Title & Action Icons */}
+        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2 bg-white shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-500 to-blue-600 text-white grid place-items-center shadow-xs">
+              <MessageSquare size={16} />
             </div>
-            <p className="text-sm text-slate-500 mt-1">
-              Direct real-time messaging and communication with doctors, patients, and staff.
-            </p>
+            <div>
+              <h2 className="text-sm font-bold text-slate-800 leading-tight tracking-tight">
+                Messenger
+              </h2>
+              <span className="text-[10px] text-slate-400 font-medium">Real-time messaging</span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start md:self-auto">
+          <div className="flex items-center gap-0.5 text-slate-400">
             <button
               type="button"
-              onClick={() => void loadData()}
-              disabled={loading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 active:bg-slate-100 transition-colors shadow-2xs"
+              title="Panel Layout"
+              className="p-1.5 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
             >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-              Refresh
+              <PanelLeft size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsCategorySectionOpen(true);
+                setActiveTab('doctors');
+              }}
+              title="New message"
+              className="p-1.5 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+            >
+              <SquarePen size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                void loadDirectory();
+                void loadConversations();
+              }}
+              title="Refresh"
+              className="p-1.5 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+            >
+              <RefreshCw size={14} className={loadingConversations ? 'animate-spin' : ''} />
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Main Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
-        {/* Navigation Tabs and Search */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4">
-          {/* Tabs */}
-          <div className="inline-flex p-1 bg-slate-200/70 rounded-xl space-x-1" role="tablist">
-            {tabs.map((tab) => {
-              const isActive = activeTab === tab.key;
-              return (
-                <button
-                  key={tab.key}
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`inline-flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all ${
-                    isActive
-                      ? 'bg-white text-indigo-700 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-                  }`}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Search Bar */}
-          <div className="relative w-full sm:w-72">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-            />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={`Search ${activeTab}...`}
-              className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-2xs"
-            />
-          </div>
-        </div>
-
-        {/* Recipients Table / Card Container */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-          {loading ? (
-            <div className="p-12 text-center text-slate-500 flex flex-col items-center justify-center gap-3">
-              <RefreshCw size={24} className="animate-spin text-indigo-600" />
-              <p className="text-sm font-medium">Loading recipients...</p>
-            </div>
-          ) : error ? (
-            <div className="p-8 text-center text-rose-600">
-              <p className="text-sm font-semibold">{error}</p>
+        {/* Scrollable Sidebar Body */}
+        <div className="flex-1 overflow-y-auto divide-y divide-slate-100/80">
+          {/* A. User Category Tabs & Directory (Positioned above Channels, Reference Image 2) */}
+          <div className="p-3 bg-slate-50/50">
+            <div className="flex items-center justify-between mb-2">
               <button
                 type="button"
-                onClick={() => void loadData()}
-                className="mt-3 px-4 py-1.5 bg-rose-600 text-white rounded-lg text-xs font-semibold hover:bg-rose-700 transition-colors"
+                onClick={() => setIsCategorySectionOpen((prev) => !prev)}
+                className="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-blue-600 transition-colors cursor-pointer"
               >
-                Retry
+                {isCategorySectionOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                <span>Directory</span>
               </button>
+              <span className="text-[10px] text-slate-400 font-medium">
+                {displayedDirectoryUsers.length} users
+              </span>
             </div>
-          ) : displayedRecipients.length === 0 ? (
-            <div className="p-12 text-center text-slate-400 flex flex-col items-center justify-center gap-2">
-              <Users size={32} className="text-slate-300" />
-              <p className="text-sm font-medium text-slate-600">No recipients found</p>
-              <p className="text-xs text-slate-400">
-                {searchQuery ? 'Try adjusting your search query.' : `No ${activeTab} currently available for chat.`}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 text-[11px] sm:text-xs font-semibold uppercase tracking-wider">
-                    <th className="py-3.5 px-4 sm:px-6">Recipient</th>
-                    <th className="py-3.5 px-4">Role / Details</th>
-                    <th className="py-3.5 px-4">Contact</th>
-                    <th className="py-3.5 px-4 text-center">Status</th>
-                    <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
-                  {displayedRecipients.map((recipient) => {
-                    const initials = getInitials(recipient.name);
+
+            {isCategorySectionOpen && (
+              <div className="space-y-2.5 animate-in fade-in duration-150">
+                {/* Three Tabs: Doctors, Patients, Others */}
+                <div className="grid grid-cols-3 gap-1 bg-slate-200/70 p-1 rounded-xl text-xs font-semibold text-slate-600">
+                  {tabs.map((tab) => {
+                    const isActive = activeTab === tab.key;
                     return (
-                      <tr
-                        key={recipient.id}
-                        className="hover:bg-slate-50/80 transition-colors"
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => setActiveTab(tab.key)}
+                        className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg transition-all cursor-pointer ${isActive
+                            ? 'bg-white text-blue-600 shadow-2xs font-bold'
+                            : 'hover:text-slate-900 text-slate-500'
+                          }`}
                       >
-                        {/* Name & Avatar */}
-                        <td className="py-3.5 px-4 sm:px-6">
-                          <div className="flex items-center gap-3">
-                            <div className="relative shrink-0">
-                              {recipient.avatar_url ? (
-                                <img
-                                  src={recipient.avatar_url}
-                                  alt={recipient.name}
-                                  className="w-9 h-9 rounded-full object-cover border border-slate-200"
-                                />
-                              ) : (
-                                <div className="w-9 h-9 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 text-white font-semibold text-xs grid place-items-center">
-                                  {initials}
-                                </div>
-                              )}
-                              {recipient.is_online && (
-                                <span
-                                  title="Online"
-                                  className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"
-                                />
-                              )}
-                            </div>
-                            <div>
-                              <div className="font-semibold text-slate-900">
-                                {recipient.name}
-                              </div>
-                              {recipient.last_message && (
-                                <p className="text-[11px] text-slate-400 truncate max-w-xs mt-0.5">
-                                  {recipient.last_message}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Role / Subtitle / Specialization */}
-                        <td className="py-3.5 px-4">
-                          <div className="flex flex-col">
-                            <span className="font-medium text-slate-700">
-                              {recipient.specialization || recipient.subtitle || recipient.role}
-                            </span>
-                            {recipient.gender && (
-                              <span className="text-[11px] text-slate-400">
-                                {recipient.age ? `${recipient.age} yrs • ` : ''}
-                                {recipient.gender}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Contact */}
-                        <td className="py-3.5 px-4 text-slate-600">
-                          <div className="flex flex-col gap-0.5 text-xs">
-                            {recipient.phone && (
-                              <span className="inline-flex items-center gap-1.5 text-slate-600">
-                                <Phone size={12} className="text-slate-400" />
-                                {recipient.phone}
-                              </span>
-                            )}
-                            {recipient.email && (
-                              <span className="text-slate-500 truncate max-w-xs">
-                                {recipient.email}
-                              </span>
-                            )}
-                            {!recipient.phone && !recipient.email && (
-                              <span className="text-slate-400">—</span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Online / Active Status */}
-                        <td className="py-3.5 px-4 text-center">
-                          {recipient.is_online ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                              Online
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600">
-                              Offline
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Actions */}
-                        <td className="py-3.5 px-4 sm:px-6 text-right">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenChat(recipient)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-lg text-xs font-semibold transition-all shadow-2xs border border-indigo-200/70 hover:border-indigo-600 cursor-pointer"
-                          >
-                            <MessageSquare size={14} />
-                            Chat
-                          </button>
-                        </td>
-                      </tr>
+                        {tab.icon}
+                        <span className="truncate">{tab.label}</span>
+                      </button>
                     );
                   })}
-                </tbody>
-              </table>
+                </div>
+
+                {/* Directory Search */}
+                <div className="relative">
+                  <Search
+                    size={13}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={`Search ${activeTab}...`}
+                    className="w-full bg-white border border-slate-200/90 rounded-lg pl-7 pr-6 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Directory Users List */}
+                <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                  {loadingDirectory ? (
+                    <div className="py-6 flex items-center justify-center gap-2 text-xs text-slate-400">
+                      <RefreshCw size={13} className="animate-spin" />
+                      <span>Loading {activeTab}...</span>
+                    </div>
+                  ) : displayedDirectoryUsers.length === 0 ? (
+                    <div className="py-4 text-center text-xs text-slate-400">
+                      No {activeTab} found
+                    </div>
+                  ) : (
+                    displayedDirectoryUsers.map((user) => {
+                      const isSelected = selectedRecipient?.id === user.id;
+                      return (
+                        <div
+                          key={user.id}
+                          onClick={() => void handleSelectUser(user)}
+                          className={`w-full text-left p-2 rounded-xl flex items-center justify-between gap-2.5 transition-all cursor-pointer group ${isSelected
+                              ? 'bg-blue-50 text-blue-900 border border-blue-200/80 shadow-2xs'
+                              : 'hover:bg-slate-100/90 text-slate-700'
+                            }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="relative shrink-0">
+                              {user.avatar_url ? (
+                                <img
+                                  src={user.avatar_url}
+                                  alt={user.name}
+                                  className="w-7 h-7 rounded-full object-cover border border-slate-200"
+                                />
+                              ) : (
+                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-[10px] grid place-items-center">
+                                  {getInitials(user.name)}
+                                </div>
+                              )}
+                              {user.is_online && (
+                                <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-1 ring-white" />
+                              )}
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold truncate leading-tight group-hover:text-blue-600 transition-colors">
+                                {user.name}
+                              </p>
+                              <p className="text-[10px] text-slate-400 truncate">
+                                {user.specialization || user.subtitle || user.role}
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            title={canSendMessage ? 'Chat' : 'View chat conversation (Read-only)'}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleSelectUser(user);
+                            }}
+                            className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 group-hover:bg-blue-600 group-hover:text-white text-blue-600 transition-colors shrink-0"
+                          >
+                            {canSendMessage ? 'Chat' : 'View'}
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* B. Channels Section (Reference Image 2) */}
+          <div className="p-3">
+            <button
+              type="button"
+              onClick={() => setIsChannelsOpen((prev) => !prev)}
+              className="w-full flex items-center justify-between text-xs font-bold text-slate-700 hover:text-blue-600 transition-colors cursor-pointer mb-1.5"
+            >
+              <div className="flex items-center gap-1.5">
+                {isChannelsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                <span>Channels</span>
+              </div>
+              <span className="text-[10px] text-slate-400 font-medium">0</span>
+            </button>
+
+            {isChannelsOpen && (
+              <div className="space-y-1 pt-1 animate-in fade-in duration-150">
+                <div className="py-2.5 px-3 rounded-lg border border-dashed border-slate-200 bg-slate-50/50 flex items-center gap-2 text-slate-400 text-xs">
+                  <Hash size={14} className="text-slate-300" />
+                  <span>No channels yet</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* C. Direct Messages Section (Reference Image 2 & 3) */}
+          <div className="p-3">
+            <div className="flex items-center justify-between mb-2">
+              <button
+                type="button"
+                onClick={() => setIsDirectMessagesOpen((prev) => !prev)}
+                className="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-blue-600 transition-colors cursor-pointer"
+              >
+                {isDirectMessagesOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                <span>Direct Messages</span>
+              </button>
+              <div className="flex items-center gap-1.5">
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-600">
+                  {conversations.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCategorySectionOpen(true);
+                  }}
+                  title="New message"
+                  className="p-1 text-slate-400 hover:text-blue-600 rounded cursor-pointer"
+                >
+                  <Plus size={13} />
+                </button>
+              </div>
             </div>
-          )}
+
+            {isDirectMessagesOpen && (
+              <div className="space-y-1 animate-in fade-in duration-150">
+                {loadingConversations ? (
+                  <div className="py-8 flex flex-col items-center justify-center gap-2 text-xs text-slate-400">
+                    <RefreshCw size={14} className="animate-spin text-blue-500" />
+                    <span>Loading conversations...</span>
+                  </div>
+                ) : conversations.length === 0 ? (
+                  <div className="py-6 px-3 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                    <p className="font-medium text-slate-600 mb-0.5">No active chats yet</p>
+                    <p className="text-[11px] text-slate-400">
+                      Select a doctor, patient, or staff member from the directory above to start chatting.
+                    </p>
+                  </div>
+                ) : (
+                  conversations.map((conv) => {
+                    const isSelected = activeConversationId === conv.id;
+                    const recipientName =
+                      conv.recipient_name ||
+                      conv.other_participant_name ||
+                      conv.name ||
+                      (conv.doctor_name && conv.doctor_name !== 'Doctor' ? conv.doctor_name : conv.patient_name) ||
+                      'User';
+
+                    const isOnline = Boolean(conv.is_online || conv.doctor_online || conv.patient_online);
+                    const time = formatConversationTime(conv.last_message_at || conv.updated_at || conv.created_at);
+                    const unread = conv.unread_count || 0;
+
+                    return (
+                      <div
+                        key={conv.id}
+                        onClick={() => handleSelectConversation(conv)}
+                        className={`w-full text-left p-2.5 rounded-xl flex items-center gap-2.5 transition-all cursor-pointer ${isSelected
+                            ? 'bg-blue-50/90 text-blue-950 font-medium border-l-3 border-blue-600 shadow-2xs'
+                            : 'hover:bg-slate-100 text-slate-700'
+                          }`}
+                      >
+                        {/* Avatar */}
+                        <div className="relative shrink-0">
+                          {conv.avatar_url || conv.doctor_avatar || conv.patient_avatar ? (
+                            <img
+                              src={conv.avatar_url || conv.doctor_avatar || conv.patient_avatar}
+                              alt={recipientName}
+                              className="w-9 h-9 rounded-full object-cover border border-slate-200"
+                            />
+                          ) : (
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-xs grid place-items-center">
+                              {getInitials(recipientName)}
+                            </div>
+                          )}
+                          {isOnline && (
+                            <span
+                              title="Online"
+                              className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"
+                            />
+                          )}
+                        </div>
+
+                        {/* Middle Text: Name & Last message */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <h4 className="text-xs font-semibold truncate text-slate-800">
+                              {recipientName}
+                            </h4>
+                            {time && (
+                              <span className="text-[10px] text-slate-400 shrink-0">{time}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between gap-1 mt-0.5">
+                            <p className="text-[11px] text-slate-500 truncate">
+                              {conv.last_message || 'Start a conversation'}
+                            </p>
+                            {unread > 0 && (
+                              <span className="shrink-0 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-600 text-white">
+                                {unread}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Real-Time Chat Drawer */}
-      <ChatConversationDrawer
-        open={isDrawerOpen}
-        onClose={handleCloseChat}
-        recipient={selectedRecipient}
-        currentUserId={currentUserId}
-        currentUserRole={effectiveRole}
-      />
+      {/* ======================================================== */}
+      {/* 2. Main Chat Area: Empty State or Conversation View      */}
+      {/* ======================================================== */}
+      <div
+        className={`flex-1 h-full flex flex-col overflow-hidden bg-white ${!selectedRecipient ? 'hidden md:flex' : 'flex'
+          }`}
+      >
+        {selectedRecipient ? (
+          <ChatConversationView
+            recipient={selectedRecipient}
+            conversationId={activeConversationId}
+            onConversationIdResolved={(id) => setActiveConversationId(id)}
+            currentUserId={currentUserId}
+            currentUserRole={effectiveRole}
+            canSend={canSendMessage}
+            onBack={() => {
+              setSelectedRecipient(null);
+              setActiveConversationId(null);
+            }}
+            onMessageSent={handleMessageSent}
+          />
+        ) : (
+          <ChatEmptyState
+            onStartNewChat={() => {
+              setIsCategorySectionOpen(true);
+              setActiveTab('doctors');
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 }

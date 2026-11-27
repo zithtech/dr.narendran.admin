@@ -29,8 +29,8 @@ class ChatSocketService {
       return this.socket;
     }
 
-    if (this.isConnecting) {
-      return null;
+    if (this.isConnecting && this.socket) {
+      return this.socket;
     }
 
     try {
@@ -42,20 +42,25 @@ class ChatSocketService {
             localStorage.getItem('clientPortalToken')
           : null;
 
-      const socketUrl = getSocketUrl();
+      if (!token) {
+        this.isConnecting = false;
+        return null;
+      }
 
       if (this.socket) {
-        this.socket.disconnect();
-        this.socket.removeAllListeners();
+        this.isConnecting = false;
+        return this.socket;
       }
+
+      const socketUrl = getSocketUrl();
 
       this.socket = io(socketUrl, {
         auth: {
-          token: token || '',
+          token: token,
         },
-        transports: ['websocket', 'polling'],
+        transports: ['polling', 'websocket'],
         reconnection: true,
-        reconnectionAttempts: 10,
+        reconnectionAttempts: 5,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
         timeout: 20000,
@@ -76,8 +81,22 @@ class ChatSocketService {
         // Disconnected
       });
 
-      this.socket.on('connect_error', () => {
-        // Connection error
+      this.socket.on('connect_error', (err: any) => {
+        // If authentication error or invalid session, halt automatic reconnect loop
+        const msg = String(err?.message || '');
+        if (
+          msg.includes('Authentication') ||
+          msg.includes('token') ||
+          msg.includes('revoked') ||
+          msg.includes('valid') ||
+          msg.includes('Unauthorized')
+        ) {
+          this.disconnect();
+        }
+      });
+
+      this.socket.on('error', () => {
+        // Safely consume socket-level error
       });
 
       this.isConnecting = false;
