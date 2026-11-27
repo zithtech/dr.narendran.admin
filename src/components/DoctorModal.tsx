@@ -28,6 +28,7 @@ import { getDoctorDefaultAvatar } from '../utils/doctorAvatar';
 
 export interface Doctor {
   id: string;
+  doctor_code?: string | null;
   user_account_id: string | null;
   hospital_id: string;
   hospital_name?: string;

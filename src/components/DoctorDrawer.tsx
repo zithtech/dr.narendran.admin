@@ -356,6 +356,13 @@ export default function DoctorDrawer({
                   </div>
                   <div className="doctor-card-cred-list">
                     <div className="doctor-card-cred-row">
+                      <span className="doctor-card-cred-label">Doctor Code</span>
+                      <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                        {doctor.doctor_code || '—'}
+                      </span>
+                    </div>
+
+                    <div className="doctor-card-cred-row">
                       <span className="doctor-card-cred-label">Specialization</span>
                       <span className="doctor-card-cred-val" style={{ color: '#1d4ed8', fontWeight: 700 }}>
                         {doctor.specialization || 'General Practitioner'}
