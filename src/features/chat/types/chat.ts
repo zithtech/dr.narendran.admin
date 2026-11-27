@@ -64,6 +64,8 @@ export interface ChatMessage {
   conversationId?: string;
   sender_id: string;
   senderId?: string;
+  sender_name?: string;
+  senderName?: string;
   sender_role?: string;
   senderRole?: string;
   sender_type?: SenderType;
@@ -85,22 +87,54 @@ export interface ChatMessage {
   createdAt?: string;
   updated_at?: string;
   updatedAt?: string;
-  attachment_url?: string | null;
-  attachmentUrl?: string | null;
-  attachment_name?: string | null;
-  attachmentName?: string | null;
-  attachment_type?: string | null;
-  attachmentType?: string | null;
-  attachment_size?: number | null;
-  attachmentSize?: number | null;
-  reply_to_message_id?: string | null;
-  replyToMessageId?: string | null;
+  attachment_url?: string | null | undefined;
+  attachmentUrl?: string | null | undefined;
+  attachment_name?: string | null | undefined;
+  attachmentName?: string | null | undefined;
+  attachment_type?: string | null | undefined;
+  attachmentType?: string | null | undefined;
+  attachment_size?: number | null | undefined;
+  attachmentSize?: number | null | undefined;
+  file_name?: string | null | undefined;
+  fileName?: string | null | undefined;
+  file_size?: number | null | undefined;
+  fileSize?: number | null | undefined;
+  mime_type?: string | null | undefined;
+  mimeType?: string | null | undefined;
+  storage_key?: string | null | undefined;
+  storageKey?: string | null | undefined;
+  duration?: number | null | undefined;
+  reply_to_message_id?: string | null | undefined;
+  replyToMessageId?: string | null | undefined;
+}
+
+export type AttachmentCategory = 'image' | 'pdf' | 'spreadsheet' | 'document' | 'voice' | 'other';
+
+export interface StagedAttachment {
+  id: string;
+  file: File;
+  previewUrl?: string | undefined;
+  name: string;
+  size: number;
+  type: string;
+  category: AttachmentCategory;
+  duration?: number | undefined;
 }
 
 export interface SendMessagePayload {
   conversationId: string;
   message: string;
   messageType?: string | undefined;
+  senderId?: string | undefined;
+  sender_id?: string | undefined;
+  senderRole?: string | undefined;
+  sender_role?: string | undefined;
   recipientId?: string | undefined;
+  recipient_id?: string | undefined;
   replyToMessageId?: string | null | undefined;
+  attachmentUrl?: string | null | undefined;
+  attachmentName?: string | null | undefined;
+  attachmentType?: string | null | undefined;
+  attachmentSize?: number | null | undefined;
+  duration?: number | null | undefined;
 }

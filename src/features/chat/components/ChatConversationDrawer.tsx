@@ -13,6 +13,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { chatApi } from '../api/chatApi';
 import { chatSocket } from '../services/chatSocket';
 import type { ChatMessage, ChatRecipient } from '../types/chat';
+import { ChatMessageContent } from './ChatMessageContent';
+import { isMessageFromMe } from '../utils/userUtils';
 
 export interface ChatConversationDrawerProps {
   open: boolean;
@@ -235,7 +237,12 @@ export const ChatConversationDrawer: React.FC<ChatConversationDrawerProps> = ({
           conversationId,
           message: trimmed,
           messageType: 'TEXT',
+          senderId: currentUserId,
+          sender_id: currentUserId,
+          senderRole: currentUserRole,
+          sender_role: currentUserRole,
           recipientId: recipient?.id,
+          recipient_id: recipient?.id,
         },
         (res) => {
           const data = res?.data;
@@ -264,19 +271,7 @@ export const ChatConversationDrawer: React.FC<ChatConversationDrawerProps> = ({
   if (!open || !recipient) return null;
 
   const isMe = (m: ChatMessage) => {
-    const sId = String(m.sender_id || m.senderId || '');
-    const myId = String(currentUserId || '');
-    if (myId && sId === myId) return true;
-    if (sId === 'me') return true;
-
-    // Check sender type vs user role
-    const sType = String(m.sender_type || m.senderType || '').toUpperCase();
-    const myRole = String(currentUserRole || '').toUpperCase();
-    if (myRole.includes('DOCTOR') && sType === 'DOCTOR') return true;
-    if (myRole.includes('PATIENT') && sType === 'PATIENT') return true;
-    if (myRole.includes('ADMIN') && (sType === 'ADMIN' || sType === 'STAFF')) return true;
-
-    return false;
+    return isMessageFromMe(m, recipient, currentUserId, currentUserRole);
   };
 
   const renderStatusIcon = (status?: string) => {
@@ -433,7 +428,9 @@ export const ChatConversationDrawer: React.FC<ChatConversationDrawerProps> = ({
                         {recipient.name}
                       </span>
                     )}
-                    <p className="whitespace-pre-wrap leading-relaxed">{text}</p>
+                    <div className="whitespace-pre-wrap leading-relaxed">
+                      <ChatMessageContent content={text} />
+                    </div>
                     <div
                       className={`flex items-center justify-end gap-1 text-[10px] mt-1 ${
                         mine ? 'text-blue-100' : 'text-slate-400'

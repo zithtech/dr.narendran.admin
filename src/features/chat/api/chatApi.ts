@@ -244,4 +244,100 @@ export const chatApi = {
       // Ignore background read receipt failure
     }
   },
+
+  /**
+   * Upload an attachment to a conversation
+   */
+  uploadAttachment: async (
+    conversationId: string,
+    file: File,
+    caption?: string,
+    replyToMessageId?: string,
+    duration?: number,
+  ): Promise<ChatMessage> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (caption && caption.trim()) {
+      formData.append('caption', caption.trim());
+      formData.append('message', caption.trim());
+    }
+    if (replyToMessageId) {
+      formData.append('replyToMessageId', replyToMessageId);
+      formData.append('reply_to_message_id', replyToMessageId);
+    }
+    if (duration !== undefined && duration !== null && !isNaN(duration)) {
+      formData.append('duration', String(duration));
+    }
+
+    const res = await api.post(`chat/conversations/${conversationId}/attachments`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return res.data?.data || res.data;
+  },
+
+  /**
+   * Upload a recorded voice note
+   */
+  uploadVoiceNote: async (
+    conversationId: string,
+    audioBlob: Blob,
+    duration: number,
+    fileName = `voice_note_${Date.now()}.webm`,
+    replyToMessageId?: string,
+  ): Promise<ChatMessage> => {
+    const file = new File([audioBlob], fileName, {
+      type: audioBlob.type || 'audio/webm',
+    });
+    return chatApi.uploadAttachment(
+      conversationId,
+      file,
+      undefined,
+      replyToMessageId,
+      duration,
+    );
+  },
+
+  /**
+   * Get fresh signed download URL for an attachment
+   */
+  getAttachmentDownloadUrl: async (
+    conversationId: string,
+    messageId: string,
+  ): Promise<{ downloadUrl: string; fileName: string; mimeType: string }> => {
+    const res = await api.get(
+      `chat/conversations/${conversationId}/messages/${messageId}/attachment`,
+    );
+    return res.data?.data || res.data;
+  },
+
+  /**
+   * Search messages within a conversation
+   */
+  searchMessages: async (
+    conversationId: string,
+    query: string,
+    limit = 30,
+    offset = 0,
+  ): Promise<{ results: ChatMessage[]; total: number; query: string }> => {
+    if (!query || !query.trim()) {
+      return { results: [], total: 0, query: '' };
+    }
+    const res = await api.get(`chat/conversations/${conversationId}/search`, {
+      params: { q: query.trim(), limit, offset },
+    });
+    const data = res.data?.data || res.data || {};
+    const results = Array.isArray(data.results)
+      ? data.results
+      : Array.isArray(data)
+        ? data
+        : [];
+    return {
+      results,
+      total: typeof data.total === 'number' ? data.total : results.length,
+      query: data.query || query,
+    };
+  },
 };

@@ -42,6 +42,7 @@ api.interceptors.response.use(
         }
       } else {
         localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUserId');
         if (window.location.pathname !== '/login') {
           window.location.assign('/login');
         }

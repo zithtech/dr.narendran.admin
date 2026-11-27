@@ -11,6 +11,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import brandLogoImg from '../assets/brand-logo.png';
 import loginDoctorImg from '../assets/login-doctor-illustration.png';
 import { Alert } from '../components/ui/primitives';
+import { chatSocket } from '../features/chat/services/chatSocket';
 import api from '../utils/api';
 import { getErrorMessage } from '../utils/errors';
 import { getMediaProxyUrl } from '../utils/mediaProxy';
@@ -120,14 +121,37 @@ export default function Login({ defaultForgot = false }: { defaultForgot?: boole
 
       const data = response.data;
 
+      // Disconnect any stale chat socket connection from previous session
+      try {
+        chatSocket.disconnect();
+      } catch {
+        // ignore
+      }
+
       // Axios handles non-2xx errors in the catch block
       // Clear previous cached permissions so fresh role permissions are loaded
       localStorage.removeItem('adminCachedPermissions');
       localStorage.setItem('adminToken', data.token);
       localStorage.setItem('adminUsername', data.username || username);
       localStorage.setItem('adminRole', data.role || 'Administrator');
-      if (data.id) {
-        localStorage.setItem('adminUserId', data.id);
+
+      let tokenSub: string | null = null;
+      try {
+        const parts = (data.token || '').split('.');
+        if (parts.length === 3 && parts[1]) {
+          const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+          tokenSub = payload.sub || payload.userId || payload.id || null;
+        }
+      } catch {
+        // ignore
+      }
+
+      const resolvedUserId = data.id || data.user?.id || data.userId || tokenSub;
+      if (resolvedUserId) {
+        localStorage.setItem('adminUserId', String(resolvedUserId));
+      }
+      if (data.user?.email || data.email) {
+        localStorage.setItem('adminEmail', data.user?.email || data.email || username);
       }
       if (data.firstName) {
         localStorage.setItem('adminFirstName', data.firstName);

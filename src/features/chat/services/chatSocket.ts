@@ -20,37 +20,44 @@ function getSocketUrl(): string {
 
 class ChatSocketService {
   private socket: Socket | null = null;
+  private currentToken: string | null = null;
   private isConnecting: boolean = false;
   private activeConversationId: string | null = null;
   private eventHandlers: Map<string, Set<(...args: any[]) => void>> = new Map();
 
   public connect(): Socket | null {
-    if (this.socket?.connected) {
+    const token =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('adminToken') ||
+          localStorage.getItem('labClientToken') ||
+          localStorage.getItem('clientPortalToken')
+        : null;
+
+    if (!token) {
+      if (this.socket) {
+        this.disconnect();
+      }
+      this.isConnecting = false;
+      return null;
+    }
+
+    // Reuse existing socket only if already connected and token has NOT changed
+    if (this.socket?.connected && this.currentToken === token) {
       return this.socket;
     }
 
-    if (this.isConnecting && this.socket) {
+    if (this.isConnecting && this.socket && this.currentToken === token) {
       return this.socket;
+    }
+
+    // If token has changed or socket is stale, disconnect and cleanly reconnect
+    if (this.socket) {
+      this.disconnect();
     }
 
     try {
       this.isConnecting = true;
-      const token =
-        typeof window !== 'undefined'
-          ? localStorage.getItem('adminToken') ||
-            localStorage.getItem('labClientToken') ||
-            localStorage.getItem('clientPortalToken')
-          : null;
-
-      if (!token) {
-        this.isConnecting = false;
-        return null;
-      }
-
-      if (this.socket) {
-        this.isConnecting = false;
-        return this.socket;
-      }
+      this.currentToken = token;
 
       const socketUrl = getSocketUrl();
 
@@ -113,6 +120,7 @@ class ChatSocketService {
       this.socket.removeAllListeners();
       this.socket = null;
     }
+    this.currentToken = null;
     this.activeConversationId = null;
     this.isConnecting = false;
   }
