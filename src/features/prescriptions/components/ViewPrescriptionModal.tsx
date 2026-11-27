@@ -15,18 +15,104 @@ import { StatusPill } from '../../../components/ui/CommonTable';
 import { titleCase } from '../../../lib/format';
 import api from '../../../utils/api';
 import { getErrorMessage } from '../../../utils/errors';
+import { resolveImageUrl } from '../../../utils/doctorAvatar';
 import { type Prescription, prescriptionsApi } from '../api/prescriptionsApi';
+import { DEFAULT_ANNAAMALAI_LOGO_BASE64 } from '../templates/defaultLogo';
 import {
   STANDARD_PRESCRIPTION_TEMPLATE_HTML,
 } from '../templates/templateData';
 import type { LetterPadDataContext } from '../types/template';
-import { resolvePrescriptionTemplate } from '../utils/resolvePrescriptionTemplate';
+import {
+  resolvePrescriptionTemplate,
+  sanitizePrescriptionHtml,
+} from '../utils/resolvePrescriptionTemplate';
+
+interface HospitalSettingsData {
+  logoUrl?: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+  hospitalName?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+}
 
 interface ViewPrescriptionModalProps {
   prescription: Prescription | null;
   open: boolean;
   onClose: () => void;
   onEdit?: (prescription: Prescription) => void;
+}
+
+function getHospitalInfo(
+  rx?: Prescription | null,
+  settings?: HospitalSettingsData | null,
+): {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+  logo_url: string;
+} {
+  const rxAny = rx as any;
+  const rawLogo =
+    rxAny?.hospital_logo ||
+    rxAny?.hospital?.logo_url ||
+    rxAny?.doctor?.hospital?.logo_url ||
+    settings?.logoUrl ||
+    localStorage.getItem('adminLogoUrl') ||
+    localStorage.getItem('adminOriginalLogoUrl') ||
+    localStorage.getItem('adminCroppedLogoUrl') ||
+    '';
+
+  const logo_url = rawLogo
+    ? (resolveImageUrl(rawLogo) || rawLogo)
+    : DEFAULT_ANNAAMALAI_LOGO_BASE64;
+
+  const name =
+    rxAny?.hospital_name ||
+    rxAny?.hospital?.name ||
+    settings?.fullName ||
+    settings?.hospitalName ||
+    localStorage.getItem('adminFullName') ||
+    [localStorage.getItem('adminFirstName'), localStorage.getItem('adminLastName')].filter(Boolean).join(' ') ||
+    'Annaamalai Cancer Center';
+
+  const address =
+    rxAny?.hospital_address ||
+    rxAny?.hospital?.address ||
+    settings?.address ||
+    'No. 18, Kottivakkam Kuppam Rd, Thiruvalluvar Nagar, Thiruvanmiyur, Chennai, Tamil Nadu - 600 041.';
+
+  const phone =
+    rxAny?.hospital_phone ||
+    rxAny?.hospital?.phone ||
+    settings?.phone ||
+    '+91 84380 56883';
+
+  const email =
+    rxAny?.hospital_email ||
+    rxAny?.hospital?.email ||
+    settings?.email ||
+    'narenonco@gmail.com';
+
+  const website =
+    rxAny?.hospital_website ||
+    rxAny?.hospital?.website ||
+    settings?.website ||
+    'www.drnarendranoncologist.com';
+
+  return {
+    name,
+    address,
+    phone,
+    email,
+    website,
+    logo_url,
+  };
 }
 
 function computeAge(dobStr?: string): string {
@@ -46,7 +132,10 @@ function computeAge(dobStr?: string): string {
   }
 }
 
-function buildDataContext(rx: Prescription): LetterPadDataContext {
+function buildDataContext(
+  rx: Prescription,
+  settings?: HospitalSettingsData | null,
+): LetterPadDataContext {
   const patientAge = computeAge(rx.patient_dob);
 
   const vitals = rx.vitals || {
@@ -59,17 +148,12 @@ function buildDataContext(rx: Prescription): LetterPadDataContext {
     custom_vitals: rx.patient_custom_vitals,
   };
 
+  const hosp = getHospitalInfo(rx, settings);
+
   return {
-    hospital: {
-      name: 'Annaamalai Cancer Center',
-      address:
-        'No. 18, Kottivakkam Kuppam Rd, Thiruvalluvar Nagar, Thiruvanmiyur, Chennai, Tamil Nadu - 600 041.',
-      phone: '+91 84380 56883',
-      email: 'narenonco@gmail.com',
-      website: 'www.drnarendranoncologist.com',
-    },
+    hospital: hosp,
     branch: {
-      name: 'Chennai Center',
+      name: (rx as any)?.branch_name || (rx as any)?.hospital?.branch_name || 'Chennai Center',
       address: 'Thiruvanmiyur, Chennai',
       phone: '+91 84380 56883',
     },
@@ -142,7 +226,35 @@ export default function ViewPrescriptionModal({
     STANDARD_PRESCRIPTION_TEMPLATE_HTML,
   );
   const [backendHtml, setBackendHtml] = useState<string | null>(null);
+  const [hospitalSettings, setHospitalSettings] = useState<HospitalSettingsData | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  // Sync hospital settings on modal open to ensure accurate branding & logo
+  useEffect(() => {
+    if (open) {
+      let active = true;
+      try {
+        const promise = api?.get?.('settings');
+        if (promise && typeof promise.then === 'function') {
+          promise
+            .then((res) => {
+              if (active && res?.data) {
+                setHospitalSettings(res.data);
+                if (res.data.logoUrl) {
+                  localStorage.setItem('adminLogoUrl', res.data.logoUrl);
+                }
+              }
+            })
+            .catch(() => {});
+        }
+      } catch {
+        // Fallback to localStorage and defaults
+      }
+      return () => {
+        active = false;
+      };
+    }
+  }, [open]);
 
   // Fetch full details if only brief item was provided
   useEffect(() => {
@@ -208,7 +320,9 @@ export default function ViewPrescriptionModal({
     if (open) {
       let active = true;
       try {
-        const promise = api?.get?.('prescription-templates/active');
+        const hospId = (prescription as any)?.hospital_id || (prescription as any)?.doctor?.hospital_id;
+        const endpoint = hospId ? `prescription-templates/active?hospital_id=${hospId}` : 'prescription-templates/active';
+        const promise = api?.get?.(endpoint);
         if (promise && typeof promise.then === 'function') {
           promise
             .then((res) => {
@@ -265,17 +379,23 @@ export default function ViewPrescriptionModal({
 
   const activeRx = rxData || prescription;
 
-  // Resolve template HTML
+  // Resolve template HTML with full logo sanitization, proxying, and error fallbacks
   const renderedHtml = useMemo(() => {
-    if (backendHtml) return backendHtml;
+    const hosp = getHospitalInfo(activeRx, hospitalSettings);
+    const effectiveLogo = hosp.logo_url || DEFAULT_ANNAAMALAI_LOGO_BASE64;
+    const effectiveHospName = hosp.name || 'Annaamalai Cancer Center';
+
+    if (backendHtml) {
+      return sanitizePrescriptionHtml(backendHtml, effectiveLogo, effectiveHospName);
+    }
     if (!activeRx) return '';
-    const context = buildDataContext(activeRx);
+    const context = buildDataContext(activeRx, hospitalSettings);
     const resolved = resolvePrescriptionTemplate(
       activeTemplateHtml || STANDARD_PRESCRIPTION_TEMPLATE_HTML,
       context,
     );
-    return resolved.renderedHtml;
-  }, [backendHtml, activeRx, activeTemplateHtml]);
+    return sanitizePrescriptionHtml(resolved.renderedHtml, effectiveLogo, effectiveHospName);
+  }, [backendHtml, activeRx, activeTemplateHtml, hospitalSettings]);
 
   const handleDownloadPdf = useCallback(async () => {
     if (!activeRx) return;

@@ -79,24 +79,40 @@ export function resolveImageUrl(url?: string | null): string | null {
   if (trimmed === 'null' || trimmed === 'undefined' || trimmed.includes('@')) {
     return null;
   }
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+    return trimmed;
+  }
+  // Normalize absolute localhost backend URLs to relative /uploads or /api paths so dev server proxies them
+  const normalizedUrl = trimmed.replace(/^https?:\/\/localhost:\d+\/(uploads|api|branding)\//i, '/$1/');
+
   // If already proxied, ensure full API origin if relative
-  if (trimmed.startsWith('/api/proxy/image')) {
-    return toApiUrl(trimmed);
+  if (normalizedUrl.startsWith('/api/proxy/image') || normalizedUrl.startsWith('api/proxy/image')) {
+    const normalized = normalizedUrl.startsWith('/') ? normalizedUrl : `/${normalizedUrl}`;
+    return toApiUrl(normalized);
   }
   // Convert legacy storage URLs to proxy endpoint
-  if (trimmed.startsWith('/api/medical-records/storage/') || trimmed.startsWith('/api/staff/storage/')) {
-    const rawKey = trimmed.replace(/^\/api\/[a-z0-9_-]+\/storage\//i, '');
+  if (normalizedUrl.startsWith('/api/medical-records/storage/') || normalizedUrl.startsWith('/api/staff/storage/')) {
+    const rawKey = normalizedUrl.replace(/^\/api\/[a-z0-9_-]+\/storage\//i, '');
     return toApiUrl(`/api/proxy/image?key=${encodeURIComponent(decodeURIComponent(rawKey))}`);
   }
   // Route unsigned S3 URLs through image proxy to avoid CORS or 403 AccessDenied
-  if (trimmed.includes('amazonaws.com') && !trimmed.includes('X-Amz-Signature')) {
-    return toApiUrl(`/api/proxy/image?url=${encodeURIComponent(trimmed)}`);
+  if (normalizedUrl.includes('amazonaws.com') && !normalizedUrl.includes('X-Amz-Signature')) {
+    return toApiUrl(`/api/proxy/image?url=${encodeURIComponent(normalizedUrl)}`);
   }
-  // If starts with /api/ or /uploads/, resolve against API origin
-  if (trimmed.startsWith('/api/') || trimmed.startsWith('/uploads/')) {
-    return toApiUrl(trimmed);
+  // If starts with /api/, /uploads/, or /branding/, resolve against API origin
+  if (normalizedUrl.startsWith('/api/') || normalizedUrl.startsWith('/uploads/') || normalizedUrl.startsWith('/branding/')) {
+    return toApiUrl(normalizedUrl);
   }
-  return trimmed;
+  // Bare storage keys without leading slash (e.g. 'uploads/prescription_templates/...', 'branding/...', etc.)
+  if (
+    normalizedUrl.startsWith('uploads/') ||
+    normalizedUrl.startsWith('branding/') ||
+    normalizedUrl.startsWith('prescriptions/') ||
+    normalizedUrl.startsWith('doctors/')
+  ) {
+    return toApiUrl(`/api/proxy/image?key=${encodeURIComponent(normalizedUrl)}`);
+  }
+  return normalizedUrl;
 }
 
 /**

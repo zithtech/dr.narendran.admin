@@ -2,6 +2,9 @@ import type {
   LetterPadDataContext,
   PrescriptionTemplate,
 } from '../types/template';
+import { DEFAULT_ANNAAMALAI_LOGO_BASE64 } from './defaultLogo';
+
+export { DEFAULT_ANNAAMALAI_LOGO_BASE64 };
 
 /**
  * Standard Prescription Template matching Annaamalai Cancer Center Letterhead Design
@@ -23,6 +26,7 @@ export const STANDARD_PRESCRIPTION_TEMPLATE: PrescriptionTemplate = {
 export const SAMPLE_ADMIN_PREVIEW_DATA: LetterPadDataContext = {
   "hospital": {
     "name": "Annaamalai Cancer Center",
+    "logo_url": DEFAULT_ANNAAMALAI_LOGO_BASE64,
     "address": "No. 18, Kottivakkam Kuppam Rd, Thiruvalluvar Nagar, Thiruvanmiyur, Chennai, Tamil Nadu - 600 041.",
     "phone": "+91 84380 56883",
     "email": "narenonco@gmail.com",
