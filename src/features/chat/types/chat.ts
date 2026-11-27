@@ -64,6 +64,8 @@ export interface ChatMessage {
   conversationId?: string;
   sender_id: string;
   senderId?: string;
+  sender_name?: string;
+  senderName?: string;
   sender_role?: string;
   senderRole?: string;
   sender_type?: SenderType;
@@ -101,11 +103,12 @@ export interface ChatMessage {
   mimeType?: string | null | undefined;
   storage_key?: string | null | undefined;
   storageKey?: string | null | undefined;
+  duration?: number | null | undefined;
   reply_to_message_id?: string | null | undefined;
   replyToMessageId?: string | null | undefined;
 }
 
-export type AttachmentCategory = 'image' | 'pdf' | 'spreadsheet' | 'document' | 'other';
+export type AttachmentCategory = 'image' | 'pdf' | 'spreadsheet' | 'document' | 'voice' | 'other';
 
 export interface StagedAttachment {
   id: string;
@@ -115,16 +118,23 @@ export interface StagedAttachment {
   size: number;
   type: string;
   category: AttachmentCategory;
+  duration?: number | undefined;
 }
 
 export interface SendMessagePayload {
   conversationId: string;
   message: string;
   messageType?: string | undefined;
+  senderId?: string | undefined;
+  sender_id?: string | undefined;
+  senderRole?: string | undefined;
+  sender_role?: string | undefined;
   recipientId?: string | undefined;
+  recipient_id?: string | undefined;
   replyToMessageId?: string | null | undefined;
   attachmentUrl?: string | null | undefined;
   attachmentName?: string | null | undefined;
   attachmentType?: string | null | undefined;
   attachmentSize?: number | null | undefined;
+  duration?: number | null | undefined;
 }

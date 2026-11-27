@@ -253,6 +253,7 @@ export const chatApi = {
     file: File,
     caption?: string,
     replyToMessageId?: string,
+    duration?: number,
   ): Promise<ChatMessage> => {
     const formData = new FormData();
     formData.append('file', file);
@@ -264,6 +265,9 @@ export const chatApi = {
       formData.append('replyToMessageId', replyToMessageId);
       formData.append('reply_to_message_id', replyToMessageId);
     }
+    if (duration !== undefined && duration !== null && !isNaN(duration)) {
+      formData.append('duration', String(duration));
+    }
 
     const res = await api.post(`chat/conversations/${conversationId}/attachments`, formData, {
       headers: {
@@ -272,6 +276,28 @@ export const chatApi = {
     });
 
     return res.data?.data || res.data;
+  },
+
+  /**
+   * Upload a recorded voice note
+   */
+  uploadVoiceNote: async (
+    conversationId: string,
+    audioBlob: Blob,
+    duration: number,
+    fileName = `voice_note_${Date.now()}.webm`,
+    replyToMessageId?: string,
+  ): Promise<ChatMessage> => {
+    const file = new File([audioBlob], fileName, {
+      type: audioBlob.type || 'audio/webm',
+    });
+    return chatApi.uploadAttachment(
+      conversationId,
+      file,
+      undefined,
+      replyToMessageId,
+      duration,
+    );
   },
 
   /**
@@ -285,5 +311,33 @@ export const chatApi = {
       `chat/conversations/${conversationId}/messages/${messageId}/attachment`,
     );
     return res.data?.data || res.data;
+  },
+
+  /**
+   * Search messages within a conversation
+   */
+  searchMessages: async (
+    conversationId: string,
+    query: string,
+    limit = 30,
+    offset = 0,
+  ): Promise<{ results: ChatMessage[]; total: number; query: string }> => {
+    if (!query || !query.trim()) {
+      return { results: [], total: 0, query: '' };
+    }
+    const res = await api.get(`chat/conversations/${conversationId}/search`, {
+      params: { q: query.trim(), limit, offset },
+    });
+    const data = res.data?.data || res.data || {};
+    const results = Array.isArray(data.results)
+      ? data.results
+      : Array.isArray(data)
+        ? data
+        : [];
+    return {
+      results,
+      total: typeof data.total === 'number' ? data.total : results.length,
+      query: data.query || query,
+    };
   },
 };

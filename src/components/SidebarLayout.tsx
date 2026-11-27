@@ -12,6 +12,7 @@ import {
   type NavModule,
 } from './navigation/navigationConfig';
 import { SubNavbar } from './navigation/SubNavbar';
+import { chatSocket } from '../features/chat/services/chatSocket';
 import { TopNavbar } from './navigation/TopNavbar';
 
 export default function SidebarLayout() {
@@ -196,6 +197,11 @@ export default function SidebarLayout() {
   };
 
   const handleLogout = () => {
+    try {
+      chatSocket.disconnect();
+    } catch {
+      // ignore
+    }
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUsername');
     localStorage.removeItem('adminRole');

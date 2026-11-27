@@ -22,6 +22,8 @@ import { ChatConversationView } from '../components/ChatConversationView';
 import { ChatEmptyState } from '../components/ChatEmptyState';
 import { chatSocket } from '../services/chatSocket';
 import type { ChatConversation, ChatMessage, ChatRecipient } from '../types/chat';
+import { stripFormatting } from '../utils/formattingUtils';
+import { getAuthenticatedUser } from '../utils/userUtils';
 
 export type ChatTabType = 'doctors' | 'patients' | 'others';
 
@@ -47,6 +49,17 @@ function formatConversationTime(dateString?: string | null): string {
 }
 
 function getMessagePreviewText(msg: any): string {
+  const isVoice =
+    msg.message_type === 'VOICE' ||
+    msg.messageType === 'VOICE' ||
+    (typeof msg.attachment_type === 'string' && msg.attachment_type.startsWith('audio/')) ||
+    (typeof msg.attachmentType === 'string' && msg.attachmentType.startsWith('audio/')) ||
+    msg.message === 'Voice message';
+
+  if (isVoice) {
+    return 'Voice message';
+  }
+
   const hasAttachment = Boolean(
     msg.attachment_url ||
       msg.attachmentUrl ||
@@ -61,9 +74,9 @@ function getMessagePreviewText(msg: any): string {
     if (!text || text === fileName) {
       return `📎 ${fileName || 'Attachment'}`;
     }
-    return `📎 ${text}`;
+    return `📎 ${stripFormatting(text)}`;
   }
-  return text;
+  return stripFormatting(text);
 }
 
 function getInitials(name: string): string {
@@ -105,22 +118,21 @@ export function ChatPage() {
     return isSystemAdmin || canView('PATIENTS');
   }, [isSystemAdmin, canView]);
 
+  const authUser = useMemo(() => getAuthenticatedUser(), []);
+
   const currentUserId = useMemo(() => {
-    return (
-      localStorage.getItem('adminUserId') ||
-      localStorage.getItem('adminUsername') ||
-      localStorage.getItem('adminEmail') ||
-      ''
-    );
-  }, []);
+    return authUser.id || localStorage.getItem('adminUserId') || '';
+  }, [authUser]);
 
   const currentUsername = useMemo(() => {
     return (
+      authUser.username ||
       localStorage.getItem('adminUsername') ||
       localStorage.getItem('adminFullName') ||
+      authUser.email ||
       ''
     );
-  }, []);
+  }, [authUser]);
 
   // Category Tabs
   const tabs = useMemo<{ key: ChatTabType; label: string; icon: React.ReactNode }[]>(() => {
@@ -722,7 +734,7 @@ export function ChatPage() {
                           </div>
                           <div className="flex items-center justify-between gap-1 mt-0.5">
                             <p className="text-[11px] text-slate-500 truncate">
-                              {conv.last_message || 'Start a conversation'}
+                              {stripFormatting(conv.last_message || '') || 'Start a conversation'}
                             </p>
                             {unread > 0 && (
                               <span className="shrink-0 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-600 text-white">

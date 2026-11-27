@@ -11,6 +11,7 @@ import { resolveImageUrl } from '../../../utils/doctorAvatar';
 import type { AttachmentCategory, ChatMessage } from '../types/chat';
 import { formatFileSize, getFileCategory } from '../utils/attachmentUtils';
 import { ChatImageLightboxModal } from './ChatImageLightboxModal';
+import { ChatVoiceMessagePlayer } from './ChatVoiceMessagePlayer';
 
 export interface ChatMessageAttachmentProps {
   message: ChatMessage;
@@ -66,6 +67,14 @@ export const ChatMessageAttachment: React.FC<ChatMessageAttachmentProps> = ({
   const resolvedUrl = resolveImageUrl(rawUrl) || rawUrl;
   const category = getFileCategory(fileName, fileType);
   const isImage = category === 'image' && !imageError;
+  const isVoice =
+    category === 'voice' ||
+    message.message_type === 'VOICE' ||
+    message.messageType === 'VOICE';
+
+  if (isVoice) {
+    return <ChatVoiceMessagePlayer message={message} mine={mine} />;
+  }
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();

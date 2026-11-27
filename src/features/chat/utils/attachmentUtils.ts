@@ -20,6 +20,13 @@ export const ALLOWED_EXTENSIONS = [
   'xls',
   'xlsx',
   'csv',
+  // Audio / Voice Notes
+  'webm',
+  'ogg',
+  'mp3',
+  'wav',
+  'm4a',
+  'aac',
 ];
 
 export const ACCEPT_FILE_TYPES = [
@@ -34,6 +41,14 @@ export const ACCEPT_FILE_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'text/csv',
   'text/plain',
+  'audio/*',
+  'audio/webm',
+  'audio/ogg',
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/wav',
+  'audio/x-m4a',
   '.jpg',
   '.jpeg',
   '.png',
@@ -46,6 +61,11 @@ export const ACCEPT_FILE_TYPES = [
   '.xlsx',
   '.csv',
   '.txt',
+  '.webm',
+  '.ogg',
+  '.mp3',
+  '.wav',
+  '.m4a',
 ].join(',');
 
 /**
@@ -94,6 +114,13 @@ export function getFileCategory(fileName: string, mimeType?: string | null): Att
   }
 
   if (
+    ['webm', 'ogg', 'mp3', 'wav', 'm4a', 'aac'].includes(ext) ||
+    mime.startsWith('audio/')
+  ) {
+    return 'voice';
+  }
+
+  if (
     ['doc', 'docx', 'txt', 'rtf', 'odt'].includes(ext) ||
     mime.includes('word') ||
     mime.includes('officedocument') ||
@@ -103,6 +130,27 @@ export function getFileCategory(fileName: string, mimeType?: string | null): Att
   }
 
   return 'other';
+}
+
+/**
+ * Format duration in seconds to M:SS (e.g. 0:05, 1:24)
+ */
+export function formatDuration(seconds?: number | null): string {
+  if (seconds === undefined || seconds === null || isNaN(seconds) || seconds < 0) {
+    return '0:00';
+  }
+  const totalSeconds = Math.floor(seconds);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}
+
+/**
+ * Check whether a file or attachment is a voice note / audio
+ */
+export function isVoiceFile(fileName?: string | null, mimeType?: string | null): boolean {
+  if (!fileName && !mimeType) return false;
+  return getFileCategory(fileName || '', mimeType) === 'voice';
 }
 
 /**
