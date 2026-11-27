@@ -86,7 +86,7 @@ export const TimelineHeaderCard: React.FC<TimelineHeaderCardProps> = ({
                   {formatPatientDisplayName(patient.name, patient.patient_id)}
                 </Title>
                 <Tag color="cyan" className="font-mono text-[11px] !m-0 font-semibold px-1.5 py-0 rounded">
-                  ID: {patient.patient_id || `#${patient.id.slice(0, 8).toUpperCase()}`}
+                  Code: {patient.patient_code || patient.patient_id || '—'}
                 </Tag>
                 {patient.blood_group && (
                   <Tag color="red" className="font-semibold text-[11px] !m-0 px-1.5 py-0 rounded flex items-center gap-1">

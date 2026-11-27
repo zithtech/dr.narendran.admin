@@ -74,6 +74,8 @@ export interface TimelineEvent {
 export interface PatientTimelineHeader {
   id: string;
   patient_id?: string | null;
+  patient_code?: string | null;
+  legacy_patient_code?: string | null;
   name: string;
   age: number | null;
   gender: string | null;
@@ -115,6 +117,8 @@ export interface MedicalTimelineResponse {
 export interface AdminPatientListItem {
   id: string;
   patient_id?: string | null;
+  patient_code?: string | null;
+  legacy_patient_code?: string | null;
   user_account_id: string | null;
   hospital_id: string;
   hospital_name: string | null;

@@ -483,7 +483,7 @@ export default function PatientDetailPage() {
                 <h1 className="patient-card-name">{formatPatientDisplayName(patient.name, patient.patient_id)}</h1>
 
                 <div className="patient-card-badges-row">
-                  {patient.patient_id && (
+                  {(patient.patient_code || patient.patient_id) && (
                     <span
                       style={{
                         display: 'inline-flex',
@@ -497,10 +497,30 @@ export default function PatientDetailPage() {
                         color: '#0369a1',
                         border: '1px solid #bae6fd',
                       }}
-                      title="Unique Patient Identifier"
+                      title="Patient Code"
                     >
                       <ShieldCheck size={11} />
-                      <span>{patient.patient_id}</span>
+                      <span>{patient.patient_code || patient.patient_id}</span>
+                    </span>
+                  )}
+
+                  {patient.legacy_patient_code && (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '2px 8px',
+                        borderRadius: 12,
+                        fontSize: 10.5,
+                        fontWeight: 600,
+                        background: '#f1f5f9',
+                        color: '#475569',
+                        border: '1px solid #cbd5e1',
+                      }}
+                      title={`Migrated from legacy Patient Code: ${patient.legacy_patient_code}`}
+                    >
+                      {/* <span>Old: {patient.legacy_patient_code}</span> */}
                     </span>
                   )}
 

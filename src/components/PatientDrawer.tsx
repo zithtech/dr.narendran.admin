@@ -203,6 +203,49 @@ export default function PatientDrawer({ patient, onClose, onEdit }: PatientDrawe
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, flexWrap: 'wrap' }}>
+            {(patient.patient_code || patient.patient_id) && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 11.5,
+                  fontWeight: 650,
+                  fontFamily: 'monospace',
+                  padding: '2px 8px',
+                  borderRadius: 5,
+                  background: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  color: '#1d4ed8',
+                }}
+                title="Patient Code"
+              >
+                <ShieldCheck size={11} />
+                <span>{patient.patient_code || patient.patient_id}</span>
+              </span>
+            )}
+
+            {patient.legacy_patient_code && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  fontFamily: 'monospace',
+                  padding: '2px 8px',
+                  borderRadius: 5,
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  color: '#64748b',
+                }}
+                title={`Migrated from legacy code: ${patient.legacy_patient_code}`}
+              >
+                {/* <span>Old: {patient.legacy_patient_code}</span> */}
+              </span>
+            )}
+
             <span
               style={{
                 display: 'inline-flex',
@@ -297,39 +340,39 @@ export default function PatientDrawer({ patient, onClose, onEdit }: PatientDrawe
     },
     ...(patient.blood_pressure
       ? [
-          {
-            label: 'Blood Pressure',
-            value: (
-              <span style={{ fontWeight: 650, color: '#dc2626', fontSize: 13 }}>
-                {patient.blood_pressure}
-              </span>
-            ),
-          },
-        ]
+        {
+          label: 'Blood Pressure',
+          value: (
+            <span style={{ fontWeight: 650, color: '#dc2626', fontSize: 13 }}>
+              {patient.blood_pressure}
+            </span>
+          ),
+        },
+      ]
       : []),
     ...(patient.blood_sugar
       ? [
-          {
-            label: 'Blood Sugar',
-            value: (
-              <span style={{ fontWeight: 650, color: '#d97706', fontSize: 13 }}>
-                {patient.blood_sugar}
-              </span>
-            ),
-          },
-        ]
+        {
+          label: 'Blood Sugar',
+          value: (
+            <span style={{ fontWeight: 650, color: '#d97706', fontSize: 13 }}>
+              {patient.blood_sugar}
+            </span>
+          ),
+        },
+      ]
       : []),
     ...(patient.body_temperature
       ? [
-          {
-            label: 'Temperature',
-            value: (
-              <span style={{ fontWeight: 650, color: '#0284c7', fontSize: 13 }}>
-                {patient.body_temperature}
-              </span>
-            ),
-          },
-        ]
+        {
+          label: 'Temperature',
+          value: (
+            <span style={{ fontWeight: 650, color: '#0284c7', fontSize: 13 }}>
+              {patient.body_temperature}
+            </span>
+          ),
+        },
+      ]
       : []),
     {
       label: 'Prescriptions',
@@ -794,31 +837,31 @@ export default function PatientDrawer({ patient, onClose, onEdit }: PatientDrawe
                   .filter(Boolean)
                   .join(', ') || patient.address,
               ) && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 9,
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: '#f8fafc',
-                    border: '1px solid #f1f5f9',
-                  }}
-                >
-                  <MapPin size={14} style={{ color: '#2563eb', marginTop: 2, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12.5, color: '#334155', lineHeight: 1.4 }}>
-                    {[
-                      patient.address_line_1,
-                      patient.address_line_2,
-                      patient.city,
-                      patient.state,
-                      patient.pincode,
-                    ]
-                      .filter(Boolean)
-                      .join(', ') || patient.address}
-                  </span>
-                </div>
-              )}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 9,
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      background: '#f8fafc',
+                      border: '1px solid #f1f5f9',
+                    }}
+                  >
+                    <MapPin size={14} style={{ color: '#2563eb', marginTop: 2, flexShrink: 0 }} />
+                    <span style={{ fontSize: 12.5, color: '#334155', lineHeight: 1.4 }}>
+                      {[
+                        patient.address_line_1,
+                        patient.address_line_2,
+                        patient.city,
+                        patient.state,
+                        patient.pincode,
+                      ]
+                        .filter(Boolean)
+                        .join(', ') || patient.address}
+                    </span>
+                  </div>
+                )}
             </div>
           </div>
 
